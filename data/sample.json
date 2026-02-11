@@ -1,0 +1,17 @@
+{
+  "lugar_emision": "Mérida, Yucatán",
+  "dia": "10",
+  "mes": "febrero",
+  "anio": "2026",
+  "empresa_grupo": "[SEÑALAR RAZÓN SOCIAL DE LA EMPRESA DEL GRUPO]",
+  "nombre_desarrollo": "[Nombre del desarrollo]",
+  "numero_unidad": "[No. de unidad]",
+  "ciudad": "[Ciudad]",
+  "cliente_nombre": "[Nombre del cliente]",
+  "cliente_identificacion": "[Tipo y No. de Identificación]",
+  "cliente_nacionalidad": "[Nacionalidad]",
+  "cliente_domicilio": "[Domicilio]",
+  "cliente_rfc": "[RFC/TIN]",
+  "cliente_curp": "[CURP/SSN]",
+  "vendedor_nombre": "[Nombre y firma del(a) Vendedor(a)]"
+}

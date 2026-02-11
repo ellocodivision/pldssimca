@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aviso de Privacidad / Privacy Notice</title>
+  <style>
+    @page { size: Letter; margin: 0; }
+    :root {
+      --page-w: 216mm;
+      --page-h: 279mm;
+      --pad: 16mm;
+      --border-inset: 8mm;
+      --footer-space: 22mm;
+      --ink: #111;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: var(--ink);
+      font-family: "Times New Roman", Times, serif;
+      font-size: 10pt;
+      line-height: 1.24;
+    }
+    .controls {
+      width: var(--page-w);
+      margin: 12px auto 0;
+      text-align: right;
+    }
+    .btn {
+      padding: 8px 12px;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #pages { width: var(--page-w); margin: 0 auto; }
+    .page {
+      width: var(--page-w);
+      height: var(--page-h);
+      padding: var(--pad);
+      position: relative;
+      background: #fff;
+      page-break-after: always;
+      overflow: hidden;
+    }
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: url('{{watermarkUrl}}') center/60% no-repeat;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+    .page::after {
+      content: "";
+      position: absolute;
+      left: var(--border-inset);
+      right: var(--border-inset);
+      top: var(--border-inset);
+      bottom: var(--border-inset);
+      border: 0.5pt solid #000;
+      pointer-events: none;
+    }
+    .content {
+      position: relative;
+      z-index: 1;
+      height: calc(var(--page-h) - (var(--pad) * 2) - var(--footer-space));
+      overflow: hidden;
+    }
+    .footer {
+      position: absolute;
+      left: var(--border-inset);
+      right: var(--border-inset);
+      bottom: var(--border-inset);
+      display: flex;
+      align-items: center;
+      font-size: 8pt;
+      z-index: 1;
+    }
+    .footer .l { width: 28%; }
+    .footer .c { width: 44%; text-align: center; }
+    .footer .r { width: 28%; text-align: right; font-weight: 700; font-size: 9pt; }
+
+    .header-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      font-weight: 700;
+      text-align: center;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .two-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .small { font-size: 9pt; }
+    .bold { font-weight: 700; }
+    .justify { text-align: left; }
+
+    h2 {
+      font-size: 10.5pt;
+      margin: 8px 0 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    h3 {
+      font-size: 10pt;
+      margin: 7px 0 3px;
+      font-weight: 700;
+    }
+    p { margin: 0 0 5px; }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin: 6px 0;
+    }
+    .table th, .table td {
+      border: 1px solid #000;
+      padding: 3px 4px;
+      vertical-align: top;
+    }
+    .table th { font-weight: 700; }
+
+    .checkbox-row {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin: 3px 0 6px;
+      font-size: 9pt;
+    }
+    .checkbox {
+      width: 11px;
+      height: 11px;
+      border: 1px solid #000;
+      display: inline-block;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .checkbox.checked { background: #000; }
+
+    .fields {
+      font-size: 9.5pt;
+      margin-top: 8px;
+    }
+    .field-line {
+      border-bottom: 1px solid #000;
+      min-height: 16px;
+      margin: 3px 0 8px;
+      padding-bottom: 1px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .signature {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 9pt;
+    }
+    .signature-line {
+      margin: 12px auto 6px;
+      border-bottom: 1px solid #000;
+      width: 60%;
+      height: 16px;
+    }
+    .inline-fill {
+      display: inline;
+      padding: 0;
+      line-height: inherit;
+      vertical-align: baseline;
+      white-space: normal;
+      word-break: normal;
+    }
+
+    #blocks { display: none; }
+    .block { margin-bottom: 8px; }
+    .block:last-child { margin-bottom: 0; }
+
+    @media print {
+      body { background: #fff; }
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">{{controls}}</div>
+  <div id="pages"></div>
+
+  <div id="blocks">
+    <div class="block">
+      <div class="header-row">
+        <div>AVISO DE PRIVACIDAD</div>
+        <div>PRIVACY NOTICE</div>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h2>1. DATOS DE LA RESPONSABLE</h2>
+        <p>La sociedad <span class="inline-fill">{{cbEmpresaES}}</span> y/o sus sociedades controladoras, subsidiarias o afiliadas bajo su control común (en conjunto denominadas como "GRUPO SIMCA"), con domicilio común en <span class="inline-fill">{{cbEmpresaDomicilioES}}</span> y sitios web comunes www.simca.mx y www.desarrollossimca.com, son empresas dedicadas a la construcción, promoción, comercialización y/o venta de unidades habitacionales (las "Unidades") dentro de desarrollos inmobiliarios en los Estados Unidos Mexicanos (las "Actividades Empresariales"). Como consecuencia de sus Actividades Empresariales, GRUPO SIMCA recaba y/o tiene acceso a los datos personales que se señalan en el numeral 4 de este Aviso, propiedad de particulares que están interesados en adquirir, o bien, han iniciado el proceso de adquisición de una o varias Unidades (los "Datos Personales"). En el caso específico, GRUPO SIMCA ha recibido o recibirá los Datos Personales de la persona física o moral cuyo nombre/razón social y firma aparecen al calce del presente Aviso (el "Titular"), con quien GRUPO SIMCA ha iniciado o iniciará los trámites para la adquisición de una Unidad (la "Operación").</p>
+      </div>
+      <div>
+        <h2>1. RESPONSIBLE DATA</h2>
+        <p>The company <span class="inline-fill">{{cbEmpresaEN}}</span> and/or its controlling, subsidiary or affiliated companies under its common control (collectively referred to as "GRUPO SIMCA"), with common address at <span class="inline-fill">{{cbEmpresaDomicilioEN}}</span> and common websites www.simca.mx and www.desarrollossimca.com, are companies dedicated to the construction, promotion, marketing and/or sale of residential units (the "Units") within real estate developments in the United Mexican States (the "Business Activities"). As a result of its Business Activities, GRUPO SIMCA collects and/or has access to the personal data indicated in section 4 of this Notice, owned by private individuals who are interested in acquiring, or have initiated the process of acquiring one or more Units (the "Personal Data"). In this particular case, GRUPO SIMCA has received or will receive the Personal Data of the natural or legal person whose name/business name and signature appears at the bottom of this Notice (the "Holder"), with whom GRUPO SIMCA has initiated or will initiate the process for acquisition of a Unit (the "Transaction").</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h2>2. RESPONSABLE DE LOS DATOS PERSONALES</h2>
+        <p>En cumplimiento de la Ley de Federal de Protección de Datos Personales en Posesión de los Particulares (la "Ley de Datos Personales"), GRUPO SIMCA será el responsable de la obtención, acceso, uso, manejo, aprovechamiento, transferencia, disposición, divulgación o almacenamiento (acciones que, en conjunto, serán denominadas como "Tratamiento" para efectos de este Aviso) de los Datos Personales del Titular.</p>
+      </div>
+      <div>
+        <h2>2. RESPONSIBLE FOR PERSONAL DATA</h2>
+        <p>In compliance with the Federal Law on Protection of Personal Data Held by Private Individuals (the "Law on Personal Data"), GRUPO SIMCA shall be responsible for obtaining, accessing, using, handling, exploiting, transferring, disposing, disseminating or storing (actions that jointly shall be referred to as the "Processing" for the purposes of this Notice) of the Personal Data of the Holder.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h2>3. COMPROMISO DE CONFIDENCIALIDAD</h2>
+        <p>GRUPO SIMCA se compromete con el Titular a proteger sus Datos Personales en los términos de la Ley de Datos Personales y del presente Aviso y, por consiguiente, salvo las Transferencias Autorizadas (según se define en el numeral 7 del presente Aviso) a no transferir a ningún Tercero (según se define en la fracción XVII del artículo 2º de la Ley de Datos Personales, en el entendido de que no se considerarán "terceros" los empleados, accionistas, directores, gerentes, apoderados, asesores y demás representantes de GRUPO SIMCA) los Datos Personales del Titular [incluidos los Datos Financieros y los Datos Sensibles (según dichos términos se definen respectivamente en los numerales 4.1.1 y 4.1.2 del presente Aviso)] sin el consentimiento previo del Titular. Además, GRUPO SIMCA se compromete a que en el Tratamiento de Datos Personales del Titular observará los principios de licitud, consentimiento, información, calidad, finalidad, lealtad, proporcionalidad y responsabilidad.</p>
+      </div>
+      <div>
+        <h2>3. CONFIDENTIALITY COMMITMENT</h2>
+        <p>GRUPO SIMCA undertakes before the Holder to protect its Personal Data in accordance with the provisions of the Law on Personal Data and of this Notice and, consequently, except for the Authorized Transfers (as defined in numeral 7 hereof) to not transfer to any Third Party (as defined in section XVII of article 2 of the Law on Personal Data, provided that employees, shareholders, directors, managers, agents, attorneys, advisors and other representatives of GRUPO SIMCA shall not be considered "third parties") the Personal Data of the Holder [including Financial Data and Sensitive Data (as these terms are defined respectively in sections 4.1.1 and 4.1.2 of this Notice)] without the prior consent of the Holder. In addition, GRUPO SIMCA undertakes that in the Processing of Personal Data of the Holder it shall observe the principles of legality, consent, information, quality, purpose, loyalty, proportionality and responsibility.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h2>4. DATOS PERSONALES Y LA FINALIDAD DE SU TRATAMIENTO</h2>
+        <h3>4.1. Datos Personales</h3>
+        <p>Los Datos Personales que el Titular ha proporcionado o proporcionará a GRUPO SIMCA con motivo de la Operación serán, enunciativa mas no limitativamente, los siguientes:</p>
+      </div>
+      <div>
+        <h2>4. PERSONAL DATA AND PURPOSE OF ITS PROCESSING</h2>
+        <h3>4.1. Personal Data</h3>
+        <p>The Personal Data the Holder has revealed or will reveal to GRUPO SIMCA due to the Transaction shall include, but in no case be limited to, the following:</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small">
+      <div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Persona Física</th>
+              <th>Persona Moral</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>i. Nombre completo</td><td>i. Razón social</td></tr>
+            <tr><td>ii. Edad</td><td>ii. Nombre de apoderado</td></tr>
+            <tr><td colspan="2">iv. Dirección: calle, número exterior, número interior (en su caso), colonia, código postal, estado, municipio o alcaldía</td></tr>
+            <tr><td colspan="2">v. Teléfono</td></tr>
+            <tr><td colspan="2">vi. Correo electrónico</td></tr>
+            <tr><td colspan="2">vii. Datos biométricos para la firma de contratos como huellas dactilares, reconocimiento facial, entre otros.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Natural Person</th>
+              <th>Company</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>i. Full birth name</td><td>i. Business name</td></tr>
+            <tr><td>ii. Age</td><td>ii. Proxy's name</td></tr>
+            <tr><td>iii. Marital status (property regime in case of being married)</td><td>iii. Certificate of incorporation, by-laws and proxy letter</td></tr>
+            <tr><td colspan="2">iv. Address: street, external number, interior number (if applicable), neighborhood, zip code, city and state</td></tr>
+            <tr><td colspan="2">v. Phone number</td></tr>
+            <tr><td colspan="2">vi. Email address</td></tr>
+            <tr><td colspan="2">vii. Biometric data to sign contracts such as fingerprints, facial recognition, among others.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h3>4.1.1. Datos Financieros</h3>
+        <p>Cuando el Titular realice el pago de la totalidad de la Operación o cualquier parte de la misma mediante tarjeta de crédito o débito (la "Tarjeta"), proporcionará a GRUPO SIMCA los datos que se señalan a continuación en relación con la Tarjeta (los "Datos Financieros"):</p>
+        <p>i. Número de tarjeta de crédito o débito<br>ii. Institución bancaria que emite la Tarjeta<br>iii. Nombre del titular de la Tarjeta<br>iv. Fecha de vencimiento de la Tarjeta<br>v. Código de seguridad de Tarjeta</p>
+
+        <h3>4.1.2. Datos Personales Sensibles</h3>
+        <p>El Titular, persona física, reconoce y acepta que, como consecuencia de la Operación, es posible, pero poco probable, que GRUPO SIMCA le solicite información y/o documentos que puedan contener datos personales sensibles que puedan revelar aspectos como origen racial o étnico, estado de salud presente y futuro, información genética, creencias religiosas, filosóficas y/o morales, afiliación sindical, opiniones políticas y/o preferencia sexual (los "Datos Sensibles"). En tal caso, el Titular autoriza expresamente a GRUPO SIMCA al Tratamiento de los Datos Personales Sensibles únicamente para los fines que se señalan en el numeral 4.2 siguiente y, consecuentemente, cualquier transferencia de los Datos Sensibles, distinta de las Transferencias Autorizadas, deberá previamente autorizada por escrito por el Titular.</p>
+      </div>
+      <div>
+        <h3>4.1.1. Financial Data</h3>
+        <p>In case the Holder makes the payment of the entire Transaction or any part thereof by credit or debit card (the "Card"), it shall provide GRUPO SIMCA with the data indicated below in relation to the Card (the "Financial Data"):</p>
+        <p>i. Card number<br>ii. Issuing banking institution of the Card<br>iii. Card holder's name<br>iv. Card expiration date<br>v. Card security code</p>
+
+        <h3>4.1.2. Personal Sensitive Data</h3>
+        <p>The Holder, a natural person, acknowledges and accepts that, as a result of the Transaction, it is possible, but unlikely, that GRUPO SIMCA shall request information and/or documents that may contain sensitive personal data that may reveal aspects such as racial or ethnic origin, state of present and future health, genetic information, religious, philosophical and/or moral beliefs, union affiliation, political opinions and/or sexual preference (the "Sensitive Data"). In such case, the Holder expressly authorizes GRUPO SIMCA to the Processing of Sensitive Personal Data only for the purposes indicated in section 4.2 below and, consequently, any transfer of Sensitive Data, other than Authorized Transfers, shall be previously authorized in writing by the Holder.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div><h3>4.2. Finalidad del Tratamiento de los Datos Personales</h3></div>
+      <div><h3>4.2. Purpose of Processing of Personal Data</h3></div>
+    </div>
+    <div class="block two-cols small justify">
+      <div><p>En cumplimiento de la fracción II del artículo 15 de la Ley de Datos Personales, en este acto GRUPO SIMCA informa al Titular que la finalidad con la que realizará el Tratamiento de sus Datos Personales será primordialmente en relación con la Operación y/o la Unidad de conformidad con lo siguiente:</p></div>
+      <div><p>In compliance with section II of article 15 of the Law on Personal Data, hereby GRUPO SIMCA informs the Holder that the purpose for which it will carry out the Processing of his Personal Data will be primarily in relation to the Transaction and/or the Unit as follows:</p></div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h3>4.2.1. Finalidades Primarias</h3>
+      </div>
+      <div>
+        <h3>4.2.1. Primary Purposes</h3>
+      </div>
+    </div>
+    <div class="block two-cols small justify">
+      <div><p>i. Dar seguimiento a las solicitudes de información del Titular.<br>ii. Realizar y enviar cotizaciones y propuestas al Titular.<br>iii. Dar cumplimiento a las obligaciones en materia de prevención de lavado de dinero.<br>iv. Elaborar todos los documentos administrativos y legales relacionados con, o derivados de, la Operación y/o la Unidad.<br>v. Dar atención a las solicitudes post venta que realice el Titular.<br>vi. La validación biométrica de identidad para firmar los documentos legales correspondientes a la adquisición de alguna Unidad.</p></div>
+      <div><p>i. Follow up on the information requests by the Holder.<br>ii. Make and send quotes and proposals to the Holder.<br>iii. Comply with the obligations regarding money laundering prevention.<br>iv. Prepare all administrative and legal documents related to, or derived from, the Transaction and / or the Unit.<br>v. Respond to the post-sale requests made by the Holder.<br>vi. Biometric identity validation to be used in signing legal documents related to the acquisition of a Unit.</p></div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h3>4.2.2. Finalidades Secundarias</h3>
+      </div>
+      <div>
+        <h3>4.2.2. Secondary Purposes</h3>
+      </div>
+    </div>
+    <div class="block two-cols small justify">
+      <div><p>De manera adicional a las finalidades primarias arriba mencionadas, GRUPO SIMCA utilizará los Datos Personales del Titular para las finalidades secundarias señaladas más abajo, mismas que, si bien no son indispensables para la realización de la Operación, sí permitirán a GRUPO SIMCA, en general, mejorar sus servicios y, en particular, brindarle una mejor atención al Titular. En ese sentido, a continuación, el Titular deberá marcar con una cruz si está de acuerdo en que GRUPO SIMCA trate sus Datos Personales para las siguientes finalidades secundarias:</p></div>
+      <div><p>In addition to the primary purposes mentioned above, GRUPO SIMCA shall use the Personal Data of the Holder for the secondary purposes indicated below, which, although not essential for the Transaction, may allow GRUPO SIMCA, in general, to improve its services and, in particular, provide better attention to the Holder. In that sense, the Holder must then mark with a cross if he agrees that GRUPO SIMCA processes his Personal Data for the following secondary purposes:</p></div>
+    </div>
+    <div class="block two-cols small justify">
+      <div>
+        <p>i. Solicitar al Titular su evaluación y retroalimentación sobre la Unidad, la Operación y, en general, sobre el servicio y los productos que ofrece GRUPO SIMCA.</p>
+        <div class="checkbox-row"><span><span class="checkbox {{solicitarSi}}"></span>SÍ</span><span><span class="checkbox {{solicitarNo}}"></span>NO</span></div>
+      </div>
+      <div>
+        <p>i. Request the Holder for its evaluation and feedback on the Unit, the Transaction and, in general, on the service and products offered by GRUPO SIMCA.</p>
+        <div class="checkbox-row"><span><span class="checkbox {{solicitarSiEN}}"></span>YES</span><span><span class="checkbox {{solicitarNoEN}}"></span>NO</span></div>
+      </div>
+    </div>
+    <div class="block two-cols small justify">
+      <div>
+        <p>ii. Enviar al Titular promociones y publicidad de nuevos productos y servicios que pudieran ser de su interés.</p>
+        <div class="checkbox-row"><span><span class="checkbox {{enviarSi}}"></span>SÍ</span><span><span class="checkbox {{enviarNo}}"></span>NO</span></div>
+        <p>La negativa por parte del Titular para el Tratamiento de sus Datos Personales por parte de GRUPO SIMCA para las finalidades secundarias arriba mencionadas no podrá ser motivo para que GRUPO SIMCA se niegue a celebrar la Operación.</p>
+      </div>
+      <div>
+        <p>ii. Send to the Holder promotions and advertising of new products and services that may be of Holder's interest.</p>
+        <div class="checkbox-row"><span><span class="checkbox {{enviarSiEN}}"></span>YES</span><span><span class="checkbox {{enviarNoEN}}"></span>NO</span></div>
+        <p>Refusal by the Holder for the Processing of its Personal Data by GRUPO SIMCA for the secondary purposes mentioned above, shall not be grounds for GRUPO SIMCA to refuse to conduct the Transaction.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h2>5. MEDIOS PARA LIMITAR EL USO O DIVULGACIÓN DE DATOS PERSONALES</h2>
+        <p>En cumplimiento de la fracción IV del artículo 15 de la Ley de Datos Personales, así como en términos de los artículos 18, 19 y 20 de dicho ordenamiento legal, GRUPO SIMCA, considerando para el caso particular el riesgo existente, las posibles consecuencias para el Titular, la sensibilidad de los Datos Personales y el desarrollo tecnológico, ha establecido las medidas de seguridad, administrativas, técnicas y físicas que permiten proteger los Datos Personales del Titular contra daño, pérdida, alteración, destrucción, o bien, contra el uso, acceso o Tratamiento no autorizado. GRUPO SIMCA manifiesta al Titular que dichas medidas de seguridad no son, de manera alguna, menores a las que GRUPO SIMCA ha implementado para el Tratamiento de su propia información. GRUPO SIMCA se compromete ante el Titular a que cualquier vulneración de seguridad ocurrida en cualquier fase del Tratamiento de los Datos Personales del Titular, serán informadas de manera inmediata a éste a efecto de que pueda tomar las medidas correspondientes en la defensa de sus derechos. Finalmente, GRUPO SIMCA garantiza al Titular que tanto GRUPO SIMCA como cualquier Tercero que intervenga en el tratamiento de los Datos Personales del Titular, guardarán la debida confidencialidad respecto de los mismos, aun después de finalizar su relación con el Titular.</p>
+      </div>
+      <div>
+        <h2>5. MEANS TO LIMIT THE USE AND DISCLOSURE OF PERSONAL DATA</h2>
+        <p>In compliance with section IV of article 15 of the Law on Personal Data, as well as pursuant to articles 18, 19 and 20 thereof, GRUPO SIMCA, considering for the particular case the existing risk, the possible consequences for the Holder, the sensitivity of the Personal Data and the technological development, has established the security, administrative, technical and physical measures that allow to protect the Personal Data of the Holder against damage, loss, alteration, destruction, or against the use, access or unauthorized processing. GRUPO SIMCA declares to the Holder that such security measures are not, in any way, less than those that GRUPO SIMCA has implemented for the Processing of its own information. GRUPO SIMCA undertakes before the Holder that any breach of security that occurs in any phase of the Processing of the Personal Data of the Holder, shall be immediately informed to the latter so that it can take the corresponding measures in defense of its rights. Finally, GRUPO SIMCA guarantees to the Holder that both GRUPO SIMCA as well as any Third Party that intervenes in the Processing of the Personal Data of the Holder, shall keep the confidentiality thereof, even after the end of its relationship with the Holder.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h2>6. DERECHOS ARCO Y MEDIOS PARA SU EJERCICIO</h2>
+        <h3>6.1. Derechos ARCO</h3>
+        <p>En cumplimiento de la fracción V del artículo 15 de la Ley de Datos Personales, GRUPO SIMCA hace del conocimiento del Titular que, con respecto al Tratamiento de sus Datos Personales, el Titular tiene los derechos que se señalan a continuación (en conjunto denominados "Derechos ARCO"):</p>
+        <p>i. Derecho de Acceso: Derecho a conocer qué Datos Personales tenemos del Titular, para qué finalidad y las condiciones del Tratamiento que GRUPO SIMCA les da.<br>ii. Derecho de Rectificación: Derecho a solicitar la corrección de sus Datos Personales en caso de que estén desactualizados, sean inexactos o estén incompletos.<br>iii. Derecho de Cancelación: Derecho a solicitar a GRUPO SIMCA la eliminación de los Datos Personales del Titular de sus registros o bases de datos cuando el Titular considere que los mismos no están siendo utilizados adecuadamente en términos de la Ley de Datos Personales y del presente Aviso.<br>iv. Derecho de Oposición: Derecho a oponerse al Tratamiento de los Datos Personales del Titular para ciertos fines específicos.<br>v. Derecho de Revocación: Derecho a revocar el Consentimiento (según se define en la fracción IV del artículo 2º de la Ley de Datos Personales) que por medio del presente Aviso otorga a GRUPO SIMCA para el Tratamiento de sus Datos Personales para las finalidades señaladas en los numerales 4.2.1 y 4.2.2 de este Aviso. No obstante ello, el Titular reconoce y acepta que, a pesar de la voluntad de GRUPO SIMCA de garantizar el acceso a este derecho, es posible que no en todos los casos GRUPO SIMCA podrá atender su solicitud o concluir el Tratamiento de forma inmediata. Además, el Titular reconoce y acepta que la revocación de su Consentimiento podría imposibilitar a GRUPO SIMCA para cerrar la Operación, o bien, continuar prestándole al Titular cualquier otro servicio relacionado con la misma e, incluso, en algunos casos, la terminación de la relación jurídica o comercial con GRUPO SIMCA.</p>
+      </div>
+      <div>
+        <h2>6. ARCO RIGHTS AND MEANS TO ITS EXERCISE</h2>
+        <h3>6.1. ARCO Rights</h3>
+        <p>In compliance with section V of article 15 of the Law on Personal Data, GRUPO SIMCA informs the Holder that, with respect to the Processing of its Personal Data, the Holder has the rights indicated below (collectively referred to as the "ARCO Rights", Spanish acronym for "Acceso-Rectificación-Cancelación-Oposición"):</p>
+        <p>i. Right of Access: Right to know what Personal Data of the Holder is in possession of GRUPO SIMCA, what is the purpose of requiring such information and the terms and conditions of the Processing thereof.<br>ii. Right of Correction: Right to request the correction of the Personal Data of the Holder in case they are outdated, inaccurate or incomplete.<br>iii. Right of Cancellation: Right to request from GRUPO SIMCA the deletion of the Personal Data of the Holder from its records or databases if the Holder considers that they are not being used properly in accordance with the provisions of the Law on Personal Data and those of this Notice.<br>iv. Right of Opposition: Right to object to the Processing of the Personal Data of the Holder for certain specific purposes.<br>v. Right of Revocation: Right to revoke the Consent (as defined in section IV of article 2 of the Law on Personal Data) herein granted by GRUPO SIMCA for the Treatment of the Personal Data of the Holder for the purposes indicated in the paragraphs 4.2.1 and 4.2.2 hereof. Notwithstanding the foregoing, the Holder acknowledges and accepts that, despite GRUPO SIMCA's willingness to guarantee access to this right, it is possible that not in all cases GRUPO SIMCA shall be able to attend the Holder's request or terminate the Processing immediately. In addition, the Holder acknowledges and accepts that the revocation of its Consent could make it impossible for GRUPO SIMCA to close the Transaction, or continue to provide the Holder with any other service related thereto and, even in some cases, may cause the termination of the legal or commercial relationship with GRUPO SIMCA.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h3>6.2. Medios para Ejercer los Derechos ARCO</h3>
+        <p>Para el ejercicio de cualesquiera de los Derechos ARCO, el Titular deberá elaborar y enviar a cualquiera de los domicilios de GRUPO SIMCA señalados más adelante, una solicitud por escrito que deberá contener, entre otras cosas, lo siguiente (la "Solicitud"):</p>
+        <p>i. El nombre del Titular, domicilio y correo electrónico para comunicarle la respuesta a su Solicitud.<br>ii. Los documentos que acrediten la identidad o, en su caso, la representación legal del Titular.<br>iii. La descripción clara y precisa de los Datos Personales respecto de los que se busca ejercer alguno de los Derechos ARCO. En caso del derecho de rectificación, el Titular deberá indicar las modificaciones a realizar y aportar la documentación que sustente su Solicitud.<br>iv. Cualquier otro elemento o documento que facilite la localización de los Datos Personales.</p>
+        <p>Recibida la Solicitud por parte de GRUPO SIMCA, ésta dará respuesta a la misma en un plazo no mayor a 15 (quince) días hábiles a través del correo electrónico que haya sido proporcionado para tal efecto.</p>
+      </div>
+      <div>
+        <h3>6.2. Means to Exercise the ARCO Rights</h3>
+        <p>For the exercise of any of the ARCO Rights, the Holder must prepare and send to any of the GRUPO SIMCA addresses indicated below, a written request that must contain, inter alia, the following (the "Request"):</p>
+        <p>i. The Holder's name, address and email to communicate the response to its Request.<br>ii. The documents that prove the identity or, where appropriate, the legal representation of the Holder.<br>iii. The clear and precise description of the Personal Data regarding which the Holder is exercising any of the ARCO Rights. In the case of the right of correction, the Holder shall indicate the modifications to be made and provide the documentation that supports his Request.<br>iv. Any other element or document that facilitates the location of the relevant Personal Data.</p>
+        <p>Once the Request has been received by GRUPO SIMCA, it shall respond it within a period not exceeding 15 (fifteen) business days through the email that has been provided for this purpose by the Holder.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h3>6.3. Datos de Contacto</h3>
+        <p>i. Dirección en Mérida: Calle 40 Diagonal, Tablaje 41931, entre Avenida Temozón y Calle 71, Temozón Norte, Código Postal 97302, Mérida, Yucatán, México.<br>i.1. Dirección en Playa del Carmen: Avenida CTM entre 1a y Cozumel, Edificio "Studio One", local 5, Colonia Zazil Ha, Código Postal 77710, Playa del Carmen, Quintana Roo, México.<br>ii. Teléfono: + 52 (999) 926 0888 - Extensión 202.<br>iii. Correo Electrónico: datospersonales@simca.mx.</p>
+      </div>
+      <div>
+        <h3>6.3. Contact Details</h3>
+        <p>i. Address in Mérida: Calle 40 Diagonal, Tablaje 41931, between Avenida Temozón and Calle 71, Temozón Norte, Zip Code 97302, Mérida, Yucatán, Mexico.<br>i.1. Address in Playa del Carmen: CTM Avenue between 1st and Cozumel, "Studio One" Building, Suite 5, Zazil Ha, Zip Code 77710, Playa del Carmen, Quintana Roo, Mexico.<br>ii. Phone number: + 52 (999) 926 0888 - Extension 202.<br>iii. Email: datospersonales@simca.mx.</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div>
+        <h2>7. TRANSFERENCIAS AUTORIZADAS</h2>
+        <p>GRUPO SIMCA, sin necesidad de autorización previa por parte del Titular, podrá revelar, divulgar y/o transferir dentro y fuera del país a los Terceros señalados más adelante (únicamente para los fines ahí indicados) los Datos Personales del Titular (con excepción de los Datos Financieros y, en algunos casos, de los Datos Sensibles) (las "Transferencias Autorizadas"):</p>
+      </div>
+      <div>
+        <h2>7. AUTHORIZED TRANSFERS</h2>
+        <p>GRUPO SIMCA, without prior authorization by the Holder, may disclose and/or transfer in and out of the country to the Third Parties indicated below (only for the purposes indicated therein) the Personal Data of the Holder (with the exception of the Financial Data and, in some cases, the Sensitive Data) (the "Authorized Transfers"):</p>
+      </div>
+    </div>
+
+    <div class="block two-cols small">
+      <div>
+        <table class="table">
+          <thead>
+            <tr><th>Tercero</th><th>Finalidad</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Fedatario Público</td><td>Protocolización de los instrumentos legales relacionados con, o derivados de, la Operación</td></tr>
+            <tr><td>Instituciones Financieras e INFONAVIT</td><td>Trámite de crédito para la Operación</td></tr>
+            <tr><td>Administrador del Condominio</td><td>Gestión de la administración y operación de la Unidad de acuerdo con el Reglamento del Condominio</td></tr>
+            <tr><td>SAT</td><td>Cumplimiento de Obligaciones Fiscales</td></tr>
+            <tr><td>Otras Empresas Inmobiliarias y Socios Comerciales</td><td>Envío de promociones y publicidad al Titular de productos o servicios que pudieran ser de utilidad</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <table class="table">
+          <thead>
+            <tr><th>Third Party</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Public Notary</td><td>Formalization of legal instruments related to, or derived from, the Transaction</td></tr>
+            <tr><td>Financial Institutions and INFONAVIT</td><td>Credit processing for the Transaction</td></tr>
+            <tr><td>Condominium Administrator</td><td>Management of the administration and Transaction of the Unit in accordance with the Condominium Regulations</td></tr>
+            <tr><td>SAT (Mexican IRS)</td><td>Compliance with Tax Obligations</td></tr>
+            <tr><td>Other Real-Estate Companies and Business Partners</td><td>Sending promotions and advertising to the Holder of products or services that could be useful</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div><p>Los Terceros que reciban la información relacionada con los Datos Personales del Titular están obligados a cumplir con lo previsto en este Aviso de Privacidad, así como con la legislación aplicable en México.</p></div>
+      <div><p>The Third Parties that receive the information related to the Personal Data of the Holder are obliged to comply with the provisions of this Privacy Notice, as well as with the applicable regulations in Mexico.</p></div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div><h2>8. CAMBIOS AL AVISO DE PRIVACIDAD</h2></div>
+      <div><h2>8. AMENDMENTS TO PRIVACY NOTICE</h2></div>
+    </div>
+    <div class="block two-cols small justify">
+      <div><p>GRUPO SIMCA se reserva el derecho de modificar en cualquier momento el contenido del presente Aviso de Privacidad. Para que surtan efectos las modificaciones en cuestión, bastará que GRUPO SIMCA envíe la nueva versión del Aviso de Privacidad a la dirección de correo electrónico proporcionado por el Titular.</p></div>
+      <div><p>GRUPO SIMCA reserves the right to amend the content of this Privacy Notice at any time. For the corresponding amendments to take effect, GRUPO SIMCA shall send the new version of the Privacy Notice to the email address provided by the Holder herein.</p></div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div><h2>9. CONSENTIMIENTO</h2></div>
+      <div><h2>9. CONSENT</h2></div>
+    </div>
+    <div class="block two-cols small justify">
+      <div><p>La rúbrica en todas las páginas del presente Aviso de Privacidad y la firma en la última página del mismo por parte del Titular cuyos datos se asientan a continuación, implican el consentimiento pleno y sin reservas del Titular, a partir de la fecha de su firma, para el Tratamiento de sus Datos Personales de acuerdo con el presente Aviso de Privacidad.</p></div>
+      <div><p>The initials on all pages of this Privacy Notice and the signature on the last page thereof by the Holder whose data is set forth below, imply the full and unreserved consent of the Holder, as of the date of its signature, for the Processing of its Personal Data in accordance with this Privacy Notice.</p></div>
+    </div>
+
+    <div class="block two-cols small justify">
+      <div><h2>10. VERSIÓN PREVALECIENTE</h2></div>
+      <div><h2>10. PREVAILING VERSION</h2></div>
+    </div>
+    <div class="block two-cols small justify">
+      <div><p>Este Aviso de Privacidad, para facilidad de su lectura en caso de que el Titular sea extranjero, está redactado tanto en Español como en Inglés. En caso de que para efectos de interpretación surgiera alguna contradicción entre una versión y otra, la versión en Español prevalecerá por sobre la versión en Inglés.</p></div>
+      <div><p>This Privacy Notice, for ease of reading in case the Holder is a foreign citizen, has been prepared in both Spanish and English. In the event that for interpretation purposes a contradiction arises between one version and another, the Spanish version shall prevail over the English version.</p></div>
+    </div>
+
+    <div class="block">
+      <div class="small bold" style="text-align:center;">11. DATOS DEL TITULAR/HOLDER'S DETAILS:</div>
+      <div class="fields">
+        <div>i. NOMBRE O RAZÓN SOCIAL / NAME OR BUSINESS NAME:</div>
+        <div class="field-line">{{spanNombreCompleto}}</div>
+        <div>ii. DIRECCIÓN / ADDRESS:</div>
+        <div class="field-line">{{spanDomicilio}}</div>
+        <div>iii. TELÉFONO / PHONE NUMBER:</div>
+        <div class="field-line">{{spanTelefono}}</div>
+        <div>iv. CORREO ELECTRÓNICO / EMAIL:</div>
+        <div class="field-line">{{spanEmail}}</div>
+        <div>v. FECHA / DATE:</div>
+        <div class="field-line">{{spanFecha}}</div>
+      </div>
+
+      <div class="signature">
+        <div class="bold">FIRMA / SIGNATURE</div>
+        <div class="signature-line"></div>
+        <div>[Si es persona física/If natural person: "Por su Propio Derecho/In its Own Right".<br>Si es persona moral/If company: "En representación del Titular/On behalf of Holder"]</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function paginate() {
+      const sourceBlocks = Array.from(document.querySelectorAll('#blocks .block'));
+      const pages = document.getElementById('pages');
+      const OVERFLOW_EPS = 1;
+
+      function overflows(contentEl) {
+        return contentEl.scrollHeight > contentEl.clientHeight + OVERFLOW_EPS;
+      }
+
+      function isMeaningful(block) {
+        if (!block) return false;
+        const text = (block.textContent || '').replace(/\s+/g, ' ').trim();
+        if (text.length > 0) return true;
+        return Boolean(block.querySelector('table, img, .signature, .field-line'));
+      }
+
+      function splitTwoColumnBlock(block) {
+        if (!block.classList.contains('two-cols')) return [block];
+        const cols = Array.from(block.children || []);
+        if (cols.length !== 2) return [block];
+
+        function splitParagraphNode(node) {
+          const tag = (node.tagName || '').toUpperCase();
+          if (tag !== 'P') return [node.cloneNode(true)];
+
+          const html = node.innerHTML || '';
+          const hasBreaks = /<br\s*\/?>/i.test(html);
+          if (hasBreaks) {
+            const parts = html
+              .split(/<br\s*\/?>/i)
+              .map((s) => s.trim())
+              .filter(Boolean);
+            if (parts.length <= 1) return [node.cloneNode(true)];
+
+            const out = [];
+            const chunkSize = 3;
+            for (let i = 0; i < parts.length; i += chunkSize) {
+              const p = document.createElement('p');
+              p.innerHTML = parts.slice(i, i + chunkSize).join('<br>');
+              out.push(p);
+            }
+            return out;
+          }
+
+          const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+          if (text.length < 420) return [node.cloneNode(true)];
+
+          const sentences = text.split(/(?<=[\.\?\!;:])\s+/).filter(Boolean);
+          if (sentences.length <= 1) return [node.cloneNode(true)];
+
+          const out = [];
+          let bucket = [];
+          let size = 0;
+          const maxChars = 360;
+          for (const s of sentences) {
+            if (size + s.length > maxChars && bucket.length) {
+              const p = document.createElement('p');
+              p.textContent = bucket.join(' ');
+              out.push(p);
+              bucket = [s];
+              size = s.length;
+            } else {
+              bucket.push(s);
+              size += s.length;
+            }
+          }
+          if (bucket.length) {
+            const p = document.createElement('p');
+            p.textContent = bucket.join(' ');
+            out.push(p);
+          }
+          return out.length ? out : [node.cloneNode(true)];
+        }
+
+        function flattenColumnItems(colEl) {
+          const children = Array.from(colEl.children || []);
+          const out = [];
+          for (const child of children) out.push(...splitParagraphNode(child));
+          return out;
+        }
+
+        const leftItems = flattenColumnItems(cols[0]);
+        const rightItems = flattenColumnItems(cols[1]);
+        if (leftItems.length <= 1 && rightItems.length <= 1) return [block];
+
+        const count = Math.max(leftItems.length, rightItems.length);
+        const chunks = [];
+        for (let i = 0; i < count; i += 1) {
+          const l = leftItems[i];
+          const r = rightItems[i];
+          if (!l && !r) continue;
+
+          const chunk = block.cloneNode(false);
+          const lWrap = document.createElement('div');
+          const rWrap = document.createElement('div');
+          if (l) lWrap.appendChild(l.cloneNode(true));
+          if (r) rWrap.appendChild(r.cloneNode(true));
+          chunk.appendChild(lWrap);
+          chunk.appendChild(rWrap);
+          chunks.push(chunk);
+        }
+        return chunks.length ? chunks : [block];
+      }
+
+      function expandBlock(block) {
+        const parts = splitTwoColumnBlock(block);
+        if (parts.length === 1) return [block.cloneNode(true)];
+        return parts;
+      }
+
+      function createPage() {
+        const page = document.createElement('section');
+        page.className = 'page';
+        const content = document.createElement('div');
+        content.className = 'content';
+        const footer = document.createElement('div');
+        footer.className = 'footer';
+        footer.innerHTML = '<div class="l">FR-VEN-35 AP B</div><div class="c">version 01</div><div class="r">0</div>';
+        page.appendChild(content);
+        page.appendChild(footer);
+        pages.appendChild(page);
+        return { page, content };
+      }
+
+      const queue = sourceBlocks
+        .flatMap((b) => expandBlock(b))
+        .filter((b) => isMeaningful(b));
+      let current = createPage();
+
+      while (queue.length) {
+        const block = queue.shift();
+
+        current.content.appendChild(block);
+        if (!overflows(current.content)) continue;
+
+        current.content.removeChild(block);
+        current = createPage();
+        current.content.appendChild(block);
+      }
+
+      const pageEls = Array.from(pages.querySelectorAll('.page'));
+      pageEls.forEach((p) => {
+        const c = p.querySelector('.content');
+        if (!c || !c.childElementCount) p.remove();
+      });
+
+      const finalPages = pages.querySelectorAll('.page');
+      finalPages.forEach((p, i) => {
+        const num = p.querySelector('.footer .r');
+        if (num) num.textContent = String(i + 1);
+      });
+    })();
+  </script>
+</body>
+</html>

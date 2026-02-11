@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BENEFICIARIO CONTROLADOR PF -BILINGÜE - FR-VEN-19</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; background: #f6f7f9; }
+    .wrap { max-width: 980px; margin: 0 auto; background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    label { font-size: 12px; color: #374151; display:block; margin-bottom:4px; }
+    input, select { width: 100%; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; height: 28px; box-sizing: border-box; }
+    .section { margin: 16px 0; padding-top: 12px; border-top: 1px solid #eee; }
+    .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .btn { background: #111827; color: #fff; border: none; padding: 10px 14px; cursor: pointer; }
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
+    .checks label { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .checks input[type="checkbox"], .checks input[type="radio"] {
+      width: 20px; height: 20px; margin: 0;
+      accent-color: #7c3aed;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>BENEFICIARIO CONTROLADOR PF -BILINGÜE - FR-VEN-19</h1>
+
+    <div class="section">
+      <h3>Encabezado</h3>
+      <div class="grid">
+        <div><label>Lugar (ES)</label><input name="cbLugarES" /></div>
+        <div><label>Place (EN)</label><input name="cbLugarEN" /></div>
+        <div><label>Día (ES)</label><input name="cbDiaES" /></div>
+        <div><label>Day (EN)</label><input name="cbDiaEN" /></div>
+        <div><label>Mes (ES)</label><input name="cbMesES" /></div>
+        <div><label>Month (EN)</label><input name="cbMesEN" /></div>
+        <div><label>Año (ES)</label><input name="cbAnioES" /></div>
+        <div><label>Year (EN)</label><input name="cbAnioEN" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Empresa</h3>
+      <div class="grid">
+        <div>
+          <label>Razón social (ES/EN)</label>
+          <select name="cbEmpresaES">
+            <option value="">Selecciona...</option>
+            <option>DESARROLLOS SIMCA, S.A.P.I. DE C.V.</option>
+            <option>GRUPO KATNA, S.A. DE C.V.</option>
+            <option>INMOBILIARIA HABITACIONAL PENINSULAR, S.A. DE C.V.</option>
+            <option>COOPERATIVA INMOBILIARIA MONCA, S.C. DE R.L. DE C.V.</option>
+            <option>NORTEMERIDA LA CIUDAD QUE QUEREMOS, S.A. DE C.V.</option>
+            <option>DESARROLLADORA G7, S.A. DE C.V.</option>
+            <option>DESARROLLADORA TAMANCHE, S.A. DE C.V.</option>
+            <option>DESARROLLOS MONSI, S.A. DE C.V.</option>
+            <option>DOWN PAYMENT FC, S.A. DE C.V.</option>
+            <option>PRIMERA NACION, S.A. DE C.V.</option>
+            <option>BANCO INVEX, S.A. INSTITUCION DE BANCA MULTIPLE, FIDEICOMISO EMPRESARIAL 3798</option>
+            <option>PARQUE LOGISTICO ENDEMICO, S.A.P.I. DE C.V.</option>
+            <option>YUCALPETEN RESORT & MARINA, S.A.P.I. DE C.V.</option>
+            <option>ALSA INDUSTRIAS, S.A. DE C.V.</option>
+            <option>MUUK DESARROLLADORES, S.A. DE C.V.</option>
+            <option>GRAN PROVINCIA GOLF, S.A. DE C.V.</option>
+            <option>HABITACIONES DEL SURESTE, S.A. DE C.V.</option>
+          </select>
+        </div>
+        <div><label>Domicilio empresa (ES)</label><input name="cbEmpresaDomicilioES" /></div>
+        <div><label>Business name (EN)</label><input name="cbEmpresaEN" /></div>
+        <div><label>Address (EN)</label><input name="cbEmpresaDomicilioEN" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Operación</h3>
+      <div class="grid">
+        <div><label>Desarrollo (ES)</label><input name="cbDesarrolloES" /></div>
+        <div><label>Desarrollo (EN)</label><input name="cbDesarrolloEN" /></div>
+        <div><label>Unidad (ES)</label><input name="cbUnidadES" /></div>
+        <div><label>Unidad (EN)</label><input name="cbUnidadEN" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>¿Existe Beneficiario Controlador?</h3>
+      <div class="checks">
+        <label><input type="radio" name="cbExiste" value="yes" /> Sí / Yes</label>
+        <label><input type="radio" name="cbExiste" value="no" /> No</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Datos del Beneficiario Controlador</h3>
+      <div class="grid">
+        <div><label>Nombre completo</label><input name="cbNombre" /></div>
+        <div><label>Fecha de nacimiento</label><input name="cbFechaNacimiento" /></div>
+        <div><label>Nacionalidad</label><input name="cbNacionalidad" /></div>
+        <div><label>RFC o CURP</label><input name="cbRFC" /></div>
+        <div><label>Dirección</label><input name="cbDireccion" /></div>
+        <div><label>Tipo y No. Identificación</label><input name="cbID" /></div>
+        <div><label>Estado civil</label><input name="cbEstadoCivil" /></div>
+        <div><label>Teléfono</label><input name="cbTelefono" /></div>
+        <div><label>Email</label><input name="cbEmail" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Firma</h3>
+      <div class="grid">
+        <div><label>Nombre del cliente (firma)</label><input name="cbNombre1" /></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="download">Descargar PDF</button>
+    </div>
+  </div>
+
+<script>
+  const form = document.querySelector('.wrap');
+  const btn = document.getElementById('download');
+
+  function getData() {
+    const data = {};
+    form.querySelectorAll('input, select').forEach((el) => {
+      if (el.type === 'radio') {
+        if (el.checked) data[el.name] = el.value;
+      } else {
+        data[el.name] = el.value || '';
+      }
+    });
+    // map EN company name same as ES if empty
+    if (!data.cbEmpresaEN) data.cbEmpresaEN = data.cbEmpresaES || '';
+
+    // circles
+    if (data.cbExiste === 'yes') data.cbExisteyes = 'checked';
+    if (data.cbExiste === 'no') data.cbExisteno = 'checked';
+
+    return data;
+  }
+
+  btn.addEventListener('click', async () => {
+    const payload = getData();
+    const res = await fetch('/format/19/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'FR-VEN-19.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+</script>
+</body>
+</html>

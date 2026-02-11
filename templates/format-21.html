@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FR-VEN-21 Consulta de Listas de Personas Bloqueadas</title>
+  <style>
+    @page { size: Letter; margin: 0; }
+    :root {
+      --page-w: 216mm;
+      --page-h: 279mm;
+      --pad: 16mm;
+      --border-inset: 8mm;
+      --footer-space: 18mm;
+      --ink: #111;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: var(--ink);
+      font-family: "Times New Roman", Times, serif;
+      font-size: 10.5pt;
+      line-height: 1.2;
+    }
+    .controls {
+      width: var(--page-w);
+      margin: 12px auto 0;
+      text-align: right;
+    }
+    .btn {
+      padding: 8px 12px;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      cursor: pointer;
+    }
+    .page {
+      width: var(--page-w);
+      height: var(--page-h);
+      padding: var(--pad);
+      position: relative;
+      background: #fff;
+      page-break-after: always;
+      overflow: hidden;
+    }
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: url('{{watermarkUrl}}') center/54% no-repeat;
+      opacity: 0.1;
+      pointer-events: none;
+    }
+    .page::after {
+      content: "";
+      position: absolute;
+      left: var(--border-inset);
+      right: var(--border-inset);
+      top: var(--border-inset);
+      bottom: var(--border-inset);
+      border: 0.5pt solid #000;
+      pointer-events: none;
+    }
+    .content {
+      position: relative;
+      z-index: 1;
+      height: calc(var(--page-h) - (var(--pad) * 2) - var(--footer-space));
+      overflow: hidden;
+    }
+    .footer {
+      position: absolute;
+      left: var(--border-inset);
+      right: var(--border-inset);
+      bottom: var(--border-inset);
+      display: flex;
+      align-items: center;
+      font-size: 8pt;
+      z-index: 1;
+    }
+    .footer .l { width: 28%; font-weight: 700; }
+    .footer .c { width: 44%; text-align: center; font-weight: 700; }
+    .footer .r { width: 28%; text-align: right; font-weight: 700; font-size: 10pt; }
+
+    .title {
+      text-align: center;
+      font-weight: 700;
+      margin: 0 0 6px;
+      font-size: 13pt;
+    }
+    .line {
+      border-bottom: 1px solid #000;
+      height: 15px;
+      display: inline-block;
+      width: 100%;
+      padding: 1px 3px 0;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .small { font-size: 9.5pt; }
+    .bold { font-weight: 700; }
+    .justify { text-align: left; }
+    .mb8 { margin-bottom: 8px; }
+    .mb10 { margin-bottom: 10px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 4px 5px;
+      vertical-align: top;
+    }
+    th { font-weight: 700; text-align: center; }
+    .no-border, .no-border td { border: 0; padding: 0; }
+
+    .field-table td:first-child {
+      width: 32%;
+      border: 0;
+      padding: 3px 0;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+    .field-table td:last-child {
+      border: 0;
+      padding: 2px 0 2px 8px;
+    }
+    .signature {
+      margin-top: 24px;
+      text-align: center;
+    }
+    .signature-line {
+      width: 60%;
+      margin: 28px auto 6px;
+      border-bottom: 1px solid #000;
+      height: 1px;
+    }
+    .clip-2 {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+      word-break: break-word;
+      line-height: 1.15;
+      max-height: 2.3em;
+    }
+    @media print {
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body class="{{bodyClass}}">
+  <div class="controls">{{controls}}</div>
+
+  <section class="page">
+    <div class="content">
+      <h1 class="title">INFORME DE VERIFICACION EN LISTAS DE PERSONAS BLOQUEADAS</h1>
+
+      <p class="small mb10" style="text-align:right;">
+        [{{lugar_emision}}], a [{{dia}}] de [{{mes}}] de 20[{{anio}}]
+      </p>
+
+      <p class="small justify mb10">
+        <span class="bold">Asunto.-</span> Verificacion de la NO inclusion del cliente en las Listas de Personas Bloqueadas derivado de las negociaciones para la posible adquisicion de la Unidad <span class="bold">{{numero_unidad}}</span> del desarrollo <span class="bold">{{nombre_desarrollo}}</span>.
+      </p>
+
+      <p class="small justify mb10">
+        El presente informe sobre la verificacion de la NO inclusion de la persona cuyos datos personales se indican en la <span class="bold">Tabla 1</span> (el "Cliente") en las listas que publica la Unidad de Inteligencia Financiera a traves de su portal de Internet y que se indican en la <span class="bold">Tabla 2</span> (las "Listas de Personas Bloqueadas"), lo emite el(la) suscrito(a), asistente de ventas en la empresa <span class="bold">{{empresa_grupo}}</span> (la "Desarrolladora"), como constancia del cumplimiento del articulo 27 relacionado con el articulo 38 de las Reglas de Caracter General a que se refiere la Ley Federal para la Prevencion e Identificacion de Operaciones con Recursos de Procedencia Ilicita, y derivado de las negociaciones con el Cliente para llevar a cabo la operacion para la adquisicion de los derechos de [propiedad/uso y goce] (la "Operacion") de la unidad no. <span class="bold">{{numero_unidad_2}}</span> del desarrollo inmobiliario denominado <span class="bold">{{nombre_desarrollo_2}}</span> ubicado en la ciudad de <span class="bold">{{ciudad}}</span>, Mexico, el cual es actualmente desarrollado y comercializado por la Desarrolladora.
+      </p>
+
+      <p class="bold small mb8" style="text-align:center;">Tabla 1 - Datos del Cliente</p>
+      <table class="field-table mb10">
+        <tr><td>Nombre</td><td><span class="line">{{cliente_nombre}}</span></td></tr>
+        <tr><td>Tipo y No. de Identificacion</td><td><span class="line">{{cliente_identificacion}}</span></td></tr>
+        <tr><td>Nacionalidad</td><td><span class="line">{{cliente_nacionalidad}}</span></td></tr>
+        <tr><td>Domicilio</td><td><span class="line">{{cliente_domicilio}}</span></td></tr>
+        <tr><td>RFC/TIN</td><td><span class="line">{{cliente_rfc}}</span></td></tr>
+        <tr><td>CURP/SSN</td><td><span class="line">{{cliente_curp}}</span></td></tr>
+      </table>
+
+      <p class="small justify mb8">
+        En este acto el(la) suscrito(a) manifiesta, bajo protesta de decir verdad, que, en las fechas senaladas en la <span class="bold">Tabla 2</span>, verifico que el Cliente NO esta incluido en ninguna de las Listas de Personas Bloqueadas a continuacion senaladas:
+      </p>
+
+      <p class="bold small mb8" style="text-align:center;">Tabla 2 - Listas de Personas Bloqueadas</p>
+      <table class="small">
+        <thead>
+          <tr>
+            <th style="width:20%;">Lista</th>
+            <th style="width:30%;">Descripcion</th>
+            <th style="width:20%;">Fecha de Verificacion</th>
+            <th style="width:30%;">Sitio Web</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="bold">ONU 1518SL</td>
+            <td>Lista de Sanciones - Resolucion 1518 de la ONU</td>
+            <td><div class="clip-2">{{fecha_verificacion_1}}</div></td>
+            <td><div class="clip-2">{{sitio_web_1}}</div></td>
+          </tr>
+          <tr>
+            <td class="bold">ONU ISIL/ALQAIDA</td>
+            <td>Lista de Sanciones - ISIL (Da'esh) y Al-Qaida de la ONU</td>
+            <td><div class="clip-2">{{fecha_verificacion_2}}</div></td>
+            <td><div class="clip-2">{{sitio_web_2}}</div></td>
+          </tr>
+          <tr>
+            <td class="bold">ONU CONSOLIDATED</td>
+            <td>Lista de Sanciones consolidada de la ONU</td>
+            <td><div class="clip-2">{{fecha_verificacion_3}}</div></td>
+            <td><div class="clip-2">{{sitio_web_3}}</div></td>
+          </tr>
+          <tr>
+            <td class="bold">OFAC SDN</td>
+            <td>Lista de Personas Bloqueadas SDN de la OFAC</td>
+            <td><div class="clip-2">{{fecha_verificacion_4}}</div></td>
+            <td><div class="clip-2">{{sitio_web_4}}</div></td>
+          </tr>
+          <tr>
+            <td class="bold">OFAC CONSOLIDATED</td>
+            <td>Lista de Personas Bloqueadas Consolidada de la OFAC</td>
+            <td><div class="clip-2">{{fecha_verificacion_5}}</div></td>
+            <td><div class="clip-2">{{sitio_web_5}}</div></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="signature small">
+        <div class="bold">Verifico</div>
+        <div class="signature-line"></div>
+        <div class="bold">[{{vendedor_nombre}}]</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="l">FR-VEN-21 CLPB</div>
+      <div class="c">version 00</div>
+      <div class="r">1</div>
+    </div>
+  </section>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FR-VEN-10 Formulario</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; background: #f6f7f9; }
+    .wrap { max-width: 980px; margin: 0 auto; background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    label { font-size: 12px; color: #374151; display:block; margin-bottom:4px; }
+    input, textarea, select { width: 100%; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; height: 28px; box-sizing: border-box; }
+    textarea { min-height: 60px; height: auto; }
+    .section { margin: 16px 0; padding-top: 12px; border-top: 1px solid #eee; }
+    .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .btn { background: #111827; color: #fff; border: none; padding: 10px 14px; cursor: pointer; }
+    .small { font-size: 12px; color: #6b7280; }
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
+    .checks label { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .checks input[type="checkbox"], .checks input[type="radio"] {
+      width: 20px; height: 20px; margin: 0;
+      accent-color: #7c3aed;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PERSONA FISICA EXTRANJERA</h1>
+    <div class="small">CONOCE A TU CLIENTE - FR-VEN-10</div>
+
+    <div class="section">
+      <h3>Encabezado</h3>
+      <div class="grid">
+        <div>
+          <label>Desarrolladora</label>
+          <select name="desarrolladoraText">
+            <option value="">Selecciona...</option>
+            <option>DESARROLLOS SIMCA, S.A.P.I. DE C.V.</option>
+            <option>GRUPO KATNA, S.A. DE C.V.</option>
+            <option>INMOBILIARIA HABITACIONAL PENINSULAR, S.A. DE C.V.</option>
+            <option>COOPERATIVA INMOBILIARIA MONCA, S.C. DE R.L. DE C.V.</option>
+            <option>NORTEMERIDA LA CIUDAD QUE QUEREMOS, S.A. DE C.V.</option>
+            <option>DESARROLLADORA G7, S.A. DE C.V.</option>
+            <option>DESARROLLADORA TAMANCHE, S.A. DE C.V.</option>
+            <option>DESARROLLOS MONSI, S.A. DE C.V.</option>
+            <option>DOWN PAYMENT FC, S.A. DE C.V.</option>
+            <option>PRIMERA NACION, S.A. DE C.V.</option>
+            <option>BANCO INVEX, S.A. INSTITUCION DE BANCA MULTIPLE, FIDEICOMISO EMPRESARIAL 3798</option>
+            <option>PARQUE LOGISTICO ENDEMICO, S.A.P.I. DE C.V.</option>
+            <option>YUCALPETEN RESORT & MARINA, S.A.P.I. DE C.V.</option>
+            <option>ALSA INDUSTRIAS, S.A. DE C.V.</option>
+            <option>MUUK DESARROLLADORES, S.A. DE C.V.</option>
+            <option>GRAN PROVINCIA GOLF, S.A. DE C.V.</option>
+            <option>HABITACIONES DEL SURESTE, S.A. DE C.V.</option>
+          </select>
+        </div>
+        <div><label>No. de lote</label><input name="txtLoteES" /></div>
+        <div><label>Nombre del desarrollo</label><input name="txtDesarrolloES" /></div>
+        <div><label>Ciudad</label><input name="txtCiudadES" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Datos del cliente</h3>
+      <div class="grid">
+        <div><label>Nombre completo</label><input name="spanNombreCompleto" /></div>
+        <div><label>Fecha de nacimiento</label><input name="spanFechaNacimiento" /></div>
+        <div><label>Lugar de nacimiento</label><input name="spanLugarNacimiento" /></div>
+        <div><label>Nacionalidad</label><input name="spanNacionalidad" /></div>
+        <div><label>Ocupación</label><input name="spanOcupacion" /></div>
+        <div><label>Identificación fiscal</label><input name="spanIdentificacionFiscal" /></div>
+        <div>
+          <label>Uso de factura</label>
+          <select name="spanFactura">
+            <option value="">Selecciona...</option>
+            <option>G01 - Adquisición de mercancías.</option>
+            <option>G02 - Devoluciones, descuentos o bonificaciones.</option>
+            <option>G03 - Gastos en general.</option>
+            <option>I01 - Construcciones.</option>
+            <option>I02 - Mobiliario y equipo de oficina por inversiones.</option>
+            <option>I03 - Equipo de transporte.</option>
+            <option>I04 - Equipo de computo y accesorios.</option>
+            <option>I05 - Dados, troqueles, moldes, matrices y herramental.</option>
+            <option>I06 - Comunicaciones telefónicas.</option>
+            <option>I07 - Comunicaciones satelitales.</option>
+            <option>I08 - Otra maquinaria y equipo.</option>
+            <option>D01 - Honorarios médicos, dentales y gastos hospitalarios.</option>
+            <option>D02 - Gastos médicos por incapacidad o discapacidad.</option>
+            <option>D03 - Gastos funerales.</option>
+            <option>D04 - Donativos.</option>
+            <option>D05 - Intereses reales efectivamente pagados por créditos hipotecarios (casa habitación).</option>
+            <option>D06 - Aportaciones voluntarias al SAR.</option>
+            <option>D07 - Primas por seguros de gastos médicos.</option>
+            <option>D08 - Gastos de transportación escolar obligatoria.</option>
+            <option>D09 - Depósitos en cuentas para el ahorro, primas que tengan como base planes de pensiones.</option>
+            <option>D10 - Pagos por servicios educativos (colegiaturas).</option>
+            <option>P01 - Por definir</option>
+            <option>S01 - Sin efectos fiscales.</option>
+            <option>CP01 - Pagos</option>
+            <option>CN01 - Nómina</option>
+            <option>N/A - No Aplica</option>
+          </select>
+        </div>
+        <div>
+          <label>Régimen SAT</label>
+          <select name="spanRegimen">
+            <option value="">Selecciona...</option>
+            <option>601 General de Ley Personas Morales</option>
+            <option>603 Personas Morales con Fines no Lucrativos</option>
+            <option>605 Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+            <option>606 Arrendamiento</option>
+            <option>607 Régimen de Enajenación o Adquisición de Bienes</option>
+            <option>608 Demás ingresos</option>
+            <option>610 Residentes en el Extranjero sin Establecimiento Permanente en México</option>
+            <option>611 Ingresos por Dividendos (socios y accionistas)</option>
+            <option>612 Personas Físicas con Actividades Empresariales y Profesionales</option>
+            <option>614 Ingresos por intereses</option>
+            <option>615 Régimen de los ingresos por obtención de premios</option>
+            <option>616 Sin obligaciones fiscales</option>
+            <option>620 Sociedades Cooperativas de Producción que optan por diferir sus ingresos</option>
+            <option>621 Incorporación Fiscal</option>
+            <option>622 Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras</option>
+            <option>623 Opcional para Grupos de Sociedades</option>
+            <option>624 Coordinados</option>
+            <option>625 Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas</option>
+            <option>626 Régimen Simplificado de Confianza</option>
+          </select>
+        </div>
+        <div><label>CP SAT</label><input name="spanCodigoPostalSAT" /></div>
+        <div><label>SSN</label><input name="spanSeguridadSocial" /></div>
+        <div><label>Domicilio</label><input name="spanDomicilio" /></div>
+        <div><label>Calle</label><input name="spanCalle" /></div>
+        <div><label>No. exterior</label><input name="spanExterior" /></div>
+        <div><label>No. interior</label><input name="spanInterior" /></div>
+        <div><label>Colonia</label><input name="spanColonia" /></div>
+        <div><label>CP</label><input name="spanCodigoPostal" /></div>
+        <div><label>Ciudad/Estado</label><input name="spanCiudadEstado" /></div>
+        <div><label>Teléfono</label><input name="spanTelefono" /></div>
+        <div><label>Email</label><input name="spanEmail" /></div>
+        <div><label>Tipo y No. Identificación</label><input name="spanTipoIdentificacion" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Apoderado</h3>
+      <div class="grid">
+        <div><label>Nombre</label><input name="spanApoderadoNombre" /></div>
+        <div><label>Fecha nacimiento</label><input name="spanApoderadoFecha" /></div>
+        <div><label>Nacionalidad</label><input name="spanApoderadoNacionalidad" /></div>
+        <div><label>RFC</label><input name="spanApoderadoRFC" /></div>
+        <div><label>SSN</label><input name="spanApoderadoSSN" /></div>
+        <div><label>Poder</label><input name="spanApoderadoPoder" /></div>
+        <div><label>Teléfono</label><input name="spanApoderadoTelefono" /></div>
+        <div><label>Email</label><input name="spanApoderadoEmail" /></div>
+        <div><label>Tipo ID</label><input name="spanApoderadoTipoID" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="checkbox" name="cbPermanente" /> Residente permanente</label>
+        <label><input type="checkbox" name="cbTemporal" /> Residente temporal</label>
+        <label><input type="checkbox" name="cbRemuneradas" /> Visitante actividades remuneradas</label>
+        <label><input type="checkbox" name="cbNegocios" /> Visitante de negocios</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>PEP</h3>
+      <div class="grid">
+        <div><label>Cargo Cliente</label><input name="pepClienteCargo" /></div>
+        <div><label>Cargo Familiar</label><input name="pepFamiliarCargo" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="radio" name="pepCliente" value="yes" /> Cliente Sí</label>
+        <label><input type="radio" name="pepCliente" value="no" /> Cliente No</label>
+        <label><input type="radio" name="pepFamiliar" value="yes" /> Familiar Sí</label>
+        <label><input type="radio" name="pepFamiliar" value="no" /> Familiar No</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Datos PPE</h3>
+      <div class="grid">
+        <div><label>Nombre</label><input name="spanPPENombre" /></div>
+        <div><label>Fecha nacimiento</label><input name="spanPPEFecha" /></div>
+        <div><label>Lugar nacimiento</label><input name="spanPPELugarNacimiento" /></div>
+        <div><label>Nacionalidad</label><input name="spanPPENacionalidad" /></div>
+        <div><label>Ocupación</label><input name="spanPPEOcupacion" /></div>
+        <div><label>RFC</label><input name="spanPPERFC" /></div>
+        <div><label>SSN</label><input name="spanPPESSN" /></div>
+        <div><label>Domicilio</label><input name="spanPPEDomicilio" /></div>
+        <div><label>Calle</label><input name="spanPPECalle" /></div>
+        <div><label>No. exterior</label><input name="spanPPEExterior" /></div>
+        <div><label>No. interior</label><input name="spanPPEInterior" /></div>
+        <div><label>Colonia</label><input name="spanPPEColonia" /></div>
+        <div><label>CP</label><input name="spanPPECodigoPostal" /></div>
+        <div><label>Ciudad</label><input name="spanPPECiudad" /></div>
+        <div><label>Teléfono</label><input name="spanPPETelefono" /></div>
+        <div><label>Email</label><input name="spanPPEEmail" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Documentos adjuntos</h3>
+      <div class="checks">
+        <label><input type="checkbox" name="cbClienteID" /> ID cliente</label>
+        <label><input type="checkbox" name="cbClientePasaporte" /> Pasaporte</label>
+        <label><input type="checkbox" name="cbClienteResTemp" /> Residente temporal</label>
+        <label><input type="checkbox" name="cbClienteCartaNat" /> Carta naturalización</label>
+        <label><input type="checkbox" name="cbClienteResidencia" /> Residencia</label>
+        <label><input type="checkbox" name="cbClienteRFC" /> RFC</label>
+        <label><input type="checkbox" name="cbClienteSSN" /> SSN</label>
+        <label><input type="checkbox" name="cbClienteDomicilio" /> Comprobante domicilio</label>
+        <label><input type="checkbox" name="cbClienteIDRep" /> ID representante</label>
+        <label><input type="checkbox" name="cbClientePoder" /> Poder</label>
+        <label><input type="checkbox" name="cbPPEID" /> PPE ID</label>
+        <label><input type="checkbox" name="cbPPERFC_DOC" /> PPE RFC</label>
+        <label><input type="checkbox" name="cbPPEDomicilio_DOC" /> PPE domicilio</label>
+        <label><input type="checkbox" name="cbPPESSNRep" /> PPE SSN Rep</label>
+      </div>
+      <div class="grid" style="margin-top:10px;">
+        <div><label>Otro (Cliente)</label><input name="spanOtro" /></div>
+        <div><label>Otro (PPE)</label><input name="spanOtro1" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Firma</h3>
+      <div class="grid">
+        <div><label>Nombre del cliente (firma)</label><input name="cbNombre1" /></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="download">Descargar PDF</button>
+    </div>
+  </div>
+
+<script>
+  const form = document.querySelector('.wrap');
+  const btn = document.getElementById('download');
+
+  function getData() {
+    const data = {};
+    form.querySelectorAll('input, textarea, select').forEach((el) => {
+      if (el.type === 'checkbox') {
+        if (el.checked) data[el.name] = 'checked';
+      } else if (el.type === 'radio') {
+        if (el.checked) data[el.name] = el.value;
+      } else {
+        data[el.name] = el.value || '';
+      }
+    });
+    data.txtLoteEN = data.txtLoteES || '';
+    data.txtDesarrolloEN = data.txtDesarrolloES || '';
+    data.txtCiudadEN = data.txtCiudadES || '';
+
+    if (data.pepCliente === 'yes') data.pepClienteYes = 'checked';
+    if (data.pepCliente === 'no') data.pepClienteNo = 'checked';
+    if (data.pepFamiliar === 'yes') data.pepFamiliarYes = 'checked';
+    if (data.pepFamiliar === 'no') data.pepFamiliarNo = 'checked';
+
+    return data;
+  }
+
+  btn.addEventListener('click', async () => {
+    const payload = getData();
+    const res = await fetch('/format/10/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'FR-VEN-10.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+</script>
+</body>
+</html>

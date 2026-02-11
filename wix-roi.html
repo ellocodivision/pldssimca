@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Retorno de Inversión</title>
+<style>
+:root{--bg:#e0ded6;--card:#ffffff;--ink:#1a1a1a;--muted:#6b6b6b;--accent:#ffe816;--accent-2:#111111;--border:#d7d2c6;--shadow:0 10px 30px rgba(0,0,0,.08)}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Instrument Sans","Work Sans",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+.container{max-width:1100px;margin:0 auto;padding:32px 20px 60px}
+.hero{display:flex;gap:24px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.brand img{width:56px;height:56px;object-fit:contain}
+.title{font-size:28px;letter-spacing:.3px;margin:0}
+.subtitle{margin:6px 0 0;color:var(--muted)}
+.controls{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
+.control-card{padding:18px}
+label{display:block;font-weight:600;margin-bottom:6px}
+select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:white;font-size:15px}
+select:disabled{background:#f2f2f2;color:#9b9b9b}
+button{padding:12px 16px;border-radius:12px;border:0;background:var(--accent);color:#111;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.15)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.kv{padding:14px;border-radius:12px;background:#faf8f4;border:1px solid var(--border)}
+.kv .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.kv .v{font-size:16px;font-weight:700;margin-top:6px}
+.section{margin-top:22px}
+.section h3{margin:0 0 10px;font-size:18px}
+.table{width:100%;border-collapse:collapse;font-size:14px}
+.table th,.table td{padding:10px 8px;border-bottom:1px solid var(--border);text-align:left}
+.table th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#ecfeff;color:#0e7490;font-weight:600;font-size:12px}
+.note{color:var(--muted);font-size:13px}
+.results{padding:20px;margin-top:18px}
+.highlight{background:#fff7ed;border:1px dashed #fdba74}
+@media (max-width:900px){.controls{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.grid{grid-template-columns:1fr}}
+@media print{body{background:white} .no-print{display:none !important} .card{box-shadow:none} .container{padding:0} @page{size:A4; margin:12mm}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="brand">
+      <img src="LOGO_URL_HERE" alt="Logo" />
+      <div>
+        <h1 class="title">Retorno de Inversión</h1>
+        <p class="subtitle">Selecciona desarrollo y unidad para ver resultados por temporada.</p>
+      </div>
+    </div>
+    <div class="no-print">
+      <button id="printBtn" disabled>Descargar PDF (A4)</button>
+    </div>
+  </div>
+
+  <div class="card control-card no-print">
+    <div class="controls">
+      <div>
+        <label for="devSelect">Desarrollo</label>
+        <select id="devSelect"><option value="">Selecciona desarrollo...</option></select>
+      </div>
+      <div>
+        <label for="unitSelect">Unidad</label>
+        <select id="unitSelect" disabled><option value="">Selecciona unidad...</option></select>
+      </div>
+      <div>
+        <button id="clearBtn" type="button">Limpiar</button>
+      </div>
+    </div>
+    <div class="controls" style="margin-top:12px">
+      <div>
+        <label for="csvInput">Cargar CSV</label>
+        <input id="csvInput" type="file" accept=".csv" />
+      </div>
+      <div>
+        <div class="note">Sube el CSV para actualizar los datos.</div>
+      </div>
+    </div>
+    <p class="note">Elige un desarrollo para desbloquear las unidades disponibles.</p>
+  </div>
+
+  <div id="results" class="card results" style="display:none"></div>
+</div>
+
+<script>
+let DATA = {rows:[],seasons:{baja:{occ:'',nights:''},media:{occ:'',nights:''},alta:{occ:'',nights:''},fiestas:{occ:'',nights:''}}};
+const devSelect = document.getElementById('devSelect');
+const unitSelect = document.getElementById('unitSelect');
+const results = document.getElementById('results');
+const printBtn = document.getElementById('printBtn');
+const clearBtn = document.getElementById('clearBtn');
+const csvInput = document.getElementById('csvInput');
+
+const COL = {DEV:1, UNIT:2, BED:3, M2:4, SQFT:5, LIST:6, DISC_PCT:7, DISC_AMT:8, FINAL:9, BAJA:12, MEDIA:13, ALTA:14, FIESTAS:15, BAJA2:18, MEDIA2:19, ALTA2:20, FIESTAS2:21, GROSS:23, ADMIN:24, GASTOS:25, MANT:26, PREDIAL:27, ROI:28};
+
+function getSeasons(){
+  return [
+    { label: 'Baja', idx: COL.BAJA, idx2: COL.BAJA2, nights: DATA.seasons.baja.nights || '', occupancy: DATA.seasons.baja.occ || '' },
+    { label: 'Media', idx: COL.MEDIA, idx2: COL.MEDIA2, nights: DATA.seasons.media.nights || '', occupancy: DATA.seasons.media.occ || '' },
+    { label: 'Alta', idx: COL.ALTA, idx2: COL.ALTA2, nights: DATA.seasons.alta.nights || '', occupancy: DATA.seasons.alta.occ || '' },
+    { label: 'Fiestas', idx: COL.FIESTAS, idx2: COL.FIESTAS2, nights: DATA.seasons.fiestas.nights || '', occupancy: DATA.seasons.fiestas.occ || '' }
+  ];
+}
+
+function clean(v){return (v||'').toString().trim();}
+function toNumber(v){const n=parseFloat(String(v||'').replace(/[^0-9.-]/g,''));return isNaN(n)?0:n;}
+function fmtMoney(v){if(v===null||v===undefined||v==='') return '-'; if(typeof v==='string' && v.trim().startsWith('$')) return v.trim(); const n=toNumber(v); return n? n.toLocaleString('en-US',{style:'currency',currency:'USD'}): (String(v).trim()||'-');}
+function fmtText(v){return clean(v)||'-';}
+function get(row, idx){return row[idx-1] ?? '';}
+function firstNonEmpty(row, idx1, idx2){const v1=clean(get(row, idx1)); if(v1) return get(row, idx1); const v2=clean(get(row, idx2)); return v2? get(row, idx2): '';}
+
+let rows = [];
+
+function loadFromRows(rowsAll){
+  if(!rowsAll || rowsAll.length<4) return;
+  const r0 = rowsAll[0] || [];
+  const r1 = rowsAll[1] || [];
+  DATA.seasons = {
+    baja: {occ: r0[11]||'', nights: r1[11]||''},
+    media:{occ: r0[12]||'', nights: r1[12]||''},
+    alta: {occ: r0[13]||'', nights: r1[13]||''},
+    fiestas:{occ: r0[14]||'', nights: r1[14]||''}
+  };
+  rows = rowsAll.slice(3).filter(r=>clean(get(r, COL.DEV)));
+  devSelect.innerHTML = '<option value=\"\">Selecciona desarrollo...</option>';
+  const devs = [...new Set(rows.map(r=>clean(get(r, COL.DEV))))].sort();
+  for(const d of devs){
+    const opt=document.createElement('option');
+    opt.value=d; opt.textContent=d; devSelect.appendChild(opt);
+  }
+  unitSelect.innerHTML = '<option value=\"\">Selecciona unidad...</option>';
+  unitSelect.disabled=true;
+}
+
+csvInput.addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const text = await file.text();
+  const rowsAll = (function(){
+    const rowsRaw=[];
+    let cur='', inq=false;
+    let row=[];
+    for(let i=0;i<text.length;i++){
+      const ch=text[i];
+      if(ch==='\"'){
+        if(inq && text[i+1]==='\"'){cur+='\"'; i++;} else {inq=!inq;}
+      } else if(ch===',' && !inq){
+        row.push(cur); cur='';
+      } else if((ch==='\n' || ch==='\r') && !inq){
+        if(ch==='\r' && text[i+1]==='\n') i++;
+        row.push(cur); rowsRaw.push(row); row=[]; cur='';
+      } else {
+        cur+=ch;
+      }
+    }
+    if(cur.length || row.length){ row.push(cur); rowsRaw.push(row); }
+    return rowsRaw.filter(r=>r.some(c=>String(c||'').trim().length));
+  })();
+  loadFromRows(rowsAll);
+  clearAll();
+});
+
+function populateUnits(dev){
+  unitSelect.innerHTML = '<option value="">Selecciona unidad...</option>';
+  const units = rows.filter(r=>clean(get(r, COL.DEV))===dev).map(r=>clean(get(r, COL.UNIT)));
+  const uniqueUnits=[...new Set(units)].sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
+  for(const u of uniqueUnits){
+    const opt=document.createElement('option');
+    opt.value=u; opt.textContent=u; unitSelect.appendChild(opt);
+  }
+  unitSelect.disabled=false;
+}
+
+function renderResult(row){
+  const gross = get(row, COL.GROSS);
+  const admin = get(row, COL.ADMIN);
+  const gastos = get(row, COL.GASTOS);
+  const mant = get(row, COL.MANT);
+  const predial = get(row, COL.PREDIAL);
+  const net = toNumber(gross) - toNumber(admin) - toNumber(gastos) - toNumber(mant) - toNumber(predial);
+
+  const seasonRows = getSeasons().map(s=>`<tr>
+    <td><span class="badge">${s.label}</span></td>
+    <td>${fmtMoney(firstNonEmpty(row, s.idx, s.idx2))}</td>
+    <td>${fmtText(s.nights)}</td>
+    <td>${fmtText(s.occupancy)}</td>
+  </tr>`).join('');
+
+  results.innerHTML = `
+    <div class="section">
+      <h3>Detalle de la Unidad</h3>
+      <div class="grid">
+        <div class="kv"><div class="k">Desarrollo</div><div class="v">${fmtText(get(row, COL.DEV))}</div></div>
+        <div class="kv"><div class="k">Unidad</div><div class="v">${fmtText(get(row, COL.UNIT))}</div></div>
+        <div class="kv"><div class="k">Recámaras</div><div class="v">${fmtText(get(row, COL.BED))}</div></div>
+        <div class="kv"><div class="k">M2 / SQFT</div><div class="v">${fmtText(get(row, COL.M2))} / ${fmtText(get(row, COL.SQFT))}</div></div>
+        <div class="kv"><div class="k">Precio Lista</div><div class="v">${fmtMoney(get(row, COL.LIST))}</div></div>
+        <div class="kv"><div class="k">Descuento</div><div class="v">${fmtText(get(row, COL.DISC_PCT))} (${fmtMoney(get(row, COL.DISC_AMT))})</div></div>
+        <div class="kv"><div class="k">Precio Final</div><div class="v">${fmtMoney(get(row, COL.FINAL))}</div></div>
+        <div class="kv highlight"><div class="k">Retorno</div><div class="v">${fmtText(get(row, COL.ROI))}</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Temporadas</h3>
+      <table class="table">
+        <thead><tr><th>Temporada</th><th>Precio por noche</th><th>Noches</th><th>Ocupación</th></tr></thead>
+        <tbody>${seasonRows}</tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>Ingresos y Costos</h3>
+      <table class="table">
+        <tbody>
+          <tr><th>Ingreso bruto</th><td>${fmtMoney(gross)}</td></tr>
+          <tr><th>Administración (30%)</th><td>${fmtMoney(admin)}</td></tr>
+          <tr><th>Gastos generales</th><td>${fmtMoney(gastos)}</td></tr>
+          <tr><th>Mantenimiento</th><td>${fmtMoney(mant)}</td></tr>
+          <tr><th>Predial</th><td>${fmtMoney(predial)}</td></tr>
+          <tr><th>Ingreso neto (estimado)</th><td><strong>${fmtMoney(net)}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  results.style.display='block';
+  printBtn.disabled=false;
+}
+
+function clearAll(){
+  devSelect.value='';
+  unitSelect.innerHTML='<option value="">Selecciona unidad...</option>';
+  unitSelect.disabled=true;
+  results.style.display='none';
+  results.innerHTML='';
+  printBtn.disabled=true;
+}
+
+printBtn.addEventListener('click',()=>window.print());
+clearBtn.addEventListener('click',clearAll);
+
+devSelect.addEventListener('change',e=>{
+  const dev=clean(e.target.value);
+  if(!dev){clearAll();return;}
+  populateUnits(dev);
+  results.style.display='none';
+  printBtn.disabled=true;
+});
+
+unitSelect.addEventListener('change',e=>{
+  const dev=clean(devSelect.value);
+  const unit=clean(e.target.value);
+  if(!dev || !unit) return;
+  const row=rows.find(r=>clean(get(r, COL.DEV))===dev && clean(get(r, COL.UNIT))===unit);
+  if(row) renderResult(row);
+});
+</script>
+</body>
+</html>
