@@ -87,13 +87,24 @@ if (AUTH_READY) {
 
 function requireAuth(req, res, next) {
   if (req.isAuthenticated && req.isAuthenticated()) return next();
+  if (String(req.path || '').startsWith('/api/')) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
   return res.redirect('/login');
 }
 
 function requireGerente(req, res, next) {
-  if (!(req.isAuthenticated && req.isAuthenticated())) return res.redirect('/login');
+  if (!(req.isAuthenticated && req.isAuthenticated())) {
+    if (String(req.path || '').startsWith('/api/')) {
+      return res.status(401).json({ error: 'No autenticado' });
+    }
+    return res.redirect('/login');
+  }
   const email = String(req.user && req.user.email || '').toLowerCase();
   if (email === GERENTE_EMAIL) return next();
+  if (String(req.path || '').startsWith('/api/')) {
+    return res.status(403).json({ error: 'No autorizado para este módulo' });
+  }
   return res.status(403).send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />

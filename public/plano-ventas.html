@@ -2357,6 +2357,14 @@
           } catch {}
           throw new Error(message);
         }
+        const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+        if (!contentType.includes("application/pdf")) {
+          let details = "Respuesta inválida del servidor.";
+          try {
+            details = (await response.text()).slice(0, 180);
+          } catch {}
+          throw new Error(`No se recibió PDF. ${details}`);
+        }
         const pdfBlob = await response.blob();
         const blobUrl = URL.createObjectURL(pdfBlob);
         const link = document.createElement("a");
