@@ -1,0 +1,40 @@
+========================================================================================================================
+ORIGINAL: FR-VEN-10 112Identificación del Cliente -Clte.Extranjera -P.Física -Bilingüe.pdf
+MARTIN  : FR-VEN-10 Identificación del Cliente -Clte.Extranjera -P.Física -Bilingüe (VERSION MARTIN).pdf
+IGUAL TEXTO NORMALIZADO: NO
+TOKENS: 1206 vs 1238
+PRIMERA DIFERENCIA token idx=0
+ORIG CONTEXTO: [agregar denominación de la desarrolladora] FR-VEN-10 ID CE PF B version 01 1 FORMATO "CONOCE A TU CLIENTE"
+MART CONTEXTO: FR-VEN-10 ID CE PF B version 01 1 DESARROLLOS SIMCA, S.A.P.I. DE C.V. FORMATO "CONOCE A TU CLIENTE"
+========================================================================================================================
+ORIGINAL: FR-VEN-19 Beneficiario Controlador PF -Bilingüe.pdf
+MARTIN  : FR-VEN-19 Beneficiario Controlador PF -Bilingüe (VERSION MARTIN).pdf
+IGUAL TEXTO NORMALIZADO: NO
+TOKENS: 967 vs 986
+PRIMERA DIFERENCIA token idx=0
+ORIG CONTEXTO: 1 FR-VEN-19 BC PF B versión 01 CARTA DE BENEFICIARIO CONTROLADOR PERSONA FISICA CONTROLLING BENEFICIARY LETTER INDIVIDUAL [señalar
+MART CONTEXTO: FR-VEN-19 BC PF B version 01 1 CARTA DE BENEFICIARIO CONTROLADOR PERSONA FÍSICA CONTROLLING BENEFICIARY LETTER INDIVIDUAL DSD,
+========================================================================================================================
+ORIGINAL: FR-VEN-21 Consulta de Listas de Personas Bloqueadas.pdf
+MARTIN  : FR-VEN-21 Consulta de Listas de Personas Bloqueadas (VERSION MARTIN).pdf
+IGUAL TEXTO NORMALIZADO: NO
+TOKENS: 357 vs 354
+PRIMERA DIFERENCIA token idx=0
+ORIG CONTEXTO: FR-VEN-21 CLPB version 00 INFORME DE VERIFICACIÓN EN LISTAS DE PERSONAS BLOQUEADAS [señalar lugar de emisión], a [*]
+MART CONTEXTO: INFORME DE VERIFICACION EN LISTAS DE PERSONAS BLOQUEADAS [DSD], a [DSASA] de [DSADSA] de 20[SADSA] Asunto.- Verificacion de
+========================================================================================================================
+ORIGINAL: FR-VEN-26 Origen de los Recursos -Bilingüe.pdf
+MARTIN  : FR-VEN-26 Origen de los Recursos -Bilingüe (VERSION MARTIN).pdf
+IGUAL TEXTO NORMALIZADO: NO
+TOKENS: 625 vs 610
+PRIMERA DIFERENCIA token idx=3
+ORIG CONTEXTO: FR-VEN-26 OR B version 00 CARTA DE ORIGEN DE LOS RECURSOS ECONÓMICOS ORIGIN OF ECONOMIC RESOURCES LETTER [señalar lugar de emisión],
+MART CONTEXTO: FR-VEN-26 OR B VERSION 00 1 CARTA DE ORIGEN DE LOS RECURSOS ECONÓMICOS ORIGIN OF ECONOMIC RESOURCES LETTER DSD, a DSASA
+========================================================================================================================
+ORIGINAL: FR-VEN-35 Aviso de Privacidad -Bilingüe - BIOMETRICOS.pdf
+MARTIN  : FR-VEN-35 Aviso de Privacidad -Bilingüe - BIOMETRICOS (VERSION MARTIN).pdf
+IGUAL TEXTO NORMALIZADO: NO
+TOKENS: 4348 vs 4357
+PRIMERA DIFERENCIA token idx=0
+ORIG CONTEXTO: FR-VEN-35 AP B version 01 1 AVISO DE PRIVACIDAD PRIVACY NOTICE 1. DATOS DE LA RESPONSABLE 1. RESPONSIBLE
+MART CONTEXTO: AVISO DE PRIVACIDAD PRIVACY NOTICE 1. DATOS DE LA RESPONSABLE 1. RESPONSIBLE DATA La sociedad DESARROLLOS SIMCA, S.A.P.I.

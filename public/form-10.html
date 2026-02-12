@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FR-VEN-10 Formulario</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 24px; background: #f6f7f9; }
+    body { font-family: Arial, sans-serif; padding: 24px; background: #e0ded6; }
     .wrap { max-width: 980px; margin: 0 auto; background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
     h1 { font-size: 20px; margin: 0 0 12px; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -14,7 +14,7 @@
     textarea { min-height: 60px; height: auto; }
     .section { margin: 16px 0; padding-top: 12px; border-top: 1px solid #eee; }
     .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
-    .btn { background: #111827; color: #fff; border: none; padding: 10px 14px; cursor: pointer; }
+    .btn { background: #ffe816; color: #111; border: 1px solid #111; border-radius: 12px; padding: 10px 14px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.15); }
     .small { font-size: 12px; color: #6b7280; }
     .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
     .checks label { display: flex; align-items: center; gap: 12px; font-size: 13px; }
@@ -25,6 +25,9 @@
   </style>
 </head>
 <body>
+  <div style="max-width:980px;margin:0 auto 12px;">
+    <button type="button" onclick="history.back()" style="padding:8px 12px;border:1px solid #333;border-radius:8px;background:#fff;cursor:pointer;">Regresar</button>
+  </div>
   <div class="wrap">
     <h1>PERSONA FISICA EXTRANJERA</h1>
     <div class="small">CONOCE A TU CLIENTE - FR-VEN-10</div>

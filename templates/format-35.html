@@ -29,10 +29,13 @@
       text-align: right;
     }
     .btn {
-      padding: 8px 12px;
+      padding: 10px 14px;
       border: 1px solid #111;
-      background: #111;
-      color: #fff;
+      background: #ffe816;
+      color: #111;
+      border-radius: 12px;
+      font-weight: 700;
+      box-shadow: 0 8px 20px rgba(0,0,0,.15);
       cursor: pointer;
     }
 
@@ -127,6 +130,9 @@
       vertical-align: top;
     }
     .table th { font-weight: 700; }
+    .data-grid td[colspan="2"] {
+      text-align: center;
+    }
 
     .checkbox-row {
       display: flex;
@@ -247,7 +253,7 @@
 
     <div class="block two-cols small">
       <div>
-        <table class="table">
+        <table class="table data-grid">
           <thead>
             <tr>
               <th>Persona Física</th>
@@ -257,6 +263,7 @@
           <tbody>
             <tr><td>i. Nombre completo</td><td>i. Razón social</td></tr>
             <tr><td>ii. Edad</td><td>ii. Nombre de apoderado</td></tr>
+            <tr><td>iii. Estado civil (régimen patrimonial en caso de ser casado)</td><td>iii. Acta constitutiva y poder</td></tr>
             <tr><td colspan="2">iv. Dirección: calle, número exterior, número interior (en su caso), colonia, código postal, estado, municipio o alcaldía</td></tr>
             <tr><td colspan="2">v. Teléfono</td></tr>
             <tr><td colspan="2">vi. Correo electrónico</td></tr>
@@ -265,7 +272,7 @@
         </table>
       </div>
       <div>
-        <table class="table">
+        <table class="table data-grid">
           <thead>
             <tr>
               <th>Natural Person</th>

@@ -1,0 +1,35 @@
+====================================================================================================
+FORMATO 10
+COINCIDE TEXTO FIJO (filtrado): NO
+TOKENS FIJOS: 1190 vs 1190
+PRIMERA DIF idx=0
+ORIGINAL: FORMATO "CONOCE A TU CLIENTE" Persona Física Extranjera "KNOW YOUR CLIENT" FORM Foreign Individual Se hace referencia a la operación
+MARTIN  : DESARROLLOS SIMCA, S.A.P.I. DE C.V. FORMATO "CONOCE A TU CLIENTE" Persona Física Extranjera "KNOW YOUR CLIENT" FORM Foreign Individual Se
+====================================================================================================
+FORMATO 19
+COINCIDE TEXTO FIJO (filtrado): NO
+TOKENS FIJOS: 944 vs 966
+PRIMERA DIF idx=0
+ORIGINAL: <NUM> CARTA DE BENEFICIARIO CONTROLADOR PERSONA FISICA CONTROLLING BENEFICIARY LETTER INDIVIDUAL <VAR> , a <VAR> de <VAR> de <NUM> <VAR>
+MARTIN  : CARTA DE BENEFICIARIO CONTROLADOR PERSONA FÍSICA CONTROLLING BENEFICIARY LETTER INDIVIDUAL <VAR> , a <VAR> del DSADSA de <VAR> <VAR> ,
+====================================================================================================
+FORMATO 21
+COINCIDE TEXTO FIJO (filtrado): NO
+TOKENS FIJOS: 347 vs 351
+PRIMERA DIF idx=2
+ORIGINAL: INFORME DE VERIFICACIÓN EN LISTAS DE PERSONAS BLOQUEADAS <VAR> , a <VAR> de <VAR> de <NUM> <VAR> Asunto.- Verificación de la NO
+MARTIN  : INFORME DE VERIFICACION EN LISTAS DE PERSONAS BLOQUEADAS <VAR> , a <VAR> de <VAR> de <NUM> <VAR> Asunto.- Verificacion de la NO
+====================================================================================================
+FORMATO 26
+COINCIDE TEXTO FIJO (filtrado): NO
+TOKENS FIJOS: 587 vs 599
+PRIMERA DIF idx=17
+ORIGINAL: RECURSOS ECONÓMICOS ORIGIN OF ECONOMIC RESOURCES LETTER <VAR> , a <VAR> de <VAR> de <NUM> <VAR> <VAR> , on <VAR> <VAR> , <VAR> Asunto.- Manifestación sobre el origen de los recursos económicos
+MARTIN  : RECURSOS ECONÓMICOS ORIGIN OF ECONOMIC RESOURCES LETTER <VAR> , a <VAR> de DSADSA de <VAR> <VAR> , on DSADSA <VAR> , <VAR> DESARROLLOS SIMCA, S.A.P.I. DE C.V. Calle <NUM> Diag x Av.
+====================================================================================================
+FORMATO 35
+COINCIDE TEXTO FIJO (filtrado): NO
+TOKENS FIJOS: 4407 vs 4410
+PRIMERA DIF idx=0
+ORIGINAL: <NUM> AVISO DE PRIVACIDAD PRIVACY NOTICE <NUM> . DATOS DE LA RESPONSABLE <NUM> . RESPONSIBLE DATA La sociedad <VAR> y/o
+MARTIN  : AVISO DE PRIVACIDAD PRIVACY NOTICE <NUM> . DATOS DE LA RESPONSABLE <NUM> . RESPONSIBLE DATA La sociedad DESARROLLOS SIMCA, S.A.P.I.

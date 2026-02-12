@@ -5,34 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Formularios AML</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 24px; background: #f6f7f9; }
+    body { font-family: Arial, sans-serif; padding: 24px; background: #e0ded6; }
     .wrap { max-width: 1100px; margin: 0 auto; background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
     h1 { font-size: 20px; margin: 0 0 12px; }
     h2 { font-size: 16px; margin: 20px 0 8px; }
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    label { font-size: 12px; color: #374151; display:block; margin-bottom:4px; }
-    input, select { width: 100%; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; height: 28px; box-sizing: border-box; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; row-gap: 12px; align-items: start; }
+    .grid > div { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+    .section .grid + .grid { margin-top: 12px; }
+    label { font-size: 12px; color: #374151; display: block; margin: 0; line-height: 1.2; min-height: 14px; }
+    input, select { width: 100%; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; height: 28px; box-sizing: border-box; margin: 0; }
     .section { margin: 16px 0; padding-top: 12px; border-top: 1px solid #eee; }
     .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
-    .btn { background: #111827; color: #fff; border: none; padding: 10px 14px; cursor: pointer; }
-    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
+    .btn { background: #ffe816; color: #111; border: 1px solid #111; border-radius: 12px; padding: 10px 14px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.15); }
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; row-gap: 12px; }
     .checks label { display: flex; align-items: center; gap: 12px; font-size: 13px; }
     .checks input[type="checkbox"], .checks input[type="radio"] {
       width: 20px; height: 20px; margin: 0;
       accent-color: #7c3aed;
     }
     .bar { display:flex; gap:10px; justify-content:flex-end; }
+    .history-panel { margin-top: 14px; padding: 12px; border: 1px solid #d1d5db; background: #fff; }
+    .history-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .history-title { margin: 0; font-size: 14px; }
+    .history-list { display: grid; gap: 8px; max-height: 230px; overflow: auto; }
+    .history-item { border: 1px solid #e5e7eb; padding: 8px; background: #fafafa; }
+    .history-meta { font-size: 11px; color: #4b5563; margin-bottom: 6px; }
+    .history-actions { display: flex; gap: 6px; }
+    .btn-sm { background: #111827; color: #fff; border: none; padding: 6px 8px; cursor: pointer; font-size: 11px; }
+    .btn-sm.light { background: #fff; color: #111827; border: 1px solid #d1d5db; }
   </style>
 </head>
 <body>
+  <div style="max-width:1100px;margin:0 auto 12px;">
+    <button type="button" onclick="history.back()" style="padding:8px 12px;border:1px solid #333;border-radius:8px;background:#fff;cursor:pointer;">Regresar</button>
+  </div>
   <div class="wrap">
     <h1>PERSONA FISICA EXTRANJERA</h1>
+    <div class="history-panel">
+      <div class="history-head">
+        <h3 class="history-title">Historial (ultimos 10 documentos)</h3>
+        <button class="btn-sm" id="saveDraft">Guardar Borrador</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
 
     <div class="section">
-      <h2>Datos compartidos</h2>
+    <h2>FR-VEN-10 — CONOCE A TU CIENTE</h2>
+      <h2>Datos base</h2>
       <div class="grid">
         <div>
-          <label>Desarrolladora (KYC, BC, LB, OR, AP)</label>
+          <label>Desarrolladora</label>
           <select name="desarrolladoraText">
             <option value="">Selecciona...</option>
             <option>DESARROLLOS SIMCA, S.A.P.I. DE C.V.</option>
@@ -54,36 +76,16 @@
             <option>HABITACIONES DEL SURESTE, S.A. DE C.V.</option>
           </select>
         </div>
-        <div>
-          <label>Domicilio de la empresa (BC, OR, AP)</label>
-          <select name="cbEmpresaDomicilioES">
-            <option value="">Selecciona...</option>
-            <option>Calle 40 Diag x Av. Temozón y 71 Tabl 41931, Temozón Norte, Mérida, Yucatán, México CP 97302</option>
-            <option>Calle 68A Norte X Av Siaan Kaan y Carret Fed Cancún-Tulum, Playa del Carmen, Quintana Roo, México CP</option>
-            <option>Calle 4 X 15 y SC No. 170A Piso 8, Col Montecristo, Mérida, Yucatán, México CP 97133</option>
-            <option>Calle 17 No. 104E Col Itzimna, Mérida, Yucatán, México CP 97100</option>
-            <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
-          </select>
-        </div>
-        <div><label>Lugar (BC, LB, OR, AP)</label><input name="cbLugarES" /></div>
-        <div><label>Día (BC, LB, OR, AP)</label><input name="cbDiaES" /></div>
-        <div><label>Mes (BC, LB, OR, AP)</label><input name="cbMesES" /></div>
-        <div><label>Año (BC, LB, OR, AP)</label><input name="cbAnioES" /></div>
-        <div><label>Nombre del desarrollo (KYC, BC, LB, OR)</label><input name="cbDesarrolloES" /></div>
-        <div><label>Unidad / No. de lote (KYC, BC, LB, OR)</label><input name="cbUnidadES" /></div>
-        <div><label>Ciudad (KYC, LB, OR)</label><input name="txtCiudadES" /></div>
-        <div><label>Nombre completo (KYC, LB, AP)</label><input name="spanNombreCompleto" /></div>
-        <div><label>Domicilio (KYC, LB, AP)</label><input name="spanDomicilio" /></div>
-        <div><label>Teléfono (KYC, AP)</label><input name="spanTelefono" /></div>
-        <div><label>Email (KYC, AP)</label><input name="spanEmail" /></div>
-        <div><label>Nacionalidad (KYC, LB)</label><input name="spanNacionalidad" /></div>
-        <div><label>Identificación fiscal / RFC (KYC, LB)</label><input name="spanIdentificacionFiscal" /></div>
-        <div><label>Nombre del cliente (firma) (KYC, BC, OR)</label><input name="cbNombre1" /></div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+        <div><label>Ciudad</label><input name="txtCiudadES" /></div>
+        <div><label>Nombre completo</label><input name="spanNombreCompleto" /></div>
+        <div><label>Domicilio</label><input name="spanDomicilio" /></div>
+        <div><label>Teléfono</label><input name="spanTelefono" /></div>
+        <div><label>Email</label><input name="spanEmail" /></div>
+        <div><label>Nacionalidad</label><input name="spanNacionalidad" /></div>
+        <div><label>Identificación fiscal / RFC</label><input name="spanIdentificacionFiscal" /></div>
       </div>
-    </div>
-
-    <div class="section">
-    <h2>FR-VEN-10 — CONOCE A TU CIENTE</h2>
       <div class="grid">
         <div><label>Fecha de nacimiento</label><input name="spanFechaNacimiento" /></div>
         <div><label>Lugar de nacimiento</label><input name="spanLugarNacimiento" /></div>
@@ -238,6 +240,31 @@
 
     <div class="section">
       <h2>FR-VEN-19 — BENEFICIARIO CONTROLADOR</h2>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="radio" name="cbExiste" value="yes" /> Existe beneficiario: Sí</label>
+        <label><input type="radio" name="cbExiste" value="no" /> Existe beneficiario: No</label>
+      </div>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div>
+          <label>Domicilio de la empresa</label>
+          <select name="cbEmpresaDomicilioES">
+            <option value="">Selecciona...</option>
+            <option>Calle 40 Diag x Av. Temozón y 71 Tabl 41931, Temozón Norte, Mérida, Yucatán, México CP 97302</option>
+            <option>Calle 68A Norte X Av Siaan Kaan y Carret Fed Cancún-Tulum, Playa del Carmen, Quintana Roo, México CP</option>
+            <option>Calle 4 X 15 y SC No. 170A Piso 8, Col Montecristo, Mérida, Yucatán, México CP 97133</option>
+            <option>Calle 17 No. 104E Col Itzimna, Mérida, Yucatán, México CP 97100</option>
+            <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
+          </select>
+        </div>
+        <div><label>Lugar</label><input name="cbLugarES" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+      </div>
       <div class="grid">
         <div><label>Nombre completo</label><input name="cbNombre" /></div>
         <div><label>Fecha de nacimiento</label><input name="cbFechaNacimiento" /></div>
@@ -249,14 +276,32 @@
         <div><label>Teléfono</label><input name="cbTelefono" /></div>
         <div><label>Email</label><input name="cbEmail" /></div>
       </div>
-      <div class="checks" style="margin-top:10px;">
-        <label><input type="radio" name="cbExiste" value="yes" /> Existe beneficiario: Sí</label>
-        <label><input type="radio" name="cbExiste" value="no" /> Existe beneficiario: No</label>
-      </div>
     </div>
 
     <div class="section">
       <h2>FR-VEN-26 — ORIGEN DE RECURSOS</h2>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div>
+          <label>Domicilio de la empresa</label>
+          <select name="cbEmpresaDomicilioES">
+            <option value="">Selecciona...</option>
+            <option>Calle 40 Diag x Av. Temozón y 71 Tabl 41931, Temozón Norte, Mérida, Yucatán, México CP 97302</option>
+            <option>Calle 68A Norte X Av Siaan Kaan y Carret Fed Cancún-Tulum, Playa del Carmen, Quintana Roo, México CP</option>
+            <option>Calle 4 X 15 y SC No. 170A Piso 8, Col Montecristo, Mérida, Yucatán, México CP 97133</option>
+            <option>Calle 17 No. 104E Col Itzimna, Mérida, Yucatán, México CP 97100</option>
+            <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
+          </select>
+        </div>
+        <div><label>Lugar</label><input name="cbLugarES" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+        <div><label>Ciudad</label><input name="txtCiudadES" /></div>
+      </div>
       <div class="grid">
         <div><label>Nombre de tercero (si aplica)</label><input name="orTerceroNombre" /></div>
       </div>
@@ -290,19 +335,53 @@
 
     <div class="section">
       <h2>FR-VEN-35 — AVISO DE PRIVACIDAD</h2>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div>
+          <label>Domicilio de la empresa</label>
+          <select name="cbEmpresaDomicilioES">
+            <option value="">Selecciona...</option>
+            <option>Calle 40 Diag x Av. Temozón y 71 Tabl 41931, Temozón Norte, Mérida, Yucatán, México CP 97302</option>
+            <option>Calle 68A Norte X Av Siaan Kaan y Carret Fed Cancún-Tulum, Playa del Carmen, Quintana Roo, México CP</option>
+            <option>Calle 4 X 15 y SC No. 170A Piso 8, Col Montecristo, Mérida, Yucatán, México CP 97133</option>
+            <option>Calle 17 No. 104E Col Itzimna, Mérida, Yucatán, México CP 97100</option>
+            <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
+          </select>
+        </div>
+        <div><label>Nombre completo</label><input name="spanNombreCompleto" /></div>
+        <div><label>Domicilio</label><input name="spanDomicilio" /></div>
+        <div><label>Teléfono</label><input name="spanTelefono" /></div>
+        <div><label>Email</label><input name="spanEmail" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+      </div>
       <div class="checks" style="margin-top:10px;">
         <label><input type="radio" name="pvSolicitar" value="si" /> Solicitar evaluación: Sí</label>
         <label><input type="radio" name="pvSolicitar" value="no" /> Solicitar evaluación: No</label>
         <label><input type="radio" name="pvEnviar" value="si" /> Enviar promociones: Sí</label>
         <label><input type="radio" name="pvEnviar" value="no" /> Enviar promociones: No</label>
       </div>
-      <div class="grid" style="margin-top:10px;">
-        <div><label>Fecha para aviso (dd/mm/aaaa se arma con día/mes/año)</label><input name="spanFecha" /></div>
-      </div>
     </div>
 
     <div class="section">
       <h2>FR-VEN-21 — CONSULTA DE LISTAS DE PERSONAS BLOQUEADAS</h2>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div><label>Lugar</label><input name="cbLugarES" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+        <div><label>Ciudad</label><input name="txtCiudadES" /></div>
+        <div><label>Nombre completo</label><input name="spanNombreCompleto" /></div>
+        <div><label>Nacionalidad</label><input name="spanNacionalidad" /></div>
+        <div><label>Domicilio</label><input name="spanDomicilio" /></div>
+        <div><label>Identificación fiscal / RFC</label><input name="spanIdentificacionFiscal" /></div>
+      </div>
       <div class="grid">
         <div><label>Tipo y No. de identificación</label><input name="v21_tipo_id" /></div>
         <div><label>CURP / SSN</label><input name="v21_curp" /></div>
@@ -324,16 +403,49 @@
     </div>
 
     <div class="bar">
-      <button class="btn" id="download21">Descargar FR-VEN-21</button>
-      <button class="btn" id="download10">Descargar FR-VEN-10</button>
-      <button class="btn" id="download19">Descargar FR-VEN-19</button>
-      <button class="btn" id="download26">Descargar FR-VEN-26</button>
-      <button class="btn" id="download35">Descargar FR-VEN-35</button>
+      <button class="btn" id="download21">Descargar Consulta de Listas de Personas Bloqueadas</button>
+      <button class="btn" id="download10">Descargar Conoce a tu Cliente</button>
+      <button class="btn" id="download19">Descargar Beneficiario Controlador</button>
+      <button class="btn" id="download26">Descargar Origen de Recursos</button>
+      <button class="btn" id="download35">Descargar Aviso de Privacidad</button>
     </div>
   </div>
 
 <script>
   const form = document.querySelector('.wrap');
+  const historyList = document.getElementById('historyList');
+  const saveDraftBtn = document.getElementById('saveDraft');
+  const HISTORY_KEY = 'plds_form_history_v1';
+  const HISTORY_LIMIT = 10;
+
+  function syncByName(source) {
+    if (!source.name) return;
+    const peers = form.querySelectorAll(`[name="${CSS.escape(source.name)}"]`);
+    peers.forEach((peer) => {
+      if (peer === source) return;
+      if (source.type === 'radio') {
+        peer.checked = source.checked && peer.value === source.value;
+      } else if (source.type === 'checkbox') {
+        peer.checked = source.checked;
+      } else {
+        peer.value = source.value;
+      }
+    });
+  }
+
+  function syncAliases(source) {
+    // FR-VEN-10 -> FR-VEN-21
+    if (source.name === 'spanTipoIdentificacion') {
+      form.querySelectorAll('input[name="v21_tipo_id"]').forEach((el) => {
+        if (el !== source) el.value = source.value;
+      });
+    }
+  }
+
+  form.querySelectorAll('input, select').forEach((el) => {
+    el.addEventListener('input', () => { syncByName(el); syncAliases(el); });
+    el.addEventListener('change', () => { syncByName(el); syncAliases(el); });
+  });
 
   function getData() {
     const data = {};
@@ -343,9 +455,18 @@
       } else if (el.type === 'radio') {
         if (el.checked) data[el.name] = el.value;
       } else {
-        data[el.name] = el.value || '';
+        const value = (el.value || '').trim();
+        // Evita que inputs duplicados vacíos sobreescriban valores capturados.
+        if (!(el.name in data) || !data[el.name]) {
+          data[el.name] = value;
+        } else if (value) {
+          data[el.name] = value;
+        }
       }
     });
+
+    // Firma del cliente: usar nombre completo como fuente principal.
+    data.cbNombre1 = (data.spanNombreCompleto || data.cbNombre || data.cbNombre1 || '').trim();
 
     // shared mappings
     data.txtLoteES = data.cbUnidadES || '';
@@ -444,13 +565,80 @@
     data.ciudad = data.txtCiudadES || '';
     data.cliente_nombre = data.spanNombreCompleto || '';
     data.cliente_identificacion = data.v21_tipo_id || data.spanTipoIdentificacion || '';
-    data.cliente_nacionalidad = data.spanNacionalidad || '';
+    // Regla solicitada: en FR-VEN-21 "Nacionalidad" toma "Lugar de nacimiento" de FR-VEN-10.
+    data.cliente_nacionalidad = data.spanLugarNacimiento || data.spanNacionalidad || '';
     data.cliente_domicilio = data.spanDomicilio || '';
     data.cliente_rfc = data.spanIdentificacionFiscal || '';
     data.cliente_curp = data.v21_curp || '';
     data.vendedor_nombre = data.v21_vendedor || data.cbNombre1 || '';
 
     return data;
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function persistHistory(items) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
+  }
+
+  function applyData(payload) {
+    form.querySelectorAll('input, select').forEach((el) => {
+      if (!el.name) return;
+      if (el.type === 'checkbox') {
+        el.checked = payload[el.name] === 'checked' || payload[el.name] === true;
+      } else if (el.type === 'radio') {
+        el.checked = payload[el.name] === el.value;
+      } else {
+        el.value = payload[el.name] || '';
+      }
+    });
+  }
+
+  function renderHistory() {
+    const items = loadHistory();
+    historyList.innerHTML = '';
+    if (!items.length) {
+      historyList.innerHTML = '<div class="history-item"><div class="history-meta">Sin historial todavia.</div></div>';
+      return;
+    }
+    items.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'history-item';
+      const dateTxt = new Date(item.createdAt).toLocaleString();
+      row.innerHTML = `
+        <div class="history-meta"><strong>${item.label}</strong> | ${dateTxt}</div>
+        <div class="history-meta">Cliente: ${item.client || 'N/A'} | Unidad: ${item.unit || 'N/A'}</div>
+        <div class="history-actions">
+          <button class="btn-sm" type="button" data-act="load" data-idx="${idx}">Cargar</button>
+          <button class="btn-sm light" type="button" data-act="delete" data-idx="${idx}">Eliminar</button>
+        </div>
+      `;
+      historyList.appendChild(row);
+    });
+  }
+
+  function saveHistoryRecord(label) {
+    const payload = getData();
+    const items = loadHistory();
+    const rec = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      label,
+      client: payload.spanNombreCompleto || payload.cbNombre || '',
+      unit: payload.cbUnidadES || payload.txtLoteES || '',
+      payload
+    };
+    items.unshift(rec);
+    persistHistory(items);
+    renderHistory();
   }
 
   async function download(format) {
@@ -464,18 +652,46 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `FR-VEN-${format}.pdf`;
+    const rawName = (payload.spanNombreCompleto || '').trim();
+    const safeName = (rawName || 'SIN_NOMBRE')
+      .replace(/[\\/:*?"<>|]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    a.download = `FR-VEN-${format} ${safeName}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    saveHistoryRecord(`FR-VEN-${format}`);
   }
+
+  saveDraftBtn.addEventListener('click', () => {
+    saveHistoryRecord('BORRADOR');
+  });
+
+  historyList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const idx = Number(btn.dataset.idx);
+    const items = loadHistory();
+    if (!Number.isFinite(idx) || !items[idx]) return;
+    if (btn.dataset.act === 'load') {
+      applyData(items[idx].payload || {});
+      return;
+    }
+    if (btn.dataset.act === 'delete') {
+      items.splice(idx, 1);
+      persistHistory(items);
+      renderHistory();
+    }
+  });
 
   document.getElementById('download21').addEventListener('click', () => download('21'));
   document.getElementById('download10').addEventListener('click', () => download('10'));
   document.getElementById('download19').addEventListener('click', () => download('19'));
   document.getElementById('download26').addEventListener('click', () => download('26'));
   document.getElementById('download35').addEventListener('click', () => download('35'));
+  renderHistory();
 </script>
 </body>
 </html>

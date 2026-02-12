@@ -158,13 +158,15 @@ body {
   <div class="block">
     <div class="two-cols justify small">
       <div class="col">
-        Hago referencia a la adquisición de los derechos de uso y disfrute (la “Operación”) de la unidad no. <span class="bold">{{orUnidadBodyES}}</span> (la “Operación”) del desarrollo inmobiliario denominado "<span class="bold">{{orDesarrolloBodyES}}</span>" ubicado en la ciudad de <span class="bold">{{orCiudadES}}</span>, México, el cual es actualmente desarrollado y comercializado por su compañía.
+        Hago referencia a la adquisición de los derechos de uso y disfrute (la “Operación”) de la unidad no. <span class="bold">{{orUnidadBodyES}}</span> (la “Unidad”) del desarrollo inmobiliario denominado "<span class="bold">{{orDesarrolloBodyES}}</span>" ubicado en la ciudad de <span class="bold">{{orCiudadES}}</span>, México, el cual es actualmente desarrollado y comercializado por su compañía.
       </div>
       <div class="col">
         Reference is hereby made to the acquisition of rights of use and enjoyment (the “Transaction”) of unit no. <span class="bold">{{orUnidadBodyEN}}</span> (the “Unit”) of the real-estate development known as "<span class="bold">{{orDesarrolloBodyEN}}</span>" located in <span class="bold">{{orCiudadEN}}</span>, Mexico, which is currently developed and marketed by your company.
       </div>
     </div>
   </div>
+
+  <div class="block spacer-1"></div>
 
   <div class="block">
     <div class="two-cols justify small">
@@ -218,7 +220,13 @@ body {
           <tr><td>Herencia o Legado<br><span class="small">Inheritance or Legacy</span></td><td><span class="circle {{orHerencia}}"></span></td></tr>
           <tr><td>Jubilación o Afore<br><span class="small">Retirement or Pension</span></td><td><span class="circle {{orJubilacion}}"></span></td></tr>
           <tr><td>Venta de Activos<br><span class="small">Sale of Assets</span></td><td><span class="circle {{orActivos}}"></span></td></tr>
-          <tr><td>Otro, especifique:<br><span class="small">Other, specify:</span></td><td><span class="circle {{orOtroCheck}}"></span></td></tr>
+          <tr>
+            <td>
+              Otro, especifique:<br><span class="small">Other, specify:</span><br>
+              <span class="line">{{orOtro}}</span>
+            </td>
+            <td><span class="circle {{orOtroCheck}}"></span></td>
+          </tr>
         </table>
       </div>
       <div class="col">
@@ -231,7 +239,6 @@ body {
           <tr><td>Actividad Empresarial<br><span class="small">Business Activity</span></td><td><span class="circle {{orEmpresarial}}"></span></td></tr>
           <tr><td>Actividad Profesional<br><span class="small">Professional Activity</span></td><td><span class="circle {{orProfesional}}"></span></td></tr>
           <tr><td>Finiquito<br><span class="small">Severance Payment</span></td><td><span class="circle {{orFiniquito}}"></span></td></tr>
-          <tr><td colspan="2">Otro: <span class="line">{{orOtro}}</span></td></tr>
         </table>
       </div>
     </div>
@@ -244,7 +251,7 @@ body {
       Atentamente / Sincerely
       <div class="spacer-2"></div>
       <div class="line" style="width:60%; margin:auto;"></div>
-      <span class="bold">{{cbNombre1}}</span><br>
+      <span class="bold">[Persona física/Natural Person: {{cbNombre1}}]</span><br>
       Por mi propio derecho / In my own right
     </div>
   </div>

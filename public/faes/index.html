@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIMCA - FAES MAKER PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --simca-yellow: #f3e552; --font-header: 'Montserrat', sans-serif; --font-body: 'Courier Prime', monospace; }
+
+        body {
+            background: #e0ded6;
+            margin: 0;
+            display: flex;
+            flex-direction: row;
+            font-family: sans-serif;
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .controls {
+            width: 400px;
+            min-width: 300px;
+            background: #f6f1e4;
+            color: #171717;
+            padding: 25px;
+            min-height: 100vh;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.15);
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .controls h2 { font-size: 18px; color: var(--simca-yellow); font-family: var(--font-header); margin-bottom: 25px; }
+
+        .preview-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            background: #e0ded6;
+            overflow: hidden;
+        }
+
+        .page-a4 {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            padding: 15mm;
+            box-sizing: border-box;
+            border: 1px solid #000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            position: relative;
+            transform-origin: top center;
+            transition: transform 0.1s ease-out;
+        }
+
+        .header-simca { background: var(--simca-yellow); border: 2px solid #000; padding: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .logo-img { height: 15mm; width: auto; object-fit: contain; }
+        .simca-table { width: 100%; border-collapse: collapse; margin-top: -2px; font-family: var(--font-body); table-layout: fixed; }
+        .simca-table td { border: 2px solid #000; padding: 10px; font-size: 14px; vertical-align: top; }
+        .label-cell { background: var(--simca-yellow); width: 35%; font-weight: bold; }
+        .value-cell { background: white; word-break: break-all; min-height: 20px; }
+        .footer-signatures { margin-top: auto; padding-top: 20px; font-family: var(--font-body); }
+        .sig-container { display: flex; justify-content: space-between; margin-top: 40px; }
+        .sig-box { width: 42%; text-align: center; border-top: 2px solid #000; padding-top: 5px; font-size: 12px; }
+
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 10px; color: #5f5b50; margin-bottom: 4px; text-transform: uppercase; }
+        .input-group input, .input-group textarea, .input-group select { width: 100%; padding: 10px; background: #fff; color: #111; border: 1px solid #cfc7b5; border-radius: 4px; font-family: var(--font-body); box-sizing: border-box; }
+        .btn-download { width: 100%; padding: 15px; background: var(--simca-yellow); color: #000; border: 2px solid #000; font-weight: bold; cursor: pointer; margin-bottom: 12px; font-family: var(--font-header); text-transform: uppercase; }
+        .btn-back { width: 100%; padding: 12px; background: #fff; color: #000; border: 2px solid #000; font-weight: bold; cursor: pointer; margin-bottom: 20px; font-family: var(--font-header); text-transform: uppercase; }
+        .history-wrap { margin: 14px 0 18px; border-top: 1px solid #d9d1bf; padding-top: 12px; }
+        .history-title { margin: 0 0 8px; color: #5f5b50; font-size: 11px; text-transform: uppercase; }
+        .history-list { display: grid; gap: 8px; max-height: 220px; overflow: auto; }
+        .history-item { background: #fff; border: 1px solid #d4ccb9; border-radius: 4px; padding: 8px; }
+        .history-meta { font-size: 11px; color: #3a3a3a; line-height: 1.3; }
+        .history-actions { margin-top: 6px; display: flex; gap: 6px; }
+        .btn-sm { padding: 6px 8px; border: 1px solid #bdb39d; background: #fff; cursor: pointer; font-size: 11px; font-family: var(--font-body); }
+        .btn-sm.light { color: #8c2f2f; border-color: #d3b1b1; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .controls { width: 100% !important; height: auto !important; min-height: unset; position: relative; }
+            .preview-area { padding: 10px 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h2>FAES MAKER PRO</h2>
+        <button class="btn-back" type="button" onclick="history.back()">Regresar</button>
+        <button class="btn-download" id="dl-btn" onclick="generarPDF()">Descargar PDF</button>
+        <div class="history-wrap">
+            <p class="history-title">Historial (ultimas 5 versiones)</p>
+            <div class="history-list" id="history-list"></div>
+        </div>
+
+        <div class="input-group"><label>Asesor</label><input id="in-asesor" type="text" oninput="up('v1', this.value)"></div>
+        <div class="input-group"><label>Fecha</label><input id="in-fecha" type="text" oninput="up('v2', this.value)"></div>
+        <div class="input-group"><label>Nombre del Cliente</label><input id="in-cliente" type="text" oninput="up('v3', this.value)"></div>
+        <div class="input-group"><label>Fecha de Reserva</label><input id="in-reserva" type="text" oninput="up('v4', this.value)"></div>
+        <div class="input-group"><label>Unidad Adquirida</label><input type="text" id="in-unidad" oninput="up('v5', this.value)"></div>
+        <div class="input-group"><label>Proyecto</label><input type="text" id="in-proyecto" oninput="up('v6', this.value)"></div>
+        <div class="input-group"><label>Forma de Pago</label><input id="in-pago" type="text" oninput="up('v7', this.value)"></div>
+
+        <div class="input-group">
+            <label>Moneda</label>
+            <select id="select-moneda" onchange="cambiarMoneda(this.value)">
+                <option value="USD" selected>USD - Dolares</option>
+                <option value="MXN">MXN - Pesos</option>
+            </select>
+        </div>
+
+        <div class="input-group"><label>Precio de Lista</label><input type="number" id="in-lista" oninput="actualizarPrecios()"></div>
+        <div class="input-group"><label>Precio Autorizado</label><input type="number" id="in-auto" oninput="actualizarPrecios()"></div>
+        <div class="input-group"><label>Descuento</label><input type="text" id="in-descuento" readonly></div>
+        <div class="input-group"><label>Notas Adicionales</label><textarea id="in-notas" oninput="up('v11', this.value)" rows="4"></textarea></div>
+
+        <div class="input-group">
+            <label>Autorizador Secundario</label>
+            <select id="select-firma" onchange="up('v-firma2', this.value); actualizarFirmasVisual(this.value)">
+                <option value="ELOY CACERES">ELOY CACERES</option>
+                <option value="LUIS SIERRA">LUIS SIERRA</option>
+                <option value="RODRIGO MONTALVO">RODRIGO MONTALVO</option>
+                <option value="MARTINA BARNABO">MARTINA BARNABO</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="preview-area" id="main-preview">
+        <div class="page-a4" id="documento-content">
+            <div class="header-simca">
+                <div class="header-left">
+                    <img src="https://static.wixstatic.com/media/5ed051_4923eb342f494f75b68f0bf749120fc2~mv2.png" class="logo-img" alt="SIMCA">
+                    <p style="margin: 5px 0 0 0; font-size: 13px; font-weight: bold;">Formato de autorizacion especial para clientes</p>
+                </div>
+                <div style="text-align:right;">
+                    <div style="width:45px; height:15px; background:#000; margin-left:auto; margin-bottom:5px;"></div>
+                    <strong style="font-family:var(--font-body); font-size:12px;">simca.mx</strong>
+                </div>
+            </div>
+
+            <table class="simca-table">
+                <tr><td class="label-cell">Asesor:</td><td class="value-cell" id="v1"></td></tr>
+                <tr><td class="label-cell">Fecha:</td><td class="value-cell" id="v2"></td></tr>
+                <tr><td class="label-cell">Nombre del cliente:</td><td class="value-cell" id="v3"></td></tr>
+                <tr><td class="label-cell">Fecha de Reserva:</td><td class="value-cell" id="v4"></td></tr>
+                <tr><td class="label-cell">Unidad adquirida:</td><td class="value-cell" id="v5"></td></tr>
+                <tr><td class="label-cell">Proyecto:</td><td class="value-cell" id="v6"></td></tr>
+                <tr><td class="label-cell">Forma de pago:</td><td class="value-cell" id="v7"></td></tr>
+                <tr><td class="label-cell">Precio de lista:</td><td class="value-cell" id="v8"></td></tr>
+                <tr><td class="label-cell">Precio autorizado:</td><td class="value-cell" id="v9"></td></tr>
+                <tr><td class="label-cell">Descuento:</td><td class="value-cell" id="v10"></td></tr>
+                <tr><td class="label-cell">Notas adicionales:</td><td class="value-cell" id="v11"></td></tr>
+            </table>
+
+            <div class="footer-signatures">
+                <div style="font-weight:bold; margin-bottom:10px;">AUTORIZA:</div>
+                <div class="sig-container">
+                    <div class="sig-box" id="firma-chris">
+                        <strong>CHRISTOPHER GIL</strong><br>NOMBRE Y FIRMA
+                    </div>
+                    <div class="sig-box">
+                        <strong id="v-firma2">ELOY CACERES</strong><br>NOMBRE Y FIRMA
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function ajustarLayout() {
+            const previewArea = document.getElementById('main-preview');
+            const pageA4 = document.getElementById('documento-content');
+            if (!previewArea || !pageA4) return;
+
+            const containerWidth = previewArea.offsetWidth - 40;
+            const a4WidthPx = 794;
+
+            if (containerWidth < a4WidthPx) {
+                const scale = containerWidth / a4WidthPx;
+                pageA4.style.transform = `scale(${scale})`;
+                pageA4.style.marginBottom = `-${pageA4.offsetHeight * (1 - scale)}px`;
+            } else {
+                pageA4.style.transform = 'scale(1)';
+                pageA4.style.marginBottom = '0';
+            }
+
+            setTimeout(() => {
+                const totalHeight = document.body.scrollHeight;
+                window.parent.postMessage({ type: 'resize', height: totalHeight }, '*');
+            }, 150);
+        }
+
+        window.addEventListener('load', ajustarLayout);
+        window.addEventListener('resize', ajustarLayout);
+
+        const LOGO_URL = 'https://static.wixstatic.com/media/5ed051_4923eb342f494f75b68f0bf749120fc2~mv2.png';
+        const HISTORY_KEY = 'faesHistoryV1';
+        const HISTORY_LIMIT = 5;
+        let MONEDA = 'USD';
+
+        function up(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+            ajustarLayout();
+        }
+
+        function formatMoney(v) {
+            if (!v || isNaN(v)) return '';
+            return `$ ${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })} ${MONEDA}`;
+        }
+
+        function actualizarPrecios() {
+            const lista = document.getElementById('in-lista').value;
+            const auto = document.getElementById('in-auto').value;
+            up('v8', formatMoney(lista));
+            up('v9', formatMoney(auto));
+            calcularDescuento();
+        }
+
+        function cambiarMoneda(valor) {
+            MONEDA = valor;
+            actualizarPrecios();
+        }
+
+        function calcularDescuento() {
+            const l = parseFloat(document.getElementById('in-lista').value) || 0;
+            const a = parseFloat(document.getElementById('in-auto').value) || 0;
+            if (l > 0 && a > 0) {
+                const diff = l - a;
+                const porc = ((l - a) / l * 100).toFixed(2);
+                const res = `${formatMoney(diff)} (${porc}%)`;
+                document.getElementById('in-descuento').value = res;
+                up('v10', res);
+            }
+        }
+
+        function actualizarFirmasVisual(valor) {
+            const firmaChris = document.getElementById('firma-chris');
+            if (firmaChris) {
+                firmaChris.style.display = (valor === 'RODRIGO MONTALVO' || valor === 'MARTINA BARNABO') ? 'none' : 'block';
+            }
+            ajustarLayout();
+        }
+
+        function getCurrentPayload() {
+            return {
+                asesor: document.getElementById('in-asesor').value || '',
+                fecha: document.getElementById('in-fecha').value || '',
+                cliente: document.getElementById('in-cliente').value || '',
+                fechaReserva: document.getElementById('in-reserva').value || '',
+                unidad: document.getElementById('in-unidad').value || '',
+                proyecto: document.getElementById('in-proyecto').value || '',
+                formaPago: document.getElementById('in-pago').value || '',
+                moneda: document.getElementById('select-moneda').value || 'USD',
+                precioLista: document.getElementById('in-lista').value || '',
+                precioAuto: document.getElementById('in-auto').value || '',
+                notas: document.getElementById('in-notas').value || '',
+                firma2: document.getElementById('select-firma').value || 'ELOY CACERES'
+            };
+        }
+
+        function applyPayload(payload) {
+            if (!payload) return;
+            document.getElementById('in-asesor').value = payload.asesor || '';
+            document.getElementById('in-fecha').value = payload.fecha || '';
+            document.getElementById('in-cliente').value = payload.cliente || '';
+            document.getElementById('in-reserva').value = payload.fechaReserva || '';
+            document.getElementById('in-unidad').value = payload.unidad || '';
+            document.getElementById('in-proyecto').value = payload.proyecto || '';
+            document.getElementById('in-pago').value = payload.formaPago || '';
+            document.getElementById('in-lista').value = payload.precioLista || '';
+            document.getElementById('in-auto').value = payload.precioAuto || '';
+            document.getElementById('in-notas').value = payload.notas || '';
+            document.getElementById('select-moneda').value = payload.moneda || 'USD';
+            document.getElementById('select-firma').value = payload.firma2 || 'ELOY CACERES';
+
+            up('v1', document.getElementById('in-asesor').value);
+            up('v2', document.getElementById('in-fecha').value);
+            up('v3', document.getElementById('in-cliente').value);
+            up('v4', document.getElementById('in-reserva').value);
+            up('v5', document.getElementById('in-unidad').value);
+            up('v6', document.getElementById('in-proyecto').value);
+            up('v7', document.getElementById('in-pago').value);
+            up('v11', document.getElementById('in-notas').value);
+            cambiarMoneda(document.getElementById('select-moneda').value);
+            actualizarFirmasVisual(document.getElementById('select-firma').value);
+            up('v-firma2', document.getElementById('select-firma').value);
+        }
+
+        function loadHistory() {
+            try {
+                const raw = localStorage.getItem(HISTORY_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function persistHistory(items) {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            const items = loadHistory();
+            historyList.innerHTML = '';
+            if (!items.length) {
+                historyList.innerHTML = '<div class="history-item"><div class="history-meta">Sin historial todavia.</div></div>';
+                return;
+            }
+            items.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = 'history-item';
+                const dateTxt = new Date(item.createdAt).toLocaleString();
+                row.innerHTML = `
+                    <div class="history-meta"><strong>${item.label}</strong> | ${dateTxt}</div>
+                    <div class="history-meta">Cliente: ${item.cliente || 'N/A'} | Unidad: ${item.unidad || 'N/A'}</div>
+                    <div class="history-actions">
+                        <button class="btn-sm" type="button" data-act="load" data-idx="${idx}">Cargar</button>
+                        <button class="btn-sm light" type="button" data-act="delete" data-idx="${idx}">Eliminar</button>
+                    </div>
+                `;
+                historyList.appendChild(row);
+            });
+        }
+
+        function saveHistoryRecord(label = 'VERSION') {
+            const payload = getCurrentPayload();
+            const items = loadHistory();
+            items.unshift({
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                createdAt: new Date().toISOString(),
+                label,
+                cliente: payload.cliente || '',
+                unidad: payload.unidad || '',
+                payload
+            });
+            persistHistory(items);
+            renderHistory();
+        }
+
+        const getBase64 = (url) => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.setAttribute('crossOrigin', 'anonymous');
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    c.width = img.width;
+                    c.height = img.height;
+                    c.getContext('2d').drawImage(img, 0, 0);
+                    resolve(c.toDataURL('image/png'));
+                };
+                img.onerror = (e) => reject(e);
+                img.src = url;
+            });
+        };
+
+        async function generarPDF() {
+            const btn = document.getElementById('dl-btn');
+            btn.innerText = 'GENERANDO...';
+            btn.disabled = true;
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const MARGIN = 10;
+                const hoy = new Date();
+                const fStr = hoy.getFullYear() + String(hoy.getMonth() + 1).padStart(2, '0') + String(hoy.getDate()).padStart(2, '0');
+                const p = (document.getElementById('in-proyecto').value || 'PROYECTO').toUpperCase().replace(/\s+/g, '');
+                const u = (document.getElementById('in-unidad').value || 'UNIDAD').toUpperCase().replace(/\s+/g, '');
+                const nombreArchivo = `${fStr}_FAES_${p}_${u}.pdf`;
+
+                let imgData;
+                try {
+                    imgData = await getBase64(LOGO_URL);
+                } catch (e) {
+                    console.warn('Logo no cargado');
+                }
+
+                let y = MARGIN;
+                const headerH = 24;
+                doc.setFillColor(243, 229, 82);
+                doc.rect(MARGIN, y, 190, headerH, 'FD');
+                doc.setDrawColor(0);
+                doc.rect(MARGIN, y, 190, headerH, 'S');
+
+                if (imgData) {
+                    const props = doc.getImageProperties(imgData);
+                    const ratio = props.width / props.height;
+                    doc.addImage(imgData, 'PNG', MARGIN + 5, y + 6, 45, 45 / ratio);
+                }
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.text('Formato de autorizacion especial para clientes', MARGIN + 5, y + 20);
+                doc.setFillColor(0);
+                doc.rect(175, y + 0, 18, 7, 'F');
+                doc.setFontSize(10);
+                doc.text('simca.mx', 175, y + 11);
+
+                y += headerH;
+                const getTxt = (id) => document.getElementById(id).innerText;
+                const rows = [
+                    ['Asesor:', getTxt('v1')],
+                    ['Fecha:', getTxt('v2')],
+                    ['Nombre del cliente:', getTxt('v3')],
+                    ['Fecha de Reserva:', getTxt('v4')],
+                    ['Unidad adquirida:', getTxt('v5')],
+                    ['Proyecto:', getTxt('v6')],
+                    ['Forma de pago:', getTxt('v7')],
+                    ['Precio de lista:', getTxt('v8')],
+                    ['Precio autorizado:', getTxt('v9')],
+                    ['Descuento:', getTxt('v10')]
+                ];
+
+                rows.forEach(r => {
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFillColor(243, 229, 82);
+                    doc.rect(MARGIN, y, 65, 9.5, 'FD');
+                    doc.text(r[0], MARGIN + 4, y + 6);
+                    doc.rect(75, y, 125, 9.5, 'S');
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(r[1], 79, y + 6);
+                    y += 9.5;
+                });
+
+                const signatureAreaStartY = 250;
+                doc.setFont('helvetica', 'bold');
+                doc.setFillColor(243, 229, 82);
+
+                const rawNotes = getTxt('v11');
+                const padTop = 6;
+                const padBottom = 3.5;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                const splitNotes = rawNotes ? doc.splitTextToSize(rawNotes, 115) : [];
+                const textDims = splitNotes.length ? doc.getTextDimensions(splitNotes) : { h: 0 };
+
+                const notesBoxHeight = Math.max(9.5, textDims.h + padTop + padBottom);
+
+                doc.setFont('helvetica', 'bold');
+                doc.rect(MARGIN, y, 65, notesBoxHeight, 'FD');
+                doc.text('Notas adicionales:', MARGIN + 4, y + padTop);
+                doc.rect(75, y, 125, notesBoxHeight, 'S');
+
+                if (rawNotes) {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    doc.text(splitNotes, 79, y + padTop);
+                }
+
+                y = signatureAreaStartY;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.text('AUTORIZA:', MARGIN + 5, y);
+                y += 22;
+                doc.setLineWidth(0.5);
+
+                const firmaSeleccionada = document.getElementById('select-firma').value;
+                const firmaChris = document.getElementById('firma-chris');
+
+                if (firmaChris.style.display !== 'none') {
+                    doc.line(MARGIN + 15, y, MARGIN + 80, y);
+                    doc.line(MARGIN + 110, y, MARGIN + 175, y);
+                    doc.setFontSize(9);
+                    doc.text('NOMBRE Y FIRMA\nCHRISTOPHER GIL', MARGIN + 47.5, y + 5, { align: 'center' });
+                    doc.text('NOMBRE Y FIRMA\n' + firmaSeleccionada, MARGIN + 142.5, y + 5, { align: 'center' });
+                } else {
+                    doc.line(MARGIN + 62.5, y, MARGIN + 127.5, y);
+                    doc.setFontSize(9);
+                    doc.text('NOMBRE Y FIRMA\n' + firmaSeleccionada, MARGIN + 95, y + 5, { align: 'center' });
+                }
+                doc.save(nombreArchivo);
+                saveHistoryRecord('PDF');
+            } catch (err) {
+                console.error(err);
+                alert('Error al generar el PDF');
+            } finally {
+                btn.innerText = 'DESCARGAR PDF';
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('history-list').addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-act]');
+            if (!btn) return;
+            const idx = Number(btn.dataset.idx);
+            const items = loadHistory();
+            if (!Number.isFinite(idx) || !items[idx]) return;
+            if (btn.dataset.act === 'load') {
+                applyPayload(items[idx].payload || {});
+                return;
+            }
+            if (btn.dataset.act === 'delete') {
+                items.splice(idx, 1);
+                persistHistory(items);
+                renderHistory();
+            }
+        });
+
+        renderHistory();
+    </script>
+</body>
+</html>

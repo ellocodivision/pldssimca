@@ -1,0 +1,2893 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plataforma de Unidades</title>
+  <style>
+    :root {
+      --bg: #f3f4ef;
+      --panel: #ffffff;
+      --ink: #171a17;
+      --line: #d3d8d1;
+      --muted: #667065;
+      --accent: #1d5a3f;
+      --disp: #2f8f47;
+      --resv: #d89d27;
+      --vend: #c43c32;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #f8f9f6, var(--bg));
+      min-height: 100vh;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 370px 1fr;
+      gap: 14px;
+      max-width: 1760px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      align-self: start;
+      position: sticky;
+      top: 12px;
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+    }
+    .section + .section {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #e8ece7;
+    }
+    .head-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    h2 { margin: 0 0 8px; font-size: 15px; }
+    p.help { margin: 0; font-size: 12px; color: var(--muted); }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input[type="file"], input[type="text"], select {
+      width: 100%;
+      border: 1px solid #ccd4cb;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--ink);
+    }
+    button {
+      border: 1px solid #b8c5b8;
+      border-radius: 10px;
+      background: #fff;
+      color: #1d231f;
+      padding: 8px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover { border-color: #8ea58f; }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.danger { border-color: #c66969; color: #9e1f1f; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .back {
+      display: inline-block;
+      text-decoration: none;
+      color: #111;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .back:hover { border-color: #b6ad98; }
+    .hint { margin-top: 8px; font-size: 12px; color: var(--muted); }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .tab {
+      border: 1px solid #cfd7cf;
+      border-radius: 999px;
+      background: #f7faf6;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .tab.active { border-color: #3d6a50; background: #eaf4ec; font-weight: 700; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #d7ddd5;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      background: #fff;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .zones {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 6px;
+      max-height: 240px;
+      overflow: auto;
+    }
+    .zone-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid #dde5de;
+      border-radius: 10px;
+      padding: 7px 8px;
+      background: #f8fbf9;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .zone-item.active { border-color: #4d7f63; background: #edf6ef; }
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: calc(100vh - 34px);
+      min-height: 780px;
+    }
+    .workspace-top {
+      flex: 1 1 auto;
+      min-height: 240px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .canvas-wrap {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: auto;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      padding: 10px;
+      min-height: 52vh;
+    }
+    .stage { position: relative; display: inline-block; line-height: 0; max-width: 100%; }
+    #baseImage { max-width: 100%; height: auto; display: block; border-radius: 8px; }
+    #overlay { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+    .table-wrap {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: auto;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      padding: 10px;
+    }
+    .pdf-live-wrap {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      padding: 10px;
+      height: 620px;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 620px;
+    }
+    .workspace-splitter {
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #d9dfd8, #cfd7cf);
+      cursor: ns-resize;
+      position: relative;
+      user-select: none;
+    }
+    .workspace-splitter::after {
+      content: "";
+      position: absolute;
+      inset: 3px 46%;
+      border-radius: 999px;
+      background: #8f9a90;
+    }
+    .preview-zoom-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto auto auto;
+      gap: 8px;
+      align-items: center;
+      margin: 0 0 8px;
+    }
+    #pdfLiveZoomRange { width: 100%; }
+    .pdf-live-viewport {
+      width: 100%;
+      flex: 1 1 auto;
+      min-height: 220px;
+      border: 1px solid #d9ded8;
+      border-radius: 8px;
+      background: #f6f8f4;
+      overflow: auto;
+    }
+    .pdf-live-stage {
+      width: 100%;
+      height: 100%;
+    }
+    #pdfLiveFrame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: 0;
+      background: #f6f8f4;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 960px;
+    }
+    th, td {
+      border: 1px solid #dee4de;
+      padding: 6px 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th { background: #f3f7f2; position: sticky; top: 0; z-index: 1; }
+    tr.matched { background: #f8fcf8; }
+    .status-pill {
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: #fff;
+      display: inline-block;
+    }
+    .summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .panel { position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="panel">
+      <div class="section">
+        <div class="head-row">
+          <div>
+            <h1>Plataforma de unidades</h1>
+            <p class="help">Paso 2: cargar JSON marcado + Excel + estado visual.</p>
+          </div>
+          <button type="button" class="back" onclick="history.back()">Regresar</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>1) Cargar proyecto marcado</h2>
+        <p class="help">Importa el JSON exportado desde el Paso 1.</p>
+        <div class="btn-row">
+          <button id="importBtn">Importar JSON</button>
+          <button id="loadLocalBtn">Cargar local</button>
+        </div>
+        <label for="projectNameInput" style="margin-top:8px;">Guardar version (nombre)</label>
+        <input id="projectNameInput" type="text" placeholder="Ej: CEIBA Piso 1+2">
+        <div class="btn-row">
+          <button id="saveProjectBtn">Guardar como</button>
+          <button id="loadProjectBtn">Cargar version</button>
+        </div>
+        <label for="projectSelect" style="margin-top:8px;">Versiones guardadas</label>
+        <select id="projectSelect"></select>
+        <div class="btn-row">
+          <button id="deleteProjectBtn" class="danger">Borrar version</button>
+        </div>
+        <p id="projectStatus" class="hint">Sin versiones guardadas.</p>
+        <div id="floorTabs" class="tabs"></div>
+        <label for="floorTitleInput" style="margin-top:8px;">Titulo hoja activa</label>
+        <input id="floorTitleInput" type="text" placeholder="Ej: INVENTARIO PISO 3">
+        <label for="floorPlanHeightInput" style="margin-top:8px;">Alto plano hoja activa (mm)</label>
+        <input id="floorPlanHeightInput" type="number" min="90" max="320" step="1" placeholder="Usar valor global">
+        <label for="floorHeaderFontSizeInput" style="margin-top:8px;">Letra encabezados hoja activa (px)</label>
+        <input id="floorHeaderFontSizeInput" type="number" min="5.5" max="30" step="0.1" placeholder="Usar valor global">
+        <label for="floorBodyFontSizeInput" style="margin-top:8px;">Letra celdas hoja activa (px)</label>
+        <input id="floorBodyFontSizeInput" type="number" min="5.5" max="30" step="0.1" placeholder="Usar valor global">
+        <label style="margin-top:8px;">
+          <input id="floorLockFontScaleInput" type="checkbox">
+          Respetar tamano de letra (no auto-reducir tabla)
+        </label>
+        <div class="btn-row">
+          <button id="applyFloorTitleBtn" type="button">Guardar titulo hoja</button>
+          <button id="clearFloorTitleBtn" type="button">Limpiar titulo hoja</button>
+        </div>
+        <div class="btn-row">
+          <button id="applyFloorPlanHeightBtn" type="button">Guardar alto hoja</button>
+          <button id="clearFloorPlanHeightBtn" type="button">Usar alto global</button>
+        </div>
+        <div class="btn-row">
+          <button id="applyFloorFontSizesBtn" type="button">Guardar letras hoja</button>
+          <button id="clearFloorFontSizesBtn" type="button">Usar letras globales</button>
+        </div>
+        <p class="hint" style="margin-top:8px;">Titulos por hoja (uno por piso)</p>
+        <div id="floorTitlesList" class="zones"></div>
+      </div>
+
+      <div class="section">
+        <h2>2) Dibujar zonas</h2>
+        <p class="help">Clic para puntos. Cierra zona con el botón.</p>
+        <div class="btn-row">
+          <button id="startZoneBtn" class="primary">Iniciar zona</button>
+          <button id="finishZoneBtn" disabled>Cerrar zona</button>
+        </div>
+        <div class="btn-row">
+          <button id="cancelZoneBtn" disabled>Cancelar</button>
+          <button id="deleteZoneBtn" class="danger" disabled>Borrar zona</button>
+        </div>
+        <label style="margin-top:8px;">
+          <input id="snapParallelInput" type="checkbox" checked>
+          Regla paralela (alinear líneas a bordes)
+        </label>
+        <p id="drawHint" class="hint">Carga pisos para empezar.</p>
+      </div>
+
+      <div class="section">
+        <h2>3) Unidad seleccionada</h2>
+        <label for="unitLabel">Etiqueta (ej: A-101)</label>
+        <input id="unitLabel" type="text" placeholder="Ej: 101">
+        <label for="unitStatus" style="margin-top:8px;">Estado</label>
+        <select id="unitStatus" disabled>
+          <option value="disponible">Disponible</option>
+          <option value="vendida">Vendida</option>
+        </select>
+        <div class="btn-row">
+          <button id="applyUnitBtn">Guardar cambios</button>
+          <button id="autoLabelBtn">Auto (1,2,3)</button>
+        </div>
+        <div class="chips">
+          <span class="chip"><span class="dot" style="background:var(--disp)"></span>Disponible</span>
+          <span class="chip"><span class="dot" style="background:var(--resv)"></span>Reservada</span>
+          <span class="chip"><span class="dot" style="background:var(--vend)"></span>Vendida</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>4) Cargar Excel</h2>
+        <label for="excelInput">Archivo (.xlsx, .xls, .csv)</label>
+        <input id="excelInput" type="file" accept=".xlsx,.xls,.csv">
+        <p id="autoExcelStatus" class="hint">Intentando carga automatica al abrir...</p>
+        <p class="hint">Filtro fijo: desarrollo en columna C = CEIBA, unidad en columna D.</p>
+        <p class="hint">Columnas usadas: B, D, E, F, G, H, I, K + estatus.</p>
+      </div>
+
+      <div class="section">
+        <h2>5) Zonas del piso actual</h2>
+        <ul id="zoneList" class="zones"></ul>
+      </div>
+
+      <div class="section">
+        <h2>6) Guardar / Exportar</h2>
+        <div class="btn-row">
+          <button id="saveLocalBtn">Guardar local</button>
+          <button id="exportBtn">Exportar JSON</button>
+        </div>
+        <div class="btn-row">
+          <button id="exportPdfBtn" class="primary">Exportar PDF</button>
+          <a href="/plano-interactivo"><button type="button">Volver a Paso 1</button></a>
+        </div>
+        <input id="importInput" type="file" accept="application/json" multiple style="display:none">
+      </div>
+
+      <div class="section">
+        <h2>7) Diseno PDF (visual)</h2>
+        <label for="pdfLogoInput">Logo</label>
+        <input id="pdfLogoInput" type="file" accept="image/*">
+        <p id="pdfLogoStatus" class="hint">Sin logo cargado</p>
+        <label for="pdfBrandTextInput" style="margin-top:8px;">Texto logo (si no hay imagen)</label>
+        <input id="pdfBrandTextInput" type="text" value="SIMCA">
+        <label for="pdfTitleInput" style="margin-top:8px;">Titulo</label>
+        <input id="pdfTitleInput" type="text" value="INVENTORY / INVENTARIO">
+        <label for="pdfLogoSizeInput" style="margin-top:8px;">Tamano logo (mm)</label>
+        <input id="pdfLogoSizeInput" type="number" min="5" max="90" step="1" value="11">
+        <label for="pdfPlanHeightInput" style="margin-top:8px;">Alto de plano (mm)</label>
+        <input id="pdfPlanHeightInput" type="number" min="90" max="240" step="1" value="148">
+        <label for="pdfTitleFontInput" style="margin-top:8px;">Fuente titulo</label>
+        <select id="pdfTitleFontInput">
+          <option value="arial">Arial</option>
+          <option value="helvetica">Helvetica</option>
+          <option value="segoe">Segoe UI</option>
+          <option value="verdana">Verdana</option>
+          <option value="tahoma">Tahoma</option>
+          <option value="trebuchet">Trebuchet MS</option>
+          <option value="georgia">Georgia</option>
+          <option value="times">Times New Roman</option>
+          <option value="garamond">Garamond</option>
+          <option value="palatino">Palatino</option>
+          <option value="courier">Courier New</option>
+          <option value="lucida">Lucida Sans</option>
+        </select>
+        <label for="pdfTitleFontSizeInput" style="margin-top:8px;">Tamano letra titulo (px)</label>
+        <input id="pdfTitleFontSizeInput" type="number" min="8" max="34" step="0.5" value="12">
+        <label for="pdfHeaderFontInput" style="margin-top:8px;">Fuente encabezados</label>
+        <select id="pdfHeaderFontInput">
+          <option value="arial">Arial</option>
+          <option value="helvetica">Helvetica</option>
+          <option value="segoe">Segoe UI</option>
+          <option value="verdana">Verdana</option>
+          <option value="tahoma">Tahoma</option>
+          <option value="trebuchet">Trebuchet MS</option>
+          <option value="georgia">Georgia</option>
+          <option value="times">Times New Roman</option>
+          <option value="garamond">Garamond</option>
+          <option value="palatino">Palatino</option>
+          <option value="courier">Courier New</option>
+          <option value="lucida">Lucida Sans</option>
+        </select>
+        <label for="pdfBodyFontInput" style="margin-top:8px;">Fuente celdas</label>
+        <select id="pdfBodyFontInput">
+          <option value="arial">Arial</option>
+          <option value="helvetica">Helvetica</option>
+          <option value="segoe">Segoe UI</option>
+          <option value="verdana">Verdana</option>
+          <option value="tahoma">Tahoma</option>
+          <option value="trebuchet">Trebuchet MS</option>
+          <option value="georgia">Georgia</option>
+          <option value="times">Times New Roman</option>
+          <option value="garamond">Garamond</option>
+          <option value="palatino">Palatino</option>
+          <option value="courier">Courier New</option>
+          <option value="lucida">Lucida Sans</option>
+        </select>
+        <label for="pdfHeaderBgInput" style="margin-top:8px;">Color encabezado</label>
+        <input id="pdfHeaderBgInput" type="color" value="#edf2ec">
+        <label for="pdfHeaderTextInput" style="margin-top:8px;">Color texto encabezado</label>
+        <input id="pdfHeaderTextInput" type="color" value="#2e352f">
+        <label for="pdfTitleColorInput" style="margin-top:8px;">Color titulo</label>
+        <input id="pdfTitleColorInput" type="color" value="#2f352f">
+        <label for="pdfOddRowInput" style="margin-top:8px;">Color fila impar</label>
+        <input id="pdfOddRowInput" type="color" value="#fafcf9">
+        <label for="pdfEvenRowInput" style="margin-top:8px;">Color fila par</label>
+        <input id="pdfEvenRowInput" type="color" value="#ffffff">
+        <label for="pdfFrameColorInput" style="margin-top:8px;">Color recuadro</label>
+        <input id="pdfFrameColorInput" type="color" value="#d8cf6b">
+        <label for="pdfFrameWidthInput" style="margin-top:8px;">Grosor recuadro (px)</label>
+        <input id="pdfFrameWidthInput" type="number" min="0.4" max="4" step="0.1" value="1.2">
+        <div class="btn-row">
+          <button id="pdfPreviewBtn">Abrir preview grande</button>
+          <button id="pdfLogoClearBtn" type="button">Quitar logo</button>
+        </div>
+        <div class="btn-row">
+          <button id="pdfResetBtn">Reset diseno</button>
+          <span></span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div id="workspaceTop" class="workspace-top">
+        <section class="canvas-wrap">
+          <div class="stage">
+            <img id="baseImage" alt="Plano base">
+            <svg id="overlay" aria-label="Editor de zonas"></svg>
+          </div>
+          <p class="hint">Tip: puedes mover el número arrastrándolo y cambiar su estado en el panel.</p>
+        </section>
+
+        <section class="table-wrap">
+          <div id="tableSummary" class="summary"></div>
+          <div id="tableContainer" class="hint">Carga un Excel para ver la tabla aquí.</div>
+        </section>
+      </div>
+      <div id="workspaceSplitter" class="workspace-splitter" title="Arrastra para ajustar alturas"></div>
+      <section id="pdfLiveWrap" class="pdf-live-wrap">
+        <p class="hint" style="margin:0 0 8px;">Vista previa PDF en vivo (se actualiza automaticamente)</p>
+        <div class="preview-zoom-row">
+          <button id="pdfLiveZoomOutBtn" type="button">-</button>
+          <input id="pdfLiveZoomRange" type="range" min="15" max="220" step="5" value="100">
+          <button id="pdfLiveZoomInBtn" type="button">+</button>
+          <span id="pdfLiveZoomValue" class="hint" style="margin:0;white-space:nowrap;">100%</span>
+          <button id="pdfLiveZoomFitBtn" type="button">Fit</button>
+          <button id="pdfLiveZoomResetBtn" type="button">Reset</button>
+        </div>
+        <div id="pdfLiveViewport" class="pdf-live-viewport">
+          <div id="pdfLiveStage" class="pdf-live-stage">
+            <iframe id="pdfLiveFrame" title="Vista previa PDF"></iframe>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    const URL_PARAMS = new URLSearchParams(window.location.search);
+    const QUICK_EXPORT_MODE = URL_PARAMS.get("quick_export") === "1";
+
+    const statusColors = {
+      disponible: "#2f8f47",
+      reservada: "#d89d27",
+      vendida: "#c43c32"
+    };
+
+    // Editable PDF layout. You can tweak this manually.
+    const PDF_LAYOUT = {
+      pageSize: "A4 portrait",
+      pageMargin: "8mm",
+      pageMaxWidth: "190mm",
+      pageHeight: "278mm",
+      borderColor: "#d8cf6b",
+      borderWidth: "1.2px",
+      logoDataUrl: "",
+      logoMaxHeight: "11mm",
+      brandText: "SIMCA",
+      brandColor: "#ca6032",
+      title: "INVENTORY / INVENTARIO",
+      titleColor: "#2f352f",
+      titleFontKey: "arial",
+      titleFontSize: "12px",
+      planHeight: "148mm",
+      cellPadding: "1.05mm 0.75mm",
+      minScale: 0.58,
+      headerFontKey: "arial",
+      bodyFontKey: "arial",
+      headerFontSize: "6.8px",
+      bodyFontSize: "6.9px",
+      headerBgColor: "#edf2ec",
+      headerTextColor: "#2e352f",
+      oddRowColor: "#fafcf9",
+      evenRowColor: "#ffffff"
+    };
+
+    const PDF_FONT_OPTIONS = {
+      arial: "Arial, sans-serif",
+      helvetica: "Helvetica, Arial, sans-serif",
+      segoe: "'Segoe UI', Tahoma, sans-serif",
+      verdana: "Verdana, Geneva, sans-serif",
+      tahoma: "Tahoma, Geneva, sans-serif",
+      trebuchet: "'Trebuchet MS', sans-serif",
+      georgia: "Georgia, serif",
+      times: "'Times New Roman', Times, serif",
+      garamond: "Garamond, serif",
+      palatino: "'Palatino Linotype', Palatino, serif",
+      courier: "'Courier New', Courier, monospace",
+      lucida: "'Lucida Sans Unicode', 'Lucida Grande', sans-serif"
+    };
+
+    const CEIBA_COL = {
+      LINK: 1,        // B
+      DEVELOPMENT: 2, // C
+      UNIT: 3,        // D
+      D: 3,
+      E: 4,
+      F: 5,
+      G: 6,
+      H: 7,
+      I: 8,
+      K: 10
+    };
+
+    const REPORT_COLUMNS = [
+      { key: "LINK", label: "PLANO / PLAN" },
+      { key: "UNIDAD", label: "UNIDAD / UNIT" },
+      { key: "REC", label: "REC / BED" },
+      { key: "TOTAL_M2", label: "TOTAL M2" },
+      { key: "TOTAL_SQFT", label: "TOTAL SQFT" },
+      { key: "PRECIO", label: "PREC / PRICE" },
+      { key: "DESCUENTO", label: "DESC / DISC %" },
+      { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
+    ];
+    const EXCEL_CACHE_KEY = "ceibaExcelCacheV1";
+    const MAX_FLOORS = 6;
+    const LOCAL_STATE_KEYS = ["plataformaUnidadesState", "selectorUnidadesState", "planoInteractivoState"];
+    const PROJECT_INDEX_KEY = "plataformaUnidadesProjectsIndexV1";
+    const PROJECT_KEY_PREFIX = "plataformaUnidadesProjectV1:";
+
+    const state = {
+      floors: [],
+      activeFloorId: null,
+      selectedZoneId: null,
+      drawing: false,
+      drawingPoints: [],
+      cursorPoint: null,
+      snapParallel: true,
+      draggingLabel: null,
+      nextZoneId: 1,
+      excel: {
+        headers: [],
+        rows: []
+      },
+      pdfLayout: {}
+    };
+
+    const floorTabs = document.getElementById("floorTabs");
+    const floorTitlesList = document.getElementById("floorTitlesList");
+    const floorTitleInput = document.getElementById("floorTitleInput");
+    const floorPlanHeightInput = document.getElementById("floorPlanHeightInput");
+    const floorHeaderFontSizeInput = document.getElementById("floorHeaderFontSizeInput");
+    const floorBodyFontSizeInput = document.getElementById("floorBodyFontSizeInput");
+    const floorLockFontScaleInput = document.getElementById("floorLockFontScaleInput");
+    const applyFloorTitleBtn = document.getElementById("applyFloorTitleBtn");
+    const clearFloorTitleBtn = document.getElementById("clearFloorTitleBtn");
+    const applyFloorPlanHeightBtn = document.getElementById("applyFloorPlanHeightBtn");
+    const clearFloorPlanHeightBtn = document.getElementById("clearFloorPlanHeightBtn");
+    const applyFloorFontSizesBtn = document.getElementById("applyFloorFontSizesBtn");
+    const clearFloorFontSizesBtn = document.getElementById("clearFloorFontSizesBtn");
+    const baseImage = document.getElementById("baseImage");
+    const overlay = document.getElementById("overlay");
+    const startZoneBtn = document.getElementById("startZoneBtn");
+    const finishZoneBtn = document.getElementById("finishZoneBtn");
+    const cancelZoneBtn = document.getElementById("cancelZoneBtn");
+    const deleteZoneBtn = document.getElementById("deleteZoneBtn");
+    const snapParallelInput = document.getElementById("snapParallelInput");
+    const drawHint = document.getElementById("drawHint");
+    const unitLabel = document.getElementById("unitLabel");
+    const unitStatus = document.getElementById("unitStatus");
+    const applyUnitBtn = document.getElementById("applyUnitBtn");
+    const autoLabelBtn = document.getElementById("autoLabelBtn");
+    const excelInput = document.getElementById("excelInput");
+    const autoExcelStatus = document.getElementById("autoExcelStatus");
+    const zoneList = document.getElementById("zoneList");
+    const tableSummary = document.getElementById("tableSummary");
+    const tableContainer = document.getElementById("tableContainer");
+    const saveLocalBtn = document.getElementById("saveLocalBtn");
+    const loadLocalBtn = document.getElementById("loadLocalBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const exportPdfBtn = document.getElementById("exportPdfBtn");
+    const pdfPreviewBtn = document.getElementById("pdfPreviewBtn");
+    const pdfResetBtn = document.getElementById("pdfResetBtn");
+    const pdfLogoInput = document.getElementById("pdfLogoInput");
+    const pdfLogoStatus = document.getElementById("pdfLogoStatus");
+    const pdfLogoClearBtn = document.getElementById("pdfLogoClearBtn");
+    const pdfBrandTextInput = document.getElementById("pdfBrandTextInput");
+    const pdfTitleInput = document.getElementById("pdfTitleInput");
+    const pdfLogoSizeInput = document.getElementById("pdfLogoSizeInput");
+    const pdfPlanHeightInput = document.getElementById("pdfPlanHeightInput");
+    const pdfTitleFontInput = document.getElementById("pdfTitleFontInput");
+    const pdfTitleFontSizeInput = document.getElementById("pdfTitleFontSizeInput");
+    const pdfHeaderFontInput = document.getElementById("pdfHeaderFontInput");
+    const pdfBodyFontInput = document.getElementById("pdfBodyFontInput");
+    const pdfHeaderBgInput = document.getElementById("pdfHeaderBgInput");
+    const pdfHeaderTextInput = document.getElementById("pdfHeaderTextInput");
+    const pdfTitleColorInput = document.getElementById("pdfTitleColorInput");
+    const pdfOddRowInput = document.getElementById("pdfOddRowInput");
+    const pdfEvenRowInput = document.getElementById("pdfEvenRowInput");
+    const pdfFrameColorInput = document.getElementById("pdfFrameColorInput");
+    const pdfFrameWidthInput = document.getElementById("pdfFrameWidthInput");
+    const workspace = document.querySelector(".workspace");
+    const importBtn = document.getElementById("importBtn");
+    const importInput = document.getElementById("importInput");
+    const workspaceTop = document.getElementById("workspaceTop");
+    const workspaceSplitter = document.getElementById("workspaceSplitter");
+    const pdfLiveWrap = document.getElementById("pdfLiveWrap");
+    const pdfLiveViewport = document.getElementById("pdfLiveViewport");
+    const pdfLiveStage = document.getElementById("pdfLiveStage");
+    const pdfLiveFrame = document.getElementById("pdfLiveFrame");
+    const pdfLiveZoomOutBtn = document.getElementById("pdfLiveZoomOutBtn");
+    const pdfLiveZoomInBtn = document.getElementById("pdfLiveZoomInBtn");
+    const pdfLiveZoomRange = document.getElementById("pdfLiveZoomRange");
+    const pdfLiveZoomValue = document.getElementById("pdfLiveZoomValue");
+    const pdfLiveZoomFitBtn = document.getElementById("pdfLiveZoomFitBtn");
+    const pdfLiveZoomResetBtn = document.getElementById("pdfLiveZoomResetBtn");
+    let pdfLiveZoom = 1;
+    let liveResizeDragging = null;
+    let previewAutoExcelRequested = false;
+    const projectNameInput = document.getElementById("projectNameInput");
+    const projectSelect = document.getElementById("projectSelect");
+    const saveProjectBtn = document.getElementById("saveProjectBtn");
+    const loadProjectBtn = document.getElementById("loadProjectBtn");
+    const deleteProjectBtn = document.getElementById("deleteProjectBtn");
+    const projectStatus = document.getElementById("projectStatus");
+
+    function activeFloor() {
+      return state.floors.find((f) => f.id === state.activeFloorId) || null;
+    }
+
+    function zoneById(zoneId) {
+      const floor = activeFloor();
+      if (!floor) return null;
+      return floor.zones.find((z) => z.id === zoneId) || null;
+    }
+
+    function normalizeKey(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function normalizeUnitKey(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      const normalized = raw.replace(/\s+/g, "");
+      if (/^\d+(\.0+)?$/.test(normalized)) {
+        return String(parseInt(normalized, 10));
+      }
+      return normalized.toLowerCase();
+    }
+
+    function getUnitCandidates(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return [];
+      const out = [];
+      const primary = normalizeUnitKey(raw);
+      if (primary) out.push(primary);
+
+      const numberMatch = raw.match(/(\d+(?:\.\d+)?)/);
+      if (numberMatch) {
+        const numeric = String(parseInt(numberMatch[1], 10));
+        if (numeric && !out.includes(numeric)) out.push(numeric);
+      }
+
+      const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (compact && !out.includes(compact)) out.push(compact);
+      return out;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function polygonCenter(points) {
+      if (!points.length) return [0, 0];
+      let sx = 0;
+      let sy = 0;
+      points.forEach(([x, y]) => {
+        sx += x;
+        sy += y;
+      });
+      return [sx / points.length, sy / points.length];
+    }
+
+    function updateHint() {
+      if (!state.floors.length) {
+        drawHint.textContent = "Importa primero el JSON del Paso 1.";
+      } else if (state.drawing) {
+        drawHint.textContent = state.snapParallel
+          ? "Dibujo activo: líneas ajustadas en paralelo a bordes."
+          : "Dibujo activo: agrega puntos y cierra la zona.";
+      } else {
+        drawHint.textContent = "Selecciona unidad para editar etiqueta y estado.";
+      }
+    }
+
+    function enableButtons() {
+      const hasFloor = Boolean(activeFloor());
+      startZoneBtn.disabled = !hasFloor || state.drawing;
+      finishZoneBtn.disabled = !hasFloor || !state.drawing || state.drawingPoints.length < 3;
+      cancelZoneBtn.disabled = !hasFloor || !state.drawing;
+      deleteZoneBtn.disabled = !hasFloor || !state.selectedZoneId;
+      applyUnitBtn.disabled = !hasFloor || !state.selectedZoneId;
+      autoLabelBtn.disabled = !hasFloor;
+    }
+
+    function setSelectedZone(zoneId) {
+      state.selectedZoneId = zoneId;
+      const zone = zoneById(zoneId);
+      unitLabel.value = zone ? zone.label : "";
+      unitStatus.value = zone ? zone.status : "disponible";
+      render();
+      enableButtons();
+    }
+
+    function switchFloor(floorId) {
+      state.activeFloorId = floorId;
+      state.selectedZoneId = null;
+      state.drawing = false;
+      state.drawingPoints = [];
+      state.cursorPoint = null;
+      const floor = activeFloor();
+      if (!floor) {
+        baseImage.removeAttribute("src");
+        overlay.innerHTML = "";
+      } else {
+        baseImage.src = floor.imageDataUrl;
+      }
+      updateHint();
+      syncFloorTitleControl();
+      render();
+      enableButtons();
+    }
+
+    function syncFloorTitleControl() {
+      const floor = activeFloor();
+      if (!floorTitleInput) return;
+      floorTitleInput.value = floor ? String(floor.pdfTitle || "") : "";
+      if (floorPlanHeightInput) {
+        floorPlanHeightInput.value = floor && Number.isFinite(Number(floor.planHeightMm))
+          ? String(Number(floor.planHeightMm))
+          : "";
+      }
+      if (floorHeaderFontSizeInput) {
+        floorHeaderFontSizeInput.value = floor && Number.isFinite(Number(floor.headerFontSizePx))
+          ? String(Number(floor.headerFontSizePx))
+          : "";
+      }
+      if (floorBodyFontSizeInput) {
+        floorBodyFontSizeInput.value = floor && Number.isFinite(Number(floor.bodyFontSizePx))
+          ? String(Number(floor.bodyFontSizePx))
+          : "";
+      }
+      if (floorLockFontScaleInput) {
+        floorLockFontScaleInput.checked = Boolean(floor && floor.lockFontScale);
+      }
+    }
+
+    function applyActiveFloorTitle(clear = false) {
+      const floor = activeFloor();
+      if (!floor) return;
+      if (clear) {
+        delete floor.pdfTitle;
+      } else {
+        floor.pdfTitle = String(floorTitleInput.value || "").trim();
+      }
+      render();
+    }
+
+    function applyActiveFloorPlanHeight(clear = false) {
+      const floor = activeFloor();
+      if (!floor) return;
+      if (clear) {
+        delete floor.planHeightMm;
+      } else {
+        const mm = Number(floorPlanHeightInput.value);
+        if (!Number.isFinite(mm)) return;
+        floor.planHeightMm = Math.min(320, Math.max(90, Math.round(mm)));
+      }
+      syncFloorTitleControl();
+      render();
+    }
+
+    function applyActiveFloorFontSizes(clear = false) {
+      const floor = activeFloor();
+      if (!floor) return;
+      if (clear) {
+        delete floor.headerFontSizePx;
+        delete floor.bodyFontSizePx;
+      } else {
+        const headerPx = Number(floorHeaderFontSizeInput.value);
+        const bodyPx = Number(floorBodyFontSizeInput.value);
+        if (Number.isFinite(headerPx)) {
+          floor.headerFontSizePx = Math.min(30, Math.max(5.5, headerPx));
+        } else {
+          delete floor.headerFontSizePx;
+        }
+        if (Number.isFinite(bodyPx)) {
+          floor.bodyFontSizePx = Math.min(30, Math.max(5.5, bodyPx));
+        } else {
+          delete floor.bodyFontSizePx;
+        }
+      }
+      syncFloorTitleControl();
+      render();
+    }
+
+    function applyActiveFloorLockFontScale() {
+      const floor = activeFloor();
+      if (!floor || !floorLockFontScaleInput) return;
+      floor.lockFontScale = Boolean(floorLockFontScaleInput.checked);
+      render();
+    }
+
+    function renderFloorTitlesList() {
+      if (!floorTitlesList) return;
+      if (!state.floors.length) {
+        floorTitlesList.innerHTML = "<li class='help'>Sin pisos cargados.</li>";
+        return;
+      }
+      floorTitlesList.innerHTML = state.floors.map((floor, idx) => {
+        const current = String(floor.pdfTitle || "");
+        const planHeightMm = Number.isFinite(Number(floor.planHeightMm)) ? String(Number(floor.planHeightMm)) : "";
+        const headerFontSizePx = Number.isFinite(Number(floor.headerFontSizePx)) ? String(Number(floor.headerFontSizePx)) : "";
+        const bodyFontSizePx = Number.isFinite(Number(floor.bodyFontSizePx)) ? String(Number(floor.bodyFontSizePx)) : "";
+        const lockFontScale = Boolean(floor.lockFontScale);
+        return `<li class="zone-item" style="align-items:flex-start;flex-direction:column;gap:6px;">
+          <span><strong>Piso ${idx + 1}</strong> - ${escapeHtml(floor.name || "")}</span>
+          <input data-floor-title-id="${escapeAttr(floor.id)}" type="text" value="${escapeAttr(current)}" placeholder="Titulo de esta hoja">
+          <input data-floor-height-id="${escapeAttr(floor.id)}" type="number" min="90" max="320" step="1" value="${escapeAttr(planHeightMm)}" placeholder="Alto plano de esta hoja (mm)">
+          <input data-floor-header-fs-id="${escapeAttr(floor.id)}" type="number" min="5.5" max="30" step="0.1" value="${escapeAttr(headerFontSizePx)}" placeholder="Letra encabezados de esta hoja (px)">
+          <input data-floor-body-fs-id="${escapeAttr(floor.id)}" type="number" min="5.5" max="30" step="0.1" value="${escapeAttr(bodyFontSizePx)}" placeholder="Letra celdas de esta hoja (px)">
+          <label style="font-size:12px;color:#667065;"><input data-floor-lock-font-id="${escapeAttr(floor.id)}" type="checkbox" ${lockFontScale ? "checked" : ""}> Respetar tamano de letra (no auto-reducir tabla)</label>
+        </li>`;
+      }).join("");
+
+      floorTitlesList.querySelectorAll("[data-floor-title-id]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const id = el.getAttribute("data-floor-title-id");
+          const floor = state.floors.find((f) => f.id === id);
+          if (!floor) return;
+          floor.pdfTitle = String(el.value || "").trim();
+          if (id === state.activeFloorId) syncFloorTitleControl();
+          schedulePdfLivePreview();
+        });
+      });
+      floorTitlesList.querySelectorAll("[data-floor-height-id]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const id = el.getAttribute("data-floor-height-id");
+          const floor = state.floors.find((f) => f.id === id);
+          if (!floor) return;
+          const mm = Number(el.value);
+          if (!Number.isFinite(mm)) {
+            delete floor.planHeightMm;
+          } else {
+            floor.planHeightMm = Math.min(320, Math.max(90, Math.round(mm)));
+          }
+          if (id === state.activeFloorId) syncFloorTitleControl();
+          schedulePdfLivePreview();
+        });
+      });
+      floorTitlesList.querySelectorAll("[data-floor-header-fs-id]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const id = el.getAttribute("data-floor-header-fs-id");
+          const floor = state.floors.find((f) => f.id === id);
+          if (!floor) return;
+          const px = Number(el.value);
+          if (!Number.isFinite(px)) {
+            delete floor.headerFontSizePx;
+          } else {
+            floor.headerFontSizePx = Math.min(30, Math.max(5.5, px));
+          }
+          if (id === state.activeFloorId) syncFloorTitleControl();
+          schedulePdfLivePreview();
+        });
+      });
+      floorTitlesList.querySelectorAll("[data-floor-body-fs-id]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const id = el.getAttribute("data-floor-body-fs-id");
+          const floor = state.floors.find((f) => f.id === id);
+          if (!floor) return;
+          const px = Number(el.value);
+          if (!Number.isFinite(px)) {
+            delete floor.bodyFontSizePx;
+          } else {
+            floor.bodyFontSizePx = Math.min(30, Math.max(5.5, px));
+          }
+          if (id === state.activeFloorId) syncFloorTitleControl();
+          schedulePdfLivePreview();
+        });
+      });
+      floorTitlesList.querySelectorAll("[data-floor-lock-font-id]").forEach((el) => {
+        el.addEventListener("change", () => {
+          const id = el.getAttribute("data-floor-lock-font-id");
+          const floor = state.floors.find((f) => f.id === id);
+          if (!floor) return;
+          floor.lockFontScale = Boolean(el.checked);
+          if (id === state.activeFloorId) syncFloorTitleControl();
+          schedulePdfLivePreview();
+        });
+      });
+    }
+
+    function applyPdfLiveZoom() {
+      if (!pdfLiveFrame || !pdfLiveZoomRange || !pdfLiveZoomValue) return;
+      pdfLiveZoomRange.value = String(Math.round(pdfLiveZoom * 100));
+      pdfLiveZoomValue.textContent = `${Math.round(pdfLiveZoom * 100)}%`;
+      try {
+        const doc = pdfLiveFrame.contentDocument;
+        if (doc && doc.body) {
+          doc.body.style.zoom = String(pdfLiveZoom);
+        }
+      } catch {}
+    }
+
+    function setPdfLiveZoom(nextZoom) {
+      const clamped = Math.max(0.15, Math.min(2.2, nextZoom));
+      pdfLiveZoom = clamped;
+      applyPdfLiveZoom();
+    }
+
+    function fitPdfLiveToPage() {
+      try {
+        if (!pdfLiveFrame || !pdfLiveViewport) return;
+        const doc = pdfLiveFrame.contentDocument;
+        if (!doc) return;
+        const page = doc.querySelector(".page");
+        if (!page) return;
+        const naturalWidth = page.offsetWidth || page.clientWidth || 1;
+        const naturalHeight = page.offsetHeight || page.clientHeight || 1;
+        const viewW = Math.max(100, pdfLiveViewport.clientWidth - 14);
+        const viewH = Math.max(100, pdfLiveViewport.clientHeight - 14);
+        const scaleW = viewW / Math.max(1, naturalWidth);
+        const scaleH = viewH / Math.max(1, naturalHeight);
+        const fit = Math.min(scaleW, scaleH);
+        setPdfLiveZoom(fit);
+        pdfLiveViewport.scrollLeft = 0;
+        pdfLiveViewport.scrollTop = 0;
+      } catch {}
+    }
+
+    function setPdfLivePanelHeight(heightPx) {
+      if (!pdfLiveWrap || !workspace || !workspaceTop || !workspaceSplitter) return;
+      const minH = 280;
+      const topMin = 240;
+      const total = workspace.clientHeight;
+      const splitterH = workspaceSplitter.getBoundingClientRect().height || 10;
+      const maxH = Math.max(minH, total - topMin - splitterH - 24);
+      const next = Math.max(minH, Math.min(maxH, Math.round(heightPx)));
+      pdfLiveWrap.style.height = `${next}px`;
+      pdfLiveWrap.style.flex = `0 0 ${next}px`;
+    }
+
+    function loadFloorImage(floor) {
+      baseImage.onload = () => {
+        floor.imageWidth = baseImage.naturalWidth;
+        floor.imageHeight = baseImage.naturalHeight;
+        overlay.setAttribute("viewBox", `0 0 ${floor.imageWidth} ${floor.imageHeight}`);
+        overlay.setAttribute("width", floor.imageWidth);
+        overlay.setAttribute("height", floor.imageHeight);
+        render();
+      };
+      baseImage.src = floor.imageDataUrl;
+    }
+
+    function getRawPointFromEvent(evt) {
+      const pt = overlay.createSVGPoint();
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      const matrix = overlay.getScreenCTM();
+      if (!matrix) return null;
+      const mapped = pt.matrixTransform(matrix.inverse());
+      return [mapped.x, mapped.y];
+    }
+
+    function normalizeAngle(angle) {
+      const pi = Math.PI;
+      let out = angle % pi;
+      if (out < 0) out += pi;
+      return out;
+    }
+
+    function angleDistance(a, b) {
+      const pi = Math.PI;
+      const diff = Math.abs(a - b);
+      return Math.min(diff, pi - diff);
+    }
+
+    function collectReferenceAngles() {
+      const floor = activeFloor();
+      const refs = [0, Math.PI / 2];
+      if (!floor) return refs;
+
+      floor.zones.forEach((zone) => {
+        const points = zone.points || [];
+        if (points.length < 2) return;
+        for (let i = 0; i < points.length; i += 1) {
+          const p1 = points[i];
+          const p2 = points[(i + 1) % points.length];
+          const dx = p2[0] - p1[0];
+          const dy = p2[1] - p1[1];
+          if (Math.hypot(dx, dy) < 6) continue;
+          refs.push(normalizeAngle(Math.atan2(dy, dx)));
+        }
+      });
+
+      for (let i = 1; i < state.drawingPoints.length; i += 1) {
+        const p1 = state.drawingPoints[i - 1];
+        const p2 = state.drawingPoints[i];
+        const dx = p2[0] - p1[0];
+        const dy = p2[1] - p1[1];
+        if (Math.hypot(dx, dy) < 6) continue;
+        refs.push(normalizeAngle(Math.atan2(dy, dx)));
+      }
+
+      return refs;
+    }
+
+    function snapDrawPoint(rawPoint) {
+      const last = state.drawingPoints[state.drawingPoints.length - 1];
+      if (!last || !state.snapParallel) {
+        return [Math.round(rawPoint[0]), Math.round(rawPoint[1])];
+      }
+      const vx = rawPoint[0] - last[0];
+      const vy = rawPoint[1] - last[1];
+      if (Math.hypot(vx, vy) < 2) {
+        return [Math.round(rawPoint[0]), Math.round(rawPoint[1])];
+      }
+
+      const rawAngle = normalizeAngle(Math.atan2(vy, vx));
+      const refs = collectReferenceAngles();
+      let bestAngle = refs[0];
+      let bestDistance = angleDistance(rawAngle, bestAngle);
+
+      for (let i = 1; i < refs.length; i += 1) {
+        const d = angleDistance(rawAngle, refs[i]);
+        if (d < bestDistance) {
+          bestDistance = d;
+          bestAngle = refs[i];
+        }
+      }
+
+      const dirX = Math.cos(bestAngle);
+      const dirY = Math.sin(bestAngle);
+      const t = vx * dirX + vy * dirY;
+      return [Math.round(last[0] + t * dirX), Math.round(last[1] + t * dirY)];
+    }
+
+    function startDrawing() {
+      if (!activeFloor()) return;
+      state.drawing = true;
+      state.drawingPoints = [];
+      state.cursorPoint = null;
+      state.selectedZoneId = null;
+      unitLabel.value = "";
+      unitStatus.value = "disponible";
+      updateHint();
+      render();
+      enableButtons();
+    }
+
+    function finishDrawing() {
+      const floor = activeFloor();
+      if (!floor || state.drawingPoints.length < 3) return;
+      const zone = {
+        id: `zone-${state.nextZoneId++}`,
+        label: String(floor.zones.length + 1),
+        status: "disponible",
+        labelOffset: { x: 0, y: 0 },
+        points: [...state.drawingPoints]
+      };
+      floor.zones.push(zone);
+      syncZoneStatusesFromExcel();
+      state.drawing = false;
+      state.drawingPoints = [];
+      state.cursorPoint = null;
+      setSelectedZone(zone.id);
+      updateHint();
+      render();
+      enableButtons();
+    }
+
+    function cancelDrawing() {
+      state.drawing = false;
+      state.drawingPoints = [];
+      state.cursorPoint = null;
+      updateHint();
+      render();
+      enableButtons();
+    }
+
+    function deleteSelectedZone() {
+      const floor = activeFloor();
+      if (!floor || !state.selectedZoneId) return;
+      floor.zones = floor.zones.filter((z) => z.id !== state.selectedZoneId);
+      syncZoneStatusesFromExcel();
+      state.selectedZoneId = null;
+      unitLabel.value = "";
+      unitStatus.value = "disponible";
+      render();
+      enableButtons();
+    }
+
+    function applySelectedUnitChanges() {
+      const zone = zoneById(state.selectedZoneId);
+      if (!zone) return;
+      const label = unitLabel.value.trim();
+      if (label) zone.label = label;
+      syncZoneStatusesFromExcel();
+      render();
+    }
+
+    function autoLabel() {
+      const floor = activeFloor();
+      if (!floor) return;
+      floor.zones
+        .sort((a, b) => {
+          const [ax, ay] = polygonCenter(a.points);
+          const [bx, by] = polygonCenter(b.points);
+          if (Math.abs(ay - by) < 30) return ax - bx;
+          return ay - by;
+        })
+        .forEach((zone, index) => {
+          zone.label = String(index + 1);
+        });
+      syncZoneStatusesFromExcel();
+      render();
+    }
+
+    function renderFloorTabs() {
+      if (!state.floors.length) {
+        floorTabs.innerHTML = "<span class='help'>Sin pisos cargados</span>";
+        return;
+      }
+      floorTabs.innerHTML = state.floors.map((floor, idx) => {
+        const active = floor.id === state.activeFloorId ? "active" : "";
+        return `<button class="tab ${active}" data-floor-id="${floor.id}">Piso ${idx + 1}</button>`;
+      }).join("");
+
+      floorTabs.querySelectorAll("[data-floor-id]").forEach((el) => {
+        el.addEventListener("click", () => {
+          const floorId = el.getAttribute("data-floor-id");
+          switchFloor(floorId);
+        });
+      });
+    }
+
+    function renderDrawingPreview() {
+      if (!state.drawingPoints.length) return "";
+      const circles = state.drawingPoints
+        .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#1d5a3f" />`)
+        .join("");
+      const linePoints = state.drawingPoints.map(([x, y]) => `${x},${y}`).join(" ");
+      const polyline = `<polyline points="${linePoints}" fill="rgba(29,90,63,0.08)" stroke="#1d5a3f" stroke-width="2" />`;
+      let guide = "";
+      const last = state.drawingPoints[state.drawingPoints.length - 1];
+      if (state.cursorPoint && last) {
+        guide = `<line x1="${last[0]}" y1="${last[1]}" x2="${state.cursorPoint[0]}" y2="${state.cursorPoint[1]}" stroke="#1d5a3f" stroke-width="2" stroke-dasharray="6 4" />`;
+      }
+      return polyline + guide + circles;
+    }
+
+    function renderZones() {
+      const floor = activeFloor();
+      if (!floor) return "";
+      return floor.zones.map((zone) => {
+        const pts = zone.points.map(([x, y]) => `${x},${y}`).join(" ");
+        const [baseX, baseY] = polygonCenter(zone.points);
+        const dx = zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0;
+        const dy = zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0;
+        const cx = baseX + dx;
+        const cy = baseY + dy;
+        const label = escapeHtml(zone.label);
+        const isActive = zone.id === state.selectedZoneId;
+        const fillColor = statusColors[zone.status] || statusColors.disponible;
+        return `
+          <g data-zone-id="${zone.id}">
+            <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.28" stroke="${isActive ? "#163c2c" : fillColor}" stroke-width="${isActive ? 3 : 2}" />
+            <text
+              data-label-zone-id="${zone.id}"
+              x="${cx}"
+              y="${cy}"
+              text-anchor="middle"
+              dominant-baseline="middle"
+              font-family="Segoe UI, Tahoma, sans-serif"
+              font-size="20"
+              font-weight="700"
+              fill="#121"
+              stroke="#fff"
+              stroke-width="3"
+              paint-order="stroke"
+              style="cursor: move;"
+            >${label}</text>
+          </g>
+        `;
+      }).join("");
+    }
+
+    function renderZoneList() {
+      const floor = activeFloor();
+      if (!floor || !floor.zones.length) {
+        zoneList.innerHTML = "<li class='help'>No hay zonas en este piso.</li>";
+        return;
+      }
+      zoneList.innerHTML = floor.zones.map((zone) => {
+        const active = zone.id === state.selectedZoneId ? "active" : "";
+        return `<li class="zone-item ${active}" data-zone-id="${zone.id}"><span>${escapeHtml(zone.label)}</span><span>${escapeHtml(zone.status)}</span></li>`;
+      }).join("");
+
+      zoneList.querySelectorAll("[data-zone-id]").forEach((el) => {
+        el.addEventListener("click", () => {
+          const zoneId = el.getAttribute("data-zone-id");
+          setSelectedZone(zoneId);
+        });
+      });
+    }
+
+    function renderOverlay() {
+      const floor = activeFloor();
+      if (!floor) {
+        overlay.innerHTML = "";
+        return;
+      }
+      overlay.innerHTML = renderZones() + renderDrawingPreview();
+
+      overlay.querySelectorAll("[data-zone-id]").forEach((el) => {
+        el.addEventListener("click", (evt) => {
+          evt.stopPropagation();
+          const zoneId = el.getAttribute("data-zone-id");
+          setSelectedZone(zoneId);
+        });
+      });
+
+      overlay.querySelectorAll("[data-label-zone-id]").forEach((el) => {
+        el.addEventListener("mousedown", (evt) => {
+          evt.preventDefault();
+          evt.stopPropagation();
+          const zoneId = el.getAttribute("data-label-zone-id");
+          const zone = zoneById(zoneId);
+          if (!zone) return;
+          setSelectedZone(zoneId);
+          const point = getRawPointFromEvent(evt);
+          if (!point) return;
+          if (!zone.labelOffset) zone.labelOffset = { x: 0, y: 0 };
+          state.draggingLabel = {
+            zoneId,
+            startX: point[0],
+            startY: point[1],
+            startOffsetX: zone.labelOffset.x,
+            startOffsetY: zone.labelOffset.y
+          };
+        });
+      });
+    }
+
+    function statusPill(status) {
+      const color = statusColors[status] || "#94a39a";
+      return `<span class="status-pill" style="background:${color}">${escapeHtml(status || "-")}</span>`;
+    }
+
+    function normalizeBedrooms(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      const numMatch = raw.match(/\d+(?:[.,]\d+)?/);
+      if (numMatch) {
+        const normalized = numMatch[0].replace(",", ".");
+        const asNumber = Number(normalized);
+        if (Number.isFinite(asNumber)) {
+          return Number.isInteger(asNumber) ? String(asNumber) : String(asNumber);
+        }
+      }
+      return raw.replace(/rec[aá]maras?|bedrooms?|beds?/gi, "").trim();
+    }
+
+    function formatUsdValue(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      const numeric = raw.replace(/[^0-9.-]/g, "");
+      const asNumber = Number(numeric);
+      if (!Number.isFinite(asNumber)) return raw;
+      const hasDecimals = Math.abs(asNumber % 1) > 0.0001;
+      const formatted = new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: hasDecimals ? 2 : 0,
+        maximumFractionDigits: 2
+      }).format(asNumber);
+      return `$${formatted} USD`;
+    }
+
+    function displayCellValue(row, key) {
+      if (!row) return "";
+      if (key === "REC") return normalizeBedrooms(row[key]);
+      if (key === "PRECIO" || key === "PRECIO_FINAL") return formatUsdValue(row[key]);
+      return row[key] || "";
+    }
+
+    function computeTableColWidths(rows) {
+      const metrics = REPORT_COLUMNS.map((col) => {
+        const bi = toBilingualHeader(col.label);
+        const headerLength = Math.max(String(bi.top || "").length, String(bi.bottom || "").length, 4);
+        return { key: col.key, weight: Math.max(4, headerLength) };
+      });
+      let statusWeight = 6;
+
+      rows.forEach((row) => {
+        metrics.forEach((metric) => {
+          const value = metric.key === "LINK" ? "📐" : String(displayCellValue(row, metric.key) || "");
+          metric.weight = Math.max(metric.weight, Math.min(36, value.length || 1));
+        });
+        const statusValue = String((row.ESTADO || "").toUpperCase());
+        statusWeight = Math.max(statusWeight, Math.min(20, statusValue.length || 1));
+      });
+
+      const rawWeights = [...metrics.map((m) => m.weight), statusWeight];
+      const sum = rawWeights.reduce((a, b) => a + b, 0) || 1;
+      const percents = rawWeights.map((w) => (w / sum) * 100);
+      return percents.map((p) => `${p.toFixed(4)}%`);
+    }
+
+    function getExcelRowByUnitMap() {
+      const map = new Map();
+      state.excel.rows.forEach((row) => {
+        const candidates = getUnitCandidates(row.UNIDAD);
+        candidates.forEach((candidate) => {
+          if (!candidate) return;
+          // Keep first match to avoid later accidental overrides.
+          if (!map.has(candidate)) map.set(candidate, row);
+        });
+      });
+      return map;
+    }
+
+    function syncZoneStatusesFromExcel() {
+      if (!state.excel.rows.length) return;
+      const unitMap = getExcelRowByUnitMap();
+      state.floors.forEach((floor) => {
+        floor.zones.forEach((zone) => {
+          const exists = getUnitCandidates(zone.label).some((candidate) => unitMap.has(candidate));
+          zone.status = exists ? "disponible" : "vendida";
+        });
+      });
+    }
+
+    function getRowsForFloorTable(floor, options = {}) {
+      if (!floor) return [];
+      const availableOnly = Boolean(options.availableOnly);
+      const unitMap = getExcelRowByUnitMap();
+      const rows = [...floor.zones]
+        .sort((a, b) => String(a.label).localeCompare(String(b.label), "es", { numeric: true }))
+        .map((zone) => {
+          let row = null;
+          const candidates = getUnitCandidates(zone.label);
+          for (const candidate of candidates) {
+            if (unitMap.has(candidate)) {
+              row = unitMap.get(candidate);
+              break;
+            }
+          }
+          const status = row ? "disponible" : "vendida";
+          return {
+            LINK: row ? row.LINK : "",
+            UNIDAD: String(zone.label || ""),
+            REC: row ? row.REC : "",
+            TOTAL_M2: row ? row.TOTAL_M2 : "",
+            TOTAL_SQFT: row ? row.TOTAL_SQFT : "",
+            PRECIO: row ? row.PRECIO : "",
+            DESCUENTO: row ? row.DESCUENTO : "",
+            PRECIO_FINAL: row ? row.PRECIO_FINAL : "",
+            ESTADO: status
+          };
+        });
+      return availableOnly ? rows.filter((r) => r.ESTADO === "disponible") : rows;
+    }
+
+    function renderDataTable() {
+      const floor = activeFloor();
+      if (!state.excel.rows.length) {
+        tableSummary.innerHTML = "";
+        tableContainer.innerHTML = "<span class='hint'>Carga un Excel CEIBA para ver la tabla aquí.</span>";
+        return;
+      }
+      const rows = getRowsForFloorTable(floor, { availableOnly: true });
+      const availableCount = rows.filter((r) => r.ESTADO === "disponible").length;
+      const colWidths = computeTableColWidths(rows);
+      const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
+      const rowsHtml = rows.map((row) => {
+        const cls = row.ESTADO === "disponible" ? "matched" : "";
+        const linkCell = row.LINK
+          ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer" title="Abrir plano">📐</a>`
+          : "-";
+        return `<tr class="${cls}">
+          <td>${linkCell}</td>
+          <td>${escapeHtml(row.UNIDAD)}</td>
+          <td>${escapeHtml(displayCellValue(row, "REC"))}</td>
+          <td>${escapeHtml(row.TOTAL_M2)}</td>
+          <td>${escapeHtml(row.TOTAL_SQFT)}</td>
+          <td>${escapeHtml(displayCellValue(row, "PRECIO"))}</td>
+          <td>${escapeHtml(row.DESCUENTO)}</td>
+          <td>${escapeHtml(displayCellValue(row, "PRECIO_FINAL"))}</td>
+          <td>${statusPill(row.ESTADO)}</td>
+        </tr>`;
+      }).join("");
+
+      tableSummary.innerHTML = [
+        `<span class="chip">Piso activo: ${escapeHtml(floor ? floor.name : "-")}</span>`,
+        `<span class="chip">Disponibles en piso: ${availableCount}</span>`
+      ].join("");
+
+      tableContainer.innerHTML = `
+        <table>
+          <colgroup>${colsHtml}</colgroup>
+          <thead>
+            <tr>
+              <th>PLANO</th>
+              <th>UNIDAD / UNIT</th>
+              <th>REC / BED</th>
+              <th>TOTAL M2</th>
+              <th>TOTAL SQFT</th>
+              <th>PREC / PRICE</th>
+              <th>DESC / DISC %</th>
+              <th>PRECIO FINAL / FINAL PRICE</th>
+              <th>ESTADO</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml || `<tr><td colspan="9">Sin unidades disponibles en este piso.</td></tr>`}</tbody>
+        </table>
+      `;
+    }
+
+    function render() {
+      renderFloorTabs();
+      renderFloorTitlesList();
+      renderOverlay();
+      renderZoneList();
+      renderDataTable();
+      schedulePdfLivePreview();
+    }
+
+    function getPersistableState() {
+      return {
+        floors: state.floors,
+        nextZoneId: state.nextZoneId,
+        excel: state.excel,
+        pdfLayout: state.pdfLayout
+      };
+    }
+
+    function cloneJson(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function normalizeStatus(status) {
+      const raw = String(status || "").trim().toLowerCase();
+      if (raw === "reservada") return "reservada";
+      if (raw === "vendida") return "vendida";
+      return "disponible";
+    }
+
+    function normalizePoint(point) {
+      if (!Array.isArray(point) || point.length < 2) return null;
+      const x = Number(point[0]);
+      const y = Number(point[1]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      return [x, y];
+    }
+
+    function normalizeFloorPayload(payload) {
+      let floorsRaw = [];
+      if (Array.isArray(payload)) {
+        floorsRaw = payload;
+      } else if (payload && Array.isArray(payload.floors)) {
+        floorsRaw = payload.floors;
+      } else if (payload && payload.imageDataUrl) {
+        floorsRaw = [payload];
+      } else {
+        return [];
+      }
+      return floorsRaw
+        .filter((floor) => floor && floor.imageDataUrl)
+        .map((floor, floorIdx) => {
+          const zones = (Array.isArray(floor.zones) ? floor.zones : [])
+            .map((zone) => {
+              const points = (Array.isArray(zone.points) ? zone.points : [])
+                .map(normalizePoint)
+                .filter(Boolean);
+              if (points.length < 3) return null;
+              return {
+                label: String(zone.label || ""),
+                status: normalizeStatus(zone.status),
+                points,
+                labelOffset: zone.labelOffset && Number.isFinite(Number(zone.labelOffset.x)) && Number.isFinite(Number(zone.labelOffset.y))
+                  ? { x: Number(zone.labelOffset.x), y: Number(zone.labelOffset.y) }
+                  : { x: 0, y: 0 }
+              };
+            })
+            .filter(Boolean);
+
+          return {
+            id: String(floor.id || ""),
+            name: String(floor.name || `Piso ${floorIdx + 1}`),
+            pdfTitle: String(floor.pdfTitle || ""),
+            planHeightMm: Number.isFinite(Number(floor.planHeightMm)) ? Number(floor.planHeightMm) : undefined,
+            headerFontSizePx: Number.isFinite(Number(floor.headerFontSizePx)) ? Number(floor.headerFontSizePx) : undefined,
+            bodyFontSizePx: Number.isFinite(Number(floor.bodyFontSizePx)) ? Number(floor.bodyFontSizePx) : undefined,
+            lockFontScale: Boolean(floor.lockFontScale),
+            imageDataUrl: String(floor.imageDataUrl),
+            imageWidth: Number(floor.imageWidth) || 0,
+            imageHeight: Number(floor.imageHeight) || 0,
+            zones
+          };
+        });
+    }
+
+    function floorIdentityKey(floor) {
+      const img = String(floor.imageDataUrl || "");
+      if (img) return `img:${img}`;
+      const name = String(floor.name || "").trim().toLowerCase();
+      return `name:${name}|zones:${Array.isArray(floor.zones) ? floor.zones.length : 0}`;
+    }
+
+    function inferFloorOrderValue(floor, fallbackIndex) {
+      const name = String((floor && floor.name) || "").toLowerCase();
+      const byWord = [
+        { re: /(primer|primero|first)/, value: 1 },
+        { re: /(segundo|second)/, value: 2 },
+        { re: /(tercer|tercero|third)/, value: 3 },
+        { re: /(cuart|fourth)/, value: 4 },
+        { re: /(quint|fifth)/, value: 5 },
+        { re: /(sext|sixth)/, value: 6 },
+        { re: /(sept|seventh)/, value: 7 },
+        { re: /(octav|eighth)/, value: 8 },
+        { re: /(noven|ninth)/, value: 9 },
+        { re: /(decim|tenth)/, value: 10 }
+      ];
+      for (const item of byWord) {
+        if (item.re.test(name)) return item.value;
+      }
+      const numMatch = name.match(/(?:piso|floor)\s*0*(\d{1,2})/i) || name.match(/(^|[^0-9])0*(\d{1,2})([^0-9]|$)/);
+      if (numMatch) {
+        const n = Number(numMatch[1] || numMatch[2]);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      return 100 + fallbackIndex;
+    }
+
+    function sortFloorsForDisplay(floors) {
+      return [...floors].sort((a, b) => {
+        const aOrder = inferFloorOrderValue(a, 0);
+        const bOrder = inferFloorOrderValue(b, 0);
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return String(a.name || "").localeCompare(String(b.name || ""), "es", { numeric: true });
+      });
+    }
+
+    function withFreshIds(floors) {
+      let zoneCounter = 1;
+      const safeFloors = floors.map((floor, idx) => {
+        const floorId = `floor-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`;
+        const zones = (Array.isArray(floor.zones) ? floor.zones : []).map((zone) => ({
+          ...cloneJson(zone),
+          id: zoneCounter++
+        }));
+        return {
+          ...cloneJson(floor),
+          id: floorId,
+          name: String(floor.name || `Piso ${idx + 1}`),
+          zones
+        };
+      });
+      return { floors: safeFloors, nextZoneId: zoneCounter };
+    }
+
+    function applyFloorsState(floors, options = {}) {
+      const orderedFloors = sortFloorsForDisplay(floors).slice(0, MAX_FLOORS);
+      const normalized = withFreshIds(orderedFloors);
+      state.floors = normalized.floors;
+      state.nextZoneId = normalized.nextZoneId;
+      if (!state.floors.length) {
+        state.activeFloorId = null;
+      } else if (options.preferFirst || !state.activeFloorId || !state.floors.some((f) => f.id === state.activeFloorId)) {
+        state.activeFloorId = state.floors[0].id;
+      }
+      state.selectedZoneId = null;
+      state.drawing = false;
+      state.drawingPoints = [];
+      state.cursorPoint = null;
+      syncZoneStatusesFromExcel();
+      loadFloorImage(activeFloor());
+      updateHint();
+      syncFloorTitleControl();
+      render();
+      enableButtons();
+    }
+
+    function mergePayloadIntoState(payload, sourceLabel) {
+      const incoming = normalizeFloorPayload(payload);
+      if (!incoming.length) return false;
+
+      const currentFloors = normalizeFloorPayload({ floors: state.floors });
+      const merged = [...currentFloors];
+      const seen = new Set(currentFloors.map(floorIdentityKey));
+
+      incoming.forEach((floor) => {
+        const key = floorIdentityKey(floor);
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(floor);
+      });
+
+      applyFloorsState(merged, { preferFirst: !state.floors.length });
+      if (projectStatus) {
+        projectStatus.textContent = `Proyecto auto cargado: ${sourceLabel}. Pisos detectados: ${state.floors.length}.`;
+      }
+      return true;
+    }
+
+    function dedupeFloorsByIdentity(floors) {
+      const out = [];
+      const seen = new Set();
+      floors.forEach((floor) => {
+        const key = floorIdentityKey(floor);
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(floor);
+      });
+      return out;
+    }
+
+    function projectStorageKey(id) {
+      return `${PROJECT_KEY_PREFIX}${id}`;
+    }
+
+    function getProjectIndex() {
+      try {
+        const raw = localStorage.getItem(PROJECT_INDEX_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(list)) return [];
+        return list
+          .filter((item) => item && item.id)
+          .map((item) => ({
+            id: String(item.id),
+            name: String(item.name || "Proyecto sin nombre"),
+            updatedAt: String(item.updatedAt || ""),
+            floorCount: Number(item.floorCount) || 0
+          }));
+      } catch {
+        return [];
+      }
+    }
+
+    function saveProjectIndex(list) {
+      localStorage.setItem(PROJECT_INDEX_KEY, JSON.stringify(list));
+    }
+
+    function formatProjectDate(iso) {
+      if (!iso) return "";
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleString("es-MX", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function refreshProjectSelector(selectedId = "") {
+      const projects = getProjectIndex()
+        .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+
+      if (!projects.length) {
+        projectSelect.innerHTML = `<option value="">Sin versiones guardadas</option>`;
+        projectSelect.disabled = true;
+        if (projectStatus) projectStatus.textContent = "Sin versiones guardadas.";
+        return;
+      }
+
+      const options = projects.map((project) => {
+        const stamp = formatProjectDate(project.updatedAt);
+        const label = `${project.name} (${project.floorCount} pisos${stamp ? `, ${stamp}` : ""})`;
+        const selected = selectedId && project.id === selectedId ? "selected" : "";
+        return `<option value="${escapeAttr(project.id)}" ${selected}>${escapeHtml(label)}</option>`;
+      }).join("");
+
+      projectSelect.innerHTML = options;
+      projectSelect.disabled = false;
+      if (!selectedId && projects[0]) projectSelect.value = projects[0].id;
+      if (projectStatus) projectStatus.textContent = `${projects.length} version(es) guardada(s).`;
+    }
+
+    function saveProjectVersion() {
+      if (!state.floors.length) {
+        alert("Primero carga o crea al menos un piso.");
+        return;
+      }
+      const customName = String(projectNameInput.value || "").trim();
+      const name = customName || `Proyecto ${new Date().toLocaleString("es-MX")}`;
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem(projectStorageKey(id), JSON.stringify(getPersistableState()));
+
+      const projects = getProjectIndex().filter((p) => p && p.id !== id);
+      projects.push({
+        id,
+        name,
+        updatedAt: new Date().toISOString(),
+        floorCount: state.floors.length
+      });
+      saveProjectIndex(projects);
+      refreshProjectSelector(id);
+      if (projectStatus) projectStatus.textContent = `Version guardada: ${name}.`;
+      alert(`Version guardada: ${name}`);
+    }
+
+    function loadSelectedProjectVersion() {
+      const id = String(projectSelect.value || "").trim();
+      if (!id) {
+        alert("Selecciona una version guardada.");
+        return;
+      }
+      const raw = localStorage.getItem(projectStorageKey(id));
+      if (!raw) {
+        alert("No se encontro esa version. Puede haber sido borrada.");
+        return;
+      }
+      try {
+        applyPersistedState(JSON.parse(raw));
+        const selected = getProjectIndex().find((p) => p.id === id);
+        if (projectStatus) {
+          projectStatus.textContent = `Version cargada: ${selected ? selected.name : id}.`;
+        }
+      } catch {
+        alert("No se pudo cargar la version seleccionada.");
+      }
+    }
+
+    function loadLatestProjectVersionSilently() {
+      const projects = getProjectIndex()
+        .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+      if (!projects.length) return false;
+      const latest = projects[0];
+      try {
+        const raw = localStorage.getItem(projectStorageKey(latest.id));
+        if (!raw) return false;
+        applyPersistedState(JSON.parse(raw));
+        refreshProjectSelector(latest.id);
+        if (projectStatus) {
+          projectStatus.textContent = `Version auto cargada: ${latest.name}.`;
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function deleteSelectedProjectVersion() {
+      const id = String(projectSelect.value || "").trim();
+      if (!id) {
+        alert("Selecciona una version para borrar.");
+        return;
+      }
+      const selected = getProjectIndex().find((p) => p.id === id);
+      const name = selected ? selected.name : id;
+      if (!window.confirm(`Borrar la version '${name}'?`)) return;
+
+      localStorage.removeItem(projectStorageKey(id));
+      const projects = getProjectIndex().filter((p) => p.id !== id);
+      saveProjectIndex(projects);
+      refreshProjectSelector();
+      if (projectStatus) projectStatus.textContent = `Version borrada: ${name}.`;
+    }
+
+    function autoMergeSavedVersionsOnOpen() {
+      const projects = getProjectIndex()
+        .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+      if (!projects.length) return 0;
+
+      let mergedCount = 0;
+      projects.forEach((project) => {
+        if (state.floors.length >= MAX_FLOORS) return;
+        try {
+          const raw = localStorage.getItem(projectStorageKey(project.id));
+          if (!raw) return;
+          const payload = JSON.parse(raw);
+          const merged = mergePayloadIntoState(payload, `version local: ${project.name}`);
+          if (merged) mergedCount += 1;
+        } catch {}
+      });
+      return mergedCount;
+    }
+
+    function applyPersistedState(payload) {
+      const floors = normalizeFloorPayload(payload);
+      if (!floors.length) {
+        alert("JSON inválido o vacío.");
+        return;
+      }
+      applyFloorsState(floors, { preferFirst: true });
+      state.nextZoneId = Math.max(Number(payload.nextZoneId) || 1, state.nextZoneId);
+      state.excel = payload.excel || { headers: [], rows: [] };
+      state.pdfLayout = payload.pdfLayout || {};
+      syncZoneStatusesFromExcel();
+      syncPdfControlsFromState();
+    }
+
+    function saveLocal() {
+      const payload = JSON.stringify(getPersistableState());
+      LOCAL_STATE_KEYS.forEach((key) => localStorage.setItem(key, payload));
+      if (projectStatus) projectStatus.textContent = "Guardado local rapido actualizado.";
+      alert("Guardado local listo.");
+    }
+
+    function loadLocal() {
+      const raw = LOCAL_STATE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
+      if (!raw) {
+        alert("No hay datos guardados.");
+        return;
+      }
+      try {
+        applyPersistedState(JSON.parse(raw));
+        if (projectStatus) projectStatus.textContent = "Se cargo el guardado local rapido.";
+      } catch (err) {
+        alert("No se pudieron cargar los datos locales.");
+      }
+    }
+
+    function tryLoadLocalSilently() {
+      const raw = LOCAL_STATE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
+      if (!raw) return false;
+      try {
+        applyPersistedState(JSON.parse(raw));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(getPersistableState(), null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "plataforma-unidades.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function escapeAttr(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function buildExportRowsForFloor(floor) {
+      const rows = getRowsForFloorTable(floor, { availableOnly: true });
+      return rows.map((row) => ({ row }));
+    }
+
+    function buildFloorSvgMarkup(floor) {
+      const width = floor.imageWidth || 1200;
+      const height = floor.imageHeight || 900;
+      const zonesMarkup = floor.zones.map((zone) => {
+        const pts = zone.points.map(([x, y]) => `${x},${y}`).join(" ");
+        const [baseX, baseY] = polygonCenter(zone.points);
+        const dx = zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0;
+        const dy = zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0;
+        const cx = baseX + dx;
+        const cy = baseY + dy;
+        const fillColor = statusColors[zone.status] || statusColors.disponible;
+        return `
+          <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.30" stroke="${fillColor}" stroke-width="2"></polygon>
+          <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI, Tahoma, sans-serif" font-size="24" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${escapeHtml(zone.label)}</text>
+        `;
+      }).join("");
+
+      return `
+        <svg viewBox="0 0 ${width} ${height}" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <image href="${escapeAttr(floor.imageDataUrl)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet"></image>
+          ${zonesMarkup}
+        </svg>
+      `;
+    }
+
+    function toBilingualHeader(header) {
+      const raw = String(header || "").trim();
+      if (!raw) return { top: "-", bottom: "" };
+      const parts = raw.split("/").map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        return { top: parts[0].toUpperCase(), bottom: parts[1].toUpperCase() };
+      }
+      return { top: raw.toUpperCase(), bottom: "" };
+    }
+
+    function getPdfLayout() {
+      return { ...PDF_LAYOUT, ...(state.pdfLayout || {}) };
+    }
+
+    function resolveFontStack(fontKey) {
+      return PDF_FONT_OPTIONS[fontKey] || PDF_FONT_OPTIONS.arial;
+    }
+
+    function syncPdfControlsFromState() {
+      const layout = getPdfLayout();
+      pdfLogoStatus.textContent = layout.logoDataUrl ? "Logo cargado" : "Sin logo cargado";
+      pdfBrandTextInput.value = layout.brandText;
+      pdfTitleInput.value = layout.title;
+      pdfLogoSizeInput.value = String(parseFloat(layout.logoMaxHeight) || 11);
+      pdfPlanHeightInput.value = String(parseFloat(layout.planHeight) || 148);
+      pdfTitleFontInput.value = layout.titleFontKey || PDF_LAYOUT.titleFontKey;
+      pdfTitleFontSizeInput.value = String(parseFloat(layout.titleFontSize) || 12);
+      pdfHeaderFontInput.value = layout.headerFontKey;
+      pdfBodyFontInput.value = layout.bodyFontKey;
+      pdfHeaderBgInput.value = layout.headerBgColor;
+      pdfHeaderTextInput.value = layout.headerTextColor;
+      pdfTitleColorInput.value = layout.titleColor;
+      pdfOddRowInput.value = layout.oddRowColor;
+      pdfEvenRowInput.value = layout.evenRowColor;
+      pdfFrameColorInput.value = layout.borderColor;
+      pdfFrameWidthInput.value = String(parseFloat(layout.borderWidth) || 1.2);
+    }
+
+    function savePdfLayoutFromControls() {
+      const planHeight = Number(pdfPlanHeightInput.value);
+      const logoSize = Number(pdfLogoSizeInput.value);
+      const titleFontSize = Number(pdfTitleFontSizeInput.value);
+      const frameWidth = Number(pdfFrameWidthInput.value);
+      state.pdfLayout = {
+        logoDataUrl: (state.pdfLayout && state.pdfLayout.logoDataUrl) || "",
+        brandText: pdfBrandTextInput.value,
+        brandColor: (state.pdfLayout && state.pdfLayout.brandColor) || PDF_LAYOUT.brandColor,
+        title: pdfTitleInput.value,
+        titleColor: pdfTitleColorInput.value || PDF_LAYOUT.titleColor,
+        titleFontKey: pdfTitleFontInput.value || PDF_LAYOUT.titleFontKey,
+        titleFontSize: `${Math.min(34, Math.max(8, Number.isFinite(titleFontSize) ? titleFontSize : 12))}px`,
+        logoMaxHeight: `${Math.min(90, Math.max(5, Number.isFinite(logoSize) ? logoSize : 11))}mm`,
+        planHeight: `${Math.min(240, Math.max(90, Number.isFinite(planHeight) ? planHeight : 148))}mm`,
+        headerFontSize: (state.pdfLayout && state.pdfLayout.headerFontSize) || PDF_LAYOUT.headerFontSize,
+        bodyFontSize: (state.pdfLayout && state.pdfLayout.bodyFontSize) || PDF_LAYOUT.bodyFontSize,
+        minScale: Number.isFinite(Number((state.pdfLayout || {}).minScale))
+          ? Number((state.pdfLayout || {}).minScale)
+          : PDF_LAYOUT.minScale,
+        headerFontKey: pdfHeaderFontInput.value || PDF_LAYOUT.headerFontKey,
+        bodyFontKey: pdfBodyFontInput.value || PDF_LAYOUT.bodyFontKey,
+        headerBgColor: pdfHeaderBgInput.value || PDF_LAYOUT.headerBgColor,
+        headerTextColor: pdfHeaderTextInput.value || PDF_LAYOUT.headerTextColor,
+        oddRowColor: pdfOddRowInput.value || PDF_LAYOUT.oddRowColor,
+        evenRowColor: pdfEvenRowInput.value || PDF_LAYOUT.evenRowColor,
+        borderColor: pdfFrameColorInput.value || PDF_LAYOUT.borderColor,
+        borderWidth: `${Math.min(4, Math.max(0.4, Number.isFinite(frameWidth) ? frameWidth : 1.2))}px`
+      };
+    }
+
+    function resetPdfLayoutControls() {
+      state.pdfLayout = {};
+      syncPdfControlsFromState();
+    }
+
+    function buildPdfHtmlDocument(layout, floors, options = {}) {
+      const autoPrint = options.autoPrint ? "true" : "false";
+      const initialScrollY = Number.isFinite(options.initialScrollY) ? options.initialScrollY : 0;
+      const headerFontStack = resolveFontStack(layout.headerFontKey);
+      const bodyFontStack = resolveFontStack(layout.bodyFontKey);
+      const titleFontStack = resolveFontStack(layout.titleFontKey || layout.headerFontKey);
+      const logoHtml = layout.logoDataUrl
+        ? `<img class="logo" src="${escapeAttr(layout.logoDataUrl)}" alt="Logo">`
+        : "";
+      const brandTextHtml = !layout.logoDataUrl && String(layout.brandText || "").trim()
+        ? `<p class="brand-text">${escapeHtml(layout.brandText)}</p>`
+        : "";
+
+      const tableHead = REPORT_COLUMNS.map((col) => {
+        const bi = toBilingualHeader(col.label);
+        return `<th><span class="th-top">${escapeHtml(bi.top)}</span><span class="th-bottom">${escapeHtml(bi.bottom)}</span></th>`;
+      }).join("");
+      const colCount = REPORT_COLUMNS.length + 1;
+
+      const pagesHtml = floors.map((floor, index) => {
+        const exportRows = buildExportRowsForFloor(floor);
+        const colWidths = computeTableColWidths(exportRows.map((entry) => entry.row || {}));
+        const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
+        const pageTitle = String((floor && floor.pdfTitle) || layout.title || "").trim();
+        const pagePlanHeightMm = Number(floor && floor.planHeightMm);
+        const pagePlanHeight = Number.isFinite(pagePlanHeightMm)
+          ? `${Math.min(320, Math.max(90, pagePlanHeightMm))}mm`
+          : layout.planHeight;
+        const pageHeaderFontPx = Number(floor && floor.headerFontSizePx);
+        const pageBodyFontPx = Number(floor && floor.bodyFontSizePx);
+        const pageHeaderFontSize = Number.isFinite(pageHeaderFontPx)
+          ? `${Math.min(30, Math.max(5.5, pageHeaderFontPx))}px`
+          : layout.headerFontSize;
+        const pageBodyFontSize = Number.isFinite(pageBodyFontPx)
+          ? `${Math.min(30, Math.max(5.5, pageBodyFontPx))}px`
+          : layout.bodyFontSize;
+        const titleHtml = pageTitle ? `<p class="title">${escapeHtml(pageTitle)}</p>` : "";
+        const tableBody = exportRows.map(({ row }) => {
+          const cells = REPORT_COLUMNS.map((col) => {
+            if (col.key === "LINK") {
+              const icon = row.LINK ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer">📐</a>` : "-";
+              return `<td>${icon}</td>`;
+            }
+            return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
+          }).join("");
+          const rawStatus = row.ESTADO || "";
+          const status = typeof rawStatus === "string" && rawStatus.trim() ? rawStatus.trim().toLowerCase() : "-";
+          const statusLabel = status === "-" ? "-" : String(status).toUpperCase();
+          const color = statusColors[status] || "#8f9691";
+          const pillBg = `${color}2b`;
+          return `<tr>${cells}<td class="status-cell" style="background:${pillBg}"><span class="pill" style="border-color:${color};background:${pillBg}">${escapeHtml(statusLabel)}</span></td></tr>`;
+        }).join("");
+        const tableBodyHtml = tableBody || `<tr><td colspan="${colCount}" style="padding:8px;color:#6a726a">Sin unidades disponibles en este piso.</td></tr>`;
+
+        return `
+          <div class="page" data-page-index="${index}" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}">
+            <div class="head">
+              ${logoHtml}
+              ${brandTextHtml}
+              ${titleHtml}
+            </div>
+            <div class="plan-wrap" style="height:${pagePlanHeight};">${buildFloorSvgMarkup(floor)}</div>
+            <div class="table-wrap">
+              <table style="font-size:${pageBodyFontSize};">
+                <colgroup>${colsHtml}</colgroup>
+                <thead style="font-size:${pageHeaderFontSize};"><tr>${tableHead}<th>ESTADO</th></tr></thead>
+                <tbody style="font-size:${pageBodyFontSize};">${tableBodyHtml}</tbody>
+              </table>
+            </div>
+            <div class="notes">
+              <p>Los precios están expresados en dólares estadounidenses (USD) y están sujetos al tipo de cambio vigente en pesos mexicanos al momento de la transacción. Precios sujetos a cambios sin previo aviso.</p>
+              <p>*Prices are expressed in United States dollars (USD) and are subject to the current exchange rate in Mexican pesos at the time of the transaction. Prices are subject to change without prior notice.</p>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      return `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Inventario CEIBA</title>
+  <style>
+    @page { size: ${layout.pageSize}; margin: ${layout.pageMargin}; }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body { margin: 0; font-family: ${bodyFontStack}; color: #101110; background: #fff; }
+    .page {
+      width: 100%;
+      max-width: ${layout.pageMaxWidth};
+      margin: 0 auto 4mm;
+      border: ${layout.borderWidth} solid ${layout.borderColor};
+      padding: 5mm 6mm 3.2mm;
+      height: ${layout.pageHeight};
+      overflow: hidden;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+    }
+    .page:last-child { page-break-after: auto; }
+    .head {
+      text-align: center;
+      margin-bottom: 4mm;
+      font-family: ${headerFontStack};
+      min-height: 20mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+    }
+    .logo { max-height: ${layout.logoMaxHeight}; width: auto; object-fit: contain; display: block; }
+    .brand-text { margin: 0; font-size: 19px; letter-spacing: 0.8px; color: ${layout.brandColor}; font-weight: 700; }
+    .title { margin: 0; font-size: ${layout.titleFontSize}; letter-spacing: 1px; color: ${layout.titleColor}; font-weight: 700; font-family: ${titleFontStack}; }
+    .plan-wrap {
+      border: 1px solid #d5dcd3;
+      border-radius: 6px;
+      padding: 2.5mm;
+      height: ${layout.planHeight};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+    }
+    .plan-wrap svg { width: 100%; height: 100%; display: block; }
+    .table-wrap { margin-top: 2.5mm; transform-origin: top left; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: ${layout.bodyFontSize}; font-family: ${bodyFontStack}; }
+    th, td { border: 1px solid #cbd2cb; padding: ${layout.cellPadding}; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
+    td { overflow: hidden; text-overflow: ellipsis; }
+    th {
+      background: ${layout.headerBgColor};
+      font-weight: 700;
+      color: ${layout.headerTextColor};
+      font-size: inherit;
+      letter-spacing: .2px;
+      line-height: 1.05;
+      font-family: ${headerFontStack};
+    }
+    .th-top, .th-bottom { display: block; }
+    .th-bottom {
+      margin-top: 1px;
+      font-size: 0.92em;
+      font-weight: 600;
+      color: ${layout.headerTextColor};
+      opacity: .82;
+    }
+    tbody td { white-space: nowrap; font-size: inherit; }
+    tbody tr:nth-child(odd) { background: ${layout.oddRowColor}; }
+    tbody tr:nth-child(even) { background: ${layout.evenRowColor}; }
+    .pill { color: #111; border-radius: 999px; padding: 1px 5px; font-size: 6.4px; font-weight: 700; border: 1px solid #7f8a7f; background: #f4f5f2; display: inline-block; min-width: 12.5mm; }
+    .notes { margin-top: auto; padding-top: 1.8mm; font-size: 6.8px; line-height: 1.35; color: #646b64; font-family: ${bodyFontStack}; }
+    .notes p { margin: 0 0 1.2mm; }
+    .table-wrap a, .table-wrap a:visited { color: #2f4e86; text-decoration: none; }
+    .table-wrap a[href]::after { content: "" !important; }
+  </style>
+</head>
+<body>
+  ${pagesHtml}
+  <script>
+    function fitTableInPage(pageEl) {
+      var plan = pageEl.querySelector(".plan-wrap");
+      var tableWrap = pageEl.querySelector(".table-wrap");
+      var notes = pageEl.querySelector(".notes");
+      if (!plan || !tableWrap || !notes) return;
+      tableWrap.style.transform = "scale(1)";
+      tableWrap.style.width = "100%";
+
+      var pageHeight = pageEl.clientHeight;
+      var notesHeight = notes.offsetHeight + 6;
+      var used = plan.offsetTop + plan.offsetHeight + notesHeight;
+      var available = Math.max(20, pageHeight - used);
+      var natural = tableWrap.scrollHeight;
+      var naturalWidth = tableWrap.scrollWidth;
+      var maxWidth = pageEl.clientWidth - 12;
+      var scaleByHeight = natural > 0 ? available / natural : 1;
+      var scaleByWidth = naturalWidth > 0 ? maxWidth / naturalWidth : 1;
+
+      // Keep readable fonts: first shrink plan height before shrinking table.
+      if (natural > available) {
+        var minPlanHeightPx = 150;
+        var currentPlanHeight = plan.offsetHeight;
+        var requiredExtra = natural - available;
+        if (requiredExtra > 0 && currentPlanHeight > minPlanHeightPx) {
+          var nextPlanHeight = Math.max(minPlanHeightPx, currentPlanHeight - requiredExtra);
+          if (nextPlanHeight !== currentPlanHeight) {
+            plan.style.height = nextPlanHeight + "px";
+            used = plan.offsetTop + plan.offsetHeight + notesHeight;
+            available = Math.max(20, pageHeight - used);
+            scaleByHeight = natural > 0 ? available / natural : 1;
+          }
+        }
+      }
+
+      var scale = Math.min(1, scaleByHeight, scaleByWidth);
+      if (pageEl.getAttribute("data-lock-font-scale") === "1") {
+        scale = 1;
+      }
+      if (scale < ${layout.minScale}) scale = ${layout.minScale};
+      tableWrap.style.transform = "scale(" + scale + ")";
+      tableWrap.style.width = (100 / scale) + "%";
+    }
+
+    window.onload = function () {
+      function runReady() {
+        document.querySelectorAll(".page").forEach(function (pageEl) { fitTableInPage(pageEl); });
+        if (${autoPrint}) {
+          setTimeout(function () { window.print(); }, 260);
+        } else {
+          setTimeout(function () { window.scrollTo(0, ${initialScrollY}); }, 80);
+        }
+      }
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () { setTimeout(runReady, 120); }).catch(function () { setTimeout(runReady, 120); });
+      } else {
+        setTimeout(runReady, 120);
+      }
+    };
+  <\/script>
+</body>
+</html>`;
+    }
+
+    function refreshPdfLivePreview() {
+      savePdfLayoutFromControls();
+      const layout = getPdfLayout();
+      const viewportScrollTop = pdfLiveViewport ? pdfLiveViewport.scrollTop : 0;
+      const viewportScrollLeft = pdfLiveViewport ? pdfLiveViewport.scrollLeft : 0;
+      let frameScrollX = 0;
+      let frameScrollY = 0;
+      try {
+        if (pdfLiveFrame && pdfLiveFrame.contentWindow) {
+          frameScrollX = pdfLiveFrame.contentWindow.scrollX || 0;
+          frameScrollY = pdfLiveFrame.contentWindow.scrollY || 0;
+        }
+      } catch {}
+      const missingFloors = !state.floors.length;
+      const missingExcel = !state.excel.headers.length || !state.excel.rows.length;
+      if (missingFloors || missingExcel) {
+        if (!missingFloors && missingExcel && !previewAutoExcelRequested) {
+          previewAutoExcelRequested = true;
+          loadDefaultExcelOnOpen().finally(() => {
+            previewAutoExcelRequested = false;
+            schedulePdfLivePreview();
+          });
+        }
+        const hints = [];
+        if (missingFloors) hints.push("<li>Importa el JSON del paso 1</li>");
+        if (missingExcel) hints.push("<li>Carga Excel CEIBA</li>");
+        const extra = !missingFloors && missingExcel ? "<p>JSON cargado. Falta Excel.</p>" : "";
+        pdfLiveFrame.srcdoc = `<html><body style="font-family:Arial,sans-serif;background:#f6f8f4;color:#4c554d;padding:16px;"><p>Para ver la previsualizacion PDF en vivo:</p>${extra}<ol>${hints.join("")}</ol></body></html>`;
+        pdfLiveFrame.onload = () => {
+          applyPdfLiveZoom();
+          if (pdfLiveViewport) {
+            pdfLiveViewport.scrollTop = viewportScrollTop;
+            pdfLiveViewport.scrollLeft = viewportScrollLeft;
+          }
+          try {
+            if (pdfLiveFrame.contentWindow) {
+              pdfLiveFrame.contentWindow.scrollTo(frameScrollX, frameScrollY);
+            }
+          } catch {}
+        };
+        return;
+      }
+      const pageScrollY = window.scrollY;
+      pdfLiveFrame.onload = () => {
+        applyPdfLiveZoom();
+        if (pdfLiveViewport) {
+          pdfLiveViewport.scrollTop = viewportScrollTop;
+          pdfLiveViewport.scrollLeft = viewportScrollLeft;
+        }
+        try {
+          if (pdfLiveFrame.contentWindow) {
+            pdfLiveFrame.contentWindow.scrollTo(frameScrollX, frameScrollY);
+          }
+        } catch {}
+      };
+      pdfLiveFrame.srcdoc = buildPdfHtmlDocument(layout, state.floors, {
+        autoPrint: false,
+        initialScrollY: frameScrollY
+      });
+      requestAnimationFrame(() => {
+        window.scrollTo(window.scrollX, pageScrollY);
+      });
+    }
+
+    function schedulePdfLivePreview() {
+      if (window.__pdfPreviewTimer) clearTimeout(window.__pdfPreviewTimer);
+      window.__pdfPreviewTimer = setTimeout(refreshPdfLivePreview, 120);
+    }
+
+    async function exportPdf(options = {}) {
+      try {
+        savePdfLayoutFromControls();
+        const layout = getPdfLayout();
+        if (!state.floors.length) {
+          alert("Primero importa el JSON del Paso 1.");
+          return;
+        }
+        if (!state.excel.headers.length || !state.excel.rows.length) {
+          alert("Carga un Excel antes de exportar PDF.");
+          return;
+        }
+        const html = buildPdfHtmlDocument(layout, state.floors, { autoPrint: false });
+        if (options.previewOnly) {
+          const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, "_blank");
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+          return;
+        }
+        const response = await fetch("/api/plano-ventas/render-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html })
+        });
+        if (!response.ok) {
+          let message = `HTTP ${response.status}`;
+          try {
+            const data = await response.json();
+            if (data && data.error) message = data.error;
+          } catch {}
+          throw new Error(message);
+        }
+        const pdfBlob = await response.blob();
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = "CEIBA INVENTARIO ／ INVENTORY.pdf";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      } catch (error) {
+        alert(`Error al exportar PDF: ${error && error.message ? error.message : "desconocido"}`);
+      }
+    }
+
+    async function importJsonFiles(files) {
+      const list = Array.from(files || []);
+      if (!list.length) return;
+
+      let merged = 0;
+      let replaced = false;
+      const errors = [];
+
+      for (const file of list) {
+        try {
+          const text = await file.text();
+          const payload = JSON.parse(text);
+          if (!state.floors.length && !replaced) {
+            applyPersistedState(payload);
+            replaced = true;
+            merged += 1;
+          } else {
+            const ok = mergePayloadIntoState(payload, file.name || "JSON importado");
+            if (ok) merged += 1;
+          }
+        } catch (err) {
+          errors.push(file && file.name ? file.name : "archivo");
+        }
+      }
+
+      if (errors.length) {
+        alert(`Algunos JSON no se pudieron importar: ${errors.join(", ")}`);
+      } else if (merged) {
+        alert(`Importacion completada. Archivos fusionados: ${merged}. Pisos actuales: ${state.floors.length}.`);
+      }
+    }
+
+    function parseCsvText(text) {
+      const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
+      if (!lines.length) return { headers: [], rows: [] };
+
+      const parseLine = (line) => {
+        const out = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i += 1) {
+          const ch = line[i];
+          const next = line[i + 1];
+          if (ch === '"' && inQuotes && next === '"') {
+            current += '"';
+            i += 1;
+          } else if (ch === '"') {
+            inQuotes = !inQuotes;
+          } else if (ch === ',' && !inQuotes) {
+            out.push(current.trim());
+            current = "";
+          } else {
+            current += ch;
+          }
+        }
+        out.push(current.trim());
+        return out;
+      };
+
+      const matrix = lines.map((line) => parseLine(line));
+      const rows = matrix.slice(1).map((values) => {
+        const development = String(values[CEIBA_COL.DEVELOPMENT] || "").trim();
+        return {
+          DEV: development,
+          LINK: values[CEIBA_COL.LINK] || "",
+          UNIDAD: String(values[CEIBA_COL.D] || "").trim(),
+          REC: normalizeBedrooms(values[CEIBA_COL.E] || ""),
+          TOTAL_M2: values[CEIBA_COL.F] || "",
+          TOTAL_SQFT: values[CEIBA_COL.G] || "",
+          PRECIO: formatUsdValue(values[CEIBA_COL.H] || ""),
+          DESCUENTO: values[CEIBA_COL.I] || "",
+          PRECIO_FINAL: formatUsdValue(values[CEIBA_COL.K] || "")
+        };
+      }).filter((row) => row && row.UNIDAD);
+
+      return {
+        headers: REPORT_COLUMNS.map((c) => c.label),
+        rows
+      };
+    }
+
+    function parseExcelArrayBuffer(buffer) {
+      if (typeof XLSX === "undefined") {
+        alert("No se pudo cargar la librería de Excel. Intenta con CSV o recarga la página.");
+        return { headers: [], rows: [] };
+      }
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const rows = [];
+      workbook.SheetNames.forEach((sheetName) => {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet || !sheet["!ref"]) return;
+        const range = XLSX.utils.decode_range(sheet["!ref"]);
+
+        for (let r = range.s.r + 1; r <= range.e.r; r += 1) {
+          const getCell = (colIndex) => sheet[XLSX.utils.encode_cell({ c: colIndex, r })];
+          const getValue = (colIndex) => {
+            const cell = getCell(colIndex);
+            if (!cell || cell.v === undefined || cell.v === null) return "";
+            return String(cell.w !== undefined ? cell.w : cell.v).trim();
+          };
+
+          const development = getValue(CEIBA_COL.DEVELOPMENT);
+
+          const linkCell = getCell(CEIBA_COL.LINK);
+          const link = linkCell && linkCell.l && linkCell.l.Target
+            ? String(linkCell.l.Target)
+            : getValue(CEIBA_COL.LINK);
+
+          const row = {
+            DEV: development,
+            LINK: link || "",
+            UNIDAD: getValue(CEIBA_COL.D),
+            REC: normalizeBedrooms(getValue(CEIBA_COL.E)),
+            TOTAL_M2: getValue(CEIBA_COL.F),
+            TOTAL_SQFT: getValue(CEIBA_COL.G),
+            PRECIO: formatUsdValue(getValue(CEIBA_COL.H)),
+            DESCUENTO: getValue(CEIBA_COL.I),
+            PRECIO_FINAL: formatUsdValue(getValue(CEIBA_COL.K))
+          };
+          if (!row.UNIDAD) continue;
+          rows.push(row);
+        }
+      });
+
+      return {
+        headers: REPORT_COLUMNS.map((c) => c.label),
+        rows
+      };
+    }
+
+    function applyParsedExcel(parsed, sourceLabel) {
+      const allRows = parsed.rows || [];
+      const filteredRows = allRows.filter((row) => {
+        const dev = String(row.DEV || "").toUpperCase();
+        if (dev.includes("CEIBA")) return true;
+        // Keep empty development rows because many Excel files use merged cells.
+        return !dev;
+      });
+
+      state.excel.headers = parsed.headers || [];
+      state.excel.rows = filteredRows;
+      syncZoneStatusesFromExcel();
+      try {
+        localStorage.setItem(EXCEL_CACHE_KEY, JSON.stringify({
+          headers: state.excel.headers,
+          rows: state.excel.rows,
+          sourceLabel,
+          savedAt: new Date().toISOString()
+        }));
+      } catch {}
+      if (autoExcelStatus) {
+        if (state.excel.rows.length) {
+          autoExcelStatus.textContent = `Excel CEIBA cargado: ${sourceLabel} (${state.excel.rows.length} unidades filtradas).`;
+        } else {
+          autoExcelStatus.textContent = `Excel cargado pero sin filas CEIBA: ${sourceLabel}.`;
+        }
+      }
+      render();
+    }
+
+    function loadExcelFromCache() {
+      try {
+        const raw = localStorage.getItem(EXCEL_CACHE_KEY);
+        if (!raw) return false;
+        const cached = JSON.parse(raw);
+        if (!cached || !Array.isArray(cached.rows) || !cached.rows.length) return false;
+        state.excel.headers = Array.isArray(cached.headers) ? cached.headers : REPORT_COLUMNS.map((c) => c.label);
+        state.excel.rows = cached.rows;
+        syncZoneStatusesFromExcel();
+        if (autoExcelStatus) {
+          const stamp = cached.savedAt ? `, cache ${cached.savedAt}` : "";
+          autoExcelStatus.textContent = `Excel cargado desde cache local (${cached.sourceLabel || "ultimo archivo"}${stamp}).`;
+        }
+        render();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    async function loadDefaultExcelOnOpen() {
+      if (!autoExcelStatus) return;
+      autoExcelStatus.textContent = "Buscando INVENTARIOMAESTROWIX.xls en Descargas...";
+      try {
+        const response = await fetch("/api/plano-ventas/default-excel", { cache: "no-store" });
+        if (!response.ok) {
+          let details = "";
+          try {
+            const json = await response.json();
+            details = json && json.expectedPath ? ` (${json.expectedPath})` : "";
+          } catch {}
+          const loaded = loadExcelFromCache();
+          if (!loaded) {
+            autoExcelStatus.textContent = `No se pudo cargar automatico (HTTP ${response.status})${details}. Puedes cargarlo manualmente una vez para cachear.`;
+          }
+          return loaded;
+        }
+        const buffer = await response.arrayBuffer();
+        const parsed = parseExcelArrayBuffer(buffer);
+        applyParsedExcel(parsed, "INVENTARIOMAESTROWIX.xls");
+        return true;
+      } catch (error) {
+        const loaded = loadExcelFromCache();
+        if (!loaded) {
+          autoExcelStatus.textContent = `No se pudo cargar el Excel automatico: ${error && error.message ? error.message : "error desconocido"}. Cargalo manualmente una vez para activar cache local.`;
+        }
+        return loaded;
+      }
+    }
+
+    async function loadDefaultJsonOnOpen() {
+      if (projectStatus) {
+        projectStatus.textContent = "Buscando JSON automatico en carpeta control...";
+      }
+      try {
+        const currentFloors = normalizeFloorPayload({ floors: state.floors });
+        let remoteFloors = [];
+        let loadedFiles = [];
+        let sourceDir = "";
+
+        const mergedRes = await fetch("/api/plano-ventas/default-json-merged", { cache: "no-store" });
+        if (mergedRes.ok) {
+          const mergedPayload = await mergedRes.json();
+          remoteFloors = normalizeFloorPayload(mergedPayload);
+          loadedFiles = Array.isArray(mergedPayload && mergedPayload.loadedFiles) ? mergedPayload.loadedFiles : [];
+          sourceDir = mergedPayload && mergedPayload.sourceDir ? String(mergedPayload.sourceDir) : "";
+        }
+
+        if (!remoteFloors.length) {
+          const fileCandidates = ["unidades-marcadas.json", "unidades-marcadas (1).json", "unidades-marcadas (2).json", "unidades-marcadas (3).json", "unidades-marcadas.JSON"];
+          for (const fileName of fileCandidates) {
+            const url = `/api/plano-ventas/default-json?name=${encodeURIComponent(fileName)}`;
+            const response = await fetch(url, { cache: "no-store" });
+            if (!response.ok) continue;
+            const payload = await response.json();
+            const floors = normalizeFloorPayload(payload);
+            if (!floors.length) continue;
+            remoteFloors.push(...floors);
+            loadedFiles.push(fileName);
+            if (remoteFloors.length >= MAX_FLOORS) break;
+          }
+        }
+
+        const combined = dedupeFloorsByIdentity([...currentFloors, ...remoteFloors]).slice(0, MAX_FLOORS);
+        const hadRemote = remoteFloors.length > 0;
+        if (combined.length) {
+          applyFloorsState(combined, { preferFirst: !currentFloors.length });
+        }
+
+        if (projectStatus) {
+          if (hadRemote) {
+            const origin = sourceDir || "fuente mixta";
+            const filesLabel = loadedFiles.length ? loadedFiles.join(", ") : "sin detalle de archivos";
+            projectStatus.textContent = `JSON automatico OK: ${loadedFiles.length} archivo(s) [${filesLabel}] desde ${origin}. Pisos actuales: ${state.floors.length}.`;
+          } else if (!state.floors.length) {
+            projectStatus.textContent = "No se pudieron cargar JSONs automaticos.";
+          }
+        }
+        return hadRemote;
+      } catch {
+        if (projectStatus && !state.floors.length) {
+          projectStatus.textContent = "No se pudo leer JSON automatico. Verifica que el servidor este reiniciado.";
+        }
+        return false;
+      }
+    }
+
+    function runQuickExportIfReady() {
+      if (!QUICK_EXPORT_MODE) return;
+      if (!state.floors.length) {
+        alert("No hay pisos cargados para exportar. Revisa guardado local o JSON automático.");
+        return;
+      }
+      if (!state.excel.rows.length) {
+        alert("No se pudo cargar Excel automático. Revisa INVENTARIOMAESTROWIX.xls.");
+        return;
+      }
+      setTimeout(() => {
+        exportPdf({ previewOnly: false });
+      }, 240);
+    }
+
+    excelInput.addEventListener("change", (evt) => {
+      const file = evt.target.files && evt.target.files[0];
+      if (!file) return;
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+
+      if (ext === "csv") {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const parsed = parseCsvText(String(reader.result || ""));
+          applyParsedExcel(parsed, file.name);
+        };
+        reader.readAsText(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const parsed = parseExcelArrayBuffer(reader.result);
+        applyParsedExcel(parsed, file.name);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    overlay.addEventListener("click", (evt) => {
+      if (!state.drawing) return;
+      const rawPoint = getRawPointFromEvent(evt);
+      if (!rawPoint) return;
+      const point = snapDrawPoint(rawPoint);
+      state.drawingPoints.push(point);
+      state.cursorPoint = point;
+      renderOverlay();
+      enableButtons();
+    });
+
+    overlay.addEventListener("mousemove", (evt) => {
+      if (!state.draggingLabel) return;
+      const zone = zoneById(state.draggingLabel.zoneId);
+      if (!zone) return;
+      const point = getRawPointFromEvent(evt);
+      if (!point) return;
+      const dx = point[0] - state.draggingLabel.startX;
+      const dy = point[1] - state.draggingLabel.startY;
+      zone.labelOffset = {
+        x: Math.round(state.draggingLabel.startOffsetX + dx),
+        y: Math.round(state.draggingLabel.startOffsetY + dy)
+      };
+      renderOverlay();
+    });
+
+    overlay.addEventListener("mousemove", (evt) => {
+      if (!state.drawing || state.draggingLabel) return;
+      const rawPoint = getRawPointFromEvent(evt);
+      if (!rawPoint) return;
+      state.cursorPoint = snapDrawPoint(rawPoint);
+      renderOverlay();
+    });
+
+    window.addEventListener("mouseup", () => {
+      state.draggingLabel = null;
+    });
+
+    startZoneBtn.addEventListener("click", startDrawing);
+    finishZoneBtn.addEventListener("click", finishDrawing);
+    cancelZoneBtn.addEventListener("click", cancelDrawing);
+    deleteZoneBtn.addEventListener("click", deleteSelectedZone);
+    applyUnitBtn.addEventListener("click", applySelectedUnitChanges);
+    autoLabelBtn.addEventListener("click", autoLabel);
+    snapParallelInput.addEventListener("change", () => {
+      state.snapParallel = snapParallelInput.checked;
+      updateHint();
+      renderOverlay();
+    });
+
+    saveLocalBtn.addEventListener("click", saveLocal);
+    loadLocalBtn.addEventListener("click", loadLocal);
+    applyFloorTitleBtn.addEventListener("click", () => applyActiveFloorTitle(false));
+    clearFloorTitleBtn.addEventListener("click", () => applyActiveFloorTitle(true));
+    applyFloorPlanHeightBtn.addEventListener("click", () => applyActiveFloorPlanHeight(false));
+    clearFloorPlanHeightBtn.addEventListener("click", () => applyActiveFloorPlanHeight(true));
+    applyFloorFontSizesBtn.addEventListener("click", () => applyActiveFloorFontSizes(false));
+    clearFloorFontSizesBtn.addEventListener("click", () => applyActiveFloorFontSizes(true));
+    floorTitleInput.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        applyActiveFloorTitle(false);
+      }
+    });
+    floorPlanHeightInput.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        applyActiveFloorPlanHeight(false);
+      }
+    });
+    floorHeaderFontSizeInput.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        applyActiveFloorFontSizes(false);
+      }
+    });
+    floorBodyFontSizeInput.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        applyActiveFloorFontSizes(false);
+      }
+    });
+    floorHeaderFontSizeInput.addEventListener("change", () => applyActiveFloorFontSizes(false));
+    floorBodyFontSizeInput.addEventListener("change", () => applyActiveFloorFontSizes(false));
+    floorLockFontScaleInput.addEventListener("change", applyActiveFloorLockFontScale);
+    saveProjectBtn.addEventListener("click", saveProjectVersion);
+    loadProjectBtn.addEventListener("click", loadSelectedProjectVersion);
+    deleteProjectBtn.addEventListener("click", deleteSelectedProjectVersion);
+    projectNameInput.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        saveProjectVersion();
+      }
+    });
+    exportBtn.addEventListener("click", exportJson);
+    exportPdfBtn.addEventListener("click", () => exportPdf({ previewOnly: false }));
+    pdfPreviewBtn.addEventListener("click", () => exportPdf({ previewOnly: true }));
+    pdfResetBtn.addEventListener("click", () => {
+      resetPdfLayoutControls();
+      schedulePdfLivePreview();
+      alert("Diseno PDF restablecido.");
+    });
+    pdfLiveZoomOutBtn.addEventListener("click", () => setPdfLiveZoom(pdfLiveZoom - 0.1));
+    pdfLiveZoomInBtn.addEventListener("click", () => setPdfLiveZoom(pdfLiveZoom + 0.1));
+    pdfLiveZoomFitBtn.addEventListener("click", () => fitPdfLiveToPage());
+    pdfLiveZoomResetBtn.addEventListener("click", () => setPdfLiveZoom(1));
+    pdfLiveZoomRange.addEventListener("input", () => {
+      const next = Number(pdfLiveZoomRange.value) / 100;
+      setPdfLiveZoom(next);
+    });
+    workspaceSplitter.addEventListener("mousedown", (evt) => {
+      evt.preventDefault();
+      liveResizeDragging = {
+        startY: evt.clientY,
+        startHeight: pdfLiveWrap.getBoundingClientRect().height
+      };
+      document.body.style.cursor = "ns-resize";
+      document.body.style.userSelect = "none";
+      if (pdfLiveFrame) pdfLiveFrame.style.pointerEvents = "none";
+    });
+    window.addEventListener("mousemove", (evt) => {
+      if (!liveResizeDragging) return;
+      const delta = evt.clientY - liveResizeDragging.startY;
+      setPdfLivePanelHeight(liveResizeDragging.startHeight + delta);
+    });
+    window.addEventListener("mouseup", () => {
+      liveResizeDragging = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      if (pdfLiveFrame) pdfLiveFrame.style.pointerEvents = "";
+    });
+    window.addEventListener("resize", () => {
+      if (!pdfLiveWrap) return;
+      setPdfLivePanelHeight(pdfLiveWrap.getBoundingClientRect().height || 620);
+    });
+    pdfLogoInput.addEventListener("change", () => {
+      const file = pdfLogoInput.files && pdfLogoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        savePdfLayoutFromControls();
+        state.pdfLayout.logoDataUrl = String(reader.result || "");
+        syncPdfControlsFromState();
+        schedulePdfLivePreview();
+      };
+      reader.readAsDataURL(file);
+      pdfLogoInput.value = "";
+    });
+    pdfLogoClearBtn.addEventListener("click", () => {
+      savePdfLayoutFromControls();
+      state.pdfLayout.logoDataUrl = "";
+      syncPdfControlsFromState();
+      schedulePdfLivePreview();
+    });
+    [
+      pdfBrandTextInput,
+      pdfTitleInput,
+      pdfLogoSizeInput,
+      pdfPlanHeightInput,
+      pdfTitleFontInput,
+      pdfTitleFontSizeInput,
+      pdfHeaderFontInput,
+      pdfBodyFontInput,
+      pdfHeaderBgInput,
+      pdfHeaderTextInput,
+      pdfTitleColorInput,
+      pdfOddRowInput,
+      pdfEvenRowInput,
+      pdfFrameColorInput,
+      pdfFrameWidthInput
+    ].forEach((el) => {
+      el.addEventListener("input", () => {
+        savePdfLayoutFromControls();
+        schedulePdfLivePreview();
+      });
+      el.addEventListener("change", () => {
+        savePdfLayoutFromControls();
+        schedulePdfLivePreview();
+      });
+    });
+    importBtn.addEventListener("click", () => importInput.click());
+    importInput.addEventListener("change", async () => {
+      const files = importInput.files;
+      if (files && files.length) await importJsonFiles(files);
+      importInput.value = "";
+    });
+
+    document.addEventListener("keydown", (evt) => {
+      if (evt.key === "Escape" && state.drawing) cancelDrawing();
+    });
+
+    async function bootstrap() {
+      syncPdfControlsFromState();
+      applyPdfLiveZoom();
+      setPdfLivePanelHeight(620);
+      refreshProjectSelector();
+      const loadedLatestVersion = loadLatestProjectVersionSilently();
+      if (!loadedLatestVersion) {
+        const loadedLocal = tryLoadLocalSilently();
+        if (!loadedLocal && projectStatus) {
+          projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON o Cargar local.";
+        }
+      }
+      updateHint();
+      render();
+      enableButtons();
+      schedulePdfLivePreview();
+      await loadDefaultExcelOnOpen();
+      runQuickExportIfReady();
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

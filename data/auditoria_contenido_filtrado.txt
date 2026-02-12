@@ -1,0 +1,30 @@
+FORMATO 10: frases_fijas_original=11, frases_fijas_martin=10, diferencias=2
+  ratio=0.289
+  O: uso de la factura / invoice usage elija un elemento.
+  M: regimen fiscal en el sat (si aplica) / tax classification of mexican revenue service (if aplicable):
+
+  ratio=0.786
+  O: atentamente / sincerely, ____________________________________ por mi propio derecho/in my own right -- of
+  M: atentamente / sincerely, por mi propio derecho/in my own right -- of
+
+
+FORMATO 19: frases_fijas_original=7, frases_fijas_martin=10, diferencias=1
+  ratio=0.430
+  O: statement regarding the existence of a controlling beneficiary in the transaction related to unit - a quien corresponda:
+  M: for purposes of the abovementioned, enclosed hereto please find the controlling beneficiary's official documentation.
+
+
+FORMATO 21: frases_fijas_original=0, frases_fijas_martin=0, diferencias=0
+
+FORMATO 26: frases_fijas_original=6, frases_fijas_martin=6, diferencias=1
+  ratio=0.462
+  O: statement regarding the origin of economic resources for the transaction related to unit - a quien corresponda:
+  M: thus, the origin of the economic resources is as follows :
+
+
+FORMATO 35: frases_fijas_original=15, frases_fijas_martin=14, diferencias=1
+  ratio=0.472
+  O: estado civil (regimen patrimonial en caso de ser casado) iii.
+  M: marital status (property regime in case of being married) iii.
+
+

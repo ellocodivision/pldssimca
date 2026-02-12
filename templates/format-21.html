@@ -29,10 +29,13 @@
       text-align: right;
     }
     .btn {
-      padding: 8px 12px;
+      padding: 10px 14px;
       border: 1px solid #111;
-      background: #111;
-      color: #fff;
+      background: #ffe816;
+      color: #111;
+      border-radius: 12px;
+      font-weight: 700;
+      box-shadow: 0 8px 20px rgba(0,0,0,.15);
       cursor: pointer;
     }
     .page {
@@ -160,24 +163,24 @@
 
   <section class="page">
     <div class="content">
-      <h1 class="title">INFORME DE VERIFICACION EN LISTAS DE PERSONAS BLOQUEADAS</h1>
+      <h1 class="title">INFORME DE VERIFICACIÓN EN LISTAS DE PERSONAS BLOQUEADAS</h1>
 
       <p class="small mb10" style="text-align:right;">
         [{{lugar_emision}}], a [{{dia}}] de [{{mes}}] de 20[{{anio}}]
       </p>
 
       <p class="small justify mb10">
-        <span class="bold">Asunto.-</span> Verificacion de la NO inclusion del cliente en las Listas de Personas Bloqueadas derivado de las negociaciones para la posible adquisicion de la Unidad <span class="bold">{{numero_unidad}}</span> del desarrollo <span class="bold">{{nombre_desarrollo}}</span>.
+        <span class="bold">Asunto.-</span> Verificación de la NO inclusión del cliente en las Listas de Personas Bloqueadas derivado de las negociaciones para la posible adquisición de la Unidad <span class="bold">{{numero_unidad}}</span> del desarrollo <span class="bold">{{nombre_desarrollo}}</span>.
       </p>
 
       <p class="small justify mb10">
-        El presente informe sobre la verificacion de la NO inclusion de la persona cuyos datos personales se indican en la <span class="bold">Tabla 1</span> (el "Cliente") en las listas que publica la Unidad de Inteligencia Financiera a traves de su portal de Internet y que se indican en la <span class="bold">Tabla 2</span> (las "Listas de Personas Bloqueadas"), lo emite el(la) suscrito(a), asistente de ventas en la empresa <span class="bold">{{empresa_grupo}}</span> (la "Desarrolladora"), como constancia del cumplimiento del articulo 27 relacionado con el articulo 38 de las Reglas de Caracter General a que se refiere la Ley Federal para la Prevencion e Identificacion de Operaciones con Recursos de Procedencia Ilicita, y derivado de las negociaciones con el Cliente para llevar a cabo la operacion para la adquisicion de los derechos de [propiedad/uso y goce] (la "Operacion") de la unidad no. <span class="bold">{{numero_unidad_2}}</span> del desarrollo inmobiliario denominado <span class="bold">{{nombre_desarrollo_2}}</span> ubicado en la ciudad de <span class="bold">{{ciudad}}</span>, Mexico, el cual es actualmente desarrollado y comercializado por la Desarrolladora.
+        El presente informe sobre la verificación de la NO inclusión de la persona cuyos datos personales se indican en la <span class="bold">Tabla 1</span> (el "Cliente") en las listas que publica la Unidad de Inteligencia Financiera a través de su portal de Internet y que se indican en la <span class="bold">Tabla 2</span> (las "Listas de Personas Bloqueadas"), lo emite el(la) suscrito(a), asistente de ventas en la empresa <span class="bold">{{empresa_grupo}}</span> (la "Desarrolladora"), como constancia del cumplimiento del artículo 27 relacionado con el artículo 38 de las Reglas de Carácter General a que se refiere la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, y derivado de las negociaciones con el Cliente para llevar a cabo la operación para la adquisición de los derechos de [propiedad/uso y goce] (la "Operación") de la unidad no. <span class="bold">{{numero_unidad_2}}</span> del desarrollo inmobiliario denominado <span class="bold">{{nombre_desarrollo_2}}</span> ubicado en la ciudad de <span class="bold">{{ciudad}}</span>, México, el cual es actualmente desarrollado y comercializado por la Desarrolladora.
       </p>
 
       <p class="bold small mb8" style="text-align:center;">Tabla 1 - Datos del Cliente</p>
       <table class="field-table mb10">
         <tr><td>Nombre</td><td><span class="line">{{cliente_nombre}}</span></td></tr>
-        <tr><td>Tipo y No. de Identificacion</td><td><span class="line">{{cliente_identificacion}}</span></td></tr>
+        <tr><td>Tipo y No. de Identificación</td><td><span class="line">{{cliente_identificacion}}</span></td></tr>
         <tr><td>Nacionalidad</td><td><span class="line">{{cliente_nacionalidad}}</span></td></tr>
         <tr><td>Domicilio</td><td><span class="line">{{cliente_domicilio}}</span></td></tr>
         <tr><td>RFC/TIN</td><td><span class="line">{{cliente_rfc}}</span></td></tr>
@@ -185,7 +188,7 @@
       </table>
 
       <p class="small justify mb8">
-        En este acto el(la) suscrito(a) manifiesta, bajo protesta de decir verdad, que, en las fechas senaladas en la <span class="bold">Tabla 2</span>, verifico que el Cliente NO esta incluido en ninguna de las Listas de Personas Bloqueadas a continuacion senaladas:
+        En este acto el(la) suscrito(a) manifiesta, bajo protesta de decir verdad, que, en las fechas señaladas en la <span class="bold">Tabla 2</span>, verificó que el Cliente NO está incluido en ninguna de las Listas de Personas Bloqueadas a continuación señaladas:
       </p>
 
       <p class="bold small mb8" style="text-align:center;">Tabla 2 - Listas de Personas Bloqueadas</p>
@@ -193,15 +196,15 @@
         <thead>
           <tr>
             <th style="width:20%;">Lista</th>
-            <th style="width:30%;">Descripcion</th>
-            <th style="width:20%;">Fecha de Verificacion</th>
+            <th style="width:30%;">Descripción</th>
+            <th style="width:20%;">Fecha de Verificación</th>
             <th style="width:30%;">Sitio Web</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="bold">ONU 1518SL</td>
-            <td>Lista de Sanciones - Resolucion 1518 de la ONU</td>
+            <td>Lista de Sanciones - Resolución 1518 de la ONU</td>
             <td><div class="clip-2">{{fecha_verificacion_1}}</div></td>
             <td><div class="clip-2">{{sitio_web_1}}</div></td>
           </tr>
@@ -213,7 +216,7 @@
           </tr>
           <tr>
             <td class="bold">ONU CONSOLIDATED</td>
-            <td>Lista de Sanciones consolidada de la ONU</td>
+            <td>Lista de Sanciones Consolidada de la ONU</td>
             <td><div class="clip-2">{{fecha_verificacion_3}}</div></td>
             <td><div class="clip-2">{{sitio_web_3}}</div></td>
           </tr>
@@ -233,7 +236,7 @@
       </table>
 
       <div class="signature small">
-        <div class="bold">Verifico</div>
+        <div class="bold">Verificó</div>
         <div class="signature-line"></div>
         <div class="bold">[{{vendedor_nombre}}]</div>
       </div>

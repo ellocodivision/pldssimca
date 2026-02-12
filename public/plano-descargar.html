@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Descargar PDF CEIBA</title>
+  <style>
+    :root {
+      --bg: #f3f4ef;
+      --card: #ffffff;
+      --line: #d3d8d1;
+      --ink: #171a17;
+      --muted: #5e685f;
+      --accent: #1d5a3f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: linear-gradient(180deg, #f8f9f6, var(--bg));
+      color: var(--ink);
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+    .card {
+      width: min(680px, 100%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      padding: 20px;
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    p { margin: 0; color: var(--muted); line-height: 1.45; }
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .back {
+      display: inline-block;
+      text-decoration: none;
+      color: #111;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .back:hover { border-color: #b6ad98; }
+    .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    button, a.btn {
+      border: 1px solid #b8c5b8;
+      border-radius: 10px;
+      background: #fff;
+      color: #1d231f;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    a.btn:hover, button:hover { border-color: #8ea58f; }
+    #status { margin-top: 12px; font-size: 13px; color: #4d5850; }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <div class="head">
+      <div>
+        <h1>Descargar PDF Actualizado</h1>
+        <p>Un clic para abrir la exportación automática usando tu configuración guardada y el Excel actualizado.</p>
+      </div>
+      <button type="button" class="back" onclick="history.back()">Regresar</button>
+    </div>
+    <div class="actions">
+      <button id="downloadBtn" class="primary" type="button">Descargar PDF</button>
+      <a class="btn" href="/plano-ventas">Abrir editor</a>
+    </div>
+    <p id="status">Listo.</p>
+  </section>
+
+  <script>
+    const downloadBtn = document.getElementById("downloadBtn");
+    const status = document.getElementById("status");
+
+    downloadBtn.addEventListener("click", () => {
+      status.textContent = "Generando y descargando PDF...";
+      const ts = Date.now();
+      window.location.href = `/plano-ventas?quick_export=1&t=${ts}`;
+    });
+  </script>
+</body>
+</html>
