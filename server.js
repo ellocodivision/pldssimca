@@ -668,6 +668,26 @@ app.get('/', requireAuth, (req, res) => {
     .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
     .user{font-size:13px;color:#5f5f5f;}
     .logout{display:inline-block;padding:8px 10px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:600;}
+    @media (max-width:900px){
+      .wrap{padding:20px 14px 36px;}
+      .top{flex-direction:column;align-items:flex-start;}
+      .grid{grid-template-columns:1fr;}
+    }
+    @media (max-width:640px){
+      h1{font-size:24px;}
+      .sub{margin-bottom:16px;}
+      .card{padding:14px;}
+      .card.maintenance .ribbon{
+        top:10px;
+        right:10px;
+        transform:none;
+        width:auto;
+        max-width:72%;
+        font-size:10px;
+        letter-spacing:.04em;
+        padding:4px 8px;
+      }
+    }
   </style></head><body>
     <div class="wrap">
       <div class="top">
