@@ -643,6 +643,25 @@ app.get('/', requireAuth, (req, res) => {
     .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
     .card{display:block; background:var(--card); border:1px solid #dcd7cb; border-radius:14px; padding:18px; text-decoration:none; color:inherit;}
     .card:hover{border-color:#b9b39f;}
+    .card.maintenance{position:relative; overflow:hidden;}
+    .card.maintenance .ribbon{
+      position:absolute;
+      top:14px;
+      right:-70px;
+      transform:rotate(34deg);
+      width:260px;
+      text-align:center;
+      background:repeating-linear-gradient(-45deg,#ffe885,#ffe885 12px,#fff5bf 12px,#fff5bf 24px);
+      border:1px solid #d6a700;
+      color:#3e3300;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      padding:5px 10px;
+      z-index:2;
+      pointer-events:none;
+    }
     .tag{display:inline-block; font-size:12px; font-weight:700; background:var(--accent); padding:4px 8px; border-radius:999px; margin-bottom:10px;}
     .name{font-size:20px; margin:0 0 8px;}
     .desc{margin:0; color:var(--muted);}
@@ -667,7 +686,8 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador FAES</h2>
           <p class="desc">Gestión y generación de documentos FAES.</p>
         </a>
-        <a class="card" href="/plds">
+        <a class="card maintenance" href="/plds">
+          <span class="ribbon">Under Construction</span>
           <span class="tag">Módulo</span>
           <h2 class="name">PLDS</h2>
           <p class="desc">En mantenimiento. No usar temporalmente.</p>
