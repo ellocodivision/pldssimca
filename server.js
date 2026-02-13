@@ -617,6 +617,12 @@ app.get('/logout', (req, res, next) => {
 app.get('/', requireAuth, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
   const isGerente = currentEmail === GERENTE_EMAIL;
+  const ownerServicesCard = isGerente ? `
+        <a class="card" href="/owner-services">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Owner Services</h2>
+          <p class="desc">Prioriza entregas y coordina obra, jurídico y finanzas.</p>
+        </a>` : '';
   const gerenteCard = isGerente ? `
         <a class="card" href="/gerente-ventas">
           <span class="tag">Módulo</span>
@@ -671,11 +677,7 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
-        <a class="card" href="/owner-services">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Owner Services</h2>
-          <p class="desc">Prioriza entregas y coordina obra, jurídico y finanzas.</p>
-        </a>
+        ${ownerServicesCard}
         ${gerenteCard}
       </div>
     </div>
@@ -686,12 +688,12 @@ app.use('/legacy', requireAuth);
 app.use('/generador-faes', requireAuth);
 app.use('/plds', requireAuth);
 app.use('/generador-roi', requireAuth);
-app.use('/owner-services', requireAuth);
 app.use('/form', requireAuth);
 app.use('/format', requireAuth);
 app.use('/submissions', requireAuth);
 app.use('/api/plds', requireAuth);
-app.use('/api/owner-services', requireAuth);
+app.use('/owner-services', requireGerente);
+app.use('/api/owner-services', requireGerente);
 
 app.use('/gerente-ventas', requireGerente);
 app.use('/plano-interactivo', requireGerente);
