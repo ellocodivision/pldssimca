@@ -670,7 +670,7 @@ app.get('/', requireAuth, (req, res) => {
         <a class="card" href="/plds">
           <span class="tag">Módulo</span>
           <h2 class="name">PLDS</h2>
-          <p class="desc">Flujos de prevención y control PLDS.</p>
+          <p class="desc">En mantenimiento. No usar temporalmente.</p>
         </a>
         <a class="card" href="/generador-roi">
           <span class="tag">Módulo</span>
