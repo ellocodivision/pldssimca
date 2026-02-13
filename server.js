@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const puppeteer = require('puppeteer');
+const XLSX = require('xlsx');
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -10,6 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
+const APP_BASE_URL_NORMALIZED = String(APP_BASE_URL).replace(/\/+$/, '');
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-session-secret-change-me';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
@@ -30,6 +32,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_PATH = path.join(__dirname, 'data', 'sample.json');
 const DATA_DIR = path.join(__dirname, 'data');
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
+const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 
 const formats = {
@@ -68,7 +71,7 @@ if (AUTH_READY) {
     {
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: `${APP_BASE_URL}/auth/google/callback`
+      callbackURL: `${APP_BASE_URL_NORMALIZED}/auth/google/callback`
     },
     (accessToken, refreshToken, profile, done) => {
       const rawEmail = profile && profile.emails && profile.emails[0] ? profile.emails[0].value : '';
@@ -140,6 +143,19 @@ function ensureDataFiles() {
   if (!fs.existsSync(FLOOR_JSON_DIR)) fs.mkdirSync(FLOOR_JSON_DIR, { recursive: true });
   if (!fs.existsSync(SUBMISSIONS_PATH)) fs.writeFileSync(SUBMISSIONS_PATH, '[]', 'utf-8');
   if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, '{}', 'utf-8');
+  if (!fs.existsSync(OWNER_SERVICES_PATH)) {
+    const initialOwnerServices = {
+      project: {
+        name: 'Proyecto principal',
+        regimenCondominial: false,
+        regimenDate: '',
+        internalFinancingReady: false,
+        updatedAt: new Date().toISOString()
+      },
+      units: []
+    };
+    fs.writeFileSync(OWNER_SERVICES_PATH, JSON.stringify(initialOwnerServices, null, 2), 'utf-8');
+  }
 }
 
 function readJson(filePath, fallback) {
@@ -156,6 +172,350 @@ function writeJson(filePath, data) {
   const tmpPath = `${filePath}.tmp`;
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
   fs.renameSync(tmpPath, filePath);
+}
+
+function ownerServicesDefaultData() {
+  return {
+    project: {
+      name: 'Proyecto principal',
+      regimenCondominial: false,
+      regimenDate: '',
+      internalFinancingReady: false,
+      updatedAt: new Date().toISOString()
+    },
+    units: []
+  };
+}
+
+function normalizeDateString(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toISOString().slice(0, 10);
+}
+
+function daysUntil(dateText) {
+  const normalized = normalizeDateString(dateText);
+  if (!normalized) return null;
+  const today = new Date();
+  const target = new Date(`${normalized}T00:00:00`);
+  const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.floor((target - base) / (1000 * 60 * 60 * 24));
+}
+
+function evaluateUnitPriority(unit, project) {
+  const paymentMethod = String(unit.paymentMethod || '').toLowerCase();
+  const constructionStatus = String(unit.constructionStatus || '').toLowerCase();
+  const handoverStatus = String(unit.handoverStatus || '').toLowerCase();
+  const paymentStatus = String(unit.paymentStatus || '').toLowerCase();
+  const hasFinanceIssues = Boolean(unit.hasFinanceIssues);
+  const financeClearance = Boolean(unit.financeClearance);
+  const appointmentConfirmed = Boolean(unit.appointmentConfirmed);
+  const regimenReady = Boolean(project && project.regimenCondominial);
+  const internalFinancingReady = Boolean(project && project.internalFinancingReady);
+  const remainingDays = daysUntil(unit.deliveryDate);
+
+  let score = 0;
+  const blockers = [];
+
+  if (paymentMethod === 'contado') score += 40;
+  if (paymentMethod === 'credito_bancario') score += 30;
+  if (paymentMethod === 'financiamiento_interno') {
+    score -= 40;
+    if (!internalFinancingReady) blockers.push('Financiamiento interno no disponible');
+  }
+
+  if (hasFinanceIssues || !financeClearance) {
+    score -= 30;
+    blockers.push('Cliente con incidencias en finanzas');
+  }
+
+  if (constructionStatus !== 'listo') {
+    blockers.push('Obra no reporta unidad lista');
+  } else if (remainingDays !== null && remainingDays <= 15) {
+    score += 20;
+  }
+
+  if (!regimenReady) {
+    blockers.push('Regimen condominial pendiente');
+  }
+
+  if (appointmentConfirmed) score += 10;
+  if (handoverStatus === 'entregado') score -= 5;
+  if (paymentStatus === 'pagado') score -= 10;
+
+  const readyForDelivery = blockers.length === 0;
+  return { score, blockers, readyForDelivery };
+}
+
+function readOwnerServicesData() {
+  const raw = readJson(OWNER_SERVICES_PATH, ownerServicesDefaultData());
+  const safe = ownerServicesDefaultData();
+  safe.project = { ...safe.project, ...(raw.project || {}) };
+  safe.project.regimenCondominial = Boolean(safe.project.regimenCondominial);
+  safe.project.internalFinancingReady = Boolean(safe.project.internalFinancingReady);
+  safe.project.regimenDate = normalizeDateString(safe.project.regimenDate);
+  safe.units = Array.isArray(raw.units) ? raw.units : [];
+  return safe;
+}
+
+function enrichOwnerUnit(unit, project) {
+  const merged = {
+    unitId: String(unit.unitId || '').trim(),
+    tower: String(unit.tower || '').trim(),
+    clientName: String(unit.clientName || '').trim(),
+    deliveryDate: normalizeDateString(unit.deliveryDate),
+    constructionStatus: String(unit.constructionStatus || 'pendiente').toLowerCase(),
+    financeClearance: Boolean(unit.financeClearance),
+    hasFinanceIssues: Boolean(unit.hasFinanceIssues),
+    financeNotes: String(unit.financeNotes || '').trim(),
+    paymentMethod: String(unit.paymentMethod || 'contado').toLowerCase(),
+    appointmentConfirmed: Boolean(unit.appointmentConfirmed),
+    handoverStatus: String(unit.handoverStatus || 'pendiente').toLowerCase(),
+    paymentStatus: String(unit.paymentStatus || 'pendiente').toLowerCase(),
+    ownerServicesPriority: Number.isFinite(Number(unit.ownerServicesPriority))
+      ? Math.max(0, Math.min(100, Number(unit.ownerServicesPriority)))
+      : 50,
+    notes: String(unit.notes || '').trim(),
+    updatedAt: String(unit.updatedAt || new Date().toISOString())
+  };
+
+  const evalData = evaluateUnitPriority(merged, project);
+  return {
+    ...merged,
+    score: evalData.score,
+    blockers: evalData.blockers,
+    readyForDelivery: evalData.readyForDelivery
+  };
+}
+
+function ownerServicesDashboardSnapshot() {
+  const data = readOwnerServicesData();
+  const enrichedUnits = data.units.map((u) => enrichOwnerUnit(u, data.project));
+  const prioritized = [...enrichedUnits].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.unitId.localeCompare(b.unitId);
+  });
+  const blocked = prioritized.filter((u) => !u.readyForDelivery);
+  const ready = prioritized.filter((u) => u.readyForDelivery);
+  const delivered = prioritized.filter((u) => u.handoverStatus === 'entregado');
+  const paid = prioritized.filter((u) => u.paymentStatus === 'pagado');
+
+  const summary = {
+    totalUnits: prioritized.length,
+    readyForDelivery: ready.length,
+    blocked: blocked.length,
+    delivered: delivered.length,
+    paid: paid.length
+  };
+
+  return { project: data.project, summary, prioritized, blocked, units: enrichedUnits };
+}
+
+function saveOwnerServicesData(data) {
+  writeJson(OWNER_SERVICES_PATH, data);
+}
+
+function sanitizeOwnerUnitPayload(raw) {
+  return {
+    unitId: String(raw.unitId || '').trim(),
+    tower: String(raw.tower || '').trim(),
+    clientName: String(raw.clientName || '').trim(),
+    deliveryDate: normalizeDateString(raw.deliveryDate),
+    constructionStatus: String(raw.constructionStatus || 'pendiente').toLowerCase(),
+    financeClearance: Boolean(raw.financeClearance),
+    hasFinanceIssues: Boolean(raw.hasFinanceIssues),
+    financeNotes: String(raw.financeNotes || '').trim(),
+    paymentMethod: String(raw.paymentMethod || 'contado').toLowerCase(),
+    appointmentConfirmed: Boolean(raw.appointmentConfirmed),
+    handoverStatus: String(raw.handoverStatus || 'pendiente').toLowerCase(),
+    paymentStatus: String(raw.paymentStatus || 'pendiente').toLowerCase(),
+    ownerServicesPriority: Number.isFinite(Number(raw.ownerServicesPriority))
+      ? Math.max(0, Math.min(100, Number(raw.ownerServicesPriority)))
+      : 50,
+    notes: String(raw.notes || '').trim(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function normalizeHeaderKey(raw) {
+  return String(raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function parseBooleanValue(raw) {
+  if (typeof raw === 'boolean') return raw;
+  const value = String(raw || '').trim().toLowerCase();
+  if (!value) return false;
+  return ['si', 'sí', 'yes', 'true', '1', 'x'].includes(value);
+}
+
+function normalizePaymentMethod(raw) {
+  const value = normalizeHeaderKey(raw);
+  if (['contado', 'cash'].includes(value)) return 'contado';
+  if (['credito_bancario', 'credito', 'creditobancario', 'bancario'].includes(value)) return 'credito_bancario';
+  if (['credito_reta', 'reta', 'credito_reta_14'].includes(value)) return 'financiamiento_interno';
+  if (['financiamiento_interno', 'interno', 'credito_interno', 'financiamiento'].includes(value)) return 'financiamiento_interno';
+  return 'contado';
+}
+
+function normalizeConstructionStatus(raw) {
+  const value = normalizeHeaderKey(raw);
+  if (['listo', 'ready'].includes(value)) return 'listo';
+  if (['entregado', 'delivered'].includes(value)) return 'entregado';
+  return 'pendiente';
+}
+
+function normalizeHandoverStatus(raw) {
+  const value = normalizeHeaderKey(raw);
+  if (['programado', 'scheduled'].includes(value)) return 'programado';
+  if (['entregado', 'delivered'].includes(value)) return 'entregado';
+  return 'pendiente';
+}
+
+function normalizePaymentStatus(raw) {
+  const value = normalizeHeaderKey(raw);
+  if (['pagado', 'paid'].includes(value)) return 'pagado';
+  if (['en_proceso', 'proceso', 'processing'].includes(value)) return 'en_proceso';
+  return 'pendiente';
+}
+
+function excelDateToIso(raw) {
+  if (raw === null || raw === undefined || raw === '') return '';
+  if (typeof raw === 'number') {
+    const parsed = XLSX.SSF.parse_date_code(raw);
+    if (!parsed) return '';
+    const mm = String(parsed.m).padStart(2, '0');
+    const dd = String(parsed.d).padStart(2, '0');
+    return `${parsed.y}-${mm}-${dd}`;
+  }
+  return normalizeDateString(raw);
+}
+
+const OWNER_EXCEL_COLUMN_MAP = {
+  unitId: ['departamento', 'depto', 'unit_id', 'unitid', 'unidad', 'no'],
+  tower: ['tower', 'torre'],
+  clientName: ['client_name', 'cliente', 'nombre_cliente', 'alias_razon_social'],
+  firstName: ['nombre_s', 'nombre'],
+  lastName1: ['apellido_1', 'apellido_paterno'],
+  lastName2: ['apellido_2', 'apellido_materno'],
+  deliveryDate: ['delivery_date', 'fecha_entrega', 'fecha_estimada_entrega'],
+  deliveryDateFromWork: ['fecha_entrega_obra'],
+  deliveryDateClient: ['fecha_entrega_cliente'],
+  constructionStatus: ['construction_status', 'estatus_obra', 'obra_estatus'],
+  financeClearance: ['finance_clearance', 'finanzas_liberado', 'finanzas_ok'],
+  hasFinanceIssues: ['has_finance_issues', 'incidencias_finanzas', 'finanzas_incidencias'],
+  statusSos: ['status_sos'],
+  financeNotes: ['finance_notes', 'notas_finanzas', 'comentarios_finanzas'],
+  paymentMethod: ['payment_method', 'metodo_pago', 'tipo_pago'],
+  appointmentConfirmed: ['appointment_confirmed', 'cita_confirmada', 'cita_entrega_confirmada'],
+  handoverStatus: ['handover_status', 'estatus_entrega', 'estado_entrega'],
+  paymentStatus: ['payment_status', 'estatus_pago', 'estado_pago', 'estatus'],
+  notes: ['notes', 'notas_owner_services', 'notas']
+};
+
+function getRowValueByAliases(row, aliases) {
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(row, alias)) {
+      return row[alias];
+    }
+  }
+  return '';
+}
+
+function normalizeExcelRows(rows) {
+  const normalizedRows = [];
+  for (const rawRow of rows) {
+    const row = {};
+    Object.entries(rawRow || {}).forEach(([key, value]) => {
+      row[normalizeHeaderKey(key)] = value;
+    });
+    const unitId = String(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.unitId) || '').trim();
+    if (!unitId) continue;
+    const aliasOrCompany = String(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.clientName) || '').trim();
+    const firstName = String(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.firstName) || '').trim();
+    const lastName1 = String(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.lastName1) || '').trim();
+    const lastName2 = String(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.lastName2) || '').trim();
+    const fullName = [firstName, lastName1, lastName2].filter(Boolean).join(' ').trim();
+    const clientName = aliasOrCompany || fullName;
+
+    const statusSos = String(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.statusSos) || '').trim();
+    const statusSosNorm = normalizeHeaderKey(statusSos);
+    const statusSosHasIssue = ['pendiente', 'bloqueado', 'observacion', 'incidencia', 'error']
+      .some((word) => statusSosNorm.includes(word));
+
+    const financeClearanceRaw = getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.financeClearance);
+    const hasFinanceIssuesRaw = getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.hasFinanceIssues);
+    const hasExplicitFinanceClearance = String(financeClearanceRaw || '').trim() !== '';
+    const hasExplicitFinanceIssues = String(hasFinanceIssuesRaw || '').trim() !== '';
+    const financeClearance = hasExplicitFinanceClearance
+      ? parseBooleanValue(financeClearanceRaw)
+      : !statusSosHasIssue;
+    const hasFinanceIssues = hasExplicitFinanceIssues
+      ? parseBooleanValue(hasFinanceIssuesRaw)
+      : statusSosHasIssue;
+
+    const deliveryDateWork = excelDateToIso(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.deliveryDateFromWork));
+    const deliveryDate = excelDateToIso(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.deliveryDate)) || deliveryDateWork;
+    const deliveryDateClient = excelDateToIso(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.deliveryDateClient));
+    const appointmentConfirmedRaw = getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.appointmentConfirmed);
+    const appointmentConfirmed = String(appointmentConfirmedRaw || '').trim()
+      ? parseBooleanValue(appointmentConfirmedRaw)
+      : Boolean(deliveryDateClient);
+
+    const notesFromComments = String(getRowValueByAliases(row, ['comentarios']) || '').trim();
+    const ticket = String(getRowValueByAliases(row, ['ticket']) || '').trim();
+    const mergedNotes = [notesFromComments, ticket ? `Ticket: ${ticket}` : ''].filter(Boolean).join(' | ');
+
+    let handoverStatus = normalizeHandoverStatus(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.handoverStatus));
+    if (handoverStatus === 'pendiente' && deliveryDateClient) handoverStatus = 'programado';
+
+    normalizedRows.push(sanitizeOwnerUnitPayload({
+      unitId,
+      tower: getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.tower),
+      clientName,
+      deliveryDate,
+      constructionStatus: normalizeConstructionStatus(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.constructionStatus)),
+      financeClearance,
+      hasFinanceIssues,
+      financeNotes: getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.financeNotes) || statusSos,
+      paymentMethod: normalizePaymentMethod(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.paymentMethod)),
+      appointmentConfirmed,
+      handoverStatus,
+      paymentStatus: normalizePaymentStatus(getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.paymentStatus)),
+      notes: getRowValueByAliases(row, OWNER_EXCEL_COLUMN_MAP.notes) || mergedNotes
+    }));
+  }
+  return normalizedRows;
+}
+
+function rowsFromSheetWithHeaderRow(sheet, headerRowNumber) {
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  const headerIndex = Math.max(0, Number(headerRowNumber || 1) - 1);
+  const headerRow = Array.isArray(grid[headerIndex]) ? grid[headerIndex] : [];
+  const headers = headerRow.map((h) => String(h || '').trim());
+  const rows = [];
+
+  for (let i = headerIndex + 1; i < grid.length; i += 1) {
+    const values = Array.isArray(grid[i]) ? grid[i] : [];
+    const record = {};
+    let hasAnyValue = false;
+    for (let c = 0; c < headers.length; c += 1) {
+      const key = headers[c];
+      if (!key) continue;
+      const value = values[c] === undefined ? '' : values[c];
+      if (String(value).trim() !== '') hasAnyValue = true;
+      record[key] = value;
+    }
+    if (hasAnyValue) rows.push(record);
+  }
+
+  return rows;
 }
 
 function persistSubmission(formatId, formatName, payload) {
@@ -311,6 +671,11 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
+        <a class="card" href="/owner-services">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Owner Services</h2>
+          <p class="desc">Prioriza entregas y coordina obra, jurídico y finanzas.</p>
+        </a>
         ${gerenteCard}
       </div>
     </div>
@@ -321,10 +686,12 @@ app.use('/legacy', requireAuth);
 app.use('/generador-faes', requireAuth);
 app.use('/plds', requireAuth);
 app.use('/generador-roi', requireAuth);
+app.use('/owner-services', requireAuth);
 app.use('/form', requireAuth);
 app.use('/format', requireAuth);
 app.use('/submissions', requireAuth);
 app.use('/api/plds', requireAuth);
+app.use('/api/owner-services', requireAuth);
 
 app.use('/gerente-ventas', requireGerente);
 app.use('/plano-interactivo', requireGerente);
@@ -392,6 +759,10 @@ app.get('/plds/cliente-nacional-persona-moral', (req, res) => {
 
 app.get('/generador-roi', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'generador-roi.html'));
+});
+
+app.get('/owner-services', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'owner-services.html'));
 });
 
 app.get('/plano-interactivo', (req, res) => {
@@ -682,6 +1053,190 @@ app.get('/api/plds/submissions/:id', (req, res) => {
   const item = all.find((x) => x.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'Submission no encontrado' });
   res.json(item);
+});
+
+// --- API modulo Owner Services ---
+app.get('/api/owner-services/health', (req, res) => {
+  res.json({ ok: true, module: 'owner-services', ts: new Date().toISOString() });
+});
+
+app.get('/api/owner-services/dashboard', (req, res) => {
+  res.json(ownerServicesDashboardSnapshot());
+});
+
+app.put('/api/owner-services/project', (req, res) => {
+  const current = readOwnerServicesData();
+  const body = req.body || {};
+  const updatedProject = {
+    ...current.project,
+    name: String(body.name || current.project.name || '').trim() || 'Proyecto principal',
+    regimenCondominial: Boolean(body.regimenCondominial),
+    regimenDate: normalizeDateString(body.regimenDate),
+    internalFinancingReady: Boolean(body.internalFinancingReady),
+    updatedAt: new Date().toISOString()
+  };
+  const next = { ...current, project: updatedProject };
+  saveOwnerServicesData(next);
+  res.json({ ok: true, project: next.project });
+});
+
+app.post('/api/owner-services/units', (req, res) => {
+  const body = req.body || {};
+  const incoming = sanitizeOwnerUnitPayload(body);
+  const unitId = incoming.unitId;
+  if (!unitId) {
+    return res.status(400).json({ error: 'unitId es obligatorio' });
+  }
+
+  const current = readOwnerServicesData();
+  const idx = current.units.findIndex((x) => String(x.unitId || '').trim() === unitId);
+  if (idx >= 0) {
+    current.units[idx] = { ...current.units[idx], ...incoming };
+  } else {
+    current.units.push(incoming);
+  }
+
+  saveOwnerServicesData(current);
+  const snapshot = ownerServicesDashboardSnapshot();
+  const saved = snapshot.units.find((x) => x.unitId === unitId);
+  return res.json({ ok: true, unit: saved });
+});
+
+app.get('/api/owner-services/template-columns', (req, res) => {
+  const columns = [
+    'unit_id',
+    'torre',
+    'cliente',
+    'fecha_entrega',
+    'estatus_obra',
+    'finanzas_liberado',
+    'incidencias_finanzas',
+    'notas_finanzas',
+    'metodo_pago',
+    'cita_confirmada',
+    'estatus_entrega',
+    'estatus_pago',
+    'notas_owner_services'
+  ];
+  res.json({
+    columns,
+    hints: {
+      estatus_obra: ['pendiente', 'listo', 'entregado'],
+      metodo_pago: ['contado', 'credito_bancario', 'financiamiento_interno'],
+      estatus_entrega: ['pendiente', 'programado', 'entregado'],
+      estatus_pago: ['pendiente', 'en_proceso', 'pagado'],
+      boolean_values: ['si', 'no']
+    }
+  });
+});
+
+app.get('/api/owner-services/template-csv', (req, res) => {
+  const header = [
+    'unit_id',
+    'torre',
+    'cliente',
+    'fecha_entrega',
+    'estatus_obra',
+    'finanzas_liberado',
+    'incidencias_finanzas',
+    'notas_finanzas',
+    'metodo_pago',
+    'cita_confirmada',
+    'estatus_entrega',
+    'estatus_pago',
+    'notas_owner_services'
+  ].join(',');
+  const example = [
+    'T1-502',
+    'Torre 1',
+    'Juan Perez',
+    '2026-02-20',
+    'listo',
+    'si',
+    'no',
+    'Sin incidencias',
+    'contado',
+    'si',
+    'programado',
+    'pendiente',
+    'Cliente listo para firma'
+  ].join(',');
+
+  const csv = `${header}\n${example}\n`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename=owner-services-template.csv');
+  res.send(csv);
+});
+
+app.post('/api/owner-services/import-excel', (req, res) => {
+  const { fileName, base64, replaceExisting, sheetName, headerRow } = req.body || {};
+  if (!base64) {
+    return res.status(400).json({ error: 'Archivo inválido: falta contenido base64' });
+  }
+
+  let workbook;
+  try {
+    const buffer = Buffer.from(String(base64), 'base64');
+    workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  } catch (err) {
+    return res.status(400).json({ error: 'No se pudo leer el archivo Excel (.xlsx)' });
+  }
+
+  const defaultSheetName = workbook.SheetNames.includes('Bonanza')
+    ? 'Bonanza'
+    : (workbook.SheetNames && workbook.SheetNames[0]);
+  const targetSheetName = String(sheetName || defaultSheetName || '').trim();
+  if (!targetSheetName) {
+    return res.status(400).json({ error: 'El Excel no contiene hojas' });
+  }
+  const sheet = workbook.Sheets[targetSheetName];
+  if (!sheet) {
+    return res.status(400).json({ error: `No existe la hoja "${targetSheetName}" en el archivo` });
+  }
+  const effectiveHeaderRow = Number(headerRow) > 0
+    ? Number(headerRow)
+    : (targetSheetName === 'Bonanza' ? 6 : 1);
+  const rows = rowsFromSheetWithHeaderRow(sheet, effectiveHeaderRow);
+  const parsedUnits = normalizeExcelRows(rows);
+
+  const current = readOwnerServicesData();
+  const baseUnits = Boolean(replaceExisting) ? [] : [...current.units];
+  let created = 0;
+  let updated = 0;
+
+  parsedUnits.forEach((incoming) => {
+    const idx = baseUnits.findIndex((u) => String(u.unitId || '').trim() === incoming.unitId);
+    if (idx >= 0) {
+      baseUnits[idx] = { ...baseUnits[idx], ...incoming };
+      updated += 1;
+    } else {
+      baseUnits.push(incoming);
+      created += 1;
+    }
+  });
+
+  const next = { ...current, units: baseUnits };
+  saveOwnerServicesData(next);
+
+  return res.json({
+    ok: true,
+    fileName: String(fileName || ''),
+    sheetName: targetSheetName,
+    headerRow: effectiveHeaderRow,
+    totalRows: rows.length,
+    importedRows: parsedUnits.length,
+    created,
+    updated,
+    skipped: Math.max(0, rows.length - parsedUnits.length)
+  });
+});
+
+app.delete('/api/owner-services/units', (req, res) => {
+  const current = readOwnerServicesData();
+  const removed = Array.isArray(current.units) ? current.units.length : 0;
+  const next = { ...current, units: [] };
+  saveOwnerServicesData(next);
+  return res.json({ ok: true, removed });
 });
 
 app.get('/format/:id', (req, res) => {
