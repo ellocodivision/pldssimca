@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Descargar PDF CEIBA</title>
+  <title>Descargar PDF</title>
   <style>
     :root {
       --bg: #f3f4ef;
@@ -81,7 +81,7 @@
     </div>
     <div class="actions">
       <button id="downloadBtn" class="primary" type="button">Descargar PDF</button>
-      <a class="btn" href="/plano-ventas">Abrir editor</a>
+      <a id="openEditorLink" class="btn" href="/plano-ventas">Abrir editor</a>
     </div>
     <p id="status">Listo.</p>
   </section>
@@ -89,11 +89,19 @@
   <script>
     const downloadBtn = document.getElementById("downloadBtn");
     const status = document.getElementById("status");
+    const openEditorLink = document.getElementById("openEditorLink");
+    const URL_PARAMS = new URLSearchParams(window.location.search);
+    const devMatch = window.location.pathname.match(/^\/gerente-ventas\/([^/]+)\/plano-descargar$/i);
+    const DEV = (URL_PARAMS.get("dev") || (devMatch && devMatch[1]) || "ceiba").toLowerCase();
+    const DEV_BASE = `/gerente-ventas/${encodeURIComponent(DEV)}`;
+    const editorUrl = `${DEV_BASE}/plano-ventas?dev=${encodeURIComponent(DEV)}`;
+    const quickExportUrl = `${DEV_BASE}/plano-ventas?quick_export=1&dev=${encodeURIComponent(DEV)}`;
+    openEditorLink.href = editorUrl;
 
     downloadBtn.addEventListener("click", () => {
       status.textContent = "Generando y descargando PDF...";
       const ts = Date.now();
-      window.location.href = `/plano-ventas?quick_export=1&t=${ts}`;
+      window.location.href = `${quickExportUrl}&t=${ts}`;
     });
   </script>
 </body>

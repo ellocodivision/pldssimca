@@ -194,6 +194,10 @@
           <input id="snapParallelInput" type="checkbox" checked>
           Regla paralela
         </label>
+        <label style="margin-top:8px;">
+          <input id="showLabelsInput" type="checkbox" checked>
+          Mostrar número de unidad
+        </label>
         <label for="zoomRangeInput" style="margin-top:8px;">Zoom</label>
         <div class="zoom-row">
           <button id="zoomOutBtn" type="button">-</button>
@@ -239,7 +243,7 @@
       <div class="section">
         <h2>6) Siguiente paso</h2>
         <p class="help">Después de exportar JSON, abre la ventana 2 y carga JSON + Excel.</p>
-        <a href="/plano-ventas"><button class="primary" type="button" style="width:100%;">Ir a Paso 2 (Excel + estados)</button></a>
+        <a id="goStep2Link" href="/plano-ventas"><button class="primary" type="button" style="width:100%;">Ir a Paso 2 (Excel + estados)</button></a>
       </div>
     </aside>
 
@@ -253,6 +257,20 @@
   </div>
 
   <script>
+    const URL_PARAMS = new URLSearchParams(window.location.search);
+    const devMatch = window.location.pathname.match(/^\/gerente-ventas\/([^/]+)\/plano-interactivo$/i);
+    const DEV = (URL_PARAMS.get("dev") || (devMatch && devMatch[1]) || "ceiba").toLowerCase();
+    const DEV_BASE = `/gerente-ventas/${encodeURIComponent(DEV)}`;
+    const STEP2_URL = `${DEV_BASE}/plano-ventas?dev=${encodeURIComponent(DEV)}`;
+    const LOCAL_STATE_KEYS = [
+      `selectorUnidadesState:${DEV}`,
+      `planoInteractivoState:${DEV}`,
+      `plataformaUnidadesState:${DEV}`
+    ];
+    if (DEV === "ceiba") {
+      LOCAL_STATE_KEYS.push("selectorUnidadesState", "planoInteractivoState", "plataformaUnidadesState");
+    }
+
     const MAX_FLOORS = 6;
 
     const state = {
@@ -263,6 +281,7 @@
       drawingPoints: [],
       cursorPoint: null,
       snapParallel: true,
+      showUnitLabels: true,
       draggingLabel: null,
       nextZoneId: 1,
       zoom: 1
@@ -279,6 +298,7 @@
     const cancelZoneBtn = document.getElementById("cancelZoneBtn");
     const deleteZoneBtn = document.getElementById("deleteZoneBtn");
     const snapParallelInput = document.getElementById("snapParallelInput");
+    const showLabelsInput = document.getElementById("showLabelsInput");
     const drawHint = document.getElementById("drawHint");
     const unitLabel = document.getElementById("unitLabel");
     const applyUnitBtn = document.getElementById("applyUnitBtn");
@@ -289,6 +309,8 @@
     const exportBtn = document.getElementById("exportBtn");
     const importBtn = document.getElementById("importBtn");
     const importInput = document.getElementById("importInput");
+    const goStep2Link = document.getElementById("goStep2Link");
+    goStep2Link.href = STEP2_URL;
     const zoomOutBtn = document.getElementById("zoomOutBtn");
     const zoomInBtn = document.getElementById("zoomInBtn");
     const zoomResetBtn = document.getElementById("zoomResetBtn");
@@ -650,9 +672,7 @@
         const cy = baseY + dy;
         const label = escapeHtml(zone.label);
         const isActive = zone.id === state.selectedZoneId;
-        return `
-          <g data-zone-id="${zone.id}">
-            <polygon points="${pts}" fill="var(--zone)" fill-opacity="0.24" stroke="${isActive ? "#163c2c" : "#2d8f63"}" stroke-width="${isActive ? 3 : 2}" />
+        const labelHtml = state.showUnitLabels ? `
             <text
               data-label-zone-id="${zone.id}"
               x="${cx}"
@@ -668,6 +688,11 @@
               paint-order="stroke"
               style="cursor: move;"
             >${label}</text>
+        ` : "";
+        return `
+          <g data-zone-id="${zone.id}">
+            <polygon points="${pts}" fill="var(--zone)" fill-opacity="0.24" stroke="${isActive ? "#163c2c" : "#2d8f63"}" stroke-width="${isActive ? 3 : 2}" />
+            ${labelHtml}
           </g>
         `;
       }).join("");
@@ -739,7 +764,8 @@
     function getPersistableState() {
       return {
         floors: state.floors,
-        nextZoneId: state.nextZoneId
+        nextZoneId: state.nextZoneId,
+        showUnitLabels: state.showUnitLabels
       };
     }
 
@@ -750,6 +776,8 @@
       }
       state.floors = payload.floors.slice(0, MAX_FLOORS);
       state.nextZoneId = Number(payload.nextZoneId) || 1;
+      state.showUnitLabels = payload.showUnitLabels !== false;
+      showLabelsInput.checked = state.showUnitLabels;
       state.activeFloorId = state.floors[0].id;
       state.selectedZoneId = null;
       state.drawing = false;
@@ -761,19 +789,34 @@
       enableButtons();
     }
 
-    function saveLocal() {
+    async function persistProjectJsonToServer(payloadObj, fileName = "unidades-marcadas-unificado-orden-adjuntos.json") {
+      try {
+        const response = await fetch(`/api/plano-ventas/save-json?dev=${encodeURIComponent(DEV)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileName, payload: payloadObj })
+        });
+        if (!response.ok) return false;
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    async function saveLocal() {
+      const payloadObj = getPersistableState();
       const payload = JSON.stringify(getPersistableState());
-      localStorage.setItem("selectorUnidadesState", payload);
-      // Compatibility with earlier versions
-      localStorage.setItem("planoInteractivoState", payload);
-      alert("Guardado local listo.");
+      LOCAL_STATE_KEYS.forEach((key) => localStorage.setItem(key, payload));
+      const savedOnServer = await persistProjectJsonToServer(payloadObj);
+      if (savedOnServer) {
+        alert("Guardado local listo y sincronizado en carpeta del desarrollo.");
+      } else {
+        alert("Guardado local listo. No se pudo sincronizar al servidor en este momento.");
+      }
     }
 
     function loadLocal() {
-      const raw =
-        localStorage.getItem("selectorUnidadesState") ||
-        localStorage.getItem("planoInteractivoState") ||
-        localStorage.getItem("plataformaUnidadesState");
+      const raw = LOCAL_STATE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
       if (!raw) {
         alert("No hay datos guardados.");
         return;
@@ -785,13 +828,21 @@
       }
     }
 
-    function exportJson() {
-      const blob = new Blob([JSON.stringify(getPersistableState(), null, 2)], { type: "application/json" });
+    async function exportJson() {
+      const payloadObj = getPersistableState();
+      const fileName = "unidades-marcadas-unificado-orden-adjuntos.json";
+      const savedOnServer = await persistProjectJsonToServer(payloadObj, fileName);
+      const blob = new Blob([JSON.stringify(payloadObj, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "unidades-marcadas.json";
+      link.download = fileName;
       link.click();
       URL.revokeObjectURL(link.href);
+      if (savedOnServer) {
+        alert("JSON exportado y guardado en la carpeta del desarrollo.");
+      } else {
+        alert("JSON exportado. No se pudo guardar en servidor en este momento.");
+      }
     }
 
     function importJson(file) {
@@ -887,6 +938,10 @@
     snapParallelInput.addEventListener("change", () => {
       state.snapParallel = snapParallelInput.checked;
       updateHint();
+      renderOverlay();
+    });
+    showLabelsInput.addEventListener("change", () => {
+      state.showUnitLabels = showLabelsInput.checked;
       renderOverlay();
     });
 

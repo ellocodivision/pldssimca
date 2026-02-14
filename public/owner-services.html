@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Owner Services - Priorización de Entregas</title>
+  <style>
+    :root{
+      --bg:#f3efe6;
+      --card:#ffffff;
+      --line:#d7cfbe;
+      --ink:#1f1b16;
+      --muted:#5f5649;
+      --accent:#ffe816;
+      --danger:#9b2f2f;
+      --ok:#2f6b3a;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,sans-serif}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px 16px 42px}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+    h1{margin:0;font-size:32px}
+    .muted{color:var(--muted)}
+    .btn{border:1px solid #bdb5a3;background:#fff;color:#17120d;padding:10px 12px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer}
+    .btn:hover{border-color:#8e8678}
+    .btn-primary{background:var(--accent)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .card h2{margin:0 0 10px;font-size:20px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#564d3e;display:block;margin-bottom:6px}
+    input,select,textarea{width:100%;border:1px solid #cbc2b0;border-radius:9px;padding:10px;font-size:14px;background:#fff;color:#1b1713}
+    textarea{min-height:72px;resize:vertical}
+    .checks{display:flex;flex-wrap:wrap;gap:14px;padding-top:4px}
+    .checks label{font-size:13px;text-transform:none;letter-spacing:0;margin:0;display:flex;align-items:center;gap:6px;font-weight:600;color:#2f2820}
+    .checks input{width:auto}
+    .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px}
+    .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+    .kpi .t{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+    .kpi .v{font-size:26px;font-weight:800;margin-top:6px}
+    .table-wrap{overflow:auto;margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:12px}
+    table{width:100%;border-collapse:collapse;min-width:980px}
+    th,td{padding:10px 8px;border-bottom:1px solid #eee8dc;text-align:left;font-size:13px;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#61584b;background:#fbf8f1}
+    .pill{display:inline-block;border-radius:999px;padding:4px 8px;font-weight:700;font-size:11px}
+    .pill-ok{background:#dcefdc;color:var(--ok)}
+    .pill-bad{background:#f5dfdf;color:var(--danger)}
+    .blockers{margin:0;padding-left:18px;color:#7a302f}
+    .actions button{margin-right:6px;margin-bottom:4px}
+    .footer{margin-top:18px;color:var(--muted);font-size:12px}
+    .import-box{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .help-list{margin:8px 0 0;padding-left:18px;color:#5d5446;font-size:13px}
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr}
+      .row{grid-template-columns:1fr}
+      .kpis{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Owner Services</h1>
+        <div class="muted">Priorización de entregas para acelerar flujo de cobranza.</div>
+      </div>
+      <div>
+        <a class="btn" href="/">Volver al panel</a>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Parámetros de Proyecto</h2>
+        <div class="row">
+          <div>
+            <label for="projectName">Proyecto</label>
+            <input id="projectName" placeholder="Nombre del proyecto" />
+          </div>
+          <div>
+            <label for="regimenDate">Fecha régimen condominial</label>
+            <input id="regimenDate" type="date" />
+          </div>
+        </div>
+        <div class="checks">
+          <label><input id="regimenCondominial" type="checkbox" /> Régimen condominial activo</label>
+          <label><input id="internalFinancingReady" type="checkbox" /> Financiamiento interno disponible</label>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn btn-primary" id="saveProjectBtn" type="button">Guardar parámetros</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Captura de Unidad</h2>
+        <form id="unitForm">
+          <div class="row">
+            <div>
+              <label for="unitId">Departamento (ID)</label>
+              <input id="unitId" required placeholder="Ej. T1-502" />
+            </div>
+            <div>
+              <label for="tower">Torre</label>
+              <input id="tower" placeholder="Ej. Torre 1" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="clientName">Cliente</label>
+              <input id="clientName" placeholder="Nombre del cliente" />
+            </div>
+            <div>
+              <label for="deliveryDate">Fecha estimada entrega</label>
+              <input id="deliveryDate" type="date" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="constructionStatus">Estatus obra</label>
+              <select id="constructionStatus">
+                <option value="pendiente">Pendiente</option>
+                <option value="listo">Listo</option>
+                <option value="entregado">Entregado</option>
+              </select>
+            </div>
+            <div>
+              <label for="paymentMethod">Método de pago</label>
+              <select id="paymentMethod">
+                <option value="contado">Contado</option>
+                <option value="credito_bancario">Crédito bancario</option>
+                <option value="financiamiento_interno">Financiamiento interno</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="handoverStatus">Estatus entrega</label>
+              <select id="handoverStatus">
+                <option value="pendiente">Pendiente</option>
+                <option value="programado">Programado</option>
+                <option value="entregado">Entregado</option>
+              </select>
+            </div>
+            <div>
+              <label for="paymentStatus">Estatus pago</label>
+              <select id="paymentStatus">
+                <option value="pendiente">Pendiente</option>
+                <option value="en_proceso">En proceso</option>
+                <option value="pagado">Pagado</option>
+              </select>
+            </div>
+          </div>
+          <div class="checks">
+            <label><input id="financeClearance" type="checkbox" /> Finanzas sin bloqueos</label>
+            <label><input id="hasFinanceIssues" type="checkbox" /> Hay incidencias financieras</label>
+            <label><input id="appointmentConfirmed" type="checkbox" /> Cita de entrega confirmada</label>
+          </div>
+          <div style="margin-top:10px">
+            <label for="financeNotes">Notas finanzas / observaciones</label>
+            <textarea id="financeNotes" placeholder="Pagos no aplicados, terceros, reembolsos, etc."></textarea>
+          </div>
+          <div style="margin-top:10px">
+            <label for="notes">Notas owner services</label>
+            <textarea id="notes" placeholder="Detalle comercial o de seguimiento"></textarea>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit">Guardar unidad</button>
+            <button class="btn" type="button" id="clearFormBtn">Limpiar formulario</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:14px">
+      <h2>Carga Masiva por Excel</h2>
+      <div class="import-box">
+        <input id="excelFile" type="file" accept=".xlsx,.xls" />
+        <input id="sheetName" type="text" value="Bonanza" placeholder="Hoja (ej. Bonanza)" style="max-width:180px" />
+        <input id="headerRow" type="number" value="6" min="1" style="width:90px" title="Fila de encabezados" />
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;text-transform:none;letter-spacing:0;margin:0">
+          <input id="replaceExisting" type="checkbox" />
+          Reemplazar unidades actuales
+        </label>
+        <button class="btn btn-primary" id="importExcelBtn" type="button">Importar Excel</button>
+        <button class="btn" id="resetUnitsBtn" type="button" style="border-color:#d3a0a0;color:#8c2d2d">Reset unidades</button>
+        <a class="btn" href="/api/owner-services/template-csv">Descargar plantilla CSV</a>
+      </div>
+      <ul class="help-list">
+        <li>Para tu layout actual usa hoja <strong>Bonanza</strong> y encabezados en fila <strong>6</strong>.</li>
+        <li>La columna clave es <strong>unit_id</strong> (si existe, actualiza; si no, crea).</li>
+        <li>Valores sugeridos: obra (<code>pendiente|listo|entregado</code>), pago (<code>pendiente|en_proceso|pagado</code>), método (<code>contado|credito_bancario|financiamiento_interno</code>).</li>
+      </ul>
+      <div id="importResult" class="muted" style="margin-top:8px"></div>
+    </section>
+
+    <section class="kpis" id="kpis"></section>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Unidad</th>
+            <th>Cliente</th>
+            <th>Puntaje</th>
+            <th>Listo para entregar</th>
+            <th>Bloqueos</th>
+            <th>Pago</th>
+            <th>Obra</th>
+            <th>Entrega</th>
+            <th>Pago final</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="unitsTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="footer">Regla de prioridad: contado y crédito bancario suben prioridad; financiamiento interno e incidencias la bajan.</div>
+  </div>
+
+  <script>
+    const els = {
+      projectName: document.getElementById('projectName'),
+      regimenDate: document.getElementById('regimenDate'),
+      regimenCondominial: document.getElementById('regimenCondominial'),
+      internalFinancingReady: document.getElementById('internalFinancingReady'),
+      saveProjectBtn: document.getElementById('saveProjectBtn'),
+      unitForm: document.getElementById('unitForm'),
+      clearFormBtn: document.getElementById('clearFormBtn'),
+      kpis: document.getElementById('kpis'),
+      unitsTableBody: document.getElementById('unitsTableBody'),
+      excelFile: document.getElementById('excelFile'),
+      sheetName: document.getElementById('sheetName'),
+      headerRow: document.getElementById('headerRow'),
+      replaceExisting: document.getElementById('replaceExisting'),
+      importExcelBtn: document.getElementById('importExcelBtn'),
+      importResult: document.getElementById('importResult'),
+      resetUnitsBtn: document.getElementById('resetUnitsBtn')
+    };
+
+    const fields = [
+      'unitId','tower','clientName','deliveryDate','constructionStatus','paymentMethod',
+      'handoverStatus','paymentStatus','financeClearance','hasFinanceIssues',
+      'appointmentConfirmed','financeNotes','notes'
+    ].reduce((acc, id) => {
+      acc[id] = document.getElementById(id);
+      return acc;
+    }, {});
+
+    let dashboard = { summary: {}, project: {}, prioritized: [] };
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function statusPill(ready) {
+      if (ready) return '<span class="pill pill-ok">LISTO</span>';
+      return '<span class="pill pill-bad">BLOQUEADO</span>';
+    }
+
+    function toPayload() {
+      return {
+        unitId: fields.unitId.value.trim(),
+        tower: fields.tower.value.trim(),
+        clientName: fields.clientName.value.trim(),
+        deliveryDate: fields.deliveryDate.value,
+        constructionStatus: fields.constructionStatus.value,
+        financeClearance: fields.financeClearance.checked,
+        hasFinanceIssues: fields.hasFinanceIssues.checked,
+        financeNotes: fields.financeNotes.value.trim(),
+        paymentMethod: fields.paymentMethod.value,
+        appointmentConfirmed: fields.appointmentConfirmed.checked,
+        handoverStatus: fields.handoverStatus.value,
+        paymentStatus: fields.paymentStatus.value,
+        notes: fields.notes.value.trim()
+      };
+    }
+
+    function clearForm() {
+      fields.unitId.value = '';
+      fields.tower.value = '';
+      fields.clientName.value = '';
+      fields.deliveryDate.value = '';
+      fields.constructionStatus.value = 'pendiente';
+      fields.paymentMethod.value = 'contado';
+      fields.handoverStatus.value = 'pendiente';
+      fields.paymentStatus.value = 'pendiente';
+      fields.financeClearance.checked = false;
+      fields.hasFinanceIssues.checked = false;
+      fields.appointmentConfirmed.checked = false;
+      fields.financeNotes.value = '';
+      fields.notes.value = '';
+      fields.unitId.focus();
+    }
+
+    function fillForm(unit) {
+      fields.unitId.value = unit.unitId || '';
+      fields.tower.value = unit.tower || '';
+      fields.clientName.value = unit.clientName || '';
+      fields.deliveryDate.value = unit.deliveryDate || '';
+      fields.constructionStatus.value = unit.constructionStatus || 'pendiente';
+      fields.paymentMethod.value = unit.paymentMethod || 'contado';
+      fields.handoverStatus.value = unit.handoverStatus || 'pendiente';
+      fields.paymentStatus.value = unit.paymentStatus || 'pendiente';
+      fields.financeClearance.checked = Boolean(unit.financeClearance);
+      fields.hasFinanceIssues.checked = Boolean(unit.hasFinanceIssues);
+      fields.appointmentConfirmed.checked = Boolean(unit.appointmentConfirmed);
+      fields.financeNotes.value = unit.financeNotes || '';
+      fields.notes.value = unit.notes || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      fields.unitId.focus();
+    }
+
+    function renderKpis(summary) {
+      const items = [
+        ['Total unidades', summary.totalUnits || 0],
+        ['Listas para entregar', summary.readyForDelivery || 0],
+        ['Bloqueadas', summary.blocked || 0],
+        ['Entregadas', summary.delivered || 0],
+        ['Pagadas', summary.paid || 0]
+      ];
+      els.kpis.innerHTML = items.map(([title, value]) => `
+        <article class="kpi">
+          <div class="t">${title}</div>
+          <div class="v">${value}</div>
+        </article>
+      `).join('');
+    }
+
+    function renderTable(units) {
+      if (!units.length) {
+        els.unitsTableBody.innerHTML = '<tr><td colspan="10">Aún no hay unidades capturadas.</td></tr>';
+        return;
+      }
+
+      els.unitsTableBody.innerHTML = units.map((u) => {
+        const blockers = (u.blockers || []).length
+          ? `<ul class="blockers">${u.blockers.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>`
+          : '<span class="muted">Sin bloqueos</span>';
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(u.unitId)}</strong><br><span class="muted">${escapeHtml(u.tower || '-')}</span></td>
+            <td>${escapeHtml(u.clientName || '-')}</td>
+            <td><strong>${u.score}</strong></td>
+            <td>${statusPill(u.readyForDelivery)}</td>
+            <td>${blockers}</td>
+            <td>${escapeHtml(u.paymentMethod || '-')}</td>
+            <td>${escapeHtml(u.constructionStatus || '-')}<br><span class="muted">${escapeHtml(u.deliveryDate || '')}</span></td>
+            <td>${escapeHtml(u.handoverStatus || '-')}</td>
+            <td>${escapeHtml(u.paymentStatus || '-')}</td>
+            <td class="actions">
+              <button class="btn" type="button" data-edit="${escapeHtml(u.unitId)}">Editar</button>
+              <button class="btn" type="button" data-deliver="${escapeHtml(u.unitId)}">Marcar entregado</button>
+              <button class="btn" type="button" data-paid="${escapeHtml(u.unitId)}">Marcar pagado</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderProject(project) {
+      els.projectName.value = project.name || '';
+      els.regimenDate.value = project.regimenDate || '';
+      els.regimenCondominial.checked = Boolean(project.regimenCondominial);
+      els.internalFinancingReady.checked = Boolean(project.internalFinancingReady);
+    }
+
+    async function loadDashboard() {
+      const res = await fetch('/api/owner-services/dashboard');
+      if (!res.ok) throw new Error('No se pudo cargar el dashboard');
+      dashboard = await res.json();
+      renderProject(dashboard.project || {});
+      renderKpis(dashboard.summary || {});
+      renderTable(dashboard.prioritized || []);
+    }
+
+    async function saveProject() {
+      const payload = {
+        name: els.projectName.value.trim(),
+        regimenDate: els.regimenDate.value,
+        regimenCondominial: els.regimenCondominial.checked,
+        internalFinancingReady: els.internalFinancingReady.checked
+      };
+      const res = await fetch('/api/owner-services/project', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Error guardando parámetros de proyecto');
+      await loadDashboard();
+    }
+
+    async function saveUnit(event) {
+      event.preventDefault();
+      const payload = toPayload();
+      if (!payload.unitId) {
+        alert('El ID de unidad es obligatorio.');
+        return;
+      }
+      const res = await fetch('/api/owner-services/units', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Error guardando unidad');
+      }
+      clearForm();
+      await loadDashboard();
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = String(reader.result || '');
+          const comma = result.indexOf(',');
+          if (comma < 0) return reject(new Error('No se pudo leer el archivo'));
+          resolve(result.slice(comma + 1));
+        };
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function importExcel() {
+      const file = els.excelFile.files && els.excelFile.files[0];
+      if (!file) {
+        alert('Selecciona un archivo Excel primero.');
+        return;
+      }
+      els.importExcelBtn.disabled = true;
+      els.importResult.textContent = 'Importando archivo...';
+      try {
+        const base64 = await fileToBase64(file);
+        const res = await fetch('/api/owner-services/import-excel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            base64,
+            replaceExisting: els.replaceExisting.checked,
+            sheetName: (els.sheetName.value || '').trim() || 'Bonanza',
+            headerRow: Number(els.headerRow.value || 6)
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'No se pudo importar el Excel');
+        els.importResult.textContent = `Importación completa: ${data.importedRows} filas válidas (${data.created} nuevas, ${data.updated} actualizadas, ${data.skipped} omitidas).`;
+        await loadDashboard();
+      } catch (err) {
+        els.importResult.textContent = '';
+        alert(err.message || 'Error importando Excel');
+      } finally {
+        els.importExcelBtn.disabled = false;
+      }
+    }
+
+    async function resetUnits() {
+      const ok = window.confirm('Esto borrará todas las unidades cargadas/importadas. ¿Continuar?');
+      if (!ok) return;
+      const secondOk = window.confirm('Confirmación final: se perderán los datos de unidades actuales.');
+      if (!secondOk) return;
+
+      els.resetUnitsBtn.disabled = true;
+      try {
+        const res = await fetch('/api/owner-services/units', { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'No se pudo resetear unidades');
+        els.importResult.textContent = `Reset completado: ${data.removed || 0} unidades eliminadas.`;
+        await loadDashboard();
+      } catch (err) {
+        alert(err.message || 'Error en reset de unidades');
+      } finally {
+        els.resetUnitsBtn.disabled = false;
+      }
+    }
+
+    async function patchUnit(unitId, patch) {
+      const unit = (dashboard.prioritized || []).find((x) => x.unitId === unitId);
+      if (!unit) return;
+      const payload = {
+        ...unit,
+        ...patch,
+        blockers: undefined,
+        readyForDelivery: undefined,
+        score: undefined
+      };
+      const res = await fetch('/api/owner-services/units', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('No se pudo actualizar la unidad');
+      await loadDashboard();
+    }
+
+    els.saveProjectBtn.addEventListener('click', async () => {
+      try { await saveProject(); }
+      catch (err) { alert(err.message || 'Error guardando proyecto'); }
+    });
+
+    els.unitForm.addEventListener('submit', async (event) => {
+      try { await saveUnit(event); }
+      catch (err) { alert(err.message || 'Error guardando unidad'); }
+    });
+
+    els.clearFormBtn.addEventListener('click', clearForm);
+    els.importExcelBtn.addEventListener('click', importExcel);
+    els.resetUnitsBtn.addEventListener('click', resetUnits);
+
+    document.addEventListener('click', async (event) => {
+      const editId = event.target && event.target.getAttribute('data-edit');
+      if (editId) {
+        const unit = (dashboard.prioritized || []).find((x) => x.unitId === editId);
+        if (unit) fillForm(unit);
+        return;
+      }
+
+      const deliverId = event.target && event.target.getAttribute('data-deliver');
+      if (deliverId) {
+        try { await patchUnit(deliverId, { handoverStatus: 'entregado' }); }
+        catch (err) { alert(err.message || 'Error al actualizar entrega'); }
+        return;
+      }
+
+      const paidId = event.target && event.target.getAttribute('data-paid');
+      if (paidId) {
+        try { await patchUnit(paidId, { paymentStatus: 'pagado' }); }
+        catch (err) { alert(err.message || 'Error al actualizar pago'); }
+      }
+    });
+
+    loadDashboard().catch((err) => {
+      alert(err.message || 'Error inicializando Owner Services');
+    });
+  </script>
+</body>
+</html>

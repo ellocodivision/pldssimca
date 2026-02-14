@@ -34,6 +34,29 @@ const DATA_DIR = path.join(__dirname, 'data');
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
+const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
+const DEFAULT_DEVELOPMENT_SLUG = 'ceiba';
+const FLOOR_JSON_FILE_RE = /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i;
+const DEVELOPMENTS = [
+  { slug: 'ceiba', name: 'CEIBA' },
+  { slug: 'costa-caribe', name: 'COSTA CARIBE' },
+  { slug: 'cruz-con-mar', name: 'CRUZ CON MAR' },
+  { slug: 'dream-c', name: 'DREAM C' },
+  { slug: 'gran-tulum', name: 'GRAN TULUM' },
+  { slug: 'ipana', name: 'IPANA' },
+  { slug: 'maresol', name: 'MARESOL' },
+  { slug: 'marila', name: 'MARILA' },
+  { slug: 'natal', name: 'NATAL' },
+  { slug: 'saint-marine', name: 'SAINT MARINE' },
+  { slug: 'serenada', name: 'SERENADA' },
+  { slug: 'singular-joy', name: 'SINGULAR JOY' },
+  { slug: 'solar', name: 'SOLAR' },
+  { slug: 'solar-mt', name: 'SOLAR MT' }
+];
+const DEVELOPMENTS_BY_SLUG = DEVELOPMENTS.reduce((acc, item) => {
+  acc[item.slug] = item;
+  return acc;
+}, {});
 
 const formats = {
   '35': { name: 'FR-VEN-35 Aviso de Privacidad', file: 'format-35.html' },
@@ -141,6 +164,11 @@ process.on('unhandledRejection', (err) => {
 function ensureDataFiles() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(FLOOR_JSON_DIR)) fs.mkdirSync(FLOOR_JSON_DIR, { recursive: true });
+  if (!fs.existsSync(DEVELOPMENTS_DIR)) fs.mkdirSync(DEVELOPMENTS_DIR, { recursive: true });
+  DEVELOPMENTS.forEach((dev) => {
+    const floorDir = path.join(DEVELOPMENTS_DIR, dev.slug, 'plano-ventas-floors');
+    if (!fs.existsSync(floorDir)) fs.mkdirSync(floorDir, { recursive: true });
+  });
   if (!fs.existsSync(SUBMISSIONS_PATH)) fs.writeFileSync(SUBMISSIONS_PATH, '[]', 'utf-8');
   if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, '{}', 'utf-8');
   if (!fs.existsSync(OWNER_SERVICES_PATH)) {
@@ -156,6 +184,64 @@ function ensureDataFiles() {
     };
     fs.writeFileSync(OWNER_SERVICES_PATH, JSON.stringify(initialOwnerServices, null, 2), 'utf-8');
   }
+}
+
+function normalizeDevelopmentSlug(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (!value) return DEFAULT_DEVELOPMENT_SLUG;
+  if (DEVELOPMENTS_BY_SLUG[value]) return value;
+  return DEFAULT_DEVELOPMENT_SLUG;
+}
+
+function getDevelopmentBySlug(raw) {
+  const slug = normalizeDevelopmentSlug(raw);
+  return DEVELOPMENTS_BY_SLUG[slug] || DEVELOPMENTS_BY_SLUG[DEFAULT_DEVELOPMENT_SLUG];
+}
+
+function getRequestedDevelopment(req) {
+  const slugFromPath = req && req.params ? req.params.devSlug : '';
+  const slugFromQuery = req && req.query ? req.query.dev : '';
+  return getDevelopmentBySlug(slugFromPath || slugFromQuery || DEFAULT_DEVELOPMENT_SLUG);
+}
+
+function getDevelopmentFloorDir(devSlug) {
+  return path.join(DEVELOPMENTS_DIR, devSlug, 'plano-ventas-floors');
+}
+
+function getDevelopmentFloorSearchDirs(devSlug) {
+  const primary = getDevelopmentFloorDir(devSlug);
+  if (devSlug === DEFAULT_DEVELOPMENT_SLUG) {
+    return [primary, FLOOR_JSON_DIR];
+  }
+  return [primary];
+}
+
+function listFloorJsonFiles(dir) {
+  try {
+    return fs.readdirSync(dir)
+      .filter((name) => FLOOR_JSON_FILE_RE.test(name))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  } catch {
+    return [];
+  }
+}
+
+function sanitizeJsonFileName(rawName) {
+  const fallback = 'unidades-marcadas-unificado-orden-adjuntos.json';
+  const value = String(rawName || '').trim();
+  if (!value) return fallback;
+  const base = path.basename(value).replace(/[^\w\-(). ]+/g, '_');
+  const normalized = base.toLowerCase().endsWith('.json') ? base : `${base}.json`;
+  return normalized || fallback;
+}
+
+function sanitizeExcelFileName(rawName) {
+  const value = String(rawName || '').trim();
+  if (!value) return '';
+  const base = path.basename(value).replace(/[^\w\-(). ]+/g, '_');
+  const ext = (base.split('.').pop() || '').toLowerCase();
+  if (!['xls', 'xlsx', 'csv'].includes(ext)) return '';
+  return base;
 }
 
 function readJson(filePath, fallback) {
@@ -859,17 +945,64 @@ app.get('/gerente-ventas', (req, res) => {
         <button type="button" class="back" onclick="history.back()">Regresar</button>
       </div>
       <div class="grid">
-        <a class="card" href="/plano-interactivo">
+        ${DEVELOPMENTS.map((dev, idx) => `
+        <a class="card" href="/gerente-ventas/${dev.slug}">
+          <span class="tag">Desarrollo ${idx + 1}</span>
+          <h2 class="name">${dev.name}</h2>
+          <p class="desc">Abrir herramientas de plano para ${dev.name}.</p>
+        </a>`).join('')}
+      </div>
+    </div>
+  </body></html>`);
+});
+
+app.get('/gerente-ventas/:devSlug', (req, res) => {
+  const dev = getRequestedDevelopment(req);
+  res.send(`<!doctype html>
+  <html lang="es"><head><meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gerente Ventas - ${dev.name}</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#ffffff;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;--line:#d8d1c1;}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 52px;}
+    h1{margin:0 0 8px;font-size:30px;}
+    .sub{margin:0 0 24px;color:var(--muted);}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    .card{display:block;background:var(--card);border:1px solid #dcd7cb;border-radius:14px;padding:18px;text-decoration:none;color:inherit;}
+    .card:hover{border-color:#b9b39f;}
+    .tag{display:inline-block;font-size:12px;font-weight:700;background:var(--accent);padding:4px 8px;border-radius:999px;margin-bottom:10px;}
+    .name{font-size:21px;margin:0 0 8px;}
+    .desc{margin:0;color:var(--muted);}
+    .back{
+      display:inline-block;text-decoration:none;color:#111;border:1px solid var(--line);background:#fff;border-radius:10px;
+      padding:10px 12px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;
+    }
+    .back:hover{border-color:#b6ad98;}
+    .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:20px;}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.hero{align-items:flex-start;flex-direction:column;}}
+  </style></head><body>
+    <div class="wrap">
+      <div class="hero">
+        <div>
+          <h1>${dev.name}</h1>
+          <p class="sub">Selecciona herramienta del desarrollo.</p>
+        </div>
+        <a class="back" href="/gerente-ventas">Regresar</a>
+      </div>
+      <div class="grid">
+        <a class="card" href="/gerente-ventas/${dev.slug}/plano-interactivo?dev=${dev.slug}">
           <span class="tag">A</span>
           <h2 class="name">Plano Interactivo</h2>
           <p class="desc">Marcado de unidades por piso y guardado base.</p>
         </a>
-        <a class="card" href="/plano-ventas">
+        <a class="card" href="/gerente-ventas/${dev.slug}/plano-ventas?dev=${dev.slug}">
           <span class="tag">B</span>
           <h2 class="name">Plano Ventas (Editor)</h2>
           <p class="desc">Editor visual completo de PDF, tabla y estado de unidades.</p>
         </a>
-        <a class="card" href="/plano-descargar">
+        <a class="card" href="/gerente-ventas/${dev.slug}/plano-descargar?dev=${dev.slug}">
           <span class="tag">C</span>
           <h2 class="name">Plano Descargar</h2>
           <p class="desc">Descarga rápida del PDF con carga automática de datos.</p>
@@ -879,73 +1012,195 @@ app.get('/gerente-ventas', (req, res) => {
   </body></html>`);
 });
 
+app.get('/gerente-ventas/:devSlug/plano-interactivo', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'plano-interactivo.html'));
+});
+
+app.get('/gerente-ventas/:devSlug/plano-ventas', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'plano-ventas.html'));
+});
+
+app.get('/gerente-ventas/:devSlug/plano-descargar', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'plano-descargar.html'));
+});
+
 app.get('/plano-descargar', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'plano-descargar.html'));
 });
 
 app.get('/api/plano-ventas/default-excel', (req, res) => {
-  const filePath = path.join(os.homedir(), 'Downloads', 'INVENTARIOMAESTROWIX.xls');
-  if (!fs.existsSync(filePath)) {
+  const dev = getRequestedDevelopment(req);
+  const devDir = path.join(DEVELOPMENTS_DIR, dev.slug);
+  const devFiles = [];
+  try {
+    const names = fs.readdirSync(devDir);
+    names.forEach((name) => {
+      if (/\.(xls|xlsx|csv)$/i.test(name)) {
+        const fullPath = path.join(devDir, name);
+        let mtimeMs = 0;
+        try { mtimeMs = fs.statSync(fullPath).mtimeMs || 0; } catch {}
+        devFiles.push({ fullPath, name, mtimeMs });
+      }
+    });
+  } catch {}
+  const canonicalNames = new Set([
+    'inventariomaestrowix.xls',
+    'inventariomaestrowix.xlsx',
+    'inventariomaestrowix.csv'
+  ]);
+  const canonicalDevFiles = devFiles
+    .filter((f) => canonicalNames.has(String(f.name || '').toLowerCase()))
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  const latestDevFiles = devFiles
+    .filter((f) => !canonicalNames.has(String(f.name || '').toLowerCase()))
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  const candidates = [
+    ...canonicalDevFiles.map((f) => f.fullPath),
+    ...latestDevFiles.map((f) => f.fullPath),
+    path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.xls'),
+    path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.xlsx'),
+    path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.csv'),
+    path.join(os.homedir(), 'Downloads', 'INVENTARIOMAESTROWIX.xls'),
+    path.join(os.homedir(), 'Downloads', 'INVENTARIOMAESTROWIX.xlsx'),
+    path.join(os.homedir(), 'Downloads', 'INVENTARIOMAESTROWIX.csv')
+  ];
+  const dedupedCandidates = [...new Set(candidates)];
+  const filePath = dedupedCandidates.find((candidate) => fs.existsSync(candidate));
+  if (!filePath) {
     return res.status(404).json({
       error: 'Archivo no encontrado',
-      expectedPath: filePath
+      expectedPath: path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.xlsx'),
+      dev: dev.slug
     });
   }
   res.sendFile(filePath);
 });
 
+app.post('/api/plano-ventas/save-excel', (req, res) => {
+  try {
+    const dev = getRequestedDevelopment(req);
+    const rawFileName = sanitizeExcelFileName(req.body?.fileName);
+    const base64Content = String(req.body?.base64 || '');
+    if (!rawFileName || !base64Content) {
+      return res.status(400).json({ error: 'Archivo Excel inválido' });
+    }
+    const commaIndex = base64Content.indexOf(',');
+    const payload = commaIndex >= 0 ? base64Content.slice(commaIndex + 1) : base64Content;
+    const buffer = Buffer.from(payload, 'base64');
+    if (!buffer.length) {
+      return res.status(400).json({ error: 'Contenido vacío' });
+    }
+    const devDir = path.join(DEVELOPMENTS_DIR, dev.slug);
+    if (!fs.existsSync(devDir)) fs.mkdirSync(devDir, { recursive: true });
+
+    const ext = (rawFileName.split('.').pop() || '').toLowerCase();
+    const canonicalName = `INVENTARIOMAESTROWIX.${ext}`;
+    const canonicalPath = path.join(devDir, canonicalName);
+    fs.writeFileSync(canonicalPath, buffer);
+
+    const originalPath = path.join(devDir, rawFileName);
+    if (originalPath !== canonicalPath) {
+      fs.writeFileSync(originalPath, buffer);
+    }
+
+    return res.json({
+      ok: true,
+      dev: dev.slug,
+      fileName: canonicalName,
+      filePath: canonicalPath
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar Excel en carpeta del desarrollo',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.get('/api/plano-ventas/default-json', (req, res) => {
+  const dev = getRequestedDevelopment(req);
   const downloadsDir = path.join(os.homedir(), 'Downloads');
-  let filePath = "";
+  const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
+  let filePath = '';
 
   const requestName = typeof req.query.name === 'string' ? req.query.name.trim() : '';
   const safeName = requestName && !requestName.includes('/') && !requestName.includes('\\') ? requestName : '';
   if (safeName) {
-    filePath = path.join(FLOOR_JSON_DIR, safeName);
-    if (!fs.existsSync(filePath)) filePath = path.join(downloadsDir, safeName);
+    floorDirs.some((dir) => {
+      const candidate = path.join(dir, safeName);
+      if (fs.existsSync(candidate)) {
+        filePath = candidate;
+        return true;
+      }
+      return false;
+    });
+    if (!filePath) {
+      const candidate = path.join(downloadsDir, safeName);
+      if (fs.existsSync(candidate)) filePath = candidate;
+    }
   } else {
-    filePath = path.join(FLOOR_JSON_DIR, 'unidades-marcadas.JSON');
-    if (!fs.existsSync(filePath)) filePath = path.join(FLOOR_JSON_DIR, 'unidades-marcadas.json');
+    floorDirs.some((dir) => {
+      const upperCandidate = path.join(dir, 'unidades-marcadas.JSON');
+      const lowerCandidate = path.join(dir, 'unidades-marcadas.json');
+      if (fs.existsSync(upperCandidate)) {
+        filePath = upperCandidate;
+        return true;
+      }
+      if (fs.existsSync(lowerCandidate)) {
+        filePath = lowerCandidate;
+        return true;
+      }
+      return false;
+    });
   }
 
-  if (!fs.existsSync(filePath)) {
-    try {
-      const files = fs.readdirSync(FLOOR_JSON_DIR);
-      const preferred = files.find((name) => name.toLowerCase() === String(path.basename(filePath)).toLowerCase());
-      if (preferred) filePath = path.join(FLOOR_JSON_DIR, preferred);
-    } catch {}
+  if (!filePath && safeName) {
+    floorDirs.some((dir) => {
+      const files = listFloorJsonFiles(dir);
+      const preferred = files.find((name) => name.toLowerCase() === safeName.toLowerCase());
+      if (preferred) {
+        filePath = path.join(dir, preferred);
+        return true;
+      }
+      return false;
+    });
   }
 
-  if (!fs.existsSync(filePath) && !safeName) {
-    try {
-      const files = fs.readdirSync(FLOOR_JSON_DIR)
-        .filter((name) => /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i.test(name))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-      if (files[0]) filePath = path.join(FLOOR_JSON_DIR, files[0]);
-    } catch {}
+  if (!filePath && !safeName) {
+    floorDirs.some((dir) => {
+      const files = listFloorJsonFiles(dir);
+      if (files[0]) {
+        filePath = path.join(dir, files[0]);
+        return true;
+      }
+      return false;
+    });
   }
 
-  if (!fs.existsSync(filePath)) {
+  if (!filePath && safeName) {
     try {
       const files = fs.readdirSync(downloadsDir);
-      const preferred = files.find((name) => name.toLowerCase() === String(path.basename(filePath)).toLowerCase());
+      const preferred = files.find((name) => name.toLowerCase() === safeName.toLowerCase());
       if (preferred) filePath = path.join(downloadsDir, preferred);
     } catch {}
   }
 
-  if (!fs.existsSync(filePath) && !safeName) {
+  if (!filePath && !safeName) {
     try {
       const files = fs.readdirSync(downloadsDir)
-        .filter((name) => /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i.test(name))
+        .filter((name) => FLOOR_JSON_FILE_RE.test(name))
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
       if (files[0]) filePath = path.join(downloadsDir, files[0]);
     } catch {}
   }
 
-  if (!fs.existsSync(filePath)) {
+  if (!filePath || !fs.existsSync(filePath)) {
     return res.status(404).json({
       error: 'Archivo no encontrado',
-      expectedPath: safeName ? path.join(FLOOR_JSON_DIR, safeName) : path.join(FLOOR_JSON_DIR, 'unidades-marcadas.json')
+      expectedPath: safeName
+        ? path.join(getDevelopmentFloorDir(dev.slug), safeName)
+        : path.join(getDevelopmentFloorDir(dev.slug), 'unidades-marcadas.json'),
+      dev: dev.slug
     });
   }
 
@@ -953,65 +1208,147 @@ app.get('/api/plano-ventas/default-json', (req, res) => {
 });
 
 app.get('/api/plano-ventas/default-json-files', (req, res) => {
+  const dev = getRequestedDevelopment(req);
   const downloadsDir = path.join(os.homedir(), 'Downloads');
+  const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
   try {
-    const primaryFiles = fs.readdirSync(FLOOR_JSON_DIR)
-      .filter((name) => /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i.test(name))
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-
-    if (primaryFiles.length) {
-      return res.json({ files: primaryFiles, sourceDir: FLOOR_JSON_DIR });
+    for (const dir of floorDirs) {
+      const files = listFloorJsonFiles(dir);
+      if (files.length) {
+        return res.json({ files, sourceDir: dir, dev: dev.slug });
+      }
     }
 
     const files = fs.readdirSync(downloadsDir)
-      .filter((name) => /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i.test(name))
+      .filter((name) => FLOOR_JSON_FILE_RE.test(name))
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    res.json({ files, sourceDir: downloadsDir });
+    res.json({ files, sourceDir: downloadsDir, dev: dev.slug });
   } catch (err) {
     res.status(500).json({ error: 'No se pudo leer carpeta de JSONs', details: err.message });
   }
 });
 
-app.get('/api/plano-ventas/default-json-merged', (req, res) => {
-  const downloadsDir = path.join(os.homedir(), 'Downloads');
+app.get('/api/plano-ventas/version-json-files', (req, res) => {
+  const dev = getRequestedDevelopment(req);
+  const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
   try {
-    let sourceDir = FLOOR_JSON_DIR;
-    let files = fs.readdirSync(FLOOR_JSON_DIR)
-      .filter((name) => /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i.test(name))
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    const entries = [];
+    floorDirs.forEach((dir) => {
+      try {
+        fs.readdirSync(dir)
+          .filter((name) => /^version-.*\.json$/i.test(name))
+          .forEach((name) => {
+            const fullPath = path.join(dir, name);
+            let mtimeMs = 0;
+            try {
+              mtimeMs = fs.statSync(fullPath).mtimeMs || 0;
+            } catch {}
+            entries.push({ name, dir, mtimeMs });
+          });
+      } catch {}
+    });
 
-    if (!files.length) {
-      sourceDir = downloadsDir;
-      files = fs.readdirSync(downloadsDir)
-        .filter((name) => /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i.test(name))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    entries.sort((a, b) => b.mtimeMs - a.mtimeMs || a.name.localeCompare(b.name));
+    res.json({
+      files: entries.map((e) => e.name),
+      sourceDir: floorDirs.join(', '),
+      dev: dev.slug
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'No se pudo listar versiones JSON', details: err.message });
+  }
+});
+
+app.get('/api/plano-ventas/default-json-merged', (req, res) => {
+  const dev = getRequestedDevelopment(req);
+  const downloadsDir = path.join(os.homedir(), 'Downloads');
+  const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
+  try {
+    let sourceDirs = floorDirs;
+    let filesByName = new Map();
+
+    for (const dir of floorDirs) {
+      const files = listFloorJsonFiles(dir);
+      files.forEach((name) => {
+        const key = name.toLowerCase();
+        if (!filesByName.has(key)) {
+          filesByName.set(key, { name, dir });
+        }
+      });
     }
+
+    if (!filesByName.size) {
+      sourceDirs = [downloadsDir];
+      const downloadFiles = listFloorJsonFiles(downloadsDir);
+      downloadFiles.forEach((name) => {
+        filesByName.set(name.toLowerCase(), { name, dir: downloadsDir });
+      });
+    }
+
+    const files = Array.from(filesByName.values())
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
     const floors = [];
     const loadedFiles = [];
-    files.forEach((name) => {
-      const filePath = path.join(sourceDir, name);
+    let showUnitLabels = true;
+    files.forEach(({ name, dir }) => {
+      const filePath = path.join(dir, name);
       try {
         const raw = fs.readFileSync(filePath, 'utf-8');
         const parsed = JSON.parse(raw);
+        if (parsed && parsed.showUnitLabels === false) showUnitLabels = false;
         const payloadFloors = Array.isArray(parsed)
           ? parsed
           : (parsed && Array.isArray(parsed.floors) ? parsed.floors : (parsed && parsed.imageDataUrl ? [parsed] : []));
         if (payloadFloors.length) {
           floors.push(...payloadFloors);
-          loadedFiles.push(name);
+          loadedFiles.push(path.relative(DATA_DIR, filePath).replace(/\\/g, '/'));
         }
       } catch {}
     });
 
-    res.json({ floors, loadedFiles, sourceDir });
+    res.json({
+      floors,
+      loadedFiles,
+      sourceDir: sourceDirs.join(', '),
+      dev: dev.slug,
+      showUnitLabels
+    });
   } catch (err) {
     res.status(500).json({ error: 'No se pudo leer JSONs de carpeta control', details: err.message });
   }
 });
 
+app.post('/api/plano-ventas/save-json', (req, res) => {
+  try {
+    const dev = getRequestedDevelopment(req);
+    const body = req.body || {};
+    const payload = body.payload;
+    const fileName = sanitizeJsonFileName(body.fileName);
+    if (!payload || typeof payload !== 'object') {
+      return res.status(400).json({ error: 'Payload JSON inválido' });
+    }
+    const floorDir = getDevelopmentFloorDir(dev.slug);
+    if (!fs.existsSync(floorDir)) fs.mkdirSync(floorDir, { recursive: true });
+    const filePath = path.join(floorDir, fileName);
+    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+    return res.json({
+      ok: true,
+      dev: dev.slug,
+      fileName,
+      filePath
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar JSON en carpeta del desarrollo',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.post('/api/plano-ventas/render-pdf', async (req, res) => {
   const html = typeof req.body?.html === 'string' ? req.body.html : '';
+  const fileNamePrefix = String(req.body?.fileNamePrefix || 'CEIBA').trim().toUpperCase().replace(/[^A-Z0-9 ]+/g, '').slice(0, 40) || 'CEIBA';
   if (!html || html.length < 20) {
     return res.status(400).json({ error: 'HTML inválido para generar PDF.' });
   }
@@ -1025,14 +1362,19 @@ app.post('/api/plano-ventas/render-pdf', async (req, res) => {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.emulateMediaType('print');
+    try {
+      await page.waitForFunction(() => window.__pdfReady === true, { timeout: 5000 });
+    } catch {
+      // Fallback: if the marker is missing, continue and generate PDF.
+    }
 
     const pdfBuffer = await page.pdf({
       printBackground: true,
       preferCSSPageSize: true
     });
 
-    const utfName = 'CEIBA INVENTARIO ／ INVENTORY.pdf';
-    const fallbackName = 'CEIBA INVENTARIO - INVENTORY.pdf';
+    const utfName = `${fileNamePrefix} INVENTARIO ／ INVENTORY.pdf`;
+    const fallbackName = `${fileNamePrefix} INVENTARIO - INVENTORY.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
