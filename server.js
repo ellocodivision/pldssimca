@@ -1342,7 +1342,12 @@ app.get('/api/plano-ventas/version-json-files', (req, res) => {
     floorDirs.forEach((dir) => {
       try {
         fs.readdirSync(dir)
-          .filter((name) => /^version-.*\.json$/i.test(name))
+          .filter((name) => {
+            const lower = String(name || '').toLowerCase();
+            if (!lower.endsWith('.json')) return false;
+            if (/^version-.*\.json$/i.test(name)) return true;
+            return FLOOR_JSON_FILE_RE.test(name);
+          })
           .forEach((name) => {
             const fullPath = path.join(dir, name);
             let mtimeMs = 0;
@@ -1354,9 +1359,18 @@ app.get('/api/plano-ventas/version-json-files', (req, res) => {
       } catch {}
     });
 
-    entries.sort((a, b) => b.mtimeMs - a.mtimeMs || a.name.localeCompare(b.name));
+    const deduped = [];
+    const seen = new Set();
+    entries
+      .sort((a, b) => b.mtimeMs - a.mtimeMs || a.name.localeCompare(b.name))
+      .forEach((entry) => {
+        const key = String(entry.name || '').toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        deduped.push(entry);
+      });
     res.json({
-      files: entries.map((e) => e.name),
+      files: deduped.map((e) => e.name),
       sourceDir: floorDirs.join(', '),
       dev: dev.slug
     });
