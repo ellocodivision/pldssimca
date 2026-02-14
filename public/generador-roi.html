@@ -111,23 +111,103 @@ const saveMasterBtn = document.getElementById('saveMasterBtn');
 const csvStatus = document.getElementById('csvStatus');
 const adminPctInput = document.getElementById('adminPctInput');
 
-const COL = {DEV:1, UNIT:2, BED:3, M2:4, SQFT:5, LIST:6, DISC_PCT:7, DISC_AMT:8, FINAL:9, BAJA:12, MEDIA:13, ALTA:14, FIESTAS:15, BAJA2:18, MEDIA2:19, ALTA2:20, FIESTAS2:21, GROSS:23, ADMIN:24, GASTOS:25, MANT:26, PREDIAL:27, ROI:28};
+function colToIndex(col){
+  const letters = String(col || '').trim().toUpperCase();
+  let n = 0;
+  for(let i = 0; i < letters.length; i++){
+    n = n * 26 + (letters.charCodeAt(i) - 64);
+  }
+  return n;
+}
 
-function getSeasons(){
+const COL = {
+  LOCATION: colToIndex('A'),
+  DEV: colToIndex('C'),
+  UNIT: colToIndex('D'),
+  BED: colToIndex('E'),
+  M2: colToIndex('F'),
+  SQFT: colToIndex('G'),
+  LIST: colToIndex('H'),
+  DISC_PCT: colToIndex('I'),
+  DISC_AMT: colToIndex('J'),
+  FINAL: colToIndex('K'),
+  BAJA: colToIndex('CL'),
+  MEDIA: colToIndex('CM'),
+  ALTA: colToIndex('CN'),
+  FIESTAS: colToIndex('CO'),
+  BAJA2: colToIndex('CR'),
+  MEDIA2A: colToIndex('CS'),
+  MEDIA2B: colToIndex('SS'),
+  ALTA2A: colToIndex('CT'),
+  ALTA2B: colToIndex('ST'),
+  FIESTAS2: colToIndex('CB'),
+  GROSS: colToIndex('W'),
+  GASTOS: colToIndex('Y'),
+  MANT: colToIndex('Z'),
+  PREDIAL: colToIndex('AA'),
+  ROI: colToIndex('AB')
+};
+
+const LOCATION_SEASONS = {
+  PLAYA_DEL_CARMEN: {
+    baja: { occ: '40%', nights: '91' },
+    media: { occ: '65%', nights: '150' },
+    alta: { occ: '85%', nights: '90' },
+    fiestas: { occ: '95%', nights: '21' }
+  },
+  TULUM: {
+    baja: { occ: '30%', nights: '105' },
+    media: { occ: '55%', nights: '150' },
+    alta: { occ: '75%', nights: '75' },
+    fiestas: { occ: '95%', nights: '35' }
+  }
+};
+
+function normalizeText(v){
+  return String(v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+}
+
+function getSeasonProfile(row){
+  const location = normalizeText(get(row, COL.LOCATION));
+  if(location.includes('PLAYA DEL CARMEN')) return LOCATION_SEASONS.PLAYA_DEL_CARMEN;
+  if(location.includes('TULUM')) return LOCATION_SEASONS.TULUM;
+  return { baja: { occ: '', nights: '' }, media: { occ: '', nights: '' }, alta: { occ: '', nights: '' }, fiestas: { occ: '', nights: '' } };
+}
+
+function getSeasons(row){
+  const profile = getSeasonProfile(row);
   return [
-    { label: 'Baja', idx: COL.BAJA, idx2: COL.BAJA2, nights: DATA.seasons.baja.nights || '', occupancy: DATA.seasons.baja.occ || '' },
-    { label: 'Media', idx: COL.MEDIA, idx2: COL.MEDIA2, nights: DATA.seasons.media.nights || '', occupancy: DATA.seasons.media.occ || '' },
-    { label: 'Alta', idx: COL.ALTA, idx2: COL.ALTA2, nights: DATA.seasons.alta.nights || '', occupancy: DATA.seasons.alta.occ || '' },
-    { label: 'Fiestas', idx: COL.FIESTAS, idx2: COL.FIESTAS2, nights: DATA.seasons.fiestas.nights || '', occupancy: DATA.seasons.fiestas.occ || '' }
+    { label: 'Baja', idxs: [COL.BAJA, COL.BAJA2], nights: profile.baja.nights, occupancy: profile.baja.occ },
+    { label: 'Media', idxs: [COL.MEDIA, COL.MEDIA2A, COL.MEDIA2B], nights: profile.media.nights, occupancy: profile.media.occ },
+    { label: 'Alta', idxs: [COL.ALTA, COL.ALTA2A, COL.ALTA2B], nights: profile.alta.nights, occupancy: profile.alta.occ },
+    { label: 'Fiestas', idxs: [COL.FIESTAS, COL.FIESTAS2], nights: profile.fiestas.nights, occupancy: profile.fiestas.occ }
   ];
 }
 
 function clean(v){return (v||'').toString().trim();}
 function toNumber(v){const n=parseFloat(String(v||'').replace(/[^0-9.-]/g,''));return isNaN(n)?0:n;}
+function toRatio(v){
+  const s = String(v || '').trim();
+  if(!s) return 0;
+  const n = toNumber(s);
+  if(!n) return 0;
+  if(s.includes('%')) return n / 100;
+  return n <= 1 ? n : n / 100;
+}
 function fmtMoney(v){if(v===null||v===undefined||v==='') return '-'; if(typeof v==='string' && v.trim().startsWith('$')) return v.trim(); const n=toNumber(v); return n? n.toLocaleString('en-US',{style:'currency',currency:'USD'}): (String(v).trim()||'-');}
 function fmtText(v){return clean(v)||'-';}
 function get(row, idx){return row[idx-1] ?? '';}
-function firstNonEmpty(row, idx1, idx2){const v1=clean(get(row, idx1)); if(v1) return get(row, idx1); const v2=clean(get(row, idx2)); return v2? get(row, idx2): '';}
+function firstNonEmptyAny(row, idxs){
+  for(const idx of idxs){
+    const val = clean(get(row, idx));
+    if(val) return get(row, idx);
+  }
+  return '';
+}
 
 let rows = [];
 let currentRow = null;
@@ -139,16 +219,17 @@ function getAdminPct(){
 }
 
 function loadFromRows(rowsAll){
-  if(!rowsAll || rowsAll.length<4) return;
-  const r0 = rowsAll[0] || [];
-  const r1 = rowsAll[1] || [];
-  DATA.seasons = {
-    baja: {occ: r0[11]||'', nights: r1[11]||''},
-    media:{occ: r0[12]||'', nights: r1[12]||''},
-    alta: {occ: r0[13]||'', nights: r1[13]||''},
-    fiestas:{occ: r0[14]||'', nights: r1[14]||''}
-  };
-  rows = rowsAll.slice(3).filter(r=>clean(get(r, COL.DEV)));
+  if(!rowsAll || !rowsAll.length) return;
+  const headerIdx = rowsAll.findIndex((r)=>{
+    const devCell = normalizeText(get(r, COL.DEV));
+    const unitCell = normalizeText(get(r, COL.UNIT));
+    return devCell.includes('DESARROLLO') || unitCell.includes('UNIDAD');
+  });
+  const dataStart = headerIdx >= 0 ? headerIdx + 1 : 0;
+  rows = rowsAll.slice(dataStart).filter(r=>{
+    const dev = normalizeText(get(r, COL.DEV));
+    return dev && !dev.includes('DESARROLLO');
+  });
   devSelect.innerHTML = '<option value=\"\">Selecciona desarrollo...</option>';
   const devs = [...new Set(rows.map(r=>clean(get(r, COL.DEV))))].sort();
   for(const d of devs){
@@ -250,20 +331,28 @@ function populateUnits(dev){
 
 function renderResult(row){
   currentRow = row;
-  const gross = get(row, COL.GROSS);
+  const seasons = getSeasons(row);
+  const computedGross = seasons.reduce((acc, s)=>{
+    const price = toNumber(firstNonEmptyAny(row, s.idxs));
+    const nights = toNumber(s.nights);
+    const occ = toRatio(s.occupancy);
+    return acc + (price * nights * occ);
+  }, 0);
+  const grossRaw = toNumber(get(row, COL.GROSS));
+  const gross = grossRaw > 0 ? grossRaw : computedGross;
   const adminPct = getAdminPct();
-  const admin = toNumber(gross) * (adminPct / 100);
+  const admin = gross * (adminPct / 100);
   const gastos = get(row, COL.GASTOS);
   const mant = get(row, COL.MANT);
   const predial = get(row, COL.PREDIAL);
   const finalPrice = get(row, COL.FINAL);
-  const net = toNumber(gross) - toNumber(admin) - toNumber(gastos) - toNumber(mant) - toNumber(predial);
+  const net = gross - toNumber(admin) - toNumber(gastos) - toNumber(mant) - toNumber(predial);
   const roiValue = toNumber(finalPrice) > 0 ? (net / toNumber(finalPrice)) * 100 : 0;
   const roiText = toNumber(finalPrice) > 0 ? `${roiValue.toFixed(2)}%` : fmtText(get(row, COL.ROI));
 
-  const seasonRows = getSeasons().map(s=>`<tr>
+  const seasonRows = seasons.map(s=>`<tr>
     <td><span class="badge">${s.label}</span></td>
-    <td>${fmtMoney(firstNonEmpty(row, s.idx, s.idx2))}</td>
+    <td>${fmtMoney(firstNonEmptyAny(row, s.idxs))}</td>
     <td>${fmtText(s.nights)}</td>
     <td>${fmtText(s.occupancy)}</td>
   </tr>`).join('');
@@ -274,6 +363,7 @@ function renderResult(row){
       <div class="grid">
         <div class="kv"><div class="k">Desarrollo</div><div class="v">${fmtText(get(row, COL.DEV))}</div></div>
         <div class="kv"><div class="k">Unidad</div><div class="v">${fmtText(get(row, COL.UNIT))}</div></div>
+        <div class="kv"><div class="k">Ubicación</div><div class="v">${fmtText(get(row, COL.LOCATION))}</div></div>
         <div class="kv"><div class="k">Recámaras</div><div class="v">${fmtText(get(row, COL.BED))}</div></div>
         <div class="kv"><div class="k">M2 / SQFT</div><div class="v">${fmtText(get(row, COL.M2))} / ${fmtText(get(row, COL.SQFT))}</div></div>
         <div class="kv"><div class="k">Precio Lista</div><div class="v">${fmtMoney(get(row, COL.LIST))}</div></div>
