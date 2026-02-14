@@ -31,6 +31,7 @@ const TEMPLATE_DIR = path.join(__dirname, 'templates');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_PATH = path.join(__dirname, 'data', 'sample.json');
 const DATA_DIR = path.join(__dirname, 'data');
+const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
@@ -715,6 +716,16 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Gerente Ventas</h2>
           <p class="desc">Acceso directo a herramientas de planos, edición y descarga PDF.</p>
         </a>` : '';
+  const roiMasterPanel = isGerente ? `
+      <section class="master-box">
+        <h3>CSV Maestro (ROI + Plano)</h3>
+        <p class="master-note">Sube un CSV y se actualiza para todos los módulos conectados.</p>
+        <div class="master-row">
+          <input id="roiMasterCsvFile" type="file" accept=".csv" />
+          <button id="roiMasterCsvBtn" type="button">Actualizar</button>
+        </div>
+        <p id="roiMasterCsvStatus" class="master-status"></p>
+      </section>` : '';
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -752,8 +763,16 @@ app.get('/', requireAuth, (req, res) => {
     .name{font-size:20px; margin:0 0 8px;}
     .desc{margin:0; color:var(--muted);}
     .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+    .left-head{display:flex;flex-direction:column;gap:10px;align-items:flex-start;}
     .user{font-size:13px;color:#5f5f5f;}
     .logout{display:inline-block;padding:8px 10px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:600;}
+    .master-box{width:min(430px,100%);background:#fff;border:1px solid #d8d1c1;border-radius:12px;padding:10px 12px;}
+    .master-box h3{margin:0 0 6px;font-size:14px;}
+    .master-note{margin:0 0 8px;color:#5f5f5f;font-size:12px;}
+    .master-row{display:flex;gap:8px;align-items:center;}
+    .master-row input{flex:1;min-width:0;}
+    .master-row button{padding:8px 12px;border:1px solid #111;border-radius:10px;background:#ffe816;color:#111;font-weight:700;cursor:pointer;}
+    .master-status{min-height:16px;margin:8px 0 0;font-size:12px;color:#5f5f5f;}
     @media (max-width:900px){
       .wrap{padding:20px 14px 36px;}
       .top{flex-direction:column;align-items:flex-start;}
@@ -777,9 +796,10 @@ app.get('/', requireAuth, (req, res) => {
   </style></head><body>
     <div class="wrap">
       <div class="top">
-        <div>
+        <div class="left-head">
           <h1>Backend SIMCA</h1>
           <p class="sub">Panel principal de módulos.</p>
+          ${roiMasterPanel}
         </div>
         <div style="text-align:right;">
           <div class="user">${String(req.user && req.user.email || '')}</div>
@@ -807,6 +827,52 @@ app.get('/', requireAuth, (req, res) => {
         ${gerenteCard}
       </div>
     </div>
+    <script>
+      (function () {
+        const input = document.getElementById('roiMasterCsvFile');
+        const btn = document.getElementById('roiMasterCsvBtn');
+        const status = document.getElementById('roiMasterCsvStatus');
+        if (!input || !btn || !status) return;
+
+        btn.addEventListener('click', async function () {
+          const file = input.files && input.files[0];
+          if (!file) {
+            status.textContent = 'Selecciona un archivo CSV.';
+            return;
+          }
+          if (!String(file.name || '').toLowerCase().endsWith('.csv')) {
+            status.textContent = 'El archivo debe ser .csv';
+            return;
+          }
+          btn.disabled = true;
+          status.textContent = 'Subiendo CSV maestro...';
+          try {
+            const base64 = await new Promise(function (resolve, reject) {
+              const r = new FileReader();
+              r.onload = function () { resolve(r.result); };
+              r.onerror = reject;
+              r.readAsDataURL(file);
+            });
+            const res = await fetch('/api/roi/master-csv', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ fileName: file.name, base64: base64 })
+            });
+            const data = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+              status.textContent = data.error || 'No se pudo actualizar el CSV maestro.';
+              return;
+            }
+            status.textContent = 'CSV maestro actualizado correctamente.';
+          } catch (err) {
+            status.textContent = 'Error al subir el CSV maestro.';
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      })();
+    </script>
   </body></html>`);
 });
 
@@ -818,6 +884,7 @@ app.use('/form', requireAuth);
 app.use('/format', requireAuth);
 app.use('/submissions', requireAuth);
 app.use('/api/plds', requireAuth);
+app.use('/api/roi', requireAuth);
 app.use('/owner-services', requireGerente);
 app.use('/api/owner-services', requireGerente);
 
@@ -887,6 +954,37 @@ app.get('/plds/cliente-nacional-persona-moral', (req, res) => {
 
 app.get('/generador-roi', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'generador-roi.html'));
+});
+
+app.get('/api/roi/master-csv', (req, res) => {
+  if (!fs.existsSync(ROI_MASTER_CSV_PATH)) {
+    return res.status(404).json({ error: 'CSV maestro no configurado' });
+  }
+  res.type('text/csv; charset=utf-8');
+  return res.send(fs.readFileSync(ROI_MASTER_CSV_PATH, 'utf-8'));
+});
+
+app.post('/api/roi/master-csv', requireGerente, (req, res) => {
+  try {
+    const fileName = String(req.body?.fileName || '').toLowerCase();
+    const base64Content = String(req.body?.base64 || '');
+    if (!fileName.endsWith('.csv') || !base64Content) {
+      return res.status(400).json({ error: 'Archivo CSV inválido' });
+    }
+    const commaIndex = base64Content.indexOf(',');
+    const payload = commaIndex >= 0 ? base64Content.slice(commaIndex + 1) : base64Content;
+    const buffer = Buffer.from(payload, 'base64');
+    if (!buffer.length) {
+      return res.status(400).json({ error: 'Contenido CSV vacío' });
+    }
+    fs.writeFileSync(ROI_MASTER_CSV_PATH, buffer);
+    return res.json({ ok: true, filePath: ROI_MASTER_CSV_PATH });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar el CSV maestro',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/owner-services', (req, res) => {
@@ -1055,6 +1153,7 @@ app.get('/api/plano-ventas/default-excel', (req, res) => {
     .filter((f) => !canonicalNames.has(String(f.name || '').toLowerCase()))
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
   const candidates = [
+    ROI_MASTER_CSV_PATH,
     ...canonicalDevFiles.map((f) => f.fullPath),
     ...latestDevFiles.map((f) => f.fullPath),
     path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.xls'),

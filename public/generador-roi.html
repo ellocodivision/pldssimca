@@ -80,7 +80,16 @@ button:disabled{opacity:.5;cursor:not-allowed}
         <input id="adminPctInput" type="number" min="0" max="100" step="0.1" value="30" />
       </div>
       <div>
-        <div class="note">Sube el CSV y ajusta el % de administración.</div>
+        <label for="csvMasterInput">CSV Maestro (Gerente)</label>
+        <input id="csvMasterInput" type="file" accept=".csv" />
+      </div>
+    </div>
+    <div class="controls" style="margin-top:8px;grid-template-columns:1fr auto">
+      <div>
+        <div class="note" id="csvStatus">Se intentará cargar el CSV maestro automáticamente al abrir.</div>
+      </div>
+      <div>
+        <button id="saveMasterBtn" type="button">Actualizar CSV Maestro</button>
       </div>
     </div>
     <p class="note">Elige un desarrollo para desbloquear las unidades disponibles.</p>
@@ -97,6 +106,9 @@ const results = document.getElementById('results');
 const printBtn = document.getElementById('printBtn');
 const clearBtn = document.getElementById('clearBtn');
 const csvInput = document.getElementById('csvInput');
+const csvMasterInput = document.getElementById('csvMasterInput');
+const saveMasterBtn = document.getElementById('saveMasterBtn');
+const csvStatus = document.getElementById('csvStatus');
 const adminPctInput = document.getElementById('adminPctInput');
 
 const COL = {DEV:1, UNIT:2, BED:3, M2:4, SQFT:5, LIST:6, DISC_PCT:7, DISC_AMT:8, FINAL:9, BAJA:12, MEDIA:13, ALTA:14, FIESTAS:15, BAJA2:18, MEDIA2:19, ALTA2:20, FIESTAS2:21, GROSS:23, ADMIN:24, GASTOS:25, MANT:26, PREDIAL:27, ROI:28};
@@ -145,34 +157,84 @@ function loadFromRows(rowsAll){
   }
   unitSelect.innerHTML = '<option value=\"\">Selecciona unidad...</option>';
   unitSelect.disabled=true;
+  csvStatus.textContent = `CSV cargado: ${rows.length} registros.`;
+}
+
+function parseCsvText(text){
+  const rowsRaw=[];
+  let cur='', inq=false;
+  let row=[];
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='\"'){
+      if(inq && text[i+1]==='\"'){cur+='\"'; i++;} else {inq=!inq;}
+    } else if(ch===',' && !inq){
+      row.push(cur); cur='';
+    } else if((ch==='\n' || ch==='\r') && !inq){
+      if(ch==='\r' && text[i+1]==='\n') i++;
+      row.push(cur); rowsRaw.push(row); row=[]; cur='';
+    } else {
+      cur+=ch;
+    }
+  }
+  if(cur.length || row.length){ row.push(cur); rowsRaw.push(row); }
+  return rowsRaw.filter(r=>r.some(c=>String(c||'').trim().length));
+}
+
+async function autoloadMasterCsv(){
+  try {
+    const res = await fetch('/api/roi/master-csv', { credentials: 'same-origin' });
+    if(!res.ok){
+      csvStatus.textContent = 'No hay CSV maestro cargado. Usa “Cargar CSV” o actualiza el maestro.';
+      return;
+    }
+    const text = await res.text();
+    const rowsAll = parseCsvText(text);
+    loadFromRows(rowsAll);
+    clearAll();
+    csvStatus.textContent = `CSV maestro cargado automáticamente (${rows.length} registros).`;
+  } catch (err) {
+    csvStatus.textContent = 'No se pudo cargar el CSV maestro automáticamente.';
+  }
 }
 
 csvInput.addEventListener('change', async (e)=>{
   const file = e.target.files && e.target.files[0];
   if(!file) return;
   const text = await file.text();
-  const rowsAll = (function(){
-    const rowsRaw=[];
-    let cur='', inq=false;
-    let row=[];
-    for(let i=0;i<text.length;i++){
-      const ch=text[i];
-      if(ch==='\"'){
-        if(inq && text[i+1]==='\"'){cur+='\"'; i++;} else {inq=!inq;}
-      } else if(ch===',' && !inq){
-        row.push(cur); cur='';
-      } else if((ch==='\n' || ch==='\r') && !inq){
-        if(ch==='\r' && text[i+1]==='\n') i++;
-        row.push(cur); rowsRaw.push(row); row=[]; cur='';
-      } else {
-        cur+=ch;
-      }
-    }
-    if(cur.length || row.length){ row.push(cur); rowsRaw.push(row); }
-    return rowsRaw.filter(r=>r.some(c=>String(c||'').trim().length));
-  })();
+  const rowsAll = parseCsvText(text);
   loadFromRows(rowsAll);
   clearAll();
+});
+
+saveMasterBtn.addEventListener('click', async ()=>{
+  const file = csvMasterInput.files && csvMasterInput.files[0];
+  if(!file){
+    csvStatus.textContent = 'Selecciona un CSV en “CSV Maestro (Gerente)”.';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const base64 = reader.result;
+      const res = await fetch('/api/roi/master-csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ fileName: file.name, base64 })
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){
+        csvStatus.textContent = data.error || 'No se pudo actualizar CSV maestro (requiere gerente).';
+        return;
+      }
+      csvStatus.textContent = 'CSV maestro actualizado. Recargando datos...';
+      await autoloadMasterCsv();
+    } catch (_) {
+      csvStatus.textContent = 'Error al subir el CSV maestro.';
+    }
+  };
+  reader.readAsDataURL(file);
 });
 
 function populateUnits(dev){
@@ -278,6 +340,8 @@ unitSelect.addEventListener('change',e=>{
   const row=rows.find(r=>clean(get(r, COL.DEV))===dev && clean(get(r, COL.UNIT))===unit);
   if(row) renderResult(row);
 });
+
+autoloadMasterCsv();
 </script>
 </body>
 </html>
