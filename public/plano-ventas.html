@@ -1636,6 +1636,14 @@
       };
     }
 
+    function estimateUtf8Bytes(text) {
+      try {
+        return new TextEncoder().encode(String(text || "")).length;
+      } catch {
+        return String(text || "").length;
+      }
+    }
+
     function cloneJson(value) {
       return JSON.parse(JSON.stringify(value));
     }
@@ -1942,13 +1950,24 @@
       const name = customName || `Proyecto ${new Date().toLocaleString("es-MX")}`;
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const payloadObj = getPersistableState();
+      const payloadForLocal = {
+        ...payloadObj,
+        // Evita ocupar quota con cache de Excel en localStorage.
+        excel: { headers: [], rows: [] }
+      };
+      const payloadForLocalJson = JSON.stringify(payloadForLocal);
+      const payloadLocalBytes = estimateUtf8Bytes(payloadForLocalJson);
+      const LOCAL_STORAGE_SAFE_LIMIT = 4_500_000;
       let localSaved = false;
-      try {
-        localStorage.setItem(projectStorageKey(id), JSON.stringify(payloadObj));
-        localSaved = true;
-      } catch (err) {
-        if (projectStatus) {
-          projectStatus.textContent = `No se pudo guardar en localStorage: ${err && err.message ? err.message : "error"}`;
+      let localSkipReason = "";
+      if (payloadLocalBytes > LOCAL_STORAGE_SAFE_LIMIT) {
+        localSkipReason = `Proyecto muy pesado para localStorage (${Math.round(payloadLocalBytes / 1024 / 1024)} MB).`;
+      } else {
+        try {
+          localStorage.setItem(projectStorageKey(id), payloadForLocalJson);
+          localSaved = true;
+        } catch (err) {
+          localSkipReason = `No se pudo guardar en localStorage: ${err && err.message ? err.message : "error"}`;
         }
       }
 
@@ -1960,7 +1979,12 @@
         floorCount: state.floors.length
       });
       if (localSaved) {
-        saveProjectIndex(projects);
+        try {
+          saveProjectIndex(projects);
+        } catch (err) {
+          localSaved = false;
+          localSkipReason = `No se pudo actualizar indice local: ${err && err.message ? err.message : "error"}`;
+        }
         refreshProjectSelector(id);
       }
 
@@ -1985,8 +2009,11 @@
       } else if (serverSaved) {
         await loadServerProjectVersions();
         refreshProjectSelector(`__srv__:${fileName}`);
-        if (projectStatus) projectStatus.textContent = `Version guardada en servidor: ${name}.`;
-        alert(`Version guardada en servidor: ${name}. (No se pudo guardar en localStorage)`);
+        if (projectStatus) {
+          const suffix = localSkipReason ? ` ${localSkipReason}` : "";
+          projectStatus.textContent = `Version guardada en servidor: ${name}.${suffix}`;
+        }
+        alert(`Version guardada en servidor: ${name}.`);
       } else {
         alert("No se pudo guardar la versión. Revisa espacio local y conexión.");
       }
