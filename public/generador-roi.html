@@ -30,6 +30,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .kv .v{font-size:16px;font-weight:700;margin-top:6px}
 .section{margin-top:22px}
 .section h3{margin:0 0 10px;font-size:18px}
+.table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .table{width:100%;border-collapse:collapse;font-size:14px}
 .table th,.table td{padding:10px 8px;border-bottom:1px solid var(--border);text-align:left}
 .table th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
@@ -39,7 +40,12 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .season-edit{width:108px;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:13px}
 .highlight{background:#fff7ed;border:1px dashed #fdba74}
 @media (max-width:900px){.controls{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}}
-@media (max-width:600px){.grid{grid-template-columns:1fr}}
+@media (max-width:600px){
+  .grid{grid-template-columns:1fr}
+  .results{padding:12px}
+  .table{min-width:760px}
+  .season-edit{width:84px;padding:6px;font-size:12px}
+}
 @media print{body{background:white} .no-print{display:none !important} .card{box-shadow:none} .container{padding:0} @page{size:A4; margin:12mm}}
 </style>
 </head>
@@ -411,24 +417,28 @@ function renderResult(row){
 
     <div class="section">
       <h3>Temporadas</h3>
-      <table class="table">
-        <thead><tr><th>Temporada</th><th>Precio por noche</th><th class="no-pdf">Editar precio</th><th>Noches</th><th>Ocupación</th><th class="no-pdf">Editar ocupación</th></tr></thead>
-        <tbody>${seasonRows}</tbody>
-      </table>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Temporada</th><th>Precio por noche</th><th class="no-pdf">Editar precio</th><th>Noches</th><th>Ocupación</th><th class="no-pdf">Editar ocupación</th></tr></thead>
+          <tbody>${seasonRows}</tbody>
+        </table>
+      </div>
     </div>
 
     <div class="section">
       <h3>Ingresos y Costos</h3>
-      <table class="table">
-        <tbody>
-          <tr><th>Ingreso bruto</th><td>${fmtMoney(gross)}</td></tr>
-          <tr><th>Administración (${adminPct.toFixed(1)}%)</th><td>${fmtMoney(admin)}</td></tr>
-          <tr><th>Gastos generales</th><td>${fmtMoney(gastos)}</td></tr>
-          <tr><th>Mantenimiento</th><td>${fmtMoney(mant)}</td></tr>
-          <tr><th>Predial</th><td>${fmtMoney(predial)}</td></tr>
-          <tr><th>Ingreso neto (estimado)</th><td><strong>${fmtMoney(net)}</strong></td></tr>
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <table class="table">
+          <tbody>
+            <tr><th>Ingreso bruto</th><td>${fmtMoney(gross)}</td></tr>
+            <tr><th>Administración (${adminPct.toFixed(1)}%)</th><td>${fmtMoney(admin)}</td></tr>
+            <tr><th>Gastos generales</th><td>${fmtMoney(gastos)}</td></tr>
+            <tr><th>Mantenimiento</th><td>${fmtMoney(mant)}</td></tr>
+            <tr><th>Predial</th><td>${fmtMoney(predial)}</td></tr>
+            <tr><th>Ingreso neto (estimado)</th><td><strong>${fmtMoney(net)}</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
   results.style.display='block';
