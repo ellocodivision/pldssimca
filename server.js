@@ -956,10 +956,6 @@ app.get('/generador-roi', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'generador-roi.html'));
 });
 
-app.get('/juego-maquillaje', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'juego-maquillaje.html'));
-});
-
 app.get('/api/roi/master-csv', (req, res) => {
   if (!fs.existsSync(ROI_MASTER_CSV_PATH)) {
     return res.status(404).json({ error: 'CSV maestro no configurado' });
