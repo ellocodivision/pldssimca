@@ -717,9 +717,8 @@ app.get('/', requireAuth, (req, res) => {
           <p class="desc">Acceso directo a herramientas de planos, edición y descarga PDF.</p>
         </a>` : '';
   const roiMasterPanel = isGerente ? `
-      <section class="master-box">
-        <h3>CSV Maestro (ROI + Plano)</h3>
-        <p class="master-note">Sube un CSV y se actualiza para todos los módulos conectados.</p>
+      <section class="master-box master-box-mini">
+        <h3>CSV Maestro</h3>
         <div class="master-row">
           <input id="roiMasterCsvFile" type="file" accept=".csv" />
           <button id="roiMasterCsvBtn" type="button">Actualizar</button>
@@ -768,6 +767,12 @@ app.get('/', requireAuth, (req, res) => {
     .logout{display:inline-block;padding:8px 10px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:600;}
     .master-box{width:min(430px,100%);background:#fff;border:1px solid #d8d1c1;border-radius:12px;padding:10px 12px;}
     .master-box h3{margin:0 0 6px;font-size:14px;}
+    .master-box-mini{width:230px;padding:6px 8px;border-radius:10px;}
+    .master-box-mini h3{font-size:11px;margin:0 0 4px;}
+    .master-box-mini .master-row{gap:6px;}
+    .master-box-mini .master-row input{font-size:10px;}
+    .master-box-mini .master-row button{padding:5px 8px;font-size:10px;border-radius:8px;}
+    .master-box-mini .master-status{min-height:12px;margin:5px 0 0;font-size:10px;line-height:1.2;}
     .master-note{margin:0 0 8px;color:#5f5f5f;font-size:12px;}
     .master-row{display:flex;gap:8px;align-items:center;}
     .master-row input{flex:1;min-width:0;}
@@ -799,11 +804,13 @@ app.get('/', requireAuth, (req, res) => {
         <div class="left-head">
           <h1>Backend SIMCA</h1>
           <p class="sub">Panel principal de módulos.</p>
-          ${roiMasterPanel}
         </div>
         <div style="text-align:right;">
           <div class="user">${String(req.user && req.user.email || '')}</div>
           <a class="logout" href="/logout">Cerrar sesión</a>
+          <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+            ${roiMasterPanel}
+          </div>
         </div>
       </div>
       <div class="grid">
