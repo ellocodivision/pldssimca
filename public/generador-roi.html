@@ -107,13 +107,13 @@ const DEV_LOGO_MAP = [
   { keys: ['MARILA'], src: '/assets/roi-logos/marila.png' },
   { keys: ['CEIBA'], src: '/assets/roi-logos/ceiba.png' },
   { keys: ['GRAN TULUM'], src: '/assets/roi-logos/gran-tulum.png' },
-  { keys: ['SINGULAR'], src: '/assets/roi-logos/singular.png' },
+  { keys: ['SINGULAR', 'DREAMC', 'DREAM C'], src: '/assets/roi-logos/singular.png' },
   { keys: ['MARESOL'], src: '/assets/roi-logos/maresol.png' },
   { keys: ['CRUZ CON MAR'], src: '/assets/roi-logos/cruz-con-mar.png' },
   { keys: ['COSTA CARIBE'], src: '/assets/roi-logos/costa-caribe.png' },
   { keys: ['NATAL'], src: '/assets/roi-logos/natal.png' },
-  { keys: ['SOLAR STUDIOS'], src: '/assets/roi-logos/solar-studios.png' },
-  { keys: ['SOLAR'], src: '/assets/roi-logos/solar-mt.png' }
+  { keys: ['SOLAR MT', 'SOLAR MIDTOWN'], src: '/assets/roi-logos/solar-mt.png' },
+  { keys: ['SOLAR STUDIOS', 'SOLAR'], src: '/assets/roi-logos/solar-studios.png' }
 ];
 
 function colToIndex(col){
@@ -182,6 +182,20 @@ function logoForDevelopment(dev){
     }
   }
   return '';
+}
+
+function logoSizeForDevelopment(dev){
+  const name = normalizeText(dev);
+  if(name.includes('SOLAR MT') || name.includes('SOLAR MIDTOWN')){
+    return { maxW: 1280, maxH: 256 };
+  }
+  if(name.includes('DREAMC') || name.includes('DREAM C') || name.includes('SINGULAR')){
+    return { maxW: 1280, maxH: 256 };
+  }
+  if(name === 'SOLAR' || name.includes('SOLAR STUDIOS')){
+    return { maxW: 1280, maxH: 256 };
+  }
+  return { maxW: 320, maxH: 64 };
 }
 
 function getSeasonProfile(row){
@@ -481,12 +495,14 @@ async function downloadPdfA4(){
       logoWrap.style.alignItems = 'center';
       logoWrap.style.margin = '0 0 14px 0';
       const logo = document.createElement('img');
+      const logoSize = logoSizeForDevelopment(devName);
       logo.src = logoSrc;
       logo.alt = `Logo ${devName}`;
       logo.style.width = 'auto';
       logo.style.height = 'auto';
-      logo.style.maxWidth = 'none';
-      logo.style.maxHeight = 'none';
+      logo.style.maxWidth = `${logoSize.maxW}px`;
+      logo.style.maxHeight = `${logoSize.maxH}px`;
+      logo.style.objectFit = 'contain';
       logo.style.display = 'block';
       logoWrap.appendChild(logo);
       pdfStage.appendChild(logoWrap);
