@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Juego de Maquillaje</title>
+  <style>
+    :root {
+      --bg: #f6efe8;
+      --ink: #1d1a1c;
+      --muted: #685f67;
+      --panel: #fff7f1;
+      --line: #d8c4b8;
+      --accent: #f26a8d;
+      --accent-soft: #ffd5e1;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+      background:
+        radial-gradient(circle at top left, #ffe8f2 0%, rgba(255, 232, 242, 0) 35%),
+        radial-gradient(circle at bottom right, #ffe7d8 0%, rgba(255, 231, 216, 0) 35%),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    .app {
+      width: min(1220px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+
+    .stage-card,
+    .panel-card {
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      backdrop-filter: blur(5px);
+    }
+
+    .stage-card {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 82vh;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.36rem;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 1px solid #c9b8ae;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      border-color: #af9f95;
+    }
+
+    .btn.primary {
+      border-color: #d84f76;
+      background: linear-gradient(180deg, #ff8aa9, #f46a90);
+      color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .canvas-wrap {
+      flex: 1;
+      position: relative;
+      border: 1px dashed #cfb8aa;
+      border-radius: 14px;
+      background: #fff8f8;
+      min-height: 380px;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    .empty-hint {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: #8d7f87;
+      padding: 26px;
+      pointer-events: none;
+      font-size: 0.96rem;
+    }
+
+    .panel-card {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 82vh;
+      overflow: auto;
+    }
+
+    .block h2 {
+      margin: 0 0 9px;
+      font-size: 0.96rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #53464b;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tool-btn {
+      border: 1px solid #d7c2b7;
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px 8px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tool-btn .name {
+      font-weight: 700;
+      font-size: 0.86rem;
+    }
+
+    .tool-btn .meta {
+      color: #806f77;
+      font-size: 0.74rem;
+    }
+
+    .tool-btn.active {
+      border-color: #de5a82;
+      background: linear-gradient(180deg, #fff4f8, #ffe7ee);
+      box-shadow: 0 0 0 2px #ffd7e4 inset;
+    }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .swatch {
+      width: 100%;
+      aspect-ratio: 1;
+      border: 2px solid #fff;
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px #c6afb0;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .swatch.active::after {
+      content: "";
+      position: absolute;
+      inset: 4px;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      border-radius: 999px;
+    }
+
+    .slider-wrap {
+      display: grid;
+      gap: 8px;
+    }
+
+    .slider-wrap label {
+      font-size: 0.84rem;
+      color: #685d63;
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .status {
+      margin: 0;
+      font-size: 0.84rem;
+      color: #5f545a;
+      padding: 8px 10px;
+      border: 1px solid #dcc7bc;
+      border-radius: 10px;
+      background: #fffbf8;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .panel-card,
+      .stage-card {
+        max-height: none;
+        min-height: auto;
+      }
+      .canvas-wrap {
+        min-height: 58vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="stage-card">
+      <div class="topbar">
+        <div class="title-group">
+          <h1>Juego de Maquillaje</h1>
+          <p>Sube una foto frontal y pinta con el mouse.</p>
+        </div>
+        <div class="top-actions">
+          <button id="openPhotoBtn" class="btn primary" type="button">Cargar foto</button>
+          <input id="photoInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden />
+          <button id="undoBtn" class="btn" type="button" disabled>Deshacer</button>
+          <button id="clearBtn" class="btn" type="button" disabled>Limpiar</button>
+          <button id="saveBtn" class="btn" type="button" disabled>Guardar imagen</button>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="stage"></canvas>
+        <div id="emptyHint" class="empty-hint">
+          Empieza con <b>Cargar foto</b>.<br />
+          Después elige una herramienta y color en la derecha.
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel-card">
+      <section class="block">
+        <h2>Herramientas</h2>
+        <div id="toolGrid" class="tool-grid"></div>
+      </section>
+
+      <section class="block">
+        <h2>Colores</h2>
+        <div id="swatches" class="swatches"></div>
+      </section>
+
+      <section class="block slider-wrap">
+        <h2>Intensidad</h2>
+        <label for="opacityRange">Transparencia: <span id="opacityValue">70%</span></label>
+        <input id="opacityRange" type="range" min="10" max="100" value="70" />
+      </section>
+
+      <section class="block slider-wrap">
+        <label for="sizeRange">Tamaño del pincel: <span id="sizeValue">26</span></label>
+        <input id="sizeRange" type="range" min="8" max="120" value="26" />
+      </section>
+
+      <p id="status" class="status">Crea estilos de maquillaje con clic y arrastre.</p>
+    </aside>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    const emptyHint = document.getElementById("emptyHint");
+    const photoInput = document.getElementById("photoInput");
+    const openPhotoBtn = document.getElementById("openPhotoBtn");
+    const undoBtn = document.getElementById("undoBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const statusEl = document.getElementById("status");
+    const sizeRange = document.getElementById("sizeRange");
+    const opacityRange = document.getElementById("opacityRange");
+    const sizeValue = document.getElementById("sizeValue");
+    const opacityValue = document.getElementById("opacityValue");
+    const toolGrid = document.getElementById("toolGrid");
+    const swatches = document.getElementById("swatches");
+
+    const tools = [
+      { id: "lipstick", name: "Labial", meta: "Borde suave", sizeFactor: 0.9, blur: 6, erase: false },
+      { id: "blush", name: "Rubor", meta: "Difuminado", sizeFactor: 1.8, blur: 16, erase: false },
+      { id: "shadow", name: "Sombra", meta: "Parpado", sizeFactor: 1.3, blur: 10, erase: false },
+      { id: "liner", name: "Delineador", meta: "Trazo fino", sizeFactor: 0.35, blur: 1, erase: false },
+      { id: "sparkle", name: "Brillo", meta: "Toque final", sizeFactor: 0.5, blur: 0, erase: false, sparkle: true },
+      { id: "eraser", name: "Borrador", meta: "Corrige", sizeFactor: 1.5, blur: 0, erase: true }
+    ];
+
+    const palette = [
+      "#f15b89", "#d44a86", "#cb5a58", "#c54a3f", "#a44f76",
+      "#7f3f98", "#4f73c8", "#3598b8", "#7a604d", "#1f1c1f",
+      "#f3b4c8", "#f6d0a6", "#ecc07d", "#f7efe8", "#ffffff"
+    ];
+
+    const state = {
+      image: null,
+      imageRect: null,
+      actions: [],
+      tool: "lipstick",
+      color: palette[0],
+      size: Number(sizeRange.value),
+      opacity: Number(opacityRange.value) / 100,
+      drawing: false,
+      currentPoints: []
+    };
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      redraw();
+    }
+
+    function getTool(toolId) {
+      return tools.find((tool) => tool.id === toolId) || tools[0];
+    }
+
+    function paintStroke(action) {
+      const tool = getTool(action.tool);
+      if (!action.points.length) return;
+
+      ctx.save();
+      ctx.globalAlpha = action.opacity;
+      ctx.globalCompositeOperation = tool.erase ? "destination-out" : "source-over";
+      ctx.strokeStyle = action.color;
+      ctx.fillStyle = action.color;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.shadowColor = action.color;
+      ctx.shadowBlur = tool.blur;
+      ctx.lineWidth = Math.max(1, action.size * tool.sizeFactor);
+
+      if (tool.sparkle) {
+        for (const point of action.points) {
+          const radius = Math.max(1.5, action.size * 0.12);
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(point.x - radius * 2.2, point.y);
+          ctx.lineTo(point.x + radius * 2.2, point.y);
+          ctx.moveTo(point.x, point.y - radius * 2.2);
+          ctx.lineTo(point.x, point.y + radius * 2.2);
+          ctx.stroke();
+        }
+      } else if (action.points.length === 1) {
+        ctx.beginPath();
+        ctx.arc(action.points[0].x, action.points[0].y, ctx.lineWidth * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(action.points[0].x, action.points[0].y);
+        for (let i = 1; i < action.points.length; i += 1) {
+          const p = action.points[i];
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawPhoto() {
+      if (!state.image) return;
+
+      const areaWidth = canvas.clientWidth;
+      const areaHeight = canvas.clientHeight;
+      const imageRatio = state.image.width / state.image.height;
+      const areaRatio = areaWidth / areaHeight;
+      let drawWidth = areaWidth;
+      let drawHeight = areaHeight;
+
+      if (imageRatio > areaRatio) {
+        drawHeight = areaWidth / imageRatio;
+      } else {
+        drawWidth = areaHeight * imageRatio;
+      }
+
+      const x = (areaWidth - drawWidth) / 2;
+      const y = (areaHeight - drawHeight) / 2;
+      state.imageRect = { x, y, w: drawWidth, h: drawHeight };
+      ctx.drawImage(state.image, x, y, drawWidth, drawHeight);
+    }
+
+    function redraw() {
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      drawPhoto();
+      for (const action of state.actions) {
+        paintStroke(action);
+      }
+      if (state.currentPoints.length) {
+        paintStroke({
+          tool: state.tool,
+          color: state.color,
+          size: state.size,
+          opacity: state.opacity,
+          points: state.currentPoints
+        });
+      }
+    }
+
+    function pointFromEvent(event) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+      const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function startDraw(event) {
+      if (!state.image) return;
+      event.preventDefault();
+      state.drawing = true;
+      state.currentPoints = [pointFromEvent(event)];
+      redraw();
+    }
+
+    function moveDraw(event) {
+      if (!state.drawing) return;
+      event.preventDefault();
+      state.currentPoints.push(pointFromEvent(event));
+      redraw();
+    }
+
+    function finishDraw() {
+      if (!state.drawing) return;
+      state.drawing = false;
+      if (state.currentPoints.length) {
+        state.actions.push({
+          tool: state.tool,
+          color: state.color,
+          size: state.size,
+          opacity: state.opacity,
+          points: state.currentPoints.slice(0)
+        });
+      }
+      state.currentPoints = [];
+      updateButtons();
+      redraw();
+    }
+
+    function updateButtons() {
+      const hasImage = Boolean(state.image);
+      const hasActions = state.actions.length > 0;
+      undoBtn.disabled = !hasActions;
+      clearBtn.disabled = !hasActions;
+      saveBtn.disabled = !hasImage;
+      emptyHint.style.display = hasImage ? "none" : "grid";
+    }
+
+    function updateLabels() {
+      sizeValue.textContent = String(state.size);
+      opacityValue.textContent = `${Math.round(state.opacity * 100)}%`;
+      const selectedTool = getTool(state.tool);
+      statusEl.textContent = `Herramienta: ${selectedTool.name} | Color: ${state.color}`;
+    }
+
+    function buildTools() {
+      toolGrid.innerHTML = "";
+      tools.forEach((tool) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "tool-btn";
+        if (tool.id === state.tool) button.classList.add("active");
+        button.innerHTML = `<span class="name">${tool.name}</span><span class="meta">${tool.meta}</span>`;
+        button.addEventListener("click", () => {
+          state.tool = tool.id;
+          buildTools();
+          updateLabels();
+        });
+        toolGrid.appendChild(button);
+      });
+    }
+
+    function buildSwatches() {
+      swatches.innerHTML = "";
+      palette.forEach((hex) => {
+        const swatch = document.createElement("button");
+        swatch.type = "button";
+        swatch.className = "swatch";
+        swatch.style.background = hex;
+        if (hex === state.color) swatch.classList.add("active");
+        swatch.addEventListener("click", () => {
+          state.color = hex;
+          buildSwatches();
+          updateLabels();
+        });
+        swatches.appendChild(swatch);
+      });
+    }
+
+    function isSupportedImage(file) {
+      const name = String(file.name || "").toLowerCase();
+      const type = String(file.type || "").toLowerCase();
+      const byName = [".jpg", ".jpeg", ".png", ".webp"].some((ext) => name.endsWith(ext));
+      const byType = ["image/jpeg", "image/png", "image/webp"].includes(type);
+      return byName || byType;
+    }
+
+    openPhotoBtn.addEventListener("click", () => {
+      photoInput.click();
+    });
+
+    photoInput.addEventListener("change", (event) => {
+      const [file] = event.target.files || [];
+      if (!file) return;
+      if (!isSupportedImage(file)) {
+        statusEl.textContent = "Formato no compatible. Usa JPG, JPEG, PNG o WEBP.";
+        photoInput.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => {
+        statusEl.textContent = "No se pudo leer el archivo. Intenta con otra imagen.";
+      };
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => {
+          statusEl.textContent = "No se pudo abrir la imagen. Prueba con JPG o PNG.";
+        };
+        img.onload = () => {
+          state.image = img;
+          state.actions = [];
+          state.currentPoints = [];
+          updateButtons();
+          redraw();
+          updateLabels();
+          statusEl.textContent = "Foto cargada. Ahora dibuja maquillaje con el mouse.";
+        };
+        img.src = String(reader.result || "");
+      };
+      reader.readAsDataURL(file);
+      photoInput.value = "";
+    });
+
+    sizeRange.addEventListener("input", () => {
+      state.size = Number(sizeRange.value);
+      updateLabels();
+    });
+
+    opacityRange.addEventListener("input", () => {
+      state.opacity = Number(opacityRange.value) / 100;
+      updateLabels();
+    });
+
+    undoBtn.addEventListener("click", () => {
+      state.actions.pop();
+      updateButtons();
+      redraw();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      state.actions = [];
+      state.currentPoints = [];
+      updateButtons();
+      redraw();
+    });
+
+    saveBtn.addEventListener("click", () => {
+      if (!state.image) return;
+      const dataUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = "maquillaje-juego.png";
+      a.click();
+    });
+
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", moveDraw);
+    canvas.addEventListener("mouseup", finishDraw);
+    canvas.addEventListener("mouseleave", finishDraw);
+    canvas.addEventListener("touchstart", startDraw, { passive: false });
+    canvas.addEventListener("touchmove", moveDraw, { passive: false });
+    canvas.addEventListener("touchend", finishDraw);
+    window.addEventListener("resize", resizeCanvas);
+
+    buildTools();
+    buildSwatches();
+    updateLabels();
+    updateButtons();
+    resizeCanvas();
+  </script>
+</body>
+</html>

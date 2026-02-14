@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Retorno de Inversión</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{--bg:#e0ded6;--card:#ffffff;--ink:#1a1a1a;--muted:#6b6b6b;--accent:#ffe816;--accent-2:#111111;--border:#d7d2c6;--shadow:0 10px 30px rgba(0,0,0,.08)}
 *{box-sizing:border-box}
@@ -193,6 +194,7 @@ function firstNonEmptyAny(row, idxs){
 
 let rows = [];
 let currentRow = null;
+let currentPdfData = null;
 
 function getAdminPct(){
   const n = parseFloat(adminPctInput.value);
@@ -338,12 +340,39 @@ function renderResult(row){
       </table>
     </div>
   `;
+  currentPdfData = {
+    dev: fmtText(get(row, COL.DEV)),
+    unit: fmtText(get(row, COL.UNIT)),
+    location: fmtText(get(row, COL.LOCATION)),
+    bed: fmtText(get(row, COL.BED)),
+    m2: fmtText(get(row, COL.M2)),
+    sqft: fmtText(get(row, COL.SQFT)),
+    list: fmtMoney(get(row, COL.LIST)),
+    discPct: fmtText(get(row, COL.DISC_PCT)),
+    discAmt: fmtMoney(get(row, COL.DISC_AMT)),
+    final: fmtMoney(get(row, COL.FINAL)),
+    roi: roiText,
+    gross: fmtMoney(gross),
+    adminPct: adminPct.toFixed(1),
+    admin: fmtMoney(admin),
+    gastos: fmtMoney(gastos),
+    mant: fmtMoney(mant),
+    predial: fmtMoney(predial),
+    net: fmtMoney(net),
+    seasons: seasons.map((s)=>({
+      name: s.label,
+      price: fmtMoney(firstNonEmptyAny(row, s.idxs)),
+      nights: fmtText(s.nights),
+      occ: fmtText(s.occupancy)
+    }))
+  };
   results.style.display='block';
   printBtn.disabled=false;
 }
 
 function clearAll(){
   currentRow = null;
+  currentPdfData = null;
   devSelect.value='';
   unitSelect.innerHTML='<option value="">Selecciona unidad...</option>';
   unitSelect.disabled=true;
@@ -352,7 +381,98 @@ function clearAll(){
   printBtn.disabled=true;
 }
 
-printBtn.addEventListener('click',()=>window.print());
+function buildFilename(){
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  const dev = String((currentPdfData && currentPdfData.dev) || 'DESARROLLO').replace(/[^A-Z0-9]+/ig,'_');
+  const unit = String((currentPdfData && currentPdfData.unit) || 'UNIDAD').replace(/[^A-Z0-9]+/ig,'_');
+  return `${stamp}_ROI_${dev}_${unit}.pdf`;
+}
+
+function drawRow(doc, y, label, value){
+  const left = 10;
+  const totalW = 190;
+  const labelW = 58;
+  const valueW = totalW - labelW;
+  const labelLines = doc.splitTextToSize(String(label || ''), labelW - 4);
+  const valueLines = doc.splitTextToSize(String(value || '-'), valueW - 4);
+  const lines = Math.max(labelLines.length, valueLines.length, 1);
+  const rowH = Math.max(7, (lines * 4.2) + 2.6);
+  doc.setFillColor(245, 241, 230);
+  doc.rect(left, y, labelW, rowH, 'FD');
+  doc.rect(left + labelW, y, valueW, rowH, 'S');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.text(labelLines, left + 2, y + 4.8);
+  doc.setFont('helvetica','normal');
+  doc.text(valueLines, left + labelW + 2, y + 4.8);
+  return y + rowH;
+}
+
+async function downloadPdfA4(){
+  if(!currentPdfData){
+    alert('Selecciona una unidad primero.');
+    return;
+  }
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    alert('No se pudo cargar el generador de PDF.');
+    return;
+  }
+  const btnText = printBtn.textContent;
+  printBtn.disabled = true;
+  printBtn.textContent = 'Generando PDF...';
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'p', unit:'mm', format:'a4' });
+    let y = 12;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(15);
+    doc.text('Reporte de Retorno de Inversion', 10, y);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 10, y + 5);
+    y += 11;
+
+    y = drawRow(doc, y, 'Desarrollo', currentPdfData.dev);
+    y = drawRow(doc, y, 'Unidad', currentPdfData.unit);
+    y = drawRow(doc, y, 'Ubicacion', currentPdfData.location);
+    y = drawRow(doc, y, 'Recamaras', currentPdfData.bed);
+    y = drawRow(doc, y, 'M2 / SQFT', `${currentPdfData.m2} / ${currentPdfData.sqft}`);
+    y = drawRow(doc, y, 'Precio Lista', currentPdfData.list);
+    y = drawRow(doc, y, 'Descuento', `${currentPdfData.discPct} (${currentPdfData.discAmt})`);
+    y = drawRow(doc, y, 'Precio Final', currentPdfData.final);
+    y = drawRow(doc, y, 'ROI', currentPdfData.roi);
+
+    y += 3;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text('Temporadas', 10, y);
+    y += 2;
+    y = drawRow(doc, y, 'Baja', `${currentPdfData.seasons[0].price} | Noches: ${currentPdfData.seasons[0].nights} | Ocupacion: ${currentPdfData.seasons[0].occ}`);
+    y = drawRow(doc, y, 'Media', `${currentPdfData.seasons[1].price} | Noches: ${currentPdfData.seasons[1].nights} | Ocupacion: ${currentPdfData.seasons[1].occ}`);
+    y = drawRow(doc, y, 'Alta', `${currentPdfData.seasons[2].price} | Noches: ${currentPdfData.seasons[2].nights} | Ocupacion: ${currentPdfData.seasons[2].occ}`);
+    y = drawRow(doc, y, 'Fiestas', `${currentPdfData.seasons[3].price} | Noches: ${currentPdfData.seasons[3].nights} | Ocupacion: ${currentPdfData.seasons[3].occ}`);
+
+    y += 3;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text('Ingresos y Costos', 10, y);
+    y += 2;
+    y = drawRow(doc, y, 'Ingreso bruto', currentPdfData.gross);
+    y = drawRow(doc, y, `Administracion (${currentPdfData.adminPct}%)`, currentPdfData.admin);
+    y = drawRow(doc, y, 'Gastos generales', currentPdfData.gastos);
+    y = drawRow(doc, y, 'Mantenimiento', currentPdfData.mant);
+    y = drawRow(doc, y, 'Predial', currentPdfData.predial);
+    y = drawRow(doc, y, 'Ingreso neto (estimado)', currentPdfData.net);
+
+    doc.save(buildFilename());
+  } finally {
+    printBtn.textContent = btnText;
+    printBtn.disabled = false;
+  }
+}
+
+printBtn.addEventListener('click',downloadPdfA4);
 clearBtn.addEventListener('click',clearAll);
 adminPctInput.addEventListener('input',()=>{
   if(currentRow) renderResult(currentRow);
