@@ -2034,20 +2034,39 @@
       }
     }
 
-    function loadLatestProjectVersionSilently() {
+    async function loadLatestProjectVersionSilently() {
       const projects = getProjectIndex()
         .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
-      if (!projects.length) return false;
-      const latest = projects[0];
+      if (projects.length) {
+        const latest = projects[0];
+        try {
+          const raw = localStorage.getItem(projectStorageKey(latest.id));
+          const legacyRaw = DEV === "ceiba" ? localStorage.getItem(projectStorageLegacyKey(latest.id)) : "";
+          const payloadRaw = raw || legacyRaw;
+          if (!payloadRaw) return false;
+          applyPersistedState(JSON.parse(payloadRaw));
+          refreshProjectSelector(latest.id);
+          if (projectStatus) {
+            projectStatus.textContent = `Version auto cargada: ${latest.name}.`;
+          }
+          return true;
+        } catch {
+          // Continue with server fallback.
+        }
+      }
+
+      const serverVersions = Array.isArray(state.serverProjectVersions) ? state.serverProjectVersions : [];
+      if (!serverVersions.length) return false;
+      const latestServer = String(serverVersions[0] || "").trim();
+      if (!latestServer) return false;
       try {
-        const raw = localStorage.getItem(projectStorageKey(latest.id));
-        const legacyRaw = DEV === "ceiba" ? localStorage.getItem(projectStorageLegacyKey(latest.id)) : "";
-        const payloadRaw = raw || legacyRaw;
-        if (!payloadRaw) return false;
-        applyPersistedState(JSON.parse(payloadRaw));
-        refreshProjectSelector(latest.id);
+        const response = await fetch(`/api/plano-ventas/default-json?dev=${encodeURIComponent(DEV)}&name=${encodeURIComponent(latestServer)}`, { cache: "no-store" });
+        if (!response.ok) return false;
+        const payload = await response.json();
+        applyPersistedState(payload);
+        refreshProjectSelector(`__srv__:${latestServer}`);
         if (projectStatus) {
-          projectStatus.textContent = `Version auto cargada: ${latest.name}.`;
+          projectStatus.textContent = `Version auto cargada desde servidor: ${latestServer}.`;
         }
         return true;
       } catch {
@@ -3261,11 +3280,14 @@
       setPdfLivePanelHeight(620);
       await loadServerProjectVersions();
       refreshProjectSelector();
-      const loadedLatestVersion = loadLatestProjectVersionSilently();
+      const loadedLatestVersion = await loadLatestProjectVersionSilently();
       if (!loadedLatestVersion) {
         const loadedLocal = tryLoadLocalSilently();
-        if (!loadedLocal && projectStatus) {
-          projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON o Cargar local.";
+        if (!loadedLocal) {
+          const loadedDefaultJson = await loadDefaultJsonOnOpen();
+          if (!loadedDefaultJson && projectStatus) {
+            projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON o Cargar local.";
+          }
         }
       }
       updateHint();
