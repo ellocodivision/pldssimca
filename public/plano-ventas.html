@@ -1888,7 +1888,21 @@
           return;
         }
         const data = await response.json();
-        state.serverProjectVersions = Array.isArray(data && data.files) ? data.files : [];
+        const files = Array.isArray(data && data.files) ? data.files : [];
+        if (files.length) {
+          state.serverProjectVersions = files;
+          return;
+        }
+
+        // Fallback: some deployments only have base JSON files, not "version-*.json".
+        const fallbackRes = await fetch(`/api/plano-ventas/default-json-files?dev=${encodeURIComponent(DEV)}`, { cache: "no-store" });
+        if (!fallbackRes.ok) {
+          state.serverProjectVersions = [];
+          return;
+        }
+        const fallbackData = await fallbackRes.json();
+        const fallbackFiles = Array.isArray(fallbackData && fallbackData.files) ? fallbackData.files : [];
+        state.serverProjectVersions = fallbackFiles;
       } catch {
         state.serverProjectVersions = [];
       }
@@ -2056,8 +2070,21 @@
       }
 
       const serverVersions = Array.isArray(state.serverProjectVersions) ? state.serverProjectVersions : [];
-      if (!serverVersions.length) return false;
-      const latestServer = String(serverVersions[0] || "").trim();
+      if (!serverVersions.length) {
+        try {
+          const fallbackRes = await fetch(`/api/plano-ventas/default-json-files?dev=${encodeURIComponent(DEV)}`, { cache: "no-store" });
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            const fallbackFiles = Array.isArray(fallbackData && fallbackData.files) ? fallbackData.files : [];
+            if (fallbackFiles.length) {
+              state.serverProjectVersions = fallbackFiles;
+            }
+          }
+        } catch {}
+      }
+      const effectiveServerVersions = Array.isArray(state.serverProjectVersions) ? state.serverProjectVersions : [];
+      if (!effectiveServerVersions.length) return false;
+      const latestServer = String(effectiveServerVersions[0] || "").trim();
       if (!latestServer) return false;
       try {
         const response = await fetch(`/api/plano-ventas/default-json?dev=${encodeURIComponent(DEV)}&name=${encodeURIComponent(latestServer)}`, { cache: "no-store" });
