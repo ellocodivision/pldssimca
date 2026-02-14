@@ -1882,27 +1882,15 @@
 
     async function loadServerProjectVersions() {
       try {
-        const response = await fetch(`/api/plano-ventas/version-json-files?dev=${encodeURIComponent(DEV)}`, { cache: "no-store" });
+        const response = await fetch(`/api/plano-ventas/json-files?dev=${encodeURIComponent(DEV)}`, { cache: "no-store" });
         if (!response.ok) {
           state.serverProjectVersions = [];
+          if (projectStatus) projectStatus.textContent = `No se pudo listar versiones (HTTP ${response.status}).`;
           return;
         }
         const data = await response.json();
         const files = Array.isArray(data && data.files) ? data.files : [];
-        if (files.length) {
-          state.serverProjectVersions = files;
-          return;
-        }
-
-        // Fallback: some deployments only have base JSON files, not "version-*.json".
-        const fallbackRes = await fetch(`/api/plano-ventas/default-json-files?dev=${encodeURIComponent(DEV)}`, { cache: "no-store" });
-        if (!fallbackRes.ok) {
-          state.serverProjectVersions = [];
-          return;
-        }
-        const fallbackData = await fallbackRes.json();
-        const fallbackFiles = Array.isArray(fallbackData && fallbackData.files) ? fallbackData.files : [];
-        state.serverProjectVersions = fallbackFiles;
+        state.serverProjectVersions = files;
       } catch {
         state.serverProjectVersions = [];
       }
@@ -2070,18 +2058,6 @@
       }
 
       const serverVersions = Array.isArray(state.serverProjectVersions) ? state.serverProjectVersions : [];
-      if (!serverVersions.length) {
-        try {
-          const fallbackRes = await fetch(`/api/plano-ventas/default-json-files?dev=${encodeURIComponent(DEV)}`, { cache: "no-store" });
-          if (fallbackRes.ok) {
-            const fallbackData = await fallbackRes.json();
-            const fallbackFiles = Array.isArray(fallbackData && fallbackData.files) ? fallbackData.files : [];
-            if (fallbackFiles.length) {
-              state.serverProjectVersions = fallbackFiles;
-            }
-          }
-        } catch {}
-      }
       const effectiveServerVersions = Array.isArray(state.serverProjectVersions) ? state.serverProjectVersions : [];
       if (!effectiveServerVersions.length) return false;
       const latestServer = String(effectiveServerVersions[0] || "").trim();

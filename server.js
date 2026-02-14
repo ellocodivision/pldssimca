@@ -1379,6 +1379,50 @@ app.get('/api/plano-ventas/version-json-files', (req, res) => {
   }
 });
 
+app.get('/api/plano-ventas/json-files', (req, res) => {
+  const dev = getRequestedDevelopment(req);
+  const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
+  try {
+    const entries = [];
+    floorDirs.forEach((dir) => {
+      try {
+        fs.readdirSync(dir)
+          .filter((name) => String(name || '').toLowerCase().endsWith('.json'))
+          .forEach((name) => {
+            const fullPath = path.join(dir, name);
+            let stat = null;
+            try {
+              stat = fs.statSync(fullPath);
+            } catch {}
+            if (!stat || !stat.isFile()) return;
+            entries.push({
+              name,
+              dir,
+              mtimeMs: stat.mtimeMs || 0
+            });
+          });
+      } catch {}
+    });
+    const deduped = [];
+    const seen = new Set();
+    entries
+      .sort((a, b) => b.mtimeMs - a.mtimeMs || a.name.localeCompare(b.name))
+      .forEach((entry) => {
+        const key = String(entry.name || '').toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        deduped.push(entry);
+      });
+    res.json({
+      files: deduped.map((e) => e.name),
+      sourceDir: floorDirs.join(', '),
+      dev: dev.slug
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'No se pudo listar JSONs del desarrollo', details: err.message });
+  }
+});
+
 app.get('/api/plano-ventas/default-json-merged', (req, res) => {
   const dev = getRequestedDevelopment(req);
   const downloadsDir = path.join(os.homedir(), 'Downloads');
