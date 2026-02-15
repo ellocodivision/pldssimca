@@ -2741,7 +2741,10 @@
           let message = `HTTP ${response.status}`;
           try {
             const data = await response.json();
-            if (data && data.error) message = data.error;
+            if (data && data.error) {
+              message = data.error;
+              if (data.details) message += ` (${data.details})`;
+            }
           } catch {}
           throw new Error(message);
         }

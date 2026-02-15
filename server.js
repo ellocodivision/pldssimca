@@ -1558,14 +1558,23 @@ app.post('/api/plano-ventas/render-pdf', async (req, res) => {
   let browser = null;
   try {
     browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--no-zygote',
+        '--single-process',
+        '--font-render-hinting=none'
+      ]
     });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    page.setDefaultTimeout(120000);
+    page.setDefaultNavigationTimeout(120000);
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await page.emulateMediaType('print');
     try {
-      await page.waitForFunction(() => window.__pdfReady === true, { timeout: 5000 });
+      await page.waitForFunction(() => window.__pdfReady === true, { timeout: 15000 });
     } catch {
       // Fallback: if the marker is missing, continue and generate PDF.
     }
@@ -1585,7 +1594,10 @@ app.post('/api/plano-ventas/render-pdf', async (req, res) => {
     return res.send(pdfBuffer);
   } catch (err) {
     log(`Error en /api/plano-ventas/render-pdf: ${err && err.stack ? err.stack : err}`);
-    return res.status(500).json({ error: 'No se pudo generar el PDF en el servidor.' });
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF en el servidor.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
   } finally {
     if (browser) {
       try { await browser.close(); } catch {}
