@@ -100,10 +100,21 @@
     const quickExportUrl = `${DEV_BASE}/plano-ventas?quick_export=1&dev=${encodeURIComponent(DEV)}`;
     openEditorLink.href = editorUrl;
 
+    let quickExportFrame = null;
     downloadBtn.addEventListener("click", () => {
       status.textContent = "Generando y descargando PDF...";
       const ts = Date.now();
-      window.location.href = `${quickExportUrl}&t=${ts}`;
+      const url = `${quickExportUrl}&t=${ts}`;
+      if (!quickExportFrame) {
+        quickExportFrame = document.createElement("iframe");
+        quickExportFrame.style.display = "none";
+        quickExportFrame.setAttribute("aria-hidden", "true");
+        document.body.appendChild(quickExportFrame);
+      }
+      quickExportFrame.src = url;
+      setTimeout(() => {
+        status.textContent = "Solicitud enviada. Si todo está correcto, la descarga inicia en breve.";
+      }, 900);
     });
   </script>
 </body>
