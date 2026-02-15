@@ -552,6 +552,22 @@
       "solar-mt": "SOLAR MT"
     };
     const DEV_LABEL = DEV_NAME_BY_SLUG[DEV] || String(DEV || "CEIBA").replace(/[-_]+/g, " ").toUpperCase();
+    const DEV_ALIASES_BY_SLUG = {
+      ceiba: ["CEIBA"],
+      "costa-caribe": ["COSTA CARIBE"],
+      "cruz-con-mar": ["CRUZ CON MAR"],
+      "dream-c": ["DREAM C"],
+      "gran-tulum": ["GRAN TULUM"],
+      ipana: ["IPANA"],
+      maresol: ["MARESOL"],
+      marila: ["MARILA"],
+      natal: ["NATAL"],
+      "saint-marine": ["SAINT MARINE"],
+      serenada: ["SERENADA"],
+      "singular-joy": ["SINGULAR JOY"],
+      solar: ["SOLAR"],
+      "solar-mt": ["SOLAR MT", "SOLARMIDTOWN", "SOLAR MIDTOWN"]
+    };
     const QUICK_EXPORT_MODE = URL_PARAMS.get("quick_export") === "1";
 
     const statusColors = {
@@ -761,6 +777,20 @@
 
     function normalizeKey(value) {
       return String(value || "").trim().toLowerCase();
+    }
+
+    function normalizeDevKey(value) {
+      return normalizeKey(value).replace(/[^a-z0-9]+/g, "");
+    }
+
+    function getTargetDevKeys() {
+      const aliases = DEV_ALIASES_BY_SLUG[DEV] || [DEV_LABEL];
+      const keys = aliases
+        .map((alias) => normalizeDevKey(alias))
+        .filter(Boolean);
+      const directFromSlug = normalizeDevKey(DEV);
+      if (directFromSlug && !keys.includes(directFromSlug)) keys.push(directFromSlug);
+      return new Set(keys);
     }
 
     function normalizeUnitKey(value) {
@@ -1370,9 +1400,7 @@
         const label = escapeHtml(zone.label);
         const isActive = zone.id === state.selectedZoneId;
         const fillColor = statusColors[zone.status] || statusColors.disponible;
-        return `
-          <g data-zone-id="${zone.id}">
-            <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.28" stroke="${isActive ? "#163c2c" : fillColor}" stroke-width="${isActive ? 3 : 2}" />
+        const labelHtml = state.showUnitLabels !== false ? `
             <text
               data-label-zone-id="${zone.id}"
               x="${cx}"
@@ -1388,6 +1416,11 @@
               paint-order="stroke"
               style="cursor: move;"
             >${label}</text>
+        ` : "";
+        return `
+          <g data-zone-id="${zone.id}">
+            <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.28" stroke="${isActive ? "#163c2c" : fillColor}" stroke-width="${isActive ? 3 : 2}" />
+            ${labelHtml}
           </g>
         `;
       }).join("");
@@ -2921,11 +2954,11 @@
     }
 
     function applyParsedExcel(parsed, sourceLabel) {
-      const targetDev = normalizeKey(DEV_LABEL).replace(/\s+/g, "");
+      const targetDevKeys = getTargetDevKeys();
       const allRows = parsed.rows || [];
       const filteredRows = allRows.filter((row) => {
-        const rowDev = normalizeKey(String(row.DEV || "")).replace(/\s+/g, "");
-        if (rowDev.includes(targetDev)) return true;
+        const rowDev = normalizeDevKey(String(row.DEV || ""));
+        if (rowDev && targetDevKeys.has(rowDev)) return true;
         // Keep empty development rows because many Excel files use merged cells.
         return !rowDev;
       });
@@ -3032,7 +3065,6 @@
         projectStatus.textContent = `Buscando JSON automatico de ${DEV_LABEL}...`;
       }
       try {
-        const currentFloors = normalizeFloorPayload({ floors: state.floors });
         let remoteFloors = [];
         let loadedFiles = [];
         let sourceDir = "";
@@ -3066,6 +3098,9 @@
           }
         }
 
+        // Re-read current floors at apply-time to avoid overwriting a manual import/edit
+        // that may have happened while this async autoload was still in flight.
+        const currentFloors = normalizeFloorPayload({ floors: state.floors });
         const combined = dedupeFloorsByIdentity([...currentFloors, ...remoteFloors]).slice(0, MAX_FLOORS);
         const hadRemote = remoteFloors.length > 0;
         if (combined.length) {

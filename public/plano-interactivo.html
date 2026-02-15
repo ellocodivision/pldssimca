@@ -424,18 +424,28 @@
       if (!sourceFloors.length) return [];
 
       let zoneCounter = Number(payload && payload.nextZoneId) || 1;
+      const usedFloorIds = new Set();
       const out = sourceFloors
         .slice(0, MAX_FLOORS)
         .map((floor, floorIndex) => {
           if (!floor || !floor.imageDataUrl) return null;
-          const floorId = String(floor.id || `floor-${Date.now()}-${floorIndex}-${Math.random().toString(36).slice(2, 7)}`);
+          let floorId = String(floor.id || "").trim();
+          if (!floorId || usedFloorIds.has(floorId)) {
+            floorId = `floor-${Date.now()}-${floorIndex}-${Math.random().toString(36).slice(2, 7)}`;
+          }
+          usedFloorIds.add(floorId);
+          const usedZoneIds = new Set();
           const zones = (Array.isArray(floor.zones) ? floor.zones : [])
             .map((zone) => {
               const points = (Array.isArray(zone && zone.points) ? zone.points : [])
                 .map(normalizePoint)
                 .filter(Boolean);
               if (points.length < 3) return null;
-              const zoneId = String((zone && zone.id) || `zone-${zoneCounter++}`);
+              let zoneId = String((zone && zone.id) || "").trim();
+              if (!zoneId || usedZoneIds.has(zoneId)) {
+                zoneId = `zone-${zoneCounter++}`;
+              }
+              usedZoneIds.add(zoneId);
               const labelOffset = zone && zone.labelOffset && Number.isFinite(Number(zone.labelOffset.x)) && Number.isFinite(Number(zone.labelOffset.y))
                 ? { x: Number(zone.labelOffset.x), y: Number(zone.labelOffset.y) }
                 : { x: 0, y: 0 };

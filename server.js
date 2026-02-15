@@ -1197,7 +1197,6 @@ app.get('/api/plano-ventas/default-excel', (req, res) => {
     .filter((f) => !canonicalNames.has(String(f.name || '').toLowerCase()))
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
   const candidates = [
-    ROI_MASTER_CSV_PATH,
     ...canonicalDevFiles.map((f) => f.fullPath),
     ...latestDevFiles.map((f) => f.fullPath),
     path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.xls'),
