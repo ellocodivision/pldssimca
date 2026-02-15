@@ -2697,7 +2697,8 @@
         }
       } catch {}
       const missingFloors = !state.floors.length;
-      const missingExcel = !state.excel.headers.length || !state.excel.rows.length;
+      // Excel can be loaded but produce 0 rows after dev filtering; preview should still render.
+      const missingExcel = !state.excel.headers.length;
       if (missingFloors || missingExcel) {
         if (!missingFloors && missingExcel && !previewAutoExcelRequested) {
           previewAutoExcelRequested = true;
@@ -2709,7 +2710,7 @@
         const hints = [];
         if (missingFloors) hints.push("<li>Importa el JSON del paso 1</li>");
         if (missingExcel) hints.push(`<li>Carga Excel ${escapeHtml(DEV_LABEL)}</li>`);
-        const extra = !missingFloors && missingExcel ? "<p>JSON cargado. Falta Excel.</p>" : "";
+        const extra = !missingFloors && missingExcel ? "<p>JSON cargado. Falta estructura de Excel.</p>" : "";
         pdfLiveFrame.srcdoc = `<html><body style="font-family:Arial,sans-serif;background:#f6f8f4;color:#4c554d;padding:16px;"><p>Para ver la previsualizacion PDF en vivo:</p>${extra}<ol>${hints.join("")}</ol></body></html>`;
         pdfLiveFrame.onload = () => {
           applyPdfLiveZoom();
@@ -2760,7 +2761,7 @@
           alert("Primero importa el JSON del Paso 1.");
           return;
         }
-        if (!state.excel.headers.length || !state.excel.rows.length) {
+        if (!state.excel.headers.length) {
           alert("Carga un Excel antes de exportar PDF.");
           return;
         }
