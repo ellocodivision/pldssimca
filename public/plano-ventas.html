@@ -263,6 +263,7 @@
       display: inline-block;
     }
     .summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .hidden-ui { display: none !important; }
     @media (max-width: 980px) {
       .layout { grid-template-columns: 1fr; }
       .panel { position: static; max-height: none; }
@@ -301,6 +302,7 @@
         </div>
         <p id="projectStatus" class="hint">Sin versiones guardadas.</p>
         <div id="floorTabs" class="tabs"></div>
+        <div id="activeFloorQuickControls" class="hidden-ui">
         <label for="floorTitleInput" style="margin-top:8px;">Titulo hoja activa</label>
         <input id="floorTitleInput" type="text" placeholder="Ej: INVENTARIO PISO 3">
         <label for="floorPlanHeightInput" style="margin-top:8px;">Alto plano hoja activa (mm)</label>
@@ -333,11 +335,12 @@
           <button id="applyFloorFontSizesBtn" type="button">Guardar letras hoja</button>
           <button id="clearFloorFontSizesBtn" type="button">Usar letras globales</button>
         </div>
+        </div>
         <p class="hint" style="margin-top:8px;">Titulos por hoja (uno por piso)</p>
         <div id="floorTitlesList" class="zones"></div>
       </div>
 
-      <div class="section">
+      <div class="section hidden-ui">
         <h2>2) Dibujar zonas</h2>
         <p class="help">Clic para puntos. Cierra zona con el botón.</p>
         <div class="btn-row">
@@ -355,7 +358,7 @@
         <p id="drawHint" class="hint">Carga pisos para empezar.</p>
       </div>
 
-      <div class="section">
+      <div class="section hidden-ui">
         <h2>3) Unidad seleccionada</h2>
         <label for="unitLabel">Etiqueta (ej: A-101)</label>
         <input id="unitLabel" type="text" placeholder="Ej: 101">
