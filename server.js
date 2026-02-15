@@ -1199,6 +1199,8 @@ app.get('/api/plano-ventas/default-excel', (req, res) => {
   const candidates = [
     ...canonicalDevFiles.map((f) => f.fullPath),
     ...latestDevFiles.map((f) => f.fullPath),
+    // Shared global master CSV uploaded from Home (CSV Maestro).
+    ROI_MASTER_CSV_PATH,
     path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.xls'),
     path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.xlsx'),
     path.join(DEVELOPMENTS_DIR, dev.slug, 'INVENTARIOMAESTROWIX.csv'),
