@@ -403,6 +403,66 @@
       return [sx / points.length, sy / points.length];
     }
 
+    function normalizePoint(raw) {
+      if (Array.isArray(raw) && raw.length >= 2) {
+        const x = Number(raw[0]);
+        const y = Number(raw[1]);
+        if (Number.isFinite(x) && Number.isFinite(y)) return [x, y];
+      }
+      if (raw && typeof raw === "object") {
+        const x = Number(raw.x);
+        const y = Number(raw.y);
+        if (Number.isFinite(x) && Number.isFinite(y)) return [x, y];
+      }
+      return null;
+    }
+
+    function normalizeImportedFloors(payload) {
+      const sourceFloors = Array.isArray(payload)
+        ? payload
+        : (payload && Array.isArray(payload.floors) ? payload.floors : []);
+      if (!sourceFloors.length) return [];
+
+      let zoneCounter = Number(payload && payload.nextZoneId) || 1;
+      const out = sourceFloors
+        .slice(0, MAX_FLOORS)
+        .map((floor, floorIndex) => {
+          if (!floor || !floor.imageDataUrl) return null;
+          const floorId = String(floor.id || `floor-${Date.now()}-${floorIndex}-${Math.random().toString(36).slice(2, 7)}`);
+          const zones = (Array.isArray(floor.zones) ? floor.zones : [])
+            .map((zone) => {
+              const points = (Array.isArray(zone && zone.points) ? zone.points : [])
+                .map(normalizePoint)
+                .filter(Boolean);
+              if (points.length < 3) return null;
+              const zoneId = String((zone && zone.id) || `zone-${zoneCounter++}`);
+              const labelOffset = zone && zone.labelOffset && Number.isFinite(Number(zone.labelOffset.x)) && Number.isFinite(Number(zone.labelOffset.y))
+                ? { x: Number(zone.labelOffset.x), y: Number(zone.labelOffset.y) }
+                : { x: 0, y: 0 };
+              return {
+                id: zoneId,
+                label: String((zone && zone.label) || ""),
+                labelOffset,
+                points
+              };
+            })
+            .filter(Boolean);
+
+          return {
+            id: floorId,
+            name: String(floor.name || `Piso ${floorIndex + 1}`),
+            imageDataUrl: String(floor.imageDataUrl),
+            imageWidth: Number(floor.imageWidth) || 0,
+            imageHeight: Number(floor.imageHeight) || 0,
+            zones
+          };
+        })
+        .filter(Boolean);
+
+      state.nextZoneId = Math.max(zoneCounter, state.nextZoneId || 1);
+      return out;
+    }
+
     function updateHint() {
       if (!state.floors.length) {
         drawHint.textContent = "Carga hasta 6 imágenes de pisos.";
@@ -766,12 +826,13 @@
     }
 
     function applyPersistedState(payload) {
-      if (!payload || !Array.isArray(payload.floors) || !payload.floors.length) {
+      const normalizedFloors = normalizeImportedFloors(payload);
+      if (!normalizedFloors.length) {
         alert("JSON inválido o vacío.");
         return;
       }
-      state.floors = payload.floors.slice(0, MAX_FLOORS);
-      state.nextZoneId = Number(payload.nextZoneId) || 1;
+      state.floors = normalizedFloors;
+      state.nextZoneId = Math.max(Number(payload && payload.nextZoneId) || 1, state.nextZoneId || 1);
       state.showUnitLabels = payload.showUnitLabels !== false;
       showLabelsInput.checked = state.showUnitLabels;
       state.activeFloorId = state.floors[0].id;
