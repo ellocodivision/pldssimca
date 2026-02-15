@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execSync } = require('child_process');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
 const session = require('express-session');
@@ -26,6 +27,7 @@ const log = (msg) => {
 };
 
 log('Iniciando servidor...');
+const PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.join(__dirname, '.cache', 'puppeteer');
 
 const TEMPLATE_DIR = path.join(__dirname, 'templates');
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -234,6 +236,40 @@ function sanitizeJsonFileName(rawName) {
   const base = path.basename(value).replace(/[^\w\-(). ]+/g, '_');
   const normalized = base.toLowerCase().endsWith('.json') ? base : `${base}.json`;
   return normalized || fallback;
+}
+
+function launchPdfBrowser() {
+  const launchOptions = {
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--no-zygote',
+      '--single-process',
+      '--font-render-hinting=none'
+    ]
+  };
+  return puppeteer.launch(launchOptions);
+}
+
+function installChromeIfMissing(err) {
+  const msg = String((err && err.message) || '');
+  if (!/Could not find Chrome/i.test(msg)) return false;
+  try {
+    log(`Chrome no encontrado. Instalando en caliente en ${PUPPETEER_CACHE_DIR} ...`);
+    execSync('npx puppeteer browsers install chrome', {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        PUPPETEER_CACHE_DIR
+      }
+    });
+    return true;
+  } catch (installErr) {
+    log(`Fallo instalando Chrome en caliente: ${installErr && installErr.stack ? installErr.stack : installErr}`);
+    return false;
+  }
 }
 
 function sanitizeExcelFileName(rawName) {
@@ -1557,17 +1593,13 @@ app.post('/api/plano-ventas/render-pdf', async (req, res) => {
 
   let browser = null;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--no-zygote',
-        '--single-process',
-        '--font-render-hinting=none'
-      ]
-    });
+    try {
+      browser = await launchPdfBrowser();
+    } catch (launchErr) {
+      const installed = installChromeIfMissing(launchErr);
+      if (!installed) throw launchErr;
+      browser = await launchPdfBrowser();
+    }
     const page = await browser.newPage();
     page.setDefaultTimeout(120000);
     page.setDefaultNavigationTimeout(120000);
