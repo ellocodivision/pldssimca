@@ -3,7 +3,7 @@ services:
     name: aml-formats-app
     env: node
     plan: starter
-    buildCommand: npm install && npx puppeteer browsers install chrome
+    buildCommand: PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer npm install && PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer npx puppeteer browsers install chrome
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -12,6 +12,6 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: PUPPETEER_CACHE_DIR
-        value: /opt/render/.cache/puppeteer
+        value: /opt/render/project/src/.cache/puppeteer
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: "false"
