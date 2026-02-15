@@ -2111,7 +2111,33 @@
         return;
       }
       if (id.startsWith("__srv__:")) {
-        alert("Esa version viene del servidor. Para borrar, elimina el archivo JSON en la carpeta del desarrollo.");
+        const fileName = id.slice("__srv__:".length);
+        if (!fileName) {
+          alert("Archivo de servidor inválido.");
+          return;
+        }
+        if (!window.confirm(`Borrar del servidor '${fileName}'?`)) return;
+        fetch(`/api/plano-ventas/json-files?dev=${encodeURIComponent(DEV)}&name=${encodeURIComponent(fileName)}`, {
+          method: "DELETE"
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              let msg = `HTTP ${res.status}`;
+              try {
+                const data = await res.json();
+                if (data && data.error) msg = data.error;
+              } catch {}
+              throw new Error(msg);
+            }
+          })
+          .then(async () => {
+            await loadServerProjectVersions();
+            refreshProjectSelector();
+            if (projectStatus) projectStatus.textContent = `Version de servidor borrada: ${fileName}.`;
+          })
+          .catch((err) => {
+            alert(`No se pudo borrar archivo de servidor: ${err && err.message ? err.message : "error"}`);
+          });
         return;
       }
       const selected = getProjectIndex().find((p) => p.id === id);

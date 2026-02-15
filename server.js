@@ -1423,6 +1423,44 @@ app.get('/api/plano-ventas/json-files', (req, res) => {
   }
 });
 
+app.delete('/api/plano-ventas/json-files', (req, res) => {
+  const dev = getRequestedDevelopment(req);
+  const nameRaw = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+  const safeName = nameRaw && !nameRaw.includes('/') && !nameRaw.includes('\\')
+    ? path.basename(nameRaw)
+    : '';
+  if (!safeName || !safeName.toLowerCase().endsWith('.json')) {
+    return res.status(400).json({ error: 'Nombre de archivo JSON inválido' });
+  }
+
+  const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
+  const deletedPaths = [];
+  floorDirs.forEach((dir) => {
+    const target = path.join(dir, safeName);
+    try {
+      if (fs.existsSync(target) && fs.statSync(target).isFile()) {
+        fs.unlinkSync(target);
+        deletedPaths.push(target);
+      }
+    } catch {}
+  });
+
+  if (!deletedPaths.length) {
+    return res.status(404).json({
+      error: 'Archivo no encontrado para borrar',
+      dev: dev.slug,
+      fileName: safeName
+    });
+  }
+
+  return res.json({
+    ok: true,
+    dev: dev.slug,
+    fileName: safeName,
+    deletedPaths
+  });
+});
+
 app.get('/api/plano-ventas/default-json-merged', (req, res) => {
   const dev = getRequestedDevelopment(req);
   const downloadsDir = path.join(os.homedir(), 'Downloads');
