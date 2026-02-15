@@ -11,3 +11,7 @@ services:
         value: production
       - key: HOST
         value: 0.0.0.0
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/.cache/puppeteer
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: "false"

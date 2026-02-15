@@ -77,7 +77,7 @@
         <h1>Descargar PDF Actualizado</h1>
         <p>Un clic para abrir la exportación automática usando tu configuración guardada y el Excel actualizado.</p>
       </div>
-      <button type="button" class="back" onclick="history.back()">Regresar</button>
+      <a id="backLink" class="back" href="/gerente-ventas">Regresar</a>
     </div>
     <div class="actions">
       <button id="downloadBtn" class="primary" type="button">Descargar PDF</button>
@@ -94,6 +94,8 @@
     const devMatch = window.location.pathname.match(/^\/gerente-ventas\/([^/]+)\/plano-descargar$/i);
     const DEV = (URL_PARAMS.get("dev") || (devMatch && devMatch[1]) || "ceiba").toLowerCase();
     const DEV_BASE = `/gerente-ventas/${encodeURIComponent(DEV)}`;
+    const backLink = document.getElementById("backLink");
+    if (backLink) backLink.href = DEV_BASE;
     const editorUrl = `${DEV_BASE}/plano-ventas?dev=${encodeURIComponent(DEV)}`;
     const quickExportUrl = `${DEV_BASE}/plano-ventas?quick_export=1&dev=${encodeURIComponent(DEV)}`;
     openEditorLink.href = editorUrl;

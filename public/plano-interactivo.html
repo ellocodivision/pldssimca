@@ -168,7 +168,7 @@
             <h1>Paso 1: Marcar unidades</h1>
             <p class="help">Aquí solo dibujas y nombras unidades por piso.</p>
           </div>
-          <button type="button" class="back" onclick="history.back()">Regresar</button>
+          <a id="backLink" class="back" href="/gerente-ventas">Regresar</a>
         </div>
       </div>
 
@@ -310,6 +310,8 @@
     const importBtn = document.getElementById("importBtn");
     const importInput = document.getElementById("importInput");
     const goStep2Link = document.getElementById("goStep2Link");
+    const backLink = document.getElementById("backLink");
+    if (backLink) backLink.href = DEV_BASE;
     goStep2Link.href = STEP2_URL;
     const zoomOutBtn = document.getElementById("zoomOutBtn");
     const zoomInBtn = document.getElementById("zoomInBtn");

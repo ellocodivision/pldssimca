@@ -1047,7 +1047,7 @@ app.get('/gerente-ventas', (req, res) => {
           <h1>Gerente Ventas</h1>
           <p class="sub">Módulo central para flujo de pisos, edición visual y descarga PDF.</p>
         </div>
-        <button type="button" class="back" onclick="history.back()">Regresar</button>
+        <a class="back" href="/">Regresar</a>
       </div>
       <div class="grid">
         ${DEVELOPMENTS.map((dev, idx) => `

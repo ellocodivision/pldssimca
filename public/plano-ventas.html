@@ -278,7 +278,7 @@
             <h1>Plataforma de unidades</h1>
             <p class="help">Paso 2: cargar JSON marcado + Excel + estado visual.</p>
           </div>
-          <button type="button" class="back" onclick="history.back()">Regresar</button>
+          <a id="backLink" class="back" href="/gerente-ventas">Regresar</a>
         </div>
       </div>
 
@@ -738,6 +738,8 @@
     const deleteProjectBtn = document.getElementById("deleteProjectBtn");
     const projectStatus = document.getElementById("projectStatus");
     const goStep1Link = document.getElementById("goStep1Link");
+    const backLink = document.getElementById("backLink");
+    if (backLink) backLink.href = DEV_BASE;
     goStep1Link.href = `${DEV_BASE}/plano-interactivo?dev=${encodeURIComponent(DEV)}`;
     if (excelFilterHint) {
       excelFilterHint.textContent = `Filtro fijo: desarrollo en columna C = ${DEV_LABEL}, unidad en columna D.`;
