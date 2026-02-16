@@ -177,6 +177,9 @@
         <label for="imagesInput">Imágenes del proyecto</label>
         <input id="imagesInput" type="file" accept="image/*" multiple>
         <div id="floorTabs" class="tabs"></div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button id="deleteFloorBtn" class="danger" type="button" disabled>Eliminar piso actual</button>
+        </div>
       </div>
 
       <div class="section">
@@ -287,6 +290,7 @@
     const canvasWrap = document.querySelector(".canvas-wrap");
     const imagesInput = document.getElementById("imagesInput");
     const floorTabs = document.getElementById("floorTabs");
+    const deleteFloorBtn = document.getElementById("deleteFloorBtn");
     const baseImage = document.getElementById("baseImage");
     const overlay = document.getElementById("overlay");
     const startZoneBtn = document.getElementById("startZoneBtn");
@@ -312,6 +316,19 @@
     const zoomResetBtn = document.getElementById("zoomResetBtn");
     const zoomRangeInput = document.getElementById("zoomRangeInput");
     const zoomValue = document.getElementById("zoomValue");
+    const DEV_LABEL = String(DEV || "ceiba").replace(/[-_]+/g, " ").toUpperCase();
+
+    function safeNameToken(value) {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    function stampNow() {
+      return new Date().toISOString().replace(/[:.]/g, "-");
+    }
 
     function clampZoom(value) {
       return Math.max(0.5, Math.min(4, value));
@@ -493,6 +510,7 @@
       deleteZoneBtn.disabled = !hasFloor || !state.selectedZoneId;
       applyUnitBtn.disabled = !hasFloor || !state.selectedZoneId;
       autoLabelBtn.disabled = !hasFloor;
+      deleteFloorBtn.disabled = !hasFloor;
     }
 
     function setSelectedZone(zoneId) {
@@ -520,6 +538,38 @@
       updateHint();
       render();
       enableButtons();
+    }
+
+    function deleteActiveFloor() {
+      const floor = activeFloor();
+      if (!floor) return;
+      const zoneCount = Array.isArray(floor.zones) ? floor.zones.length : 0;
+      const warn = zoneCount
+        ? `Eliminar este piso también borrará ${zoneCount} zona(s). ¿Continuar?`
+        : "¿Eliminar este piso?";
+      if (!window.confirm(warn)) return;
+
+      const index = state.floors.findIndex((f) => f.id === floor.id);
+      if (index < 0) return;
+      state.floors.splice(index, 1);
+
+      if (!state.floors.length) {
+        state.activeFloorId = null;
+        state.selectedZoneId = null;
+        state.drawing = false;
+        state.drawingPoints = [];
+        state.cursorPoint = null;
+        baseImage.removeAttribute("src");
+        overlay.innerHTML = "";
+        applyZoomToStage();
+        updateHint();
+        render();
+        enableButtons();
+        return;
+      }
+
+      const nextIndex = Math.min(index, state.floors.length - 1);
+      switchFloor(state.floors[nextIndex].id);
     }
 
     function loadFloorImage(floor) {
@@ -897,18 +947,20 @@
 
     async function exportJson() {
       const payloadObj = getPersistableState();
-      const fileName = "unidades-marcadas-unificado-orden-adjuntos.json";
-      const savedOnServer = await persistProjectJsonToServer(payloadObj, fileName);
+      const canonicalFileName = "unidades-marcadas-unificado-orden-adjuntos.json";
+      const mappedFileName = `imagen-mapeada-${safeNameToken(DEV)}-${stampNow()}.json`;
+      const savedCanonical = await persistProjectJsonToServer(payloadObj, canonicalFileName);
+      const savedMapped = await persistProjectJsonToServer(payloadObj, mappedFileName);
       const blob = new Blob([JSON.stringify(payloadObj, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = fileName;
+      link.download = mappedFileName;
       link.click();
       URL.revokeObjectURL(link.href);
-      if (savedOnServer) {
-        alert("JSON exportado y guardado en la carpeta del desarrollo.");
+      if (savedCanonical && savedMapped) {
+        alert(`JSON exportado y guardado en carpeta del desarrollo como:\n- ${mappedFileName}\n- ${canonicalFileName}`);
       } else {
-        alert("JSON exportado. No se pudo guardar en servidor en este momento.");
+        alert("JSON exportado. No se pudo guardar completamente en servidor en este momento.");
       }
     }
 
@@ -1000,6 +1052,7 @@
     finishZoneBtn.addEventListener("click", finishDrawing);
     cancelZoneBtn.addEventListener("click", cancelDrawing);
     deleteZoneBtn.addEventListener("click", deleteSelectedZone);
+    deleteFloorBtn.addEventListener("click", deleteActiveFloor);
     applyUnitBtn.addEventListener("click", applySelectedUnitChanges);
     autoLabelBtn.addEventListener("click", autoLabel);
     snapParallelInput.addEventListener("change", () => {
