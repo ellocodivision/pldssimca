@@ -304,6 +304,10 @@
           <input id="showLabelsEditorInput" type="checkbox" checked>
           Mostrar numero de unidad (plano + PDF)
         </label>
+        <label for="unitNumberSizeInput" style="margin-top:8px;">Tamano numero unidad (px)</label>
+        <input id="unitNumberSizeInput" type="number" min="10" max="64" step="1" value="20">
+        <label for="zoneBorderWidthInput" style="margin-top:8px;">Grosor borde zonas (px)</label>
+        <input id="zoneBorderWidthInput" type="number" min="1" max="12" step="0.5" value="2">
         <p id="projectStatus" class="hint">Sin versiones guardadas.</p>
         <div id="floorTabs" class="tabs"></div>
         <div id="activeFloorQuickControls" class="hidden-ui">
@@ -673,7 +677,9 @@
         headers: [],
         rows: []
       },
-      pdfLayout: {}
+      pdfLayout: {},
+      unitNumberSizePx: 20,
+      zoneBorderWidthPx: 2
     };
 
     const floorTabs = document.getElementById("floorTabs");
@@ -756,6 +762,8 @@
     const loadProjectBtn = document.getElementById("loadProjectBtn");
     const deleteProjectBtn = document.getElementById("deleteProjectBtn");
     const showLabelsEditorInput = document.getElementById("showLabelsEditorInput");
+    const unitNumberSizeInput = document.getElementById("unitNumberSizeInput");
+    const zoneBorderWidthInput = document.getElementById("zoneBorderWidthInput");
     const projectStatus = document.getElementById("projectStatus");
     const goStep1Link = document.getElementById("goStep1Link");
     const backLink = document.getElementById("backLink");
@@ -801,6 +809,18 @@
         return String(parseInt(normalized, 10));
       }
       return normalized.toLowerCase();
+    }
+
+    function getUnitNumberSizePx() {
+      const value = Number(state.unitNumberSizePx);
+      if (!Number.isFinite(value)) return 20;
+      return Math.min(64, Math.max(10, value));
+    }
+
+    function getZoneBorderWidthPx() {
+      const value = Number(state.zoneBorderWidthPx);
+      if (!Number.isFinite(value)) return 2;
+      return Math.min(12, Math.max(1, value));
     }
 
     function getUnitCandidates(value) {
@@ -1390,6 +1410,8 @@
     function renderZones() {
       const floor = activeFloor();
       if (!floor) return "";
+      const numberSizePx = getUnitNumberSizePx();
+      const borderWidthPx = getZoneBorderWidthPx();
       return floor.zones.map((zone) => {
         const pts = zone.points.map(([x, y]) => `${x},${y}`).join(" ");
         const [baseX, baseY] = polygonCenter(zone.points);
@@ -1408,7 +1430,7 @@
               text-anchor="middle"
               dominant-baseline="middle"
               font-family="Segoe UI, Tahoma, sans-serif"
-              font-size="20"
+              font-size="${numberSizePx}"
               font-weight="700"
               fill="#121"
               stroke="#fff"
@@ -1419,7 +1441,7 @@
         ` : "";
         return `
           <g data-zone-id="${zone.id}">
-            <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.28" stroke="${isActive ? "#163c2c" : fillColor}" stroke-width="${isActive ? 3 : 2}" />
+            <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.28" stroke="${isActive ? "#163c2c" : fillColor}" stroke-width="${isActive ? borderWidthPx + 1 : borderWidthPx}" />
             ${labelHtml}
           </g>
         `;
@@ -1670,6 +1692,8 @@
         floors: state.floors,
         nextZoneId: state.nextZoneId,
         showUnitLabels: state.showUnitLabels,
+        unitNumberSizePx: getUnitNumberSizePx(),
+        zoneBorderWidthPx: getZoneBorderWidthPx(),
         excel: state.excel,
         pdfLayout: state.pdfLayout
       };
@@ -2221,7 +2245,15 @@
         return;
       }
       state.showUnitLabels = payload && payload.showUnitLabels === false ? false : true;
+      state.unitNumberSizePx = Number(payload && payload.unitNumberSizePx);
+      if (!Number.isFinite(state.unitNumberSizePx)) state.unitNumberSizePx = 20;
+      state.unitNumberSizePx = Math.min(64, Math.max(10, state.unitNumberSizePx));
+      state.zoneBorderWidthPx = Number(payload && payload.zoneBorderWidthPx);
+      if (!Number.isFinite(state.zoneBorderWidthPx)) state.zoneBorderWidthPx = 2;
+      state.zoneBorderWidthPx = Math.min(12, Math.max(1, state.zoneBorderWidthPx));
       if (showLabelsEditorInput) showLabelsEditorInput.checked = state.showUnitLabels !== false;
+      if (unitNumberSizeInput) unitNumberSizeInput.value = String(state.unitNumberSizePx);
+      if (zoneBorderWidthInput) zoneBorderWidthInput.value = String(state.zoneBorderWidthPx);
       applyFloorsState(floors, { preferFirst: true });
       state.nextZoneId = Math.max(Number(payload.nextZoneId) || 1, state.nextZoneId);
       const keepCurrentExcel = options.keepCurrentExcel !== false;
@@ -2310,6 +2342,8 @@
     function buildFloorSvgMarkup(floor) {
       const width = floor.imageWidth || 1200;
       const height = floor.imageHeight || 900;
+      const numberSizePx = getUnitNumberSizePx();
+      const borderWidthPx = getZoneBorderWidthPx();
       const showLabels = typeof floor.showUnitLabels === "boolean"
         ? floor.showUnitLabels
         : state.showUnitLabels !== false;
@@ -2322,10 +2356,10 @@
         const cy = baseY + dy;
         const fillColor = statusColors[zone.status] || statusColors.disponible;
         const textMarkup = showLabels
-          ? `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI, Tahoma, sans-serif" font-size="24" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${escapeHtml(zone.label)}</text>`
+          ? `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI, Tahoma, sans-serif" font-size="${numberSizePx}" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${escapeHtml(zone.label)}</text>`
           : "";
         return `
-          <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.30" stroke="${fillColor}" stroke-width="2"></polygon>
+          <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.30" stroke="${fillColor}" stroke-width="${borderWidthPx}"></polygon>
           ${textMarkup}
         `;
       }).join("");
@@ -3225,6 +3259,24 @@
         render();
       });
       showLabelsEditorInput.checked = state.showUnitLabels !== false;
+    }
+    if (unitNumberSizeInput) {
+      unitNumberSizeInput.value = String(getUnitNumberSizePx());
+      unitNumberSizeInput.addEventListener("input", () => {
+        const value = Number(unitNumberSizeInput.value);
+        if (!Number.isFinite(value)) return;
+        state.unitNumberSizePx = Math.min(64, Math.max(10, value));
+        render();
+      });
+    }
+    if (zoneBorderWidthInput) {
+      zoneBorderWidthInput.value = String(getZoneBorderWidthPx());
+      zoneBorderWidthInput.addEventListener("input", () => {
+        const value = Number(zoneBorderWidthInput.value);
+        if (!Number.isFinite(value)) return;
+        state.zoneBorderWidthPx = Math.min(12, Math.max(1, value));
+        render();
+      });
     }
 
     applyFloorTitleBtn.addEventListener("click", () => applyActiveFloorTitle(false));
