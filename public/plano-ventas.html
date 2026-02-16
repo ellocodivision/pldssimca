@@ -2788,6 +2788,21 @@
     }
 
     async function exportPdf(options = {}) {
+      const downloadHtmlFallback = (html, reason) => {
+        try {
+          const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = `${DEV_LABEL} INVENTARIO - INVENTORY (PRINT FALLBACK).html`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+          alert(`No se pudo generar PDF en servidor (${reason}). Se descargó HTML listo para Imprimir > Guardar como PDF.`);
+        } catch {}
+      };
+
       try {
         savePdfLayoutFromControls();
         const layout = getPdfLayout();
@@ -2821,6 +2836,10 @@
               if (data.details) message += ` (${data.details})`;
             }
           } catch {}
+          if (response.status === 502 || response.status === 504 || response.status === 503) {
+            downloadHtmlFallback(html, message);
+            return;
+          }
           throw new Error(message);
         }
         const contentType = String(response.headers.get("content-type") || "").toLowerCase();
@@ -2842,6 +2861,15 @@
         setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
       } catch (error) {
         let detail = error && error.message ? error.message : "desconocido";
+        if (/HTTP 502|HTTP 503|HTTP 504/i.test(detail)) {
+          try {
+            savePdfLayoutFromControls();
+            const layout = getPdfLayout();
+            const html = buildPdfHtmlDocument(layout, state.floors, { autoPrint: false });
+            downloadHtmlFallback(html, detail);
+            return;
+          } catch {}
+        }
         if (/failed to fetch/i.test(detail)) {
           try {
             const health = await fetch("/health", { cache: "no-store" });
