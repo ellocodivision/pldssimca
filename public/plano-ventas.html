@@ -2339,6 +2339,63 @@
       return rows.map((row) => ({ row }));
     }
 
+    function loadImageFromDataUrl(dataUrl) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+
+    async function compressFloorImageDataUrl(dataUrl, options = {}) {
+      const maxLongSide = Number(options.maxLongSide) || 1800;
+      const jpegQuality = Number(options.jpegQuality) || 0.82;
+      if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return dataUrl;
+      try {
+        const img = await loadImageFromDataUrl(dataUrl);
+        const width = Number(img.naturalWidth) || 0;
+        const height = Number(img.naturalHeight) || 0;
+        if (!width || !height) return dataUrl;
+
+        const longer = Math.max(width, height);
+        if (longer <= maxLongSide) return dataUrl;
+
+        const scale = maxLongSide / longer;
+        const targetW = Math.max(1, Math.round(width * scale));
+        const targetH = Math.max(1, Math.round(height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return dataUrl;
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+        return canvas.toDataURL("image/jpeg", Math.min(0.92, Math.max(0.55, jpegQuality)));
+      } catch {
+        return dataUrl;
+      }
+    }
+
+    async function buildOptimizedFloorsForPdf(floors) {
+      const source = Array.isArray(floors) ? floors : [];
+      const out = [];
+      for (const floor of source) {
+        if (!floor || !floor.imageDataUrl) {
+          out.push(floor);
+          continue;
+        }
+        const optimizedImage = await compressFloorImageDataUrl(floor.imageDataUrl, {
+          maxLongSide: 1800,
+          jpegQuality: 0.82
+        });
+        out.push({
+          ...floor,
+          imageDataUrl: optimizedImage
+        });
+      }
+      return out;
+    }
+
     function buildFloorSvgMarkup(floor) {
       const width = floor.imageWidth || 1200;
       const height = floor.imageHeight || 900;
@@ -2717,7 +2774,7 @@
 </html>`;
     }
 
-    function refreshPdfLivePreview() {
+    async function refreshPdfLivePreview() {
       savePdfLayoutFromControls();
       const layout = getPdfLayout();
       const viewportScrollTop = pdfLiveViewport ? pdfLiveViewport.scrollTop : 0;
@@ -2773,7 +2830,8 @@
           }
         } catch {}
       };
-      pdfLiveFrame.srcdoc = buildPdfHtmlDocument(layout, state.floors, {
+      const optimizedFloors = await buildOptimizedFloorsForPdf(state.floors);
+      pdfLiveFrame.srcdoc = buildPdfHtmlDocument(layout, optimizedFloors, {
         autoPrint: false,
         initialScrollY: frameScrollY
       });
@@ -2814,7 +2872,8 @@
           alert("Carga un Excel antes de exportar PDF.");
           return;
         }
-        const html = buildPdfHtmlDocument(layout, state.floors, { autoPrint: false });
+        const optimizedFloors = await buildOptimizedFloorsForPdf(state.floors);
+        const html = buildPdfHtmlDocument(layout, optimizedFloors, { autoPrint: false });
         if (options.previewOnly) {
           const blob = new Blob([html], { type: "text/html;charset=utf-8" });
           const blobUrl = URL.createObjectURL(blob);
