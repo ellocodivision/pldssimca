@@ -178,6 +178,10 @@
         <input id="imagesInput" type="file" accept="image/*" multiple>
         <div id="floorTabs" class="tabs"></div>
         <div class="btn-row" style="margin-top:8px;">
+          <button id="moveFloorUpBtn" type="button" disabled>Subir piso</button>
+          <button id="moveFloorDownBtn" type="button" disabled>Bajar piso</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
           <button id="deleteFloorBtn" class="danger" type="button" disabled>Eliminar piso actual</button>
         </div>
       </div>
@@ -290,6 +294,8 @@
     const canvasWrap = document.querySelector(".canvas-wrap");
     const imagesInput = document.getElementById("imagesInput");
     const floorTabs = document.getElementById("floorTabs");
+    const moveFloorUpBtn = document.getElementById("moveFloorUpBtn");
+    const moveFloorDownBtn = document.getElementById("moveFloorDownBtn");
     const deleteFloorBtn = document.getElementById("deleteFloorBtn");
     const baseImage = document.getElementById("baseImage");
     const overlay = document.getElementById("overlay");
@@ -392,6 +398,10 @@
 
     function activeFloor() {
       return state.floors.find((f) => f.id === state.activeFloorId) || null;
+    }
+
+    function activeFloorIndex() {
+      return state.floors.findIndex((f) => f.id === state.activeFloorId);
     }
 
     function zoneById(zoneId) {
@@ -511,6 +521,9 @@
       applyUnitBtn.disabled = !hasFloor || !state.selectedZoneId;
       autoLabelBtn.disabled = !hasFloor;
       deleteFloorBtn.disabled = !hasFloor;
+      const idx = activeFloorIndex();
+      moveFloorUpBtn.disabled = !hasFloor || idx <= 0;
+      moveFloorDownBtn.disabled = !hasFloor || idx < 0 || idx >= state.floors.length - 1;
     }
 
     function setSelectedZone(zoneId) {
@@ -570,6 +583,18 @@
 
       const nextIndex = Math.min(index, state.floors.length - 1);
       switchFloor(state.floors[nextIndex].id);
+    }
+
+    function moveActiveFloor(direction) {
+      const idx = activeFloorIndex();
+      if (idx < 0) return;
+      const target = idx + direction;
+      if (target < 0 || target >= state.floors.length) return;
+      const tmp = state.floors[idx];
+      state.floors[idx] = state.floors[target];
+      state.floors[target] = tmp;
+      render();
+      enableButtons();
     }
 
     function loadFloorImage(floor) {
@@ -1052,6 +1077,8 @@
     finishZoneBtn.addEventListener("click", finishDrawing);
     cancelZoneBtn.addEventListener("click", cancelDrawing);
     deleteZoneBtn.addEventListener("click", deleteSelectedZone);
+    moveFloorUpBtn.addEventListener("click", () => moveActiveFloor(-1));
+    moveFloorDownBtn.addEventListener("click", () => moveActiveFloor(1));
     deleteFloorBtn.addEventListener("click", deleteActiveFloor);
     applyUnitBtn.addEventListener("click", applySelectedUnitChanges);
     autoLabelBtn.addEventListener("click", autoLabel);
