@@ -317,6 +317,8 @@
         <input id="floorPlanHeightInput" type="number" min="90" max="320" step="1" placeholder="Usar valor por defecto">
         <label for="floorPlanOffsetInput" style="margin-top:8px;">Mover plano hoja activa (mm)</label>
         <input id="floorPlanOffsetInput" type="number" min="0" max="40" step="0.5" placeholder="0 = normal">
+        <label for="floorTitleOffsetInput" style="margin-top:8px;">Bajar titulo hoja activa (mm)</label>
+        <input id="floorTitleOffsetInput" type="number" min="0" max="25" step="0.5" placeholder="0 = normal">
         <label for="floorTableOffsetInput" style="margin-top:8px;">Mover tabla hoja activa (mm)</label>
         <input id="floorTableOffsetInput" type="number" min="0" max="60" step="0.5" placeholder="2.5 = normal">
         <label for="floorHeaderFontSizeInput" style="margin-top:8px;">Letra encabezados hoja activa (px)</label>
@@ -436,6 +438,7 @@
           <option value="trebuchet">Trebuchet MS</option>
           <option value="georgia">Georgia</option>
           <option value="times">Times New Roman</option>
+          <option value="adobe-caslon-pro">Adobe Caslon Pro</option>
           <option value="garamond">Garamond</option>
           <option value="palatino">Palatino</option>
           <option value="courier">Courier New</option>
@@ -453,6 +456,7 @@
           <option value="trebuchet">Trebuchet MS</option>
           <option value="georgia">Georgia</option>
           <option value="times">Times New Roman</option>
+          <option value="adobe-caslon-pro">Adobe Caslon Pro</option>
           <option value="garamond">Garamond</option>
           <option value="palatino">Palatino</option>
           <option value="courier">Courier New</option>
@@ -468,6 +472,7 @@
           <option value="trebuchet">Trebuchet MS</option>
           <option value="georgia">Georgia</option>
           <option value="times">Times New Roman</option>
+          <option value="adobe-caslon-pro">Adobe Caslon Pro</option>
           <option value="garamond">Garamond</option>
           <option value="palatino">Palatino</option>
           <option value="courier">Courier New</option>
@@ -621,6 +626,7 @@
       trebuchet: "'Trebuchet MS', sans-serif",
       georgia: "Georgia, serif",
       times: "'Times New Roman', Times, serif",
+      "adobe-caslon-pro": "'Adobe Caslon Pro', 'Adobe Caslon Pro Regular', 'Adobe Caslon Pro Semibold', 'Times New Roman', serif",
       garamond: "Garamond, serif",
       palatino: "'Palatino Linotype', Palatino, serif",
       courier: "'Courier New', Courier, monospace",
@@ -646,7 +652,7 @@
       { key: "REC", label: "REC / BED" },
       { key: "TOTAL_M2", label: "TOTAL M2" },
       { key: "TOTAL_SQFT", label: "TOTAL SQFT" },
-      { key: "PRECIO", label: "PREC / PRICE" },
+      { key: "PRECIO", label: "PRECIO / PRICE" },
       { key: "DESCUENTO", label: "DESC / DISC %" },
       { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
     ];
@@ -687,6 +693,7 @@
     const floorTitleInput = document.getElementById("floorTitleInput");
     const floorPlanHeightInput = document.getElementById("floorPlanHeightInput");
     const floorPlanOffsetInput = document.getElementById("floorPlanOffsetInput");
+    const floorTitleOffsetInput = document.getElementById("floorTitleOffsetInput");
     const floorTableOffsetInput = document.getElementById("floorTableOffsetInput");
     const floorHeaderFontSizeInput = document.getElementById("floorHeaderFontSizeInput");
     const floorBodyFontSizeInput = document.getElementById("floorBodyFontSizeInput");
@@ -789,6 +796,14 @@
 
     function normalizeDevKey(value) {
       return normalizeKey(value).replace(/[^a-z0-9]+/g, "");
+    }
+
+    function safeFileToken(value) {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
     }
 
     function getTargetDevKeys() {
@@ -935,6 +950,11 @@
           ? String(Number(floor.planOffsetMm))
           : "";
       }
+      if (floorTitleOffsetInput) {
+        floorTitleOffsetInput.value = floor && Number.isFinite(Number(floor.titleOffsetMm))
+          ? String(Number(floor.titleOffsetMm))
+          : "";
+      }
       if (floorTableOffsetInput) {
         floorTableOffsetInput.value = floor && Number.isFinite(Number(floor.tableOffsetMm))
           ? String(Number(floor.tableOffsetMm))
@@ -994,6 +1014,40 @@
       render();
     }
 
+    function setFloorTitleOffsetWithAutoPlan(floor, nextTitleOffsetMm, clear = false) {
+      if (!floor) return;
+      const prevTitleOffset = Number.isFinite(Number(floor.titleOffsetMm)) ? Number(floor.titleOffsetMm) : 0;
+      let nextTitleOffset = prevTitleOffset;
+      if (clear) {
+        delete floor.titleOffsetMm;
+        nextTitleOffset = 0;
+      } else if (Number.isFinite(Number(nextTitleOffsetMm))) {
+        nextTitleOffset = Math.min(25, Math.max(0, Number(nextTitleOffsetMm)));
+        floor.titleOffsetMm = nextTitleOffset;
+      } else {
+        delete floor.titleOffsetMm;
+        nextTitleOffset = 0;
+      }
+      const delta = nextTitleOffset - prevTitleOffset;
+      if (Math.abs(delta) < 0.0001) return;
+      const currentPlanOffset = Number.isFinite(Number(floor.planOffsetMm)) ? Number(floor.planOffsetMm) : 0;
+      const adjustedPlanOffset = Math.min(40, Math.max(0, currentPlanOffset + delta));
+      if (Math.abs(adjustedPlanOffset) < 0.0001) {
+        delete floor.planOffsetMm;
+      } else {
+        floor.planOffsetMm = adjustedPlanOffset;
+      }
+    }
+
+    function applyActiveFloorTitleOffset(clear = false) {
+      const floor = activeFloor();
+      if (!floor) return;
+      const next = Number(floorTitleOffsetInput.value);
+      setFloorTitleOffsetWithAutoPlan(floor, next, clear);
+      syncFloorTitleControl();
+      render();
+    }
+
     function applyActiveFloorFontSizes(clear = false) {
       const floor = activeFloor();
       if (!floor) return;
@@ -1035,6 +1089,7 @@
         const current = String(floor.pdfTitle || "");
         const planHeightMm = Number.isFinite(Number(floor.planHeightMm)) ? String(Number(floor.planHeightMm)) : "";
         const planOffsetMm = Number.isFinite(Number(floor.planOffsetMm)) ? String(Number(floor.planOffsetMm)) : "";
+        const titleOffsetMm = Number.isFinite(Number(floor.titleOffsetMm)) ? String(Number(floor.titleOffsetMm)) : "";
         const tableOffsetMm = Number.isFinite(Number(floor.tableOffsetMm)) ? String(Number(floor.tableOffsetMm)) : "";
         const headerFontSizePx = Number.isFinite(Number(floor.headerFontSizePx)) ? String(Number(floor.headerFontSizePx)) : "";
         const bodyFontSizePx = Number.isFinite(Number(floor.bodyFontSizePx)) ? String(Number(floor.bodyFontSizePx)) : "";
@@ -1044,6 +1099,7 @@
           <input data-floor-title-id="${escapeAttr(floor.id)}" type="text" value="${escapeAttr(current)}" placeholder="Titulo de esta hoja">
           <input data-floor-height-id="${escapeAttr(floor.id)}" type="number" min="90" max="320" step="1" value="${escapeAttr(planHeightMm)}" placeholder="Alto plano de esta hoja (mm)">
           <input data-floor-plan-offset-id="${escapeAttr(floor.id)}" type="number" min="0" max="40" step="0.5" value="${escapeAttr(planOffsetMm)}" placeholder="Mover plano (mm)">
+          <input data-floor-title-offset-id="${escapeAttr(floor.id)}" type="number" min="0" max="25" step="0.5" value="${escapeAttr(titleOffsetMm)}" placeholder="Bajar titulo (mm)">
           <input data-floor-table-offset-id="${escapeAttr(floor.id)}" type="number" min="0" max="60" step="0.5" value="${escapeAttr(tableOffsetMm)}" placeholder="Mover tabla (mm)">
           <input data-floor-header-fs-id="${escapeAttr(floor.id)}" type="number" min="5.5" max="30" step="0.1" value="${escapeAttr(headerFontSizePx)}" placeholder="Letra encabezados de esta hoja (px)">
           <input data-floor-body-fs-id="${escapeAttr(floor.id)}" type="number" min="5.5" max="30" step="0.1" value="${escapeAttr(bodyFontSizePx)}" placeholder="Letra celdas de esta hoja (px)">
@@ -1102,6 +1158,17 @@
           } else {
             floor.tableOffsetMm = Math.min(60, Math.max(0, mm));
           }
+          if (id === state.activeFloorId) syncFloorTitleControl();
+          schedulePdfLivePreview();
+        });
+      });
+      floorTitlesList.querySelectorAll("[data-floor-title-offset-id]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const id = el.getAttribute("data-floor-title-offset-id");
+          const floor = state.floors.find((f) => f.id === id);
+          if (!floor) return;
+          const mm = Number(el.value);
+          setFloorTitleOffsetWithAutoPlan(floor, mm, !Number.isFinite(mm));
           if (id === state.activeFloorId) syncFloorTitleControl();
           schedulePdfLivePreview();
         });
@@ -1667,7 +1734,7 @@
               <th>REC / BED</th>
               <th>TOTAL M2</th>
               <th>TOTAL SQFT</th>
-              <th>PREC / PRICE</th>
+              <th>PRECIO / PRICE</th>
               <th>DESC / DISC %</th>
               <th>PRECIO FINAL / FINAL PRICE</th>
               <th>ESTADO</th>
@@ -1764,6 +1831,7 @@
             pdfTitle: String(floor.pdfTitle || ""),
             planHeightMm: Number.isFinite(Number(floor.planHeightMm)) ? Number(floor.planHeightMm) : undefined,
             planOffsetMm: Number.isFinite(Number(floor.planOffsetMm)) ? Number(floor.planOffsetMm) : undefined,
+            titleOffsetMm: Number.isFinite(Number(floor.titleOffsetMm)) ? Number(floor.titleOffsetMm) : undefined,
             tableOffsetMm: Number.isFinite(Number(floor.tableOffsetMm)) ? Number(floor.tableOffsetMm) : undefined,
             headerFontSizePx: Number.isFinite(Number(floor.headerFontSizePx)) ? Number(floor.headerFontSizePx) : undefined,
             bodyFontSizePx: Number.isFinite(Number(floor.bodyFontSizePx)) ? Number(floor.bodyFontSizePx) : undefined,
@@ -1836,8 +1904,9 @@
     }
 
     function applyFloorsState(floors, options = {}) {
-      const orderedFloors = sortFloorsForDisplay(floors).slice(0, MAX_FLOORS);
-      const normalized = withFreshIds(orderedFloors);
+      const sourceFloors = Array.isArray(floors) ? floors : [];
+      const preparedFloors = options.sortForDisplay ? sortFloorsForDisplay(sourceFloors) : [...sourceFloors];
+      const normalized = withFreshIds(preparedFloors.slice(0, MAX_FLOORS));
       state.floors = normalized.floors;
       state.nextZoneId = normalized.nextZoneId;
       if (!state.floors.length) {
@@ -2010,7 +2079,7 @@
         return;
       }
       const customName = String(projectNameInput.value || "").trim();
-      const name = customName || `Proyecto ${new Date().toLocaleString("es-MX")}`;
+      const name = customName || `${DEV_LABEL} editada`;
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const payloadObj = getPersistableState();
       const payloadForLocal = {
@@ -2056,7 +2125,7 @@
         .trim()
         .replace(/\s+/g, "-")
         .slice(0, 70) || "version";
-      const fileName = `version-${safeName}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+      const fileName = `version-${safeFileToken(DEV)}-editada-${safeName}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
       const serverSaved = await persistProjectJsonToServer(payloadObj, fileName);
 
       if (localSaved && serverSaved) {
@@ -2541,6 +2610,10 @@
         const pageTableOffset = Number.isFinite(pageTableOffsetMm)
           ? `${Math.min(60, Math.max(0, pageTableOffsetMm))}mm`
           : (layout.tableOffset || "2.5mm");
+        const pageTitleOffsetMm = Number(floor && floor.titleOffsetMm);
+        const pageTitleOffset = Number.isFinite(pageTitleOffsetMm)
+          ? `${Math.min(25, Math.max(0, pageTitleOffsetMm))}mm`
+          : "0mm";
         const pageHeaderFontPx = Number(floor && floor.headerFontSizePx);
         const pageBodyFontPx = Number(floor && floor.bodyFontSizePx);
         const hasManualFontSize = Number.isFinite(pageHeaderFontPx) || Number.isFinite(pageBodyFontPx);
@@ -2550,7 +2623,7 @@
         const pageBodyFontSize = Number.isFinite(pageBodyFontPx)
           ? `${Math.min(30, Math.max(5.5, pageBodyFontPx))}px`
           : layout.bodyFontSize;
-        const titleHtml = pageTitle ? `<p class="title">${escapeHtml(pageTitle)}</p>` : "";
+        const titleHtml = pageTitle ? `<p class="title" style="margin-top:${pageTitleOffset};">${escapeHtml(pageTitle)}</p>` : "";
         const notesHtml = `
             <div class="notes">
               <p>Los precios están expresados en dólares estadounidenses (USD) y están sujetos al tipo de cambio vigente en pesos mexicanos al momento de la transacción. Precios sujetos a cambios sin previo aviso.</p>
@@ -2576,7 +2649,7 @@
 
         if (layout.pageContentMode === "split") {
           return `
-          <div class="page page-plan" data-page-index="${index}-plan" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
+          <div class="page page-plan" data-page-index="${index}-plan" data-plan-base-mm="${Number.parseFloat(pagePlanHeight) || 185}" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
             <div class="head">
               ${logoHtml}
               ${brandTextHtml}
@@ -2603,7 +2676,7 @@
         }
 
         return `
-          <div class="page page-single" data-page-index="${index}" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
+          <div class="page page-single" data-page-index="${index}" data-plan-base-mm="${Number.parseFloat(pagePlanHeight) || 185}" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
             <div class="head">
               ${logoHtml}
               ${brandTextHtml}
@@ -2713,8 +2786,14 @@
       var tableWrap = pageEl.querySelector(".table-wrap");
       var notes = pageEl.querySelector(".notes");
       if (!tableWrap || !notes) return;
+      var planWrap = pageEl.querySelector(".plan-wrap");
       tableWrap.style.transform = "scale(1)";
       tableWrap.style.width = "100%";
+      if (planWrap) {
+        var basePlanMm = Number(pageEl.getAttribute("data-plan-base-mm"));
+        if (!Number.isFinite(basePlanMm)) basePlanMm = 185;
+        planWrap.style.height = basePlanMm + "mm";
+      }
 
       var available = Math.max(20, notes.offsetTop - tableWrap.offsetTop - 2);
       var natural = tableWrap.scrollHeight;
@@ -2722,26 +2801,41 @@
       var maxWidth = pageEl.clientWidth - 12;
       var scaleByHeight = natural > 0 ? available / natural : 1;
       var scaleByWidth = naturalWidth > 0 ? maxWidth / naturalWidth : 1;
-      var maxUpscale = 1.28;
-      var scale = Math.min(maxUpscale, scaleByHeight, scaleByWidth);
+      var maxUpscale = 1.45;
+      var scale = Math.min(maxUpscale, scaleByWidth, scaleByHeight);
       var lockScale = pageEl.getAttribute("data-lock-font-scale") === "1" || pageEl.getAttribute("data-manual-font-size") === "1";
       if (lockScale) {
-        scale = 1;
+        scale = Math.min(1, scaleByWidth, scaleByHeight);
       }
-      if (!lockScale && scale < 0.5) scale = 0.5;
+      if (scale < 0.25) scale = 0.25;
       tableWrap.style.transform = "scale(" + scale + ")";
       tableWrap.style.width = (100 / scale) + "%";
 
       // Safety pass: never let table overlap notes.
       var tries = 0;
-      while (tries < 40) {
+      var minPlanMm = 50;
+      while (tries < 80) {
+        available = Math.max(20, notes.offsetTop - tableWrap.offsetTop - 2);
         var tableBottom = tableWrap.offsetTop + (tableWrap.scrollHeight * scale);
         var notesTop = notes.offsetTop;
         if (tableBottom <= notesTop - 1) break;
-        scale -= 0.02;
-        if (scale < 0.45) { scale = 0.45; break; }
-        tableWrap.style.transform = "scale(" + scale + ")";
-        tableWrap.style.width = (100 / scale) + "%";
+        var reducedPlan = false;
+        if (planWrap) {
+          var currentPlanMm = parseFloat(planWrap.style.height) || Number(pageEl.getAttribute("data-plan-base-mm")) || 185;
+          if (currentPlanMm > minPlanMm) {
+            currentPlanMm = Math.max(minPlanMm, currentPlanMm - 1);
+            planWrap.style.height = currentPlanMm + "mm";
+            reducedPlan = true;
+          }
+        }
+        if (!reducedPlan) {
+          var strictScaleByHeight = tableWrap.scrollHeight > 0 ? (available / tableWrap.scrollHeight) : scale;
+          var strictScaleByWidth = tableWrap.scrollWidth > 0 ? (maxWidth / tableWrap.scrollWidth) : scale;
+          var nextScale = Math.min(scale - 0.02, strictScaleByHeight, strictScaleByWidth);
+          scale = Math.max(0.2, nextScale);
+          tableWrap.style.transform = "scale(" + scale + ")";
+          tableWrap.style.width = (100 / scale) + "%";
+        }
         tries += 1;
       }
     }
@@ -3392,6 +3486,12 @@
         applyActiveFloorOffsets(false);
       }
     });
+    floorTitleOffsetInput.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        applyActiveFloorTitleOffset(false);
+      }
+    });
     floorTableOffsetInput.addEventListener("keydown", (evt) => {
       if (evt.key === "Enter") {
         evt.preventDefault();
@@ -3413,6 +3513,7 @@
     floorHeaderFontSizeInput.addEventListener("change", () => applyActiveFloorFontSizes(false));
     floorBodyFontSizeInput.addEventListener("change", () => applyActiveFloorFontSizes(false));
     floorPlanOffsetInput.addEventListener("change", () => applyActiveFloorOffsets(false));
+    floorTitleOffsetInput.addEventListener("change", () => applyActiveFloorTitleOffset(false));
     floorTableOffsetInput.addEventListener("change", () => applyActiveFloorOffsets(false));
     floorLockFontScaleInput.addEventListener("change", applyActiveFloorLockFontScale);
     saveProjectBtn.addEventListener("click", saveProjectVersion);

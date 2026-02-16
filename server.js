@@ -18,6 +18,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-session-secret-change-
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const AUTH_READY = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+const LOCAL_NO_AUTH = String(process.env.LOCAL_NO_AUTH || '') === '1';
 const ALLOWED_DOMAIN = String(process.env.ALLOWED_DOMAIN || 'simca.mx').toLowerCase();
 const GERENTE_EMAIL = String(process.env.GERENTE_EMAIL || 'martin@simca.mx').toLowerCase();
 const LOG_PATH = '/tmp/fr-ven-server.log';
@@ -87,6 +88,17 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+if (LOCAL_NO_AUTH) {
+  app.use((req, _res, next) => {
+    req.user = {
+      id: 'local-dev-user',
+      email: GERENTE_EMAIL,
+      name: 'Local Dev'
+    };
+    req.isAuthenticated = () => true;
+    next();
+  });
+}
 app.use('/assets', express.static(path.join(PUBLIC_DIR, 'assets')));
 app.use('/plds-static', express.static(path.join(PUBLIC_DIR, 'plds')));
 
@@ -116,6 +128,7 @@ if (AUTH_READY) {
 }
 
 function requireAuth(req, res, next) {
+  if (LOCAL_NO_AUTH) return next();
   if (req.isAuthenticated && req.isAuthenticated()) return next();
   if (String(req.path || '').startsWith('/api/')) {
     return res.status(401).json({ error: 'No autenticado' });
@@ -124,6 +137,7 @@ function requireAuth(req, res, next) {
 }
 
 function requireGerente(req, res, next) {
+  if (LOCAL_NO_AUTH) return next();
   if (!(req.isAuthenticated && req.isAuthenticated())) {
     if (String(req.path || '').startsWith('/api/')) {
       return res.status(401).json({ error: 'No autenticado' });
@@ -252,6 +266,55 @@ function launchPdfBrowser() {
     ]
   };
   return puppeteer.launch(launchOptions);
+}
+
+let sharedPdfBrowser = null;
+async function getSharedPdfBrowser() {
+  if (sharedPdfBrowser) {
+    try {
+      if (sharedPdfBrowser.isConnected()) return sharedPdfBrowser;
+    } catch {}
+  }
+  try {
+    sharedPdfBrowser = await launchPdfBrowser();
+  } catch (launchErr) {
+    const installed = installChromeIfMissing(launchErr);
+    if (!installed) throw launchErr;
+    sharedPdfBrowser = await launchPdfBrowser();
+  }
+  sharedPdfBrowser.on('disconnected', () => {
+    sharedPdfBrowser = null;
+  });
+  return sharedPdfBrowser;
+}
+
+async function buildPdfBufferWithBrowser(browser, html) {
+  const page = await browser.newPage();
+  try {
+    page.setDefaultTimeout(120000);
+    page.setDefaultNavigationTimeout(120000);
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.emulateMediaType('print');
+    try {
+      const hasReadyMarker = await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, '__pdfReady'));
+      if (hasReadyMarker) {
+        await page.waitForFunction(() => window.__pdfReady === true, { timeout: 8000 });
+      }
+    } catch {
+      // If marker check fails, continue and generate PDF.
+    }
+    return await page.pdf({
+      printBackground: true,
+      preferCSSPageSize: true
+    });
+  } finally {
+    try { await page.close(); } catch {}
+  }
+}
+
+function isRetryablePdfError(err) {
+  const msg = String((err && err.message) || '');
+  return /Target closed|Session closed|browser has disconnected|Protocol error/i.test(msg);
 }
 
 function installChromeIfMissing(err) {
@@ -1593,30 +1656,21 @@ app.post('/api/plano-ventas/render-pdf', async (req, res) => {
     return res.status(400).json({ error: 'HTML inválido para generar PDF.' });
   }
 
-  let browser = null;
   try {
+    let pdfBuffer;
     try {
-      browser = await launchPdfBrowser();
-    } catch (launchErr) {
-      const installed = installChromeIfMissing(launchErr);
-      if (!installed) throw launchErr;
-      browser = await launchPdfBrowser();
+      const browser = await getSharedPdfBrowser();
+      pdfBuffer = await buildPdfBufferWithBrowser(browser, html);
+    } catch (firstErr) {
+      if (!isRetryablePdfError(firstErr)) throw firstErr;
+      // If Chromium target dies, recreate browser and retry once.
+      try {
+        if (sharedPdfBrowser) await sharedPdfBrowser.close();
+      } catch {}
+      sharedPdfBrowser = null;
+      const retryBrowser = await getSharedPdfBrowser();
+      pdfBuffer = await buildPdfBufferWithBrowser(retryBrowser, html);
     }
-    const page = await browser.newPage();
-    page.setDefaultTimeout(120000);
-    page.setDefaultNavigationTimeout(120000);
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.emulateMediaType('print');
-    try {
-      await page.waitForFunction(() => window.__pdfReady === true, { timeout: 15000 });
-    } catch {
-      // Fallback: if the marker is missing, continue and generate PDF.
-    }
-
-    const pdfBuffer = await page.pdf({
-      printBackground: true,
-      preferCSSPageSize: true
-    });
 
     const utfName = `${fileNamePrefix} INVENTARIO ／ INVENTORY.pdf`;
     const fallbackName = `${fileNamePrefix} INVENTARIO - INVENTORY.pdf`;
@@ -1632,10 +1686,6 @@ app.post('/api/plano-ventas/render-pdf', async (req, res) => {
       error: 'No se pudo generar el PDF en el servidor.',
       details: err && err.message ? err.message : 'error desconocido'
     });
-  } finally {
-    if (browser) {
-      try { await browser.close(); } catch {}
-    }
   }
 });
 
