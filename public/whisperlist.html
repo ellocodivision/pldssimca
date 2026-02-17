@@ -50,7 +50,7 @@
     <div class="top">
       <div>
         <h1 class="title">Viceroy Whisperlist</h1>
-        <p class="sub">Todos ven todas las filas. Cada asesor solo edita sus filas por correo.</p>
+        <p class="sub"></p>
       </div>
       <div class="actions">
         <a class="btn" href="/">Volver</a>
@@ -68,6 +68,16 @@
       </div>
       <p class="hint">El nuevo cliente se asigna automáticamente a tu correo.</p>
       <p id="addStatus" class="status"></p>
+    </div>
+
+    <div id="managerCard" class="card" hidden>
+      <div class="row">
+        <span class="badge">Importar Excel</span>
+        <input id="excelInput" type="file" accept=".xlsx,.xls" />
+        <button id="importBtn" class="btn primary" type="button">Importar</button>
+      </div>
+      <p class="hint">Solo gerente. Reemplaza toda la tabla con el Excel cargado.</p>
+      <p id="importStatus" class="status"></p>
     </div>
 
     <div class="card">
@@ -109,6 +119,10 @@
         globalStatus: document.getElementById('globalStatus'),
         metaUser: document.getElementById('metaUser'),
         metaRows: document.getElementById('metaRows'),
+        managerCard: document.getElementById('managerCard'),
+        excelInput: document.getElementById('excelInput'),
+        importBtn: document.getElementById('importBtn'),
+        importStatus: document.getElementById('importStatus'),
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
@@ -163,6 +177,7 @@
         state.isGerente = Boolean(data.isGerente);
         els.metaUser.textContent = 'Usuario: ' + state.currentEmail;
         els.metaRows.textContent = 'Filas: ' + state.rows.length;
+        els.managerCard.hidden = !state.isGerente;
         setStatus(els.globalStatus, 'Tabla cargada.', 'ok');
         renderRows();
       }
@@ -227,6 +242,38 @@
         }
       }
 
+      async function importExcel() {
+        const file = els.excelInput.files && els.excelInput.files[0];
+        if (!file) {
+          setStatus(els.importStatus, 'Selecciona un archivo .xlsx', 'error');
+          return;
+        }
+        els.importBtn.disabled = true;
+        setStatus(els.importStatus, 'Importando...', null);
+        try {
+          const base64 = await new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function () { resolve(reader.result); };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const res = await fetch('/api/whisperlist/import-excel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ fileName: file.name, base64: base64 })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo importar');
+          setStatus(els.importStatus, 'Excel importado. Filas: ' + String(data.importedRows || 0), 'ok');
+          await fetchData();
+        } catch (err) {
+          setStatus(els.importStatus, err.message || 'Error al importar', 'error');
+        } finally {
+          els.importBtn.disabled = false;
+        }
+      }
+
       els.reloadBtn.addEventListener('click', function () {
         fetchData().catch(function (err) {
           setStatus(els.globalStatus, err.message || 'Error de carga', 'error');
@@ -235,6 +282,10 @@
 
       els.addBtn.addEventListener('click', function () {
         addRow();
+      });
+
+      els.importBtn.addEventListener('click', function () {
+        importExcel();
       });
 
       els.tbody.addEventListener('click', function (ev) {

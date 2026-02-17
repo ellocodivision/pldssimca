@@ -1316,6 +1316,36 @@ app.post('/api/whisperlist/rows', (req, res) => {
   return res.status(201).json({ ok: true, row: newRow });
 });
 
+app.post('/api/whisperlist/import-excel', requireGerente, (req, res) => {
+  const { fileName, base64, sheetName } = req.body || {};
+  if (!base64) {
+    return res.status(400).json({ error: 'Archivo inválido: falta contenido base64' });
+  }
+
+  let workbook;
+  try {
+    const payload = String(base64).includes(',') ? String(base64).split(',').pop() : String(base64);
+    const buffer = Buffer.from(payload || '', 'base64');
+    workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  } catch (err) {
+    return res.status(400).json({ error: 'No se pudo leer el archivo Excel (.xlsx)' });
+  }
+
+  const parsed = parseWhisperlistWorkbook(workbook, sheetName);
+  if (!parsed.sheetName) {
+    return res.status(400).json({ error: 'No se encontró una hoja válida en el Excel' });
+  }
+
+  const safeName = sanitizeExcelFileName(fileName) || 'whisperlist.xlsx';
+  saveWhisperlistRows(parsed.rows, safeName);
+  return res.json({
+    ok: true,
+    fileName: safeName,
+    sheetName: parsed.sheetName,
+    importedRows: parsed.rows.length
+  });
+});
+
 app.get('/owner-services', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'owner-services.html'));
 });
