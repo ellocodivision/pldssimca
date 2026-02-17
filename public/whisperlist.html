@@ -41,8 +41,16 @@
     .hint{margin-top:8px;color:var(--muted);font-size:12px}
     .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#ece7da;font-size:12px;font-weight:700}
     .check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+    .kpi{font-size:13px;color:var(--muted)}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
+    .stats-box{border:1px solid var(--line);border-radius:10px;padding:10px}
+    .stats-box h3{margin:0 0 8px;font-size:13px}
+    .stats-table{width:100%;border-collapse:collapse;min-width:0}
+    .stats-table th,.stats-table td{padding:6px 4px;border-bottom:1px solid #eee7d9;font-size:12px}
+    .stats-table th{position:static;background:transparent}
     @media (max-width:700px){
       .title{font-size:26px}
+      .stats-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -99,7 +107,40 @@
         <span id="metaUser" class="badge">Usuario: -</span>
         <span id="metaRows" class="badge">Filas: 0</span>
       </div>
+      <div class="row" style="margin-top:8px">
+        <span class="badge">Filtro</span>
+        <select id="filterAsesor" class="cell-input"></select>
+        <input id="searchText" class="cell-input" placeholder="Buscar cliente/correo" />
+        <button id="clearFiltersBtn" class="btn" type="button">Limpiar filtros</button>
+      </div>
       <p id="globalStatus" class="status"></p>
+      <p id="filterSummary" class="kpi"></p>
+    </div>
+
+    <div class="card">
+      <div class="stats-grid">
+        <section class="stats-box">
+          <h3>Clientes por vendedor</h3>
+          <table class="stats-table">
+            <thead><tr><th>Vendedor</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByAsesor"></tbody>
+          </table>
+        </section>
+        <section class="stats-box">
+          <h3>Clientes por canal</h3>
+          <table class="stats-table">
+            <thead><tr><th>Canal</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByCanal"></tbody>
+          </table>
+        </section>
+        <section class="stats-box">
+          <h3>Clientes por tipo de venta</h3>
+          <table class="stats-table">
+            <thead><tr><th>Tipo</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByTipo"></tbody>
+          </table>
+        </section>
+      </div>
     </div>
 
     <div class="card table-wrap">
@@ -138,6 +179,13 @@
         replaceExisting: document.getElementById('replaceExisting'),
         importBtn: document.getElementById('importBtn'),
         importStatus: document.getElementById('importStatus'),
+        filterAsesor: document.getElementById('filterAsesor'),
+        searchText: document.getElementById('searchText'),
+        clearFiltersBtn: document.getElementById('clearFiltersBtn'),
+        filterSummary: document.getElementById('filterSummary'),
+        statsByAsesor: document.getElementById('statsByAsesor'),
+        statsByCanal: document.getElementById('statsByCanal'),
+        statsByTipo: document.getElementById('statsByTipo'),
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
@@ -192,7 +240,71 @@
       }
 
       function renderRows() {
-        els.tbody.innerHTML = state.rows.map(rowHtml).join('');
+        const filtered = getFilteredRows();
+        els.tbody.innerHTML = filtered.map(rowHtml).join('');
+        els.metaRows.textContent = 'Filas: ' + filtered.length + ' / ' + state.rows.length;
+      }
+
+      function mapCounts(rows, getKey) {
+        const counts = new Map();
+        rows.forEach(function (row) {
+          const key = String(getKey(row) || '').trim() || '(VACIO)';
+          counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        return Array.from(counts.entries()).sort(function (a, b) {
+          if (b[1] !== a[1]) return b[1] - a[1];
+          return String(a[0]).localeCompare(String(b[0]));
+        });
+      }
+
+      function renderCountTable(tbody, entries) {
+        tbody.innerHTML = entries.map(function (entry) {
+          return '<tr><td>' + escapeHtml(entry[0]) + '</td><td>' + String(entry[1]) + '</td></tr>';
+        }).join('');
+      }
+
+      function buildSellerFilter() {
+        const sellers = Array.from(new Set(state.rows.map(function (r) {
+          return String(r.asesor || '').trim();
+        }).filter(Boolean))).sort(function (a, b) { return a.localeCompare(b); });
+        const current = String(els.filterAsesor.value || '');
+        const options = ['<option value="">Todos los vendedores</option>'].concat(
+          sellers.map(function (seller) {
+            const selected = seller === current ? ' selected' : '';
+            return '<option value="' + escapeHtml(seller) + '"' + selected + '>' + escapeHtml(seller) + '</option>';
+          })
+        );
+        els.filterAsesor.innerHTML = options.join('');
+      }
+
+      function getFilteredRows() {
+        const seller = String(els.filterAsesor.value || '').trim();
+        const text = String(els.searchText.value || '').trim().toLowerCase();
+        return state.rows.filter(function (row) {
+          if (seller && String(row.asesor || '').trim() !== seller) return false;
+          if (!text) return true;
+          const haystack = [
+            row.asesor,
+            row.correo,
+            row.canal,
+            row.tipoVenta,
+            row.nombreCliente
+          ].join(' ').toLowerCase();
+          return haystack.includes(text);
+        });
+      }
+
+      function renderStats() {
+        const filtered = getFilteredRows();
+        renderCountTable(els.statsByAsesor, mapCounts(filtered, function (r) { return r.asesor; }));
+        renderCountTable(els.statsByCanal, mapCounts(filtered, function (r) { return r.canal; }));
+        renderCountTable(els.statsByTipo, mapCounts(filtered, function (r) { return r.tipoVenta; }));
+        els.filterSummary.textContent = 'Mostrando ' + filtered.length + ' de ' + state.rows.length + ' filas.';
+      }
+
+      function renderListAndStats() {
+        renderRows();
+        renderStats();
       }
 
       async function fetchData() {
@@ -204,10 +316,10 @@
         state.currentEmail = String(data.currentEmail || '');
         state.isGerente = Boolean(data.isGerente);
         els.metaUser.textContent = 'Usuario: ' + state.currentEmail;
-        els.metaRows.textContent = 'Filas: ' + state.rows.length;
         els.managerCard.hidden = !state.isGerente;
+        buildSellerFilter();
         setStatus(els.globalStatus, 'Tabla cargada.', 'ok');
-        renderRows();
+        renderListAndStats();
       }
 
       async function saveRow(tr) {
@@ -322,6 +434,20 @@
 
       els.importBtn.addEventListener('click', function () {
         importExcel();
+      });
+
+      els.filterAsesor.addEventListener('change', function () {
+        renderListAndStats();
+      });
+
+      els.searchText.addEventListener('input', function () {
+        renderListAndStats();
+      });
+
+      els.clearFiltersBtn.addEventListener('click', function () {
+        els.filterAsesor.value = '';
+        els.searchText.value = '';
+        renderListAndStats();
       });
 
       els.tbody.addEventListener('click', function (ev) {
