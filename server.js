@@ -9,6 +9,7 @@ const XLSX = require('xlsx');
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const MicrosoftStrategy = require('passport-microsoft').Strategy;
 const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,7 +19,11 @@ const APP_BASE_URL_NORMALIZED = String(APP_BASE_URL).replace(/\/+$/, '');
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-session-secret-change-me';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const AUTH_READY = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+const GOOGLE_AUTH_READY = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
+const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
+const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
+const MICROSOFT_AUTH_READY = Boolean(MICROSOFT_CLIENT_ID && MICROSOFT_CLIENT_SECRET);
 const LOCAL_NO_AUTH = String(process.env.LOCAL_NO_AUTH || '') === '1';
 const ALLOWED_DOMAIN = String(process.env.ALLOWED_DOMAIN || 'simca.mx').toLowerCase();
 const GERENTE_EMAIL = String(process.env.GERENTE_EMAIL || 'martin@simca.mx').toLowerCase();
@@ -126,7 +131,7 @@ app.use('/plds-static', express.static(path.join(PUBLIC_DIR, 'plds')));
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
-if (AUTH_READY) {
+if (GOOGLE_AUTH_READY) {
   passport.use(new GoogleStrategy(
     {
       clientID: GOOGLE_CLIENT_ID,
@@ -137,6 +142,36 @@ if (AUTH_READY) {
       (async () => {
         const rawEmail = profile && profile.emails && profile.emails[0] ? profile.emails[0].value : '';
         const email = String(rawEmail || '').trim().toLowerCase();
+        if (!(await isAllowedLoginEmail(email))) {
+          return done(null, false, { message: 'Correo no autorizado' });
+        }
+        return done(null, {
+          id: profile.id,
+          email,
+          name: profile.displayName || email
+        });
+      })().catch((err) => done(err));
+    }
+  ));
+}
+
+if (MICROSOFT_AUTH_READY) {
+  passport.use(new MicrosoftStrategy(
+    {
+      clientID: MICROSOFT_CLIENT_ID,
+      clientSecret: MICROSOFT_CLIENT_SECRET,
+      callbackURL: `${APP_BASE_URL_NORMALIZED}/auth/microsoft/callback`,
+      scope: ['user.read'],
+      tenant: MICROSOFT_TENANT_ID,
+      addUPNAsEmail: true
+    },
+    (accessToken, refreshToken, profile, done) => {
+      (async () => {
+        const profileEmail = profile && Array.isArray(profile.emails) && profile.emails[0]
+          ? profile.emails[0].value
+          : '';
+        const upnEmail = profile && profile._json ? (profile._json.userPrincipalName || profile._json.mail || '') : '';
+        const email = String(profileEmail || upnEmail || '').trim().toLowerCase();
         if (!(await isAllowedLoginEmail(email))) {
           return done(null, false, { message: 'Correo no autorizado' });
         }
@@ -1025,10 +1060,16 @@ function renderTemplate(templateName, data, options = {}) {
 
 app.get('/login', (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) return res.redirect('/');
-  const authReady = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+  const googleReady = GOOGLE_AUTH_READY;
+  const microsoftReady = MICROSOFT_AUTH_READY;
+  const anyReady = googleReady || microsoftReady;
   const error = req.query && req.query.error === 'domain'
     ? 'Correo no autorizado. Usa un correo permitido.'
     : '';
+  const providersHtml = [
+    googleReady ? '<a class="btn" href="/auth/google">Entrar con Google</a>' : '',
+    microsoftReady ? '<a class="btn" href="/auth/microsoft">Entrar con Microsoft</a>' : ''
+  ].filter(Boolean).join('<span style="display:inline-block;width:8px"></span>');
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -1044,15 +1085,15 @@ app.get('/login', (req, res) => {
   </style></head><body>
     <div class="card">
       <h1>Acceso SIMCA</h1>
-      <p>Inicia sesión con Google. Acceso para cuentas <strong>@${ALLOWED_DOMAIN}</strong> o correos invitados autorizados.</p>
-      ${authReady ? '<a class="btn" href="/auth/google">Entrar con Google</a>' : '<p class="warn">Falta configurar GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET.</p>'}
+      <p>Inicia sesión con Google o Microsoft. Acceso para cuentas <strong>@${ALLOWED_DOMAIN}</strong> o correos invitados autorizados.</p>
+      ${anyReady ? providersHtml : '<p class="warn">Falta configurar OAuth. Variables requeridas: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET o MICROSOFT_CLIENT_ID/MICROSOFT_CLIENT_SECRET.</p>'}
       ${error ? `<p class="warn">${error}</p>` : ''}
       <p class="muted">Gerente ventas permitido: ${GERENTE_EMAIL}</p>
     </div>
   </body></html>`);
 });
 
-if (AUTH_READY) {
+if (GOOGLE_AUTH_READY) {
   app.get('/auth/google', passport.authenticate('google', {
     scope: ['profile', 'email']
   }));
@@ -1064,6 +1105,20 @@ if (AUTH_READY) {
 } else {
   app.get('/auth/google', (req, res) => res.redirect('/login'));
   app.get('/auth/google/callback', (req, res) => res.redirect('/login'));
+}
+
+if (MICROSOFT_AUTH_READY) {
+  app.get('/auth/microsoft', passport.authenticate('microsoft', {
+    prompt: 'select_account'
+  }));
+
+  app.get('/auth/microsoft/callback',
+    passport.authenticate('microsoft', { failureRedirect: '/login?error=domain' }),
+    (req, res) => res.redirect('/')
+  );
+} else {
+  app.get('/auth/microsoft', (req, res) => res.redirect('/login'));
+  app.get('/auth/microsoft/callback', (req, res) => res.redirect('/login'));
 }
 
 app.get('/logout', (req, res, next) => {

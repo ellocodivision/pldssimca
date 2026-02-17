@@ -17,3 +17,7 @@ services:
         value: "false"
       - key: ALLOWED_EMAILS
         value: michelle@viceroyplayadelcarmen.com,marion@viceroyplayadelcarmen.com,manuel@viceroyplayadelcarmen.com,karla@viceroyplayadelcarmen.com,daniela@viceroyplayadelcarmen.com,martin@viceroyplayadelcarmen.com
+      - key: MICROSOFT_CLIENT_ID
+        value: 19dcb653-047c-4a6c-8752-c017d35da751
+      - key: MICROSOFT_TENANT_ID
+        value: 0b0dc98a-257b-4b06-aa02-1157b503d610
