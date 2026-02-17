@@ -21,6 +21,12 @@ const AUTH_READY = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 const LOCAL_NO_AUTH = String(process.env.LOCAL_NO_AUTH || '') === '1';
 const ALLOWED_DOMAIN = String(process.env.ALLOWED_DOMAIN || 'simca.mx').toLowerCase();
 const GERENTE_EMAIL = String(process.env.GERENTE_EMAIL || 'martin@simca.mx').toLowerCase();
+const EXTRA_ALLOWED_EMAILS = new Set(
+  String(process.env.ALLOWED_EMAILS || '')
+    .split(',')
+    .map((item) => String(item || '').trim().toLowerCase())
+    .filter(Boolean)
+);
 const LOG_PATH = '/tmp/fr-ven-server.log';
 const log = (msg) => {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -38,6 +44,8 @@ const DATA_DIR = path.join(__dirname, 'data');
 const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
+const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
+const WHISPERLIST_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY WHISPERLIST.xlsx');
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
 const DEFAULT_DEVELOPMENT_SLUG = 'ceiba';
@@ -115,8 +123,8 @@ if (AUTH_READY) {
     (accessToken, refreshToken, profile, done) => {
       const rawEmail = profile && profile.emails && profile.emails[0] ? profile.emails[0].value : '';
       const email = String(rawEmail || '').trim().toLowerCase();
-      if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-        return done(null, false, { message: `Solo cuentas @${ALLOWED_DOMAIN}` });
+      if (!isAllowedLoginEmail(email)) {
+        return done(null, false, { message: 'Correo no autorizado' });
       }
       return done(null, {
         id: profile.id,
@@ -134,6 +142,29 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'No autenticado' });
   }
   return res.redirect('/login');
+}
+
+function isInternalUserEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === GERENTE_EMAIL) return true;
+  return normalized.endsWith(`@${ALLOWED_DOMAIN}`);
+}
+
+function requireInternalUser(req, res, next) {
+  if (LOCAL_NO_AUTH) return next();
+  if (!(req.isAuthenticated && req.isAuthenticated())) {
+    if (String(req.path || '').startsWith('/api/')) {
+      return res.status(401).json({ error: 'No autenticado' });
+    }
+    return res.redirect('/login');
+  }
+  const email = String(req.user && req.user.email || '').toLowerCase();
+  if (isInternalUserEmail(email)) return next();
+  if (String(req.path || '').startsWith('/api/')) {
+    return res.status(403).json({ error: 'Acceso restringido a usuarios internos' });
+  }
+  return res.redirect('/whisperlist');
 }
 
 function requireGerente(req, res, next) {
@@ -202,6 +233,7 @@ function ensureDataFiles() {
     };
     fs.writeFileSync(OWNER_SERVICES_PATH, JSON.stringify(initialOwnerServices, null, 2), 'utf-8');
   }
+  seedWhisperlistFromExcelIfNeeded();
 }
 
 function normalizeDevelopmentSlug(raw) {
@@ -359,6 +391,108 @@ function writeJson(filePath, data) {
   const tmpPath = `${filePath}.tmp`;
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
   fs.renameSync(tmpPath, filePath);
+}
+
+function normalizeWhisperlistKey(raw) {
+  return String(raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function normalizeWhisperlistRow(rawRow, fallbackId) {
+  const normalized = {};
+  Object.entries(rawRow || {}).forEach(([key, value]) => {
+    normalized[normalizeWhisperlistKey(key)] = value;
+  });
+
+  const asesor = String(normalized.asesor || '').trim();
+  const correo = String(normalized.correo || '').trim().toLowerCase();
+  if (!asesor || !correo) return null;
+
+  return {
+    id: String(normalized.id || fallbackId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    asesor,
+    correo,
+    canal: String(normalized.canal || '').trim(),
+    tipoVenta: String(normalized.tipo_de_venta || normalized.tipodeventa || '').trim(),
+    nombreCliente: String(normalized.nombre_cliente || normalized.nombrecliente || '').trim(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function readWhisperlistData() {
+  const raw = readJson(WHISPERLIST_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
+  const rows = Array.isArray(raw.rows) ? raw.rows : [];
+  return {
+    rows,
+    updatedAt: raw.updatedAt || null,
+    sourceFile: String(raw.sourceFile || '')
+  };
+}
+
+function saveWhisperlistRows(rows, sourceFile) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  writeJson(WHISPERLIST_JSON_PATH, {
+    rows: safeRows,
+    updatedAt: new Date().toISOString(),
+    sourceFile: String(sourceFile || '')
+  });
+}
+
+function whisperlistAllowedEmails() {
+  const data = readWhisperlistData();
+  const emails = new Set();
+  data.rows.forEach((row) => {
+    const email = String(row && row.correo || '').trim().toLowerCase();
+    if (email) emails.add(email);
+  });
+  return emails;
+}
+
+function isAllowedLoginEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === GERENTE_EMAIL) return true;
+  if (normalized.endsWith(`@${ALLOWED_DOMAIN}`)) return true;
+  if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
+  if (whisperlistAllowedEmails().has(normalized)) return true;
+  return false;
+}
+
+function parseWhisperlistWorkbook(workbook, requestedSheetName) {
+  const fallbackSheet = workbook.SheetNames.includes('Hoja1')
+    ? 'Hoja1'
+    : (workbook.SheetNames[0] || '');
+  const sheetName = String(requestedSheetName || fallbackSheet || '').trim();
+  if (!sheetName) {
+    return { sheetName: '', rows: [] };
+  }
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) {
+    return { sheetName: '', rows: [] };
+  }
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  const rows = rawRows
+    .map((item, idx) => normalizeWhisperlistRow(item, `${idx + 1}`))
+    .filter(Boolean);
+
+  return { sheetName, rows };
+}
+
+function seedWhisperlistFromExcelIfNeeded() {
+  if (fs.existsSync(WHISPERLIST_JSON_PATH)) return;
+  if (!fs.existsSync(WHISPERLIST_EXCEL_PATH)) return;
+  try {
+    const workbook = XLSX.readFile(WHISPERLIST_EXCEL_PATH, { cellDates: true });
+    const parsed = parseWhisperlistWorkbook(workbook);
+    saveWhisperlistRows(parsed.rows, path.basename(WHISPERLIST_EXCEL_PATH));
+    log(`Whisperlist inicializada con ${parsed.rows.length} filas`);
+  } catch (err) {
+    log(`No se pudo inicializar whisperlist: ${err && err.message ? err.message : err}`);
+  }
 }
 
 function ownerServicesDefaultData() {
@@ -752,7 +886,9 @@ function renderTemplate(templateName, data, options = {}) {
 app.get('/login', (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) return res.redirect('/');
   const authReady = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
-  const error = req.query && req.query.error === 'domain' ? `Solo cuentas @${ALLOWED_DOMAIN}.` : '';
+  const error = req.query && req.query.error === 'domain'
+    ? 'Correo no autorizado. Usa un correo permitido.'
+    : '';
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -768,7 +904,7 @@ app.get('/login', (req, res) => {
   </style></head><body>
     <div class="card">
       <h1>Acceso SIMCA</h1>
-      <p>Inicia sesión con Google usando tu cuenta <strong>@${ALLOWED_DOMAIN}</strong>.</p>
+      <p>Inicia sesión con Google. Acceso para cuentas <strong>@${ALLOWED_DOMAIN}</strong> o correos invitados autorizados.</p>
       ${authReady ? '<a class="btn" href="/auth/google">Entrar con Google</a>' : '<p class="warn">Falta configurar GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET.</p>'}
       ${error ? `<p class="warn">${error}</p>` : ''}
       <p class="muted">Gerente ventas permitido: ${GERENTE_EMAIL}</p>
@@ -778,8 +914,7 @@ app.get('/login', (req, res) => {
 
 if (AUTH_READY) {
   app.get('/auth/google', passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    hd: ALLOWED_DOMAIN
+    scope: ['profile', 'email']
   }));
 
   app.get('/auth/google/callback',
@@ -803,6 +938,10 @@ app.get('/logout', (req, res, next) => {
 
 app.get('/', requireAuth, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
+  const isInternalUser = isInternalUserEmail(currentEmail);
+  if (!isInternalUser) {
+    return res.redirect('/whisperlist');
+  }
   const isGerente = currentEmail === GERENTE_EMAIL;
   const ownerServicesCard = isGerente ? `
         <a class="card" href="/owner-services">
@@ -930,6 +1069,11 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
+        <a class="card" href="/whisperlist">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Whisperlist</h2>
+          <p class="desc">Todos ven la tabla, cada asesor edita solo sus filas.</p>
+        </a>
         ${ownerServicesCard}
         ${gerenteCard}
       </div>
@@ -983,15 +1127,17 @@ app.get('/', requireAuth, (req, res) => {
   </body></html>`);
 });
 
-app.use('/legacy', requireAuth);
-app.use('/generador-faes', requireAuth);
-app.use('/plds', requireAuth);
-app.use('/generador-roi', requireAuth);
-app.use('/form', requireAuth);
-app.use('/format', requireAuth);
-app.use('/submissions', requireAuth);
-app.use('/api/plds', requireAuth);
-app.use('/api/roi', requireAuth);
+app.use('/legacy', requireInternalUser);
+app.use('/generador-faes', requireInternalUser);
+app.use('/plds', requireInternalUser);
+app.use('/generador-roi', requireInternalUser);
+app.use('/form', requireInternalUser);
+app.use('/format', requireInternalUser);
+app.use('/submissions', requireInternalUser);
+app.use('/api/plds', requireInternalUser);
+app.use('/api/roi', requireInternalUser);
+app.use('/whisperlist', requireAuth);
+app.use('/api/whisperlist', requireAuth);
 app.use('/owner-services', requireGerente);
 app.use('/api/owner-services', requireGerente);
 
@@ -1092,6 +1238,82 @@ app.post('/api/roi/master-csv', requireGerente, (req, res) => {
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
+});
+
+app.get('/whisperlist', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'whisperlist.html'));
+});
+
+app.get('/api/whisperlist', (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const isGerente = currentEmail === GERENTE_EMAIL;
+  const data = readWhisperlistData();
+  const rows = data.rows.map((row) => ({
+    ...row,
+    canEdit: isGerente || String(row.correo || '').toLowerCase() === currentEmail
+  }));
+  res.json({
+    ok: true,
+    currentEmail,
+    isGerente,
+    updatedAt: data.updatedAt,
+    sourceFile: data.sourceFile,
+    rows
+  });
+});
+
+app.patch('/api/whisperlist/rows/:id', (req, res) => {
+  const rowId = String(req.params.id || '').trim();
+  if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const isGerente = currentEmail === GERENTE_EMAIL;
+  const data = readWhisperlistData();
+  const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+  if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+  const target = data.rows[index];
+  const ownerEmail = String(target.correo || '').trim().toLowerCase();
+  if (!isGerente && ownerEmail !== currentEmail) {
+    return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+  }
+
+  const body = req.body || {};
+  const nextRow = {
+    ...target,
+    canal: String(body.canal !== undefined ? body.canal : target.canal).trim(),
+    tipoVenta: String(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta).trim(),
+    nombreCliente: String(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente).trim(),
+    updatedAt: new Date().toISOString()
+  };
+  data.rows[index] = nextRow;
+  saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+  return res.json({ ok: true, row: nextRow });
+});
+
+app.post('/api/whisperlist/rows', (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const fallbackName = String(req.user && req.user.name || '').trim();
+  const data = readWhisperlistData();
+  const existing = data.rows.find((row) => String(row.correo || '').trim().toLowerCase() === currentEmail);
+  const asesor = String(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '').trim();
+
+  const body = req.body || {};
+  const nombreCliente = String(body.nombreCliente || '').trim();
+  if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
+
+  const newRow = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    asesor,
+    correo: currentEmail,
+    canal: String(body.canal || '').trim(),
+    tipoVenta: String(body.tipoVenta || '').trim(),
+    nombreCliente,
+    updatedAt: new Date().toISOString()
+  };
+  data.rows.push(newRow);
+  saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+  return res.status(201).json({ ok: true, row: newRow });
 });
 
 app.get('/owner-services', (req, res) => {

@@ -1,0 +1,816 @@
+{
+  "rows": [
+    {
+      "id": "1",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "SYD",
+      "updatedAt": "2026-02-17T19:57:15.651Z"
+    },
+    {
+      "id": "2",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CARLOS DIAS",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "3",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "JONATHAN COLIN",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "4",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "MARIANA RIVERA NAJERA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "5",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CARLOS MERCADO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "6",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ARNALDO SANCHEZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "7",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "MARTA DEBORA MATEROS GARZA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "8",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "LEON TRUDEU",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "9",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ROBERTO CARLOS REYES RIVAS",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "10",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "PAULO MATIAS FOLINO GONZALEZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "11",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "GILMAN WOLSEY",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "12",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "LINDA SONES",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "13",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "BERNARDO MARTNEZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "14",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "JASMINE BOUFFARD",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "15",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "GARY AND CATHERINE LOUIE",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "16",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "CRISTOBAL QUEZADA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "17",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "J. DEPA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "18",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "CYNTIA (CEIBA)",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "19",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "ANDRES ORAMAS",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "20",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "ADALBERTO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "21",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "MAURICIO SOLER",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "22",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "IVAN MICHELE",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "23",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "JEAN M",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "24",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "JAVIER CASTELAN",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "25",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "ANGEL GONZALES",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "26",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "MARK & TRACY",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "27",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "ELIBERTO CHAVEZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "28",
+      "asesor": "ABIGAIL PEREZ",
+      "correo": "abigail@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "BERNARDO MARTÍNEZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "29",
+      "asesor": "LUCIA GONZALEZ",
+      "correo": "lucia@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ROGER KLEEFELDT",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "30",
+      "asesor": "LUCIA GONZALEZ",
+      "correo": "lucia@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "LUIS AMIEVA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "31",
+      "asesor": "LUCIA GONZALEZ",
+      "correo": "lucia@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "HOMERO HERRERA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "32",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "DAVID BUTTERY",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "33",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ALEX SCUTARI",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "34",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ALBERTO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "35",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "FERNANDO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "36",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "SHANNON OTOOLE",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "37",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CARLOS & ELISEO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "38",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CLIENTE 1",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "39",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CLEINTE 2",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "40",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "DANIEL LA CHAINE",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "41",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "LOUISE ST CYR",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "42",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "JEAN SEBASTEIN GILBERT",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "43",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "VICTOR & GLORIA 1 BDR",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "44",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "VICTOR & GLORIA 1 BDR",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "45",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "VICTOR & GLORIA 1 BDR",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "46",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "BENJAMIN 2 BDR",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "47",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CLIENTE 1",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "48",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "LUIS BERNAL",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "49",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CRISTOBAL QUEZADA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "50",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "JOSE CANTU",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "51",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "MICHAEL DAYAN",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "52",
+      "asesor": "AYRTON GARZA",
+      "correo": "ayrton@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "BRIAN SWAN",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "53",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "JENNY BERNAL",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "54",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "IRENE SOTO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "55",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "STEVEN AIRHART",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "56",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "CARLOS MERCADO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "57",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "BRIAN NEWMAN",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "58",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "MERITO PROPIO",
+      "nombreCliente": "Steve Henry",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "59",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "INTERNO",
+      "nombreCliente": "NEAL PATEL",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "60",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "MERITO PROPIO",
+      "nombreCliente": "AURA REIGN",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "61",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "JOSE DE MORAES",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "62",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "LARRY RACASA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "63",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "HENRY GENNADY LUKOVSKY",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "64",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "RYKY MAURA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "65",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "FRNANDO VIETO CRUZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "66",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "MERITO PROPIO",
+      "nombreCliente": "ramon quintanar",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "67",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "Larry Cummings",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "68",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "SERGIO ROCHA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "69",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "RYAN MSCHRODER",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "70",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "DAN MOLOTNIKO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "71",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "CHRISTIAN NAZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "72",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "JOHN FARKAS",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "73",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ALESSANDRA DO SANTOS",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "74",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ART ULLE",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "75",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "JAVIER GARCIA",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "76",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "ELKA STERN",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "77",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "IRENE HEINZE",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "78",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "GEORGE LAZLO",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "79",
+      "asesor": "RAFAEL MONROY",
+      "correo": "rafael@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "NOE PEREZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "80",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "Alberto Elizondo",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "81",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "Priscila Guadalupe Carrillo",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "82",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "Hector Olvera Valdez",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "83",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "Hector Gonzalez Leal",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "84",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "Carlos Zepeda",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "85",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "Daniel Ríos",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "86",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "JOSE VILLARREAL",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "87",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "FRANCISCO BRUCOLI",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "88",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "LETICIA MARTINEZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "89",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "MARCUS KNOCH",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    },
+    {
+      "id": "90",
+      "asesor": "RODRIGO BALMES",
+      "correo": "rodrigobalmes@simca.mx",
+      "canal": "SIMCA",
+      "tipoVenta": "EXTERNO",
+      "nombreCliente": "MARELY SANCHEZ",
+      "updatedAt": "2026-02-17T19:54:21.768Z"
+    }
+  ],
+  "updatedAt": "2026-02-17T19:57:15.651Z",
+  "sourceFile": "VICEROY WHISPERLIST.xlsx"
+}
