@@ -40,6 +40,7 @@
     .save-btn{padding:7px 9px;font-size:12px}
     .hint{margin-top:8px;color:var(--muted);font-size:12px}
     .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#ece7da;font-size:12px;font-weight:700}
+    .check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
     @media (max-width:700px){
       .title{font-size:26px}
     }
@@ -61,8 +62,17 @@
     <div class="card">
       <div class="row">
         <span class="badge">Nuevo cliente</span>
-        <input id="newCanal" class="cell-input" placeholder="CANAL" />
-        <input id="newTipoVenta" class="cell-input" placeholder="TIPO DE VENTA" />
+        <select id="newCanal" class="cell-input">
+          <option value="">CANAL</option>
+          <option value="SIMCA">SIMCA</option>
+          <option value="RELATED">RELATED</option>
+        </select>
+        <select id="newTipoVenta" class="cell-input">
+          <option value="">TIPO DE VENTA</option>
+          <option value="EXTERNO">EXTERNO</option>
+          <option value="INTERNO">INTERNO</option>
+          <option value="MERITO PROPIO">MERITO PROPIO</option>
+        </select>
         <input id="newNombreCliente" class="cell-input" placeholder="NOMBRE CLIENTE" />
         <button id="addBtn" class="btn primary" type="button">Agregar</button>
       </div>
@@ -74,9 +84,13 @@
       <div class="row">
         <span class="badge">Importar Excel</span>
         <input id="excelInput" type="file" accept=".xlsx,.xls" />
+        <label class="check">
+          <input id="replaceExisting" type="checkbox" />
+          Reemplazar lista actual
+        </label>
         <button id="importBtn" class="btn primary" type="button">Importar</button>
       </div>
-      <p class="hint">Solo gerente. Reemplaza toda la tabla con el Excel cargado.</p>
+      <p class="hint">Solo gerente. Si no marcas reemplazar, el Excel se adiciona sin borrar lo existente.</p>
       <p id="importStatus" class="status"></p>
     </div>
 
@@ -121,6 +135,7 @@
         metaRows: document.getElementById('metaRows'),
         managerCard: document.getElementById('managerCard'),
         excelInput: document.getElementById('excelInput'),
+        replaceExisting: document.getElementById('replaceExisting'),
         importBtn: document.getElementById('importBtn'),
         importStatus: document.getElementById('importStatus'),
         newCanal: document.getElementById('newCanal'),
@@ -136,16 +151,29 @@
         if (level) el.classList.add(level);
       }
 
+      function selectHtml(field, value, options, disabled) {
+        const safeCurrent = String(value || '');
+        const optionSet = new Set(options);
+        const list = optionSet.has(safeCurrent) || !safeCurrent ? options : options.concat([safeCurrent]);
+        const optionHtml = ['<option value=""></option>'].concat(list.map(function (opt) {
+          const selected = opt === safeCurrent ? ' selected' : '';
+          return '<option value="' + escapeHtml(opt) + '"' + selected + '>' + escapeHtml(opt) + '</option>';
+        })).join('');
+        return '<select class="cell-input" data-field="' + field + '" ' + disabled + '>' + optionHtml + '</select>';
+      }
+
       function rowHtml(row) {
         const canEdit = Boolean(row.canEdit);
         const lockText = canEdit ? '' : '<div class="lock">Solo lectura</div>';
         const disabled = canEdit ? '' : 'disabled';
+        const canalSelect = selectHtml('canal', row.canal || '', ['SIMCA', 'RELATED'], disabled);
+        const tipoSelect = selectHtml('tipoVenta', row.tipoVenta || '', ['EXTERNO', 'INTERNO', 'MERITO PROPIO'], disabled);
         return `
           <tr data-id="${String(row.id)}">
             <td>${escapeHtml(row.asesor || '')}</td>
             <td class="email">${escapeHtml(row.correo || '')}</td>
-            <td><input class="cell-input" data-field="canal" value="${escapeHtml(row.canal || '')}" ${disabled}></td>
-            <td><input class="cell-input" data-field="tipoVenta" value="${escapeHtml(row.tipoVenta || '')}" ${disabled}></td>
+            <td>${canalSelect}</td>
+            <td>${tipoSelect}</td>
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
             <td>
               ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button>' : lockText}
@@ -261,11 +289,19 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ fileName: file.name, base64: base64 })
+            body: JSON.stringify({
+              fileName: file.name,
+              base64: base64,
+              replaceExisting: Boolean(els.replaceExisting.checked)
+            })
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) throw new Error(data.error || 'No se pudo importar');
-          setStatus(els.importStatus, 'Excel importado. Filas: ' + String(data.importedRows || 0), 'ok');
+          setStatus(
+            els.importStatus,
+            'Importado. Nuevas: ' + String(data.created || 0) + ', omitidas: ' + String(data.skipped || 0) + ', total: ' + String(data.totalRows || 0),
+            'ok'
+          );
           await fetchData();
         } catch (err) {
           setStatus(els.importStatus, err.message || 'Error al importar', 'error');

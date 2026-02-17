@@ -81,6 +81,8 @@ const formats = {
   '19': { name: 'FR-VEN-19 Beneficiario Controlador PF', file: 'format-19.html' },
   '10': { name: 'FR-VEN-10 Identificación del Cliente (Extranjera PF)', file: 'format-10.html' }
 };
+const WHISPERLIST_CANALES = ['SIMCA', 'RELATED'];
+const WHISPERLIST_TIPOS_VENTA = ['EXTERNO', 'INTERNO', 'MERITO PROPIO'];
 
 const whisperlistPool = USE_WHISPERLIST_DB
   ? new Pool({
@@ -414,6 +416,18 @@ function normalizeWhisperlistKey(raw) {
     .replace(/^_+|_+$/g, '');
 }
 
+function normalizeWhisperlistCanal(raw) {
+  const value = String(raw || '').trim().toUpperCase();
+  return WHISPERLIST_CANALES.includes(value) ? value : '';
+}
+
+function normalizeWhisperlistTipoVenta(raw) {
+  const value = String(raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  if (value === 'MERITO PROPIO' || value === 'MÉRITO PROPIO') return 'MERITO PROPIO';
+  if (WHISPERLIST_TIPOS_VENTA.includes(value)) return value;
+  return '';
+}
+
 function normalizeWhisperlistRow(rawRow, fallbackId) {
   const normalized = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
@@ -424,12 +438,14 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
   const correo = String(normalized.correo || '').trim().toLowerCase();
   if (!asesor || !correo) return null;
 
+  const generatedId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 6)}`;
+  const providedId = String(normalized.id || '').trim();
   return {
-    id: String(normalized.id || fallbackId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    id: providedId || String(fallbackId || generatedId),
     asesor,
     correo,
-    canal: String(normalized.canal || '').trim(),
-    tipoVenta: String(normalized.tipo_de_venta || normalized.tipodeventa || '').trim(),
+    canal: normalizeWhisperlistCanal(normalized.canal),
+    tipoVenta: normalizeWhisperlistTipoVenta(normalized.tipo_de_venta || normalized.tipodeventa),
     nombreCliente: String(normalized.nombre_cliente || normalized.nombrecliente || '').trim(),
     updatedAt: new Date().toISOString()
   };
@@ -449,7 +465,7 @@ function parseWhisperlistWorkbook(workbook, requestedSheetName) {
   }
   const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
   const rows = rawRows
-    .map((item, idx) => normalizeWhisperlistRow(item, `${idx + 1}`))
+    .map((item) => normalizeWhisperlistRow(item))
     .filter(Boolean);
 
   return { sheetName, rows };
@@ -1410,8 +1426,8 @@ app.patch('/api/whisperlist/rows/:id', async (req, res) => {
     const body = req.body || {};
     const nextRow = {
       ...target,
-      canal: String(body.canal !== undefined ? body.canal : target.canal).trim(),
-      tipoVenta: String(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta).trim(),
+      canal: normalizeWhisperlistCanal(body.canal !== undefined ? body.canal : target.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta),
       nombreCliente: String(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente).trim(),
       updatedAt: new Date().toISOString()
     };
@@ -1439,8 +1455,8 @@ app.post('/api/whisperlist/rows', async (req, res) => {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       asesor,
       correo: currentEmail,
-      canal: String(body.canal || '').trim(),
-      tipoVenta: String(body.tipoVenta || '').trim(),
+      canal: normalizeWhisperlistCanal(body.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta),
       nombreCliente,
       updatedAt: new Date().toISOString()
     };
@@ -1453,7 +1469,7 @@ app.post('/api/whisperlist/rows', async (req, res) => {
 });
 
 app.post('/api/whisperlist/import-excel', requireGerente, async (req, res) => {
-  const { fileName, base64, sheetName } = req.body || {};
+  const { fileName, base64, sheetName, replaceExisting } = req.body || {};
   if (!base64) {
     return res.status(400).json({ error: 'Archivo inválido: falta contenido base64' });
   }
@@ -1473,12 +1489,47 @@ app.post('/api/whisperlist/import-excel', requireGerente, async (req, res) => {
   }
 
   const safeName = sanitizeExcelFileName(fileName) || 'whisperlist.xlsx';
-  await saveWhisperlistRows(parsed.rows, safeName);
+  const current = await readWhisperlistData();
+  const shouldReplace = Boolean(replaceExisting);
+  let created = 0;
+  let skipped = 0;
+  const nextRows = shouldReplace ? [] : [...current.rows];
+  const seen = new Set(
+    nextRows.map((row) => [
+      String(row.correo || '').trim().toLowerCase(),
+      String(row.asesor || '').trim().toUpperCase(),
+      String(row.nombreCliente || '').trim().toUpperCase(),
+      String(row.canal || '').trim().toUpperCase(),
+      String(row.tipoVenta || '').trim().toUpperCase()
+    ].join('|'))
+  );
+  parsed.rows.forEach((row) => {
+    const key = [
+      String(row.correo || '').trim().toLowerCase(),
+      String(row.asesor || '').trim().toUpperCase(),
+      String(row.nombreCliente || '').trim().toUpperCase(),
+      String(row.canal || '').trim().toUpperCase(),
+      String(row.tipoVenta || '').trim().toUpperCase()
+    ].join('|');
+    if (seen.has(key)) {
+      skipped += 1;
+      return;
+    }
+    nextRows.push(row);
+    seen.add(key);
+    created += 1;
+  });
+
+  await saveWhisperlistRows(nextRows, safeName);
   return res.json({
     ok: true,
     fileName: safeName,
     sheetName: parsed.sheetName,
-    importedRows: parsed.rows.length
+    importedRows: parsed.rows.length,
+    mode: shouldReplace ? 'replace' : 'append',
+    created,
+    skipped,
+    totalRows: nextRows.length
   });
 });
 
