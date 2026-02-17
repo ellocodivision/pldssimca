@@ -15,3 +15,5 @@ services:
         value: /opt/render/project/src/.cache/puppeteer
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: "false"
+      - key: ALLOWED_EMAILS
+        value: michelle@viceroyplayadelcarmen.com,marion@viceroyplayadelcarmen.com,manuel@viceroyplayadelcarmen.com,karla@viceroyplayadelcarmen.com,daniela@viceroyplayadelcarmen.com,martin@viceroyplayadelcarmen.com
