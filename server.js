@@ -9,6 +9,7 @@ const XLSX = require('xlsx');
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -27,6 +28,8 @@ const EXTRA_ALLOWED_EMAILS = new Set(
     .map((item) => String(item || '').trim().toLowerCase())
     .filter(Boolean)
 );
+const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
+const USE_WHISPERLIST_DB = Boolean(DATABASE_URL);
 const LOG_PATH = '/tmp/fr-ven-server.log';
 const log = (msg) => {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -79,6 +82,14 @@ const formats = {
   '10': { name: 'FR-VEN-10 Identificación del Cliente (Extranjera PF)', file: 'format-10.html' }
 };
 
+const whisperlistPool = USE_WHISPERLIST_DB
+  ? new Pool({
+    connectionString: DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  })
+  : null;
+let whisperlistStorageReady = false;
+
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -121,16 +132,18 @@ if (AUTH_READY) {
       callbackURL: `${APP_BASE_URL_NORMALIZED}/auth/google/callback`
     },
     (accessToken, refreshToken, profile, done) => {
-      const rawEmail = profile && profile.emails && profile.emails[0] ? profile.emails[0].value : '';
-      const email = String(rawEmail || '').trim().toLowerCase();
-      if (!isAllowedLoginEmail(email)) {
-        return done(null, false, { message: 'Correo no autorizado' });
-      }
-      return done(null, {
-        id: profile.id,
-        email,
-        name: profile.displayName || email
-      });
+      (async () => {
+        const rawEmail = profile && profile.emails && profile.emails[0] ? profile.emails[0].value : '';
+        const email = String(rawEmail || '').trim().toLowerCase();
+        if (!(await isAllowedLoginEmail(email))) {
+          return done(null, false, { message: 'Correo no autorizado' });
+        }
+        return done(null, {
+          id: profile.id,
+          email,
+          name: profile.displayName || email
+        });
+      })().catch((err) => done(err));
     }
   ));
 }
@@ -233,7 +246,6 @@ function ensureDataFiles() {
     };
     fs.writeFileSync(OWNER_SERVICES_PATH, JSON.stringify(initialOwnerServices, null, 2), 'utf-8');
   }
-  seedWhisperlistFromExcelIfNeeded();
 }
 
 function normalizeDevelopmentSlug(raw) {
@@ -423,45 +435,6 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
   };
 }
 
-function readWhisperlistData() {
-  const raw = readJson(WHISPERLIST_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
-  const rows = Array.isArray(raw.rows) ? raw.rows : [];
-  return {
-    rows,
-    updatedAt: raw.updatedAt || null,
-    sourceFile: String(raw.sourceFile || '')
-  };
-}
-
-function saveWhisperlistRows(rows, sourceFile) {
-  const safeRows = Array.isArray(rows) ? rows : [];
-  writeJson(WHISPERLIST_JSON_PATH, {
-    rows: safeRows,
-    updatedAt: new Date().toISOString(),
-    sourceFile: String(sourceFile || '')
-  });
-}
-
-function whisperlistAllowedEmails() {
-  const data = readWhisperlistData();
-  const emails = new Set();
-  data.rows.forEach((row) => {
-    const email = String(row && row.correo || '').trim().toLowerCase();
-    if (email) emails.add(email);
-  });
-  return emails;
-}
-
-function isAllowedLoginEmail(email) {
-  const normalized = String(email || '').trim().toLowerCase();
-  if (!normalized) return false;
-  if (normalized === GERENTE_EMAIL) return true;
-  if (normalized.endsWith(`@${ALLOWED_DOMAIN}`)) return true;
-  if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
-  if (whisperlistAllowedEmails().has(normalized)) return true;
-  return false;
-}
-
 function parseWhisperlistWorkbook(workbook, requestedSheetName) {
   const fallbackSheet = workbook.SheetNames.includes('Hoja1')
     ? 'Hoja1'
@@ -482,17 +455,168 @@ function parseWhisperlistWorkbook(workbook, requestedSheetName) {
   return { sheetName, rows };
 }
 
-function seedWhisperlistFromExcelIfNeeded() {
-  if (fs.existsSync(WHISPERLIST_JSON_PATH)) return;
-  if (!fs.existsSync(WHISPERLIST_EXCEL_PATH)) return;
+async function ensureWhisperlistDbSchema() {
+  if (!whisperlistPool) return;
+  await whisperlistPool.query(`
+    CREATE TABLE IF NOT EXISTS whisperlist_rows (
+      id TEXT PRIMARY KEY,
+      asesor TEXT NOT NULL,
+      correo TEXT NOT NULL,
+      canal TEXT NOT NULL DEFAULT '',
+      tipo_venta TEXT NOT NULL DEFAULT '',
+      nombre_cliente TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await whisperlistPool.query(`
+    CREATE TABLE IF NOT EXISTS whisperlist_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+}
+
+async function readWhisperlistData() {
+  if (!whisperlistStorageReady) await ensureWhisperlistStorageReady();
+  if (!whisperlistPool) {
+    const raw = readJson(WHISPERLIST_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
+    const rows = Array.isArray(raw.rows) ? raw.rows : [];
+    return {
+      rows,
+      updatedAt: raw.updatedAt || null,
+      sourceFile: String(raw.sourceFile || '')
+    };
+  }
+
+  const [rowsRes, metaRes] = await Promise.all([
+    whisperlistPool.query(`
+      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, updated_at
+      FROM whisperlist_rows
+      ORDER BY updated_at DESC, id ASC
+    `),
+    whisperlistPool.query(`
+      SELECT key, value
+      FROM whisperlist_meta
+      WHERE key IN ('sourceFile', 'updatedAt')
+    `)
+  ]);
+
+  const meta = {};
+  metaRes.rows.forEach((item) => {
+    meta[String(item.key || '')] = String(item.value || '');
+  });
+
+  return {
+    rows: rowsRes.rows.map((row) => ({
+      id: String(row.id || ''),
+      asesor: String(row.asesor || ''),
+      correo: String(row.correo || '').toLowerCase(),
+      canal: String(row.canal || ''),
+      tipoVenta: String(row.tipo_venta || ''),
+      nombreCliente: String(row.nombre_cliente || ''),
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
+    })),
+    updatedAt: meta.updatedAt || null,
+    sourceFile: meta.sourceFile || ''
+  };
+}
+
+async function saveWhisperlistRows(rows, sourceFile) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const updatedAt = new Date().toISOString();
+  if (!whisperlistPool) {
+    writeJson(WHISPERLIST_JSON_PATH, {
+      rows: safeRows,
+      updatedAt,
+      sourceFile: String(sourceFile || '')
+    });
+    return;
+  }
+
+  const client = await whisperlistPool.connect();
   try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM whisperlist_rows');
+    for (const row of safeRows) {
+      await client.query(
+        `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+          String(row.asesor || '').trim(),
+          String(row.correo || '').trim().toLowerCase(),
+          String(row.canal || '').trim(),
+          String(row.tipoVenta || '').trim(),
+          String(row.nombreCliente || '').trim(),
+          String(row.updatedAt || updatedAt)
+        ]
+      );
+    }
+    await client.query(
+      `INSERT INTO whisperlist_meta (key, value)
+       VALUES ('sourceFile', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [String(sourceFile || '')]
+    );
+    await client.query(
+      `INSERT INTO whisperlist_meta (key, value)
+       VALUES ('updatedAt', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [updatedAt]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function whisperlistAllowedEmails() {
+  const data = await readWhisperlistData();
+  const emails = new Set();
+  data.rows.forEach((row) => {
+    const email = String(row && row.correo || '').trim().toLowerCase();
+    if (email) emails.add(email);
+  });
+  return emails;
+}
+
+async function isAllowedLoginEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === GERENTE_EMAIL) return true;
+  if (normalized.endsWith(`@${ALLOWED_DOMAIN}`)) return true;
+  if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
+  if ((await whisperlistAllowedEmails()).has(normalized)) return true;
+  return false;
+}
+
+async function seedWhisperlistFromExcelIfNeeded() {
+  if (!fs.existsSync(WHISPERLIST_EXCEL_PATH)) return;
+  if (!whisperlistPool && fs.existsSync(WHISPERLIST_JSON_PATH)) return;
+  try {
+    if (whisperlistPool) {
+      const countRes = await whisperlistPool.query('SELECT COUNT(*)::int AS total FROM whisperlist_rows');
+      const count = Number(countRes.rows[0] && countRes.rows[0].total || 0);
+      if (count > 0) return;
+    }
     const workbook = XLSX.readFile(WHISPERLIST_EXCEL_PATH, { cellDates: true });
     const parsed = parseWhisperlistWorkbook(workbook);
-    saveWhisperlistRows(parsed.rows, path.basename(WHISPERLIST_EXCEL_PATH));
+    await saveWhisperlistRows(parsed.rows, path.basename(WHISPERLIST_EXCEL_PATH));
     log(`Whisperlist inicializada con ${parsed.rows.length} filas`);
   } catch (err) {
     log(`No se pudo inicializar whisperlist: ${err && err.message ? err.message : err}`);
   }
+}
+
+async function ensureWhisperlistStorageReady() {
+  if (whisperlistStorageReady) return;
+  log(`Whisperlist storage: ${whisperlistPool ? 'postgres' : 'json-file'}`);
+  if (whisperlistPool) await ensureWhisperlistDbSchema();
+  await seedWhisperlistFromExcelIfNeeded();
+  whisperlistStorageReady = true;
 }
 
 function ownerServicesDefaultData() {
@@ -1244,79 +1368,91 @@ app.get('/whisperlist', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'whisperlist.html'));
 });
 
-app.get('/api/whisperlist', (req, res) => {
-  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const isGerente = currentEmail === GERENTE_EMAIL;
-  const data = readWhisperlistData();
-  const rows = data.rows.map((row) => ({
-    ...row,
-    canEdit: isGerente || String(row.correo || '').toLowerCase() === currentEmail
-  }));
-  res.json({
-    ok: true,
-    currentEmail,
-    isGerente,
-    updatedAt: data.updatedAt,
-    sourceFile: data.sourceFile,
-    rows
-  });
-});
-
-app.patch('/api/whisperlist/rows/:id', (req, res) => {
-  const rowId = String(req.params.id || '').trim();
-  if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
-
-  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const isGerente = currentEmail === GERENTE_EMAIL;
-  const data = readWhisperlistData();
-  const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
-  if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
-
-  const target = data.rows[index];
-  const ownerEmail = String(target.correo || '').trim().toLowerCase();
-  if (!isGerente && ownerEmail !== currentEmail) {
-    return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+app.get('/api/whisperlist', async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readWhisperlistData();
+    const rows = data.rows.map((row) => ({
+      ...row,
+      canEdit: isGerente || String(row.correo || '').toLowerCase() === currentEmail
+    }));
+    res.json({
+      ok: true,
+      currentEmail,
+      isGerente,
+      updatedAt: data.updatedAt,
+      sourceFile: data.sourceFile,
+      rows
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo leer whisperlist' });
   }
-
-  const body = req.body || {};
-  const nextRow = {
-    ...target,
-    canal: String(body.canal !== undefined ? body.canal : target.canal).trim(),
-    tipoVenta: String(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta).trim(),
-    nombreCliente: String(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente).trim(),
-    updatedAt: new Date().toISOString()
-  };
-  data.rows[index] = nextRow;
-  saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
-  return res.json({ ok: true, row: nextRow });
 });
 
-app.post('/api/whisperlist/rows', (req, res) => {
-  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const fallbackName = String(req.user && req.user.name || '').trim();
-  const data = readWhisperlistData();
-  const existing = data.rows.find((row) => String(row.correo || '').trim().toLowerCase() === currentEmail);
-  const asesor = String(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '').trim();
+app.patch('/api/whisperlist/rows/:id', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
-  const body = req.body || {};
-  const nombreCliente = String(body.nombreCliente || '').trim();
-  if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readWhisperlistData();
+    const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
 
-  const newRow = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    asesor,
-    correo: currentEmail,
-    canal: String(body.canal || '').trim(),
-    tipoVenta: String(body.tipoVenta || '').trim(),
-    nombreCliente,
-    updatedAt: new Date().toISOString()
-  };
-  data.rows.push(newRow);
-  saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
-  return res.status(201).json({ ok: true, row: newRow });
+    const target = data.rows[index];
+    const ownerEmail = String(target.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+    }
+
+    const body = req.body || {};
+    const nextRow = {
+      ...target,
+      canal: String(body.canal !== undefined ? body.canal : target.canal).trim(),
+      tipoVenta: String(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta).trim(),
+      nombreCliente: String(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente).trim(),
+      updatedAt: new Date().toISOString()
+    };
+    data.rows[index] = nextRow;
+    await saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.json({ ok: true, row: nextRow });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo guardar fila' });
+  }
 });
 
-app.post('/api/whisperlist/import-excel', requireGerente, (req, res) => {
+app.post('/api/whisperlist/rows', async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const fallbackName = String(req.user && req.user.name || '').trim();
+    const data = await readWhisperlistData();
+    const existing = data.rows.find((row) => String(row.correo || '').trim().toLowerCase() === currentEmail);
+    const asesor = String(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '').trim();
+
+    const body = req.body || {};
+    const nombreCliente = String(body.nombreCliente || '').trim();
+    if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
+
+    const newRow = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor,
+      correo: currentEmail,
+      canal: String(body.canal || '').trim(),
+      tipoVenta: String(body.tipoVenta || '').trim(),
+      nombreCliente,
+      updatedAt: new Date().toISOString()
+    };
+    data.rows.push(newRow);
+    await saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.status(201).json({ ok: true, row: newRow });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo agregar fila' });
+  }
+});
+
+app.post('/api/whisperlist/import-excel', requireGerente, async (req, res) => {
   const { fileName, base64, sheetName } = req.body || {};
   if (!base64) {
     return res.status(400).json({ error: 'Archivo inválido: falta contenido base64' });
@@ -1337,7 +1473,7 @@ app.post('/api/whisperlist/import-excel', requireGerente, (req, res) => {
   }
 
   const safeName = sanitizeExcelFileName(fileName) || 'whisperlist.xlsx';
-  saveWhisperlistRows(parsed.rows, safeName);
+  await saveWhisperlistRows(parsed.rows, safeName);
   return res.json({
     ok: true,
     fileName: safeName,
@@ -2272,9 +2408,19 @@ app.post('/format/:id/pdf', async (req, res) => {
   }
 });
 
-const server = app.listen(PORT, HOST, () => {
-  log(`Servidor listo en http://${HOST}:${PORT}`);
-});
-server.on('error', (err) => {
-  log(`Error al iniciar servidor: ${err && err.stack ? err.stack : err}`);
-});
+async function startServer() {
+  try {
+    await ensureWhisperlistStorageReady();
+  } catch (err) {
+    log(`Fallo inicializando Whisperlist storage: ${err && err.stack ? err.stack : err}`);
+    process.exit(1);
+  }
+  const server = app.listen(PORT, HOST, () => {
+    log(`Servidor listo en http://${HOST}:${PORT}`);
+  });
+  server.on('error', (err) => {
+    log(`Error al iniciar servidor: ${err && err.stack ? err.stack : err}`);
+  });
+}
+
+startServer();
