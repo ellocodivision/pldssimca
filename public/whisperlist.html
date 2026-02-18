@@ -148,7 +148,6 @@
         <thead>
           <tr>
             <th>ASESOR</th>
-            <th>CORREO</th>
             <th>CANAL</th>
             <th>TIPO DE VENTA</th>
             <th>NOMBRE CLIENTE</th>
@@ -219,7 +218,6 @@
         return `
           <tr data-id="${String(row.id)}">
             <td>${escapeHtml(row.asesor || '')}</td>
-            <td class="email">${escapeHtml(row.correo || '')}</td>
             <td>${canalSelect}</td>
             <td>${tipoSelect}</td>
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
