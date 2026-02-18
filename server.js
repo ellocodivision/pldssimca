@@ -346,7 +346,7 @@ function launchPdfBrowser() {
       '--disable-dev-shm-usage',
       '--no-zygote',
       '--single-process',
-      '--font-render-hinting=none'
+      '--font-render-hinting=medium'
     ]
   };
   return puppeteer.launch(launchOptions);
@@ -377,7 +377,8 @@ async function buildPdfBufferWithBrowser(browser, html) {
   try {
     page.setDefaultTimeout(120000);
     page.setDefaultNavigationTimeout(120000);
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.setViewport({ width: 1600, height: 2200, deviceScaleFactor: 2 });
+    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 120000 });
     await page.emulateMediaType('print');
     try {
       const hasReadyMarker = await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, '__pdfReady'));
