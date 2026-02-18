@@ -1564,14 +1564,14 @@ app.get('/api/whisperlist', async (req, res) => {
       ...row,
       asesor: normalizeWhisperlistPersonText(row.asesor),
       nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
-      clientEmail: String(row.correo || '').toLowerCase() === currentEmail
+      clientEmail: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
         ? normalizeClientEmail(row.clientEmail)
         : '',
-      clientPhone: String(row.correo || '').toLowerCase() === currentEmail
+      clientPhone: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
         ? normalizeClientPhone(row.clientPhone)
         : '',
       canEdit: isGerente || String(row.correo || '').toLowerCase() === currentEmail,
-      canViewClientData: String(row.correo || '').toLowerCase() === currentEmail
+      canViewClientData: isGerente || String(row.correo || '').toLowerCase() === currentEmail
     }));
     res.json({
       ok: true,
