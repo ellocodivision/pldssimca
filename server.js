@@ -2,10 +2,12 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { execSync } = require('child_process');
 process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
+const QRCode = require('qrcode');
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -24,6 +26,7 @@ const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
 const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
 const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
 const MICROSOFT_AUTH_READY = Boolean(MICROSOFT_CLIENT_ID && MICROSOFT_CLIENT_SECRET);
+const LEAD_TOKEN_SECRET = process.env.LEAD_TOKEN_SECRET || SESSION_SECRET;
 const LOCAL_NO_AUTH = String(process.env.LOCAL_NO_AUTH || '') === '1';
 const ALLOWED_DOMAIN = String(process.env.ALLOWED_DOMAIN || 'simca.mx').toLowerCase();
 const GERENTE_EMAIL = String(process.env.GERENTE_EMAIL || 'martin@simca.mx').toLowerCase();
@@ -470,6 +473,52 @@ function normalizeWhisperlistPersonText(raw) {
     .toUpperCase();
 }
 
+function encodeBase64Url(raw) {
+  return Buffer.from(String(raw || ''), 'utf-8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function decodeBase64Url(value) {
+  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '==='.slice((normalized.length + 3) % 4);
+  return Buffer.from(padded, 'base64').toString('utf-8');
+}
+
+function signLeadPayload(payloadText) {
+  return crypto
+    .createHmac('sha256', LEAD_TOKEN_SECRET)
+    .update(String(payloadText || ''))
+    .digest('hex');
+}
+
+function createLeadToken(payload) {
+  const payloadText = JSON.stringify(payload || {});
+  const encoded = encodeBase64Url(payloadText);
+  const signature = signLeadPayload(encoded);
+  return `${encoded}.${signature}`;
+}
+
+function verifyLeadToken(token) {
+  const rawToken = String(token || '').trim();
+  const parts = rawToken.split('.');
+  if (parts.length !== 2) return null;
+  const [encoded, signature] = parts;
+  const expected = signLeadPayload(encoded);
+  if (signature !== expected) return null;
+  try {
+    const payload = JSON.parse(decodeBase64Url(encoded));
+    const asesor = normalizeWhisperlistPersonText(payload.asesor);
+    const correo = String(payload.correo || '').trim().toLowerCase();
+    if (!asesor || !correo) return null;
+    return { asesor, correo };
+  } catch {
+    return null;
+  }
+}
+
 function normalizeWhisperlistRow(rawRow, fallbackId) {
   const normalized = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
@@ -657,6 +706,20 @@ async function isAllowedLoginEmail(email) {
   if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
   if ((await whisperlistAllowedEmails()).has(normalized)) return true;
   return false;
+}
+
+function getWhisperlistSellers(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  const byEmail = new Map();
+  items.forEach((row) => {
+    const correo = String(row && row.correo || '').trim().toLowerCase();
+    const asesor = normalizeWhisperlistPersonText(row && row.asesor || '');
+    if (!correo || !asesor) return;
+    if (!byEmail.has(correo)) {
+      byEmail.set(correo, { asesor, correo });
+    }
+  });
+  return Array.from(byEmail.values()).sort((a, b) => a.asesor.localeCompare(b.asesor));
 }
 
 async function seedWhisperlistFromExcelIfNeeded() {
@@ -1346,6 +1409,7 @@ app.use('/format', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
+app.use('/whisperlist/qr', requireGerente);
 app.use('/whisperlist', requireAuth);
 app.use('/api/whisperlist', requireAuth);
 app.use('/owner-services', requireGerente);
@@ -1454,6 +1518,10 @@ app.get('/whisperlist', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'whisperlist.html'));
 });
 
+app.get('/whisperlist/qr', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'whisperlist-qr.html'));
+});
+
 app.get('/api/whisperlist', async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
@@ -1475,6 +1543,26 @@ app.get('/api/whisperlist', async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo leer whisperlist' });
+  }
+});
+
+app.get('/api/whisperlist/qr-codes', requireGerente, async (req, res) => {
+  try {
+    const data = await readWhisperlistData();
+    const sellers = getWhisperlistSellers(data.rows);
+    const items = await Promise.all(sellers.map(async (seller) => {
+      const token = createLeadToken({ asesor: seller.asesor, correo: seller.correo });
+      const leadUrl = `${APP_BASE_URL_NORMALIZED}/lead?t=${encodeURIComponent(token)}`;
+      const qrDataUrl = await QRCode.toDataURL(leadUrl, { margin: 1, width: 280 });
+      return {
+        ...seller,
+        leadUrl,
+        qrDataUrl
+      };
+    }));
+    return res.json({ ok: true, items });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudieron generar QR' });
   }
 });
 
@@ -1562,6 +1650,38 @@ app.delete('/api/whisperlist/rows/:id', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo eliminar fila' });
+  }
+});
+
+app.get('/lead', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'lead-form.html'));
+});
+
+app.post('/api/lead/submit', async (req, res) => {
+  try {
+    const token = String(req.body && req.body.token || '').trim();
+    const decoded = verifyLeadToken(token);
+    if (!decoded) return res.status(400).json({ error: 'Token inválido' });
+
+    const nombreCliente = normalizeWhisperlistPersonText(req.body && req.body.nombreCliente);
+    if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
+
+    const newRow = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor: decoded.asesor,
+      correo: decoded.correo,
+      canal: normalizeWhisperlistCanal(req.body && req.body.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(req.body && req.body.tipoVenta),
+      nombreCliente,
+      updatedAt: new Date().toISOString()
+    };
+
+    const data = await readWhisperlistData();
+    data.rows.push(newRow);
+    await saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.status(201).json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo registrar el cliente' });
   }
 });
 

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QR Vendedores</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#111;--muted:#67645c;--accent:#f3df2b}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px 16px 40px}
+    h1{margin:0 0 8px}
+    .sub{margin:0;color:var(--muted)}
+    .top{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .btn{border:1px solid #bdb8a9;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer;text-decoration:none;color:#111}
+    .grid{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+    .qr{display:block;width:100%;max-width:220px;margin:0 auto 10px}
+    .name{font-size:14px;font-weight:800}
+    .email{font-size:12px;color:var(--muted);font-family:monospace}
+    .row{margin-top:8px;display:flex;gap:8px;align-items:center}
+    .link{font-size:12px;color:#1d4ed8;word-break:break-all}
+    .status{margin-top:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>QR por Vendedor</h1>
+        <p class="sub">Escanean y abre una landing para alta automática de cliente.</p>
+      </div>
+      <a class="btn" href="/whisperlist">Volver</a>
+    </div>
+    <p id="status" class="status">Cargando QR...</p>
+    <div id="grid" class="grid"></div>
+  </div>
+
+  <script>
+    (function () {
+      const grid = document.getElementById('grid');
+      const status = document.getElementById('status');
+
+      function esc(v) {
+        return String(v || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function cardHtml(item) {
+        return `
+          <article class="card">
+            <img class="qr" src="${item.qrDataUrl}" alt="QR ${esc(item.asesor)}" />
+            <div class="name">${esc(item.asesor)}</div>
+            <div class="email">${esc(item.correo)}</div>
+            <div class="row">
+              <button class="btn copy-btn" data-link="${esc(item.leadUrl)}" type="button">Copiar link</button>
+              <a class="btn" href="${item.leadUrl}" target="_blank" rel="noopener">Abrir</a>
+            </div>
+            <div class="link">${esc(item.leadUrl)}</div>
+          </article>
+        `;
+      }
+
+      async function loadQr() {
+        status.textContent = 'Cargando QR...';
+        try {
+          const res = await fetch('/api/whisperlist/qr-codes', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo cargar');
+          const items = Array.isArray(data.items) ? data.items : [];
+          grid.innerHTML = items.map(cardHtml).join('');
+          status.textContent = 'Vendedores: ' + items.length;
+        } catch (err) {
+          status.textContent = err.message || 'Error al cargar QR';
+        }
+      }
+
+      grid.addEventListener('click', async function (ev) {
+        const btn = ev.target.closest('.copy-btn');
+        if (!btn) return;
+        const link = btn.getAttribute('data-link') || '';
+        try {
+          await navigator.clipboard.writeText(link);
+          btn.textContent = 'Copiado';
+          setTimeout(function () { btn.textContent = 'Copiar link'; }, 1200);
+        } catch {}
+      });
+
+      loadQr();
+    })();
+  </script>
+</body>
+</html>

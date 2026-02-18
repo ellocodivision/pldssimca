@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registro de Cliente</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#111;--muted:#67645c;--accent:#f3df2b;--ok:#1f8d3c;--err:#b42318}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);display:grid;place-items:center;min-height:100vh;padding:16px}
+    .card{width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+    h1{margin:0 0 8px}
+    p{margin:0 0 12px;color:var(--muted)}
+    label{display:block;font-size:12px;font-weight:700;margin:10px 0 6px}
+    .input{width:100%;padding:10px;border:1px solid #cec7b8;border-radius:10px}
+    .btn{margin-top:12px;border:1px solid #111;background:var(--accent);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer}
+    .status{margin-top:10px;font-size:13px}
+    .status.ok{color:var(--ok)}
+    .status.err{color:var(--err)}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Registro de Cliente</h1>
+    <p>Completa los datos y tu asesor recibirá este cliente en su lista.</p>
+    <form id="leadForm">
+      <label for="nombreCliente">NOMBRE CLIENTE</label>
+      <input id="nombreCliente" class="input" required />
+
+      <label for="canal">CANAL</label>
+      <select id="canal" class="input">
+        <option value="">Seleccionar</option>
+        <option value="SIMCA">SIMCA</option>
+        <option value="RELATED">RELATED</option>
+      </select>
+
+      <label for="tipoVenta">TIPO DE VENTA</label>
+      <select id="tipoVenta" class="input">
+        <option value="">Seleccionar</option>
+        <option value="EXTERNO">EXTERNO</option>
+        <option value="INTERNO">INTERNO</option>
+        <option value="MERITO PROPIO">MERITO PROPIO</option>
+      </select>
+
+      <button class="btn" type="submit">Enviar</button>
+      <p id="status" class="status"></p>
+    </form>
+  </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById('leadForm');
+      const status = document.getElementById('status');
+      const token = new URLSearchParams(window.location.search).get('t') || '';
+
+      function setStatus(text, kind) {
+        status.textContent = text || '';
+        status.className = 'status' + (kind ? ' ' + kind : '');
+      }
+
+      form.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        if (!token) {
+          setStatus('Link inválido o incompleto.', 'err');
+          return;
+        }
+        const payload = {
+          token: token,
+          nombreCliente: document.getElementById('nombreCliente').value,
+          canal: document.getElementById('canal').value,
+          tipoVenta: document.getElementById('tipoVenta').value
+        };
+        setStatus('Enviando...', '');
+        try {
+          const res = await fetch('/api/lead/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo enviar');
+          form.reset();
+          setStatus('Gracias, cliente registrado correctamente.', 'ok');
+        } catch (err) {
+          setStatus(err.message || 'No se pudo registrar el cliente', 'err');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
