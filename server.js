@@ -755,6 +755,20 @@ function sortWhisperlistRows(rows) {
   });
 }
 
+function whisperlistExportRows(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  return items.map((row) => ({
+    ASESOR: normalizeWhisperlistPersonText(row.asesor),
+    CORREO_ASESOR: String(row.correo || '').trim().toLowerCase(),
+    CANAL: normalizeWhisperlistCanal(row.canal),
+    TIPO_DE_VENTA: normalizeWhisperlistTipoVenta(row.tipoVenta),
+    NOMBRE_CLIENTE: normalizeWhisperlistPersonText(row.nombreCliente),
+    CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
+    TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
+    UPDATED_AT: String(row.updatedAt || '')
+  }));
+}
+
 async function seedWhisperlistFromExcelIfNeeded() {
   if (!fs.existsSync(WHISPERLIST_EXCEL_PATH)) return;
   if (!whisperlistPool && fs.existsSync(WHISPERLIST_JSON_PATH)) return;
@@ -1603,6 +1617,24 @@ app.get('/api/whisperlist/qr-codes', requireGerente, async (req, res) => {
     return res.json({ ok: true, items });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudieron generar QR' });
+  }
+});
+
+app.get('/api/whisperlist/export.xlsx', requireGerente, async (req, res) => {
+  try {
+    const data = await readWhisperlistData();
+    const rows = whisperlistExportRows(data.rows);
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Whisperlist');
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const dateTag = new Date().toISOString().slice(0, 10);
+    const fileName = `whisperlist-backup-${dateTag}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(buffer);
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo exportar whisperlist' });
   }
 });
 
