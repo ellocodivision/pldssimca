@@ -43,6 +43,7 @@
     .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#ece7da;font-size:12px;font-weight:700}
     .check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
     .kpi{font-size:13px;color:var(--muted)}
+    .dup-row{background:#fff4c4}
     .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
     .stats-box{border:1px solid var(--line);border-radius:10px;padding:10px}
     .stats-box h3{margin:0 0 8px;font-size:13px}
@@ -112,6 +113,11 @@
         <span class="badge">Filtro</span>
         <select id="filterAsesor" class="cell-input"></select>
         <input id="searchText" class="cell-input" placeholder="Buscar cliente/correo" />
+        <button id="findDuplicatesBtn" class="btn" type="button">Buscar duplicados</button>
+        <label class="check">
+          <input id="onlyDuplicates" type="checkbox" />
+          Solo duplicados
+        </label>
         <button id="clearFiltersBtn" class="btn" type="button">Limpiar filtros</button>
       </div>
       <p id="globalStatus" class="status"></p>
@@ -182,6 +188,8 @@
         filterAsesor: document.getElementById('filterAsesor'),
         searchText: document.getElementById('searchText'),
         clearFiltersBtn: document.getElementById('clearFiltersBtn'),
+        findDuplicatesBtn: document.getElementById('findDuplicatesBtn'),
+        onlyDuplicates: document.getElementById('onlyDuplicates'),
         filterSummary: document.getElementById('filterSummary'),
         statsByAsesor: document.getElementById('statsByAsesor'),
         statsByCanal: document.getElementById('statsByCanal'),
@@ -192,6 +200,7 @@
         addBtn: document.getElementById('addBtn'),
         addStatus: document.getElementById('addStatus')
       };
+      const duplicateNameSet = new Set();
 
       function setStatus(el, text, level) {
         el.textContent = text || '';
@@ -216,8 +225,10 @@
         const disabled = canEdit ? '' : 'disabled';
         const canalSelect = selectHtml('canal', row.canal || '', ['SIMCA', 'RELATED'], disabled);
         const tipoSelect = selectHtml('tipoVenta', row.tipoVenta || '', ['EXTERNO', 'INTERNO', 'MERITO PROPIO'], disabled);
+        const isDuplicateName = duplicateNameSet.has(String(row.nombreCliente || '').trim().toUpperCase());
+        const duplicateClass = isDuplicateName ? 'dup-row' : '';
         return `
-          <tr data-id="${String(row.id)}">
+          <tr data-id="${String(row.id)}" class="${duplicateClass}">
             <td>${escapeHtml(row.asesor || '')}</td>
             <td>${canalSelect}</td>
             <td>${tipoSelect}</td>
@@ -281,6 +292,10 @@
         const text = String(els.searchText.value || '').trim().toLowerCase();
         return state.rows.filter(function (row) {
           if (seller && String(row.asesor || '').trim() !== seller) return false;
+          if (els.onlyDuplicates.checked) {
+            const key = String(row.nombreCliente || '').trim().toUpperCase();
+            if (!duplicateNameSet.has(key)) return false;
+          }
           if (!text) return true;
           const haystack = [
             row.asesor,
@@ -299,6 +314,29 @@
         renderCountTable(els.statsByCanal, mapCounts(filtered, function (r) { return r.canal; }));
         renderCountTable(els.statsByTipo, mapCounts(filtered, function (r) { return r.tipoVenta; }));
         els.filterSummary.textContent = 'Mostrando ' + filtered.length + ' de ' + state.rows.length + ' filas.';
+      }
+
+      function findDuplicateNames() {
+        duplicateNameSet.clear();
+        const counts = new Map();
+        state.rows.forEach(function (row) {
+          const key = String(row.nombreCliente || '').trim().toUpperCase();
+          if (!key) return;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        let dupCount = 0;
+        counts.forEach(function (count, key) {
+          if (count > 1) {
+            duplicateNameSet.add(key);
+            dupCount += count;
+          }
+        });
+        if (duplicateNameSet.size) {
+          setStatus(els.globalStatus, 'Duplicados detectados: ' + duplicateNameSet.size + ' nombres (' + dupCount + ' filas).', 'ok');
+        } else {
+          setStatus(els.globalStatus, 'No se encontraron nombres duplicados.', 'ok');
+        }
+        renderListAndStats();
       }
 
       function renderListAndStats() {
@@ -466,6 +504,15 @@
       els.clearFiltersBtn.addEventListener('click', function () {
         els.filterAsesor.value = '';
         els.searchText.value = '';
+        els.onlyDuplicates.checked = false;
+        renderListAndStats();
+      });
+
+      els.findDuplicatesBtn.addEventListener('click', function () {
+        findDuplicateNames();
+      });
+
+      els.onlyDuplicates.addEventListener('change', function () {
         renderListAndStats();
       });
 
