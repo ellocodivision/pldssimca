@@ -601,7 +601,7 @@ async function readWhisperlistData() {
   if (!whisperlistStorageReady) await ensureWhisperlistStorageReady();
   if (!whisperlistPool) {
     const raw = readJson(WHISPERLIST_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
-    const rows = Array.isArray(raw.rows) ? raw.rows : [];
+    const rows = sortWhisperlistRows(Array.isArray(raw.rows) ? raw.rows : []);
     return {
       rows,
       updatedAt: raw.updatedAt || null,
@@ -628,7 +628,7 @@ async function readWhisperlistData() {
   });
 
   return {
-    rows: rowsRes.rows.map((row) => ({
+    rows: sortWhisperlistRows(rowsRes.rows.map((row) => ({
       id: String(row.id || ''),
       asesor: String(row.asesor || ''),
       correo: String(row.correo || '').toLowerCase(),
@@ -638,7 +638,7 @@ async function readWhisperlistData() {
       clientEmail: String(row.client_email || ''),
       clientPhone: String(row.client_phone || ''),
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
-    })),
+    }))),
     updatedAt: meta.updatedAt || null,
     sourceFile: meta.sourceFile || ''
   };
@@ -740,6 +740,19 @@ function getWhisperlistSellers(rows) {
     }
   });
   return Array.from(byEmail.values()).sort((a, b) => a.asesor.localeCompare(b.asesor));
+}
+
+function sortWhisperlistRows(rows) {
+  const list = Array.isArray(rows) ? [...rows] : [];
+  return list.sort((a, b) => {
+    const asesorA = normalizeWhisperlistPersonText(a && a.asesor || '');
+    const asesorB = normalizeWhisperlistPersonText(b && b.asesor || '');
+    const byAsesor = asesorA.localeCompare(asesorB, 'es');
+    if (byAsesor !== 0) return byAsesor;
+    const clienteA = normalizeWhisperlistPersonText(a && a.nombreCliente || '');
+    const clienteB = normalizeWhisperlistPersonText(b && b.nombreCliente || '');
+    return clienteA.localeCompare(clienteB, 'es');
+  });
 }
 
 async function seedWhisperlistFromExcelIfNeeded() {
