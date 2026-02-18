@@ -3,17 +3,67 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Registro de Cliente</title>
+  <title>Registro Viceroy</title>
   <style>
-    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#111;--muted:#67645c;--accent:#f3df2b;--ok:#1f8d3c;--err:#b42318}
+    :root{
+      --bg:#1f1710;
+      --card:#efe2cc;
+      --line:#c9ab7a;
+      --ink:#1c140d;
+      --muted:#5d4d3a;
+      --accent:#9a6f3b;
+      --accent-2:#dbc08e;
+      --ok:#1f8d3c;
+      --err:#b42318;
+    }
     *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);display:grid;place-items:center;min-height:100vh;padding:16px}
-    .card{width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-    h1{margin:0 0 8px}
+    body{
+      margin:0;
+      font-family:Arial,sans-serif;
+      background:
+        radial-gradient(circle at 0% 0%, #47311d 0%, rgba(71,49,29,0) 45%),
+        radial-gradient(circle at 100% 100%, #2d2016 0%, rgba(45,32,22,0) 45%),
+        var(--bg);
+      color:var(--ink);
+      display:grid;
+      place-items:center;
+      min-height:100vh;
+      padding:16px;
+    }
+    .card{width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+    h1{margin:0 0 8px;font-size:32px;letter-spacing:.02em}
     p{margin:0 0 12px;color:var(--muted)}
     label{display:block;font-size:12px;font-weight:700;margin:10px 0 6px}
-    .input{width:100%;padding:10px;border:1px solid #cec7b8;border-radius:10px}
-    .btn{margin-top:12px;border:1px solid #111;background:var(--accent);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer}
+    .input{
+      width:100%;
+      padding:11px 12px;
+      border:1px solid #c5ab81;
+      border-radius:10px;
+      background:#fffdfa;
+      color:var(--ink);
+    }
+    .meta{
+      display:inline-block;
+      font-size:11px;
+      font-weight:700;
+      color:#4c3c29;
+      background:#e7d1a8;
+      border:1px solid #c5ab81;
+      border-radius:999px;
+      padding:4px 9px;
+      margin-bottom:10px;
+    }
+    .btn{
+      margin-top:14px;
+      border:1px solid #5e4526;
+      background:linear-gradient(180deg,var(--accent-2),var(--accent));
+      color:#20160d;
+      border-radius:10px;
+      padding:11px 14px;
+      font-weight:800;
+      cursor:pointer;
+      width:100%;
+    }
     .status{margin-top:10px;font-size:13px}
     .status.ok{color:var(--ok)}
     .status.err{color:var(--err)}
@@ -21,28 +71,20 @@
 </head>
 <body>
   <main class="card">
-    <h1>Registro de Cliente</h1>
-    <p>Completa los datos y tu asesor recibirá este cliente en su lista.</p>
+    <span class="meta">VICEROY PLAYA DEL CARMEN</span>
+    <h1>REGISTRO</h1>
+    <p>Completa los datos para registrar tu interés.</p>
     <form id="leadForm">
-      <label for="nombreCliente">NOMBRE CLIENTE</label>
+      <label for="nombreCliente">NOMBRE COMPLETO</label>
       <input id="nombreCliente" class="input" required />
 
-      <label for="canal">CANAL</label>
-      <select id="canal" class="input">
-        <option value="">Seleccionar</option>
-        <option value="SIMCA">SIMCA</option>
-        <option value="RELATED">RELATED</option>
-      </select>
+      <label for="clientEmail">CORREO</label>
+      <input id="clientEmail" class="input" type="email" />
 
-      <label for="tipoVenta">TIPO DE VENTA</label>
-      <select id="tipoVenta" class="input">
-        <option value="">Seleccionar</option>
-        <option value="EXTERNO">EXTERNO</option>
-        <option value="INTERNO">INTERNO</option>
-        <option value="MERITO PROPIO">MERITO PROPIO</option>
-      </select>
+      <label for="clientPhone">TELÉFONO</label>
+      <input id="clientPhone" class="input" type="tel" />
 
-      <button class="btn" type="submit">Enviar</button>
+      <button class="btn" type="submit">ENVIAR DATOS</button>
       <p id="status" class="status"></p>
     </form>
   </main>
@@ -67,8 +109,8 @@
         const payload = {
           token: token,
           nombreCliente: document.getElementById('nombreCliente').value,
-          canal: document.getElementById('canal').value,
-          tipoVenta: document.getElementById('tipoVenta').value
+          clientEmail: document.getElementById('clientEmail').value,
+          clientPhone: document.getElementById('clientPhone').value
         };
         setStatus('Enviando...', '');
         try {

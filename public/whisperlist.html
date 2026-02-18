@@ -50,6 +50,12 @@
     .stats-table{width:100%;border-collapse:collapse;min-width:0}
     .stats-table th,.stats-table td{padding:6px 4px;border-bottom:1px solid #eee7d9;font-size:12px}
     .stats-table th{position:static;background:transparent}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:30}
+    .modal.open{display:flex}
+    .modal-card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+    .modal-grid{display:grid;grid-template-columns:1fr;gap:8px}
+    .modal-field{font-size:13px}
+    .modal-label{font-size:11px;color:var(--muted);display:block}
     @media (max-width:700px){
       .title{font-size:26px}
       .stats-grid{grid-template-columns:1fr}
@@ -167,6 +173,20 @@
     </div>
   </div>
 
+  <div id="clientModal" class="modal" aria-hidden="true">
+    <section class="modal-card">
+      <h3 style="margin:0 0 10px">Datos de cliente</h3>
+      <div class="modal-grid">
+        <div class="modal-field"><span class="modal-label">NOMBRE CLIENTE</span><strong id="modalNombre">-</strong></div>
+        <div class="modal-field"><span class="modal-label">CORREO CLIENTE</span><strong id="modalCorreo">-</strong></div>
+        <div class="modal-field"><span class="modal-label">TELÉFONO CLIENTE</span><strong id="modalTelefono">-</strong></div>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+        <button id="closeModalBtn" class="btn" type="button">Cerrar</button>
+      </div>
+    </section>
+  </div>
+
   <script>
     (function () {
       const state = {
@@ -195,6 +215,11 @@
         statsByAsesor: document.getElementById('statsByAsesor'),
         statsByCanal: document.getElementById('statsByCanal'),
         statsByTipo: document.getElementById('statsByTipo'),
+        clientModal: document.getElementById('clientModal'),
+        closeModalBtn: document.getElementById('closeModalBtn'),
+        modalNombre: document.getElementById('modalNombre'),
+        modalCorreo: document.getElementById('modalCorreo'),
+        modalTelefono: document.getElementById('modalTelefono'),
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
@@ -236,6 +261,7 @@
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
             <td>
               ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
+              <button class="btn save-btn client-data-btn" type="button">Datos cliente</button>
             </td>
           </tr>
         `;
@@ -254,6 +280,20 @@
         const filtered = getFilteredRows();
         els.tbody.innerHTML = filtered.map(rowHtml).join('');
         els.metaRows.textContent = 'Filas: ' + filtered.length + ' / ' + state.rows.length;
+      }
+
+      function showClientData(tr) {
+        const id = tr.getAttribute('data-id');
+        const row = state.rows.find(function (item) { return String(item.id) === String(id); });
+        if (!row) return;
+        els.modalNombre.textContent = row.nombreCliente || '-';
+        els.modalCorreo.textContent = row.clientEmail || '-';
+        els.modalTelefono.textContent = row.clientPhone || '-';
+        els.clientModal.classList.add('open');
+      }
+
+      function closeClientData() {
+        els.clientModal.classList.remove('open');
       }
 
       function mapCounts(rows, getKey) {
@@ -520,7 +560,13 @@
       els.tbody.addEventListener('click', function (ev) {
         const btn = ev.target.closest('.save-btn');
         const deleteBtn = ev.target.closest('.delete-btn');
-        if (!btn && !deleteBtn) return;
+        const clientDataBtn = ev.target.closest('.client-data-btn');
+        if (!btn && !deleteBtn && !clientDataBtn) return;
+        if (clientDataBtn) {
+          const trForData = clientDataBtn.closest('tr');
+          if (trForData) showClientData(trForData);
+          return;
+        }
         const sourceBtn = deleteBtn || btn;
         const tr = sourceBtn.closest('tr');
         if (!tr) return;
@@ -529,6 +575,14 @@
           return;
         }
         saveRow(tr);
+      });
+
+      els.closeModalBtn.addEventListener('click', function () {
+        closeClientData();
+      });
+
+      els.clientModal.addEventListener('click', function (ev) {
+        if (ev.target === els.clientModal) closeClientData();
       });
 
       fetchData().catch(function (err) {
