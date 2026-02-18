@@ -463,13 +463,20 @@ function normalizeWhisperlistTipoVenta(raw) {
   return '';
 }
 
+function normalizeWhisperlistPersonText(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+}
+
 function normalizeWhisperlistRow(rawRow, fallbackId) {
   const normalized = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
     normalized[normalizeWhisperlistKey(key)] = value;
   });
 
-  const asesor = String(normalized.asesor || '').trim();
+  const asesor = normalizeWhisperlistPersonText(normalized.asesor);
   const correo = String(normalized.correo || '').trim().toLowerCase();
   if (!asesor || !correo) return null;
 
@@ -481,7 +488,7 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
     correo,
     canal: normalizeWhisperlistCanal(normalized.canal),
     tipoVenta: normalizeWhisperlistTipoVenta(normalized.tipo_de_venta || normalized.tipodeventa),
-    nombreCliente: String(normalized.nombre_cliente || normalized.nombrecliente || '').trim(),
+    nombreCliente: normalizeWhisperlistPersonText(normalized.nombre_cliente || normalized.nombrecliente),
     updatedAt: new Date().toISOString()
   };
 }
@@ -574,10 +581,18 @@ async function readWhisperlistData() {
 
 async function saveWhisperlistRows(rows, sourceFile) {
   const safeRows = Array.isArray(rows) ? rows : [];
+  const normalizedRows = safeRows.map((row) => ({
+    ...row,
+    asesor: normalizeWhisperlistPersonText(row.asesor),
+    nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+    correo: String(row.correo || '').trim().toLowerCase(),
+    canal: normalizeWhisperlistCanal(row.canal),
+    tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta)
+  }));
   const updatedAt = new Date().toISOString();
   if (!whisperlistPool) {
     writeJson(WHISPERLIST_JSON_PATH, {
-      rows: safeRows,
+      rows: normalizedRows,
       updatedAt,
       sourceFile: String(sourceFile || '')
     });
@@ -588,17 +603,17 @@ async function saveWhisperlistRows(rows, sourceFile) {
   try {
     await client.query('BEGIN');
     await client.query('DELETE FROM whisperlist_rows');
-    for (const row of safeRows) {
+    for (const row of normalizedRows) {
       await client.query(
         `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
-          String(row.asesor || '').trim(),
+          normalizeWhisperlistPersonText(row.asesor),
           String(row.correo || '').trim().toLowerCase(),
           String(row.canal || '').trim(),
           String(row.tipoVenta || '').trim(),
-          String(row.nombreCliente || '').trim(),
+          normalizeWhisperlistPersonText(row.nombreCliente),
           String(row.updatedAt || updatedAt)
         ]
       );
@@ -1446,6 +1461,8 @@ app.get('/api/whisperlist', async (req, res) => {
     const data = await readWhisperlistData();
     const rows = data.rows.map((row) => ({
       ...row,
+      asesor: normalizeWhisperlistPersonText(row.asesor),
+      nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
       canEdit: isGerente || String(row.correo || '').toLowerCase() === currentEmail
     }));
     res.json({
@@ -1483,7 +1500,7 @@ app.patch('/api/whisperlist/rows/:id', async (req, res) => {
       ...target,
       canal: normalizeWhisperlistCanal(body.canal !== undefined ? body.canal : target.canal),
       tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta),
-      nombreCliente: String(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente).trim(),
+      nombreCliente: normalizeWhisperlistPersonText(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente),
       updatedAt: new Date().toISOString()
     };
     data.rows[index] = nextRow;
@@ -1500,10 +1517,10 @@ app.post('/api/whisperlist/rows', async (req, res) => {
     const fallbackName = String(req.user && req.user.name || '').trim();
     const data = await readWhisperlistData();
     const existing = data.rows.find((row) => String(row.correo || '').trim().toLowerCase() === currentEmail);
-    const asesor = String(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '').trim();
+    const asesor = normalizeWhisperlistPersonText(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '');
 
     const body = req.body || {};
-    const nombreCliente = String(body.nombreCliente || '').trim();
+    const nombreCliente = normalizeWhisperlistPersonText(body.nombreCliente);
     if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
 
     const newRow = {
@@ -1520,6 +1537,31 @@ app.post('/api/whisperlist/rows', async (req, res) => {
     return res.status(201).json({ ok: true, row: newRow });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo agregar fila' });
+  }
+});
+
+app.delete('/api/whisperlist/rows/:id', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readWhisperlistData();
+    const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const target = data.rows[index];
+    const ownerEmail = String(target.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes eliminar filas asignadas a tu correo' });
+    }
+
+    data.rows.splice(index, 1);
+    await saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo eliminar fila' });
   }
 });
 

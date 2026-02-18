@@ -24,6 +24,7 @@
     .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .btn{border:1px solid #bdb8a9;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}
     .btn.primary{background:var(--accent);border-color:#111}
+    .btn.danger{background:#fff2f0;border-color:#d25b4e;color:#8b1f16}
     .card{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .status{margin-top:8px;color:var(--muted);font-size:13px;min-height:18px}
@@ -222,7 +223,7 @@
             <td>${tipoSelect}</td>
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
             <td>
-              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button>' : lockText}
+              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
             </td>
           </tr>
         `;
@@ -380,6 +381,26 @@
         }
       }
 
+      async function deleteRow(tr) {
+        const id = tr.getAttribute('data-id');
+        if (!id) return;
+        const ok = window.confirm('Se eliminará esta fila. ¿Deseas continuar?');
+        if (!ok) return;
+        setStatus(els.globalStatus, 'Eliminando fila...', null);
+        try {
+          const res = await fetch('/api/whisperlist/rows/' + encodeURIComponent(id), {
+            method: 'DELETE',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo eliminar');
+          setStatus(els.globalStatus, 'Fila eliminada.', 'ok');
+          await fetchData();
+        } catch (err) {
+          setStatus(els.globalStatus, err.message || 'Error al eliminar', 'error');
+        }
+      }
+
       async function importExcel() {
         const file = els.excelInput.files && els.excelInput.files[0];
         if (!file) {
@@ -450,9 +471,15 @@
 
       els.tbody.addEventListener('click', function (ev) {
         const btn = ev.target.closest('.save-btn');
-        if (!btn) return;
-        const tr = btn.closest('tr');
+        const deleteBtn = ev.target.closest('.delete-btn');
+        if (!btn && !deleteBtn) return;
+        const sourceBtn = deleteBtn || btn;
+        const tr = sourceBtn.closest('tr');
         if (!tr) return;
+        if (deleteBtn) {
+          deleteRow(tr);
+          return;
+        }
         saveRow(tr);
       });
 
