@@ -90,6 +90,14 @@
           <option value="MERITO PROPIO">MERITO PROPIO</option>
         </select>
         <input id="newNombreCliente" class="cell-input" placeholder="NOMBRE CLIENTE" />
+        <select id="newRecamaras" class="cell-input">
+          <option value="">RECAMARAS</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="2PH">2PH</option>
+          <option value="3PH">3PH</option>
+        </select>
         <button id="addBtn" class="btn primary" type="button">Agregar</button>
       </div>
       <p class="hint">El nuevo cliente se asigna automáticamente a tu correo.</p>
@@ -166,6 +174,7 @@
             <th>CANAL</th>
             <th>TIPO DE VENTA</th>
             <th>NOMBRE CLIENTE</th>
+            <th>RECAMARAS</th>
             <th>ACCION</th>
           </tr>
         </thead>
@@ -224,6 +233,7 @@
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
+        newRecamaras: document.getElementById('newRecamaras'),
         addBtn: document.getElementById('addBtn'),
         addStatus: document.getElementById('addStatus')
       };
@@ -252,6 +262,7 @@
         const disabled = canEdit ? '' : 'disabled';
         const canalSelect = selectHtml('canal', row.canal || '', ['SIMCA', 'RELATED'], disabled);
         const tipoSelect = selectHtml('tipoVenta', row.tipoVenta || '', ['EXTERNO', 'INTERNO', 'MERITO PROPIO'], disabled);
+        const recamarasSelect = selectHtml('recamaras', row.recamaras || '', ['1', '2', '3', '2PH', '3PH'], disabled);
         const isDuplicateName = duplicateNameSet.has(String(row.nombreCliente || '').trim().toUpperCase());
         const duplicateClass = isDuplicateName ? 'dup-row' : '';
         return `
@@ -260,6 +271,7 @@
             <td>${canalSelect}</td>
             <td>${tipoSelect}</td>
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
+            <td>${recamarasSelect}</td>
             <td>
               ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
@@ -344,7 +356,8 @@
             row.correo,
             row.canal,
             row.tipoVenta,
-            row.nombreCliente
+            row.nombreCliente,
+            row.recamaras
           ].join(' ').toLowerCase();
           return haystack.includes(text);
         });
@@ -406,7 +419,8 @@
         const payload = {
           canal: tr.querySelector('[data-field="canal"]').value,
           tipoVenta: tr.querySelector('[data-field="tipoVenta"]').value,
-          nombreCliente: tr.querySelector('[data-field="nombreCliente"]').value
+          nombreCliente: tr.querySelector('[data-field="nombreCliente"]').value,
+          recamaras: tr.querySelector('[data-field="recamaras"]').value
         };
         const btn = tr.querySelector('.save-btn');
         if (btn) btn.disabled = true;
@@ -432,7 +446,8 @@
         const payload = {
           canal: els.newCanal.value,
           tipoVenta: els.newTipoVenta.value,
-          nombreCliente: els.newNombreCliente.value
+          nombreCliente: els.newNombreCliente.value,
+          recamaras: els.newRecamaras.value
         };
         if (!String(payload.nombreCliente || '').trim()) {
           setStatus(els.addStatus, 'Nombre cliente es obligatorio.', 'error');
@@ -453,6 +468,7 @@
           els.newCanal.value = '';
           els.newTipoVenta.value = '';
           els.newNombreCliente.value = '';
+          els.newRecamaras.value = '';
           await fetchData();
         } catch (err) {
           setStatus(els.addStatus, err.message || 'Error al agregar', 'error');

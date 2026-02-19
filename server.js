@@ -91,6 +91,7 @@ const formats = {
 };
 const WHISPERLIST_CANALES = ['SIMCA', 'RELATED'];
 const WHISPERLIST_TIPOS_VENTA = ['EXTERNO', 'INTERNO', 'MERITO PROPIO'];
+const WHISPERLIST_RECAMARAS = ['1', '2', '3', '2PH', '3PH'];
 
 const whisperlistPool = USE_WHISPERLIST_DB
   ? new Pool({
@@ -467,6 +468,11 @@ function normalizeWhisperlistTipoVenta(raw) {
   return '';
 }
 
+function normalizeWhisperlistRecamaras(raw) {
+  const value = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+  return WHISPERLIST_RECAMARAS.includes(value) ? value : '';
+}
+
 function normalizeWhisperlistPersonText(raw) {
   return String(raw || '')
     .trim()
@@ -547,6 +553,7 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
     canal: normalizeWhisperlistCanal(normalized.canal),
     tipoVenta: normalizeWhisperlistTipoVenta(normalized.tipo_de_venta || normalized.tipodeventa),
     nombreCliente: normalizeWhisperlistPersonText(normalized.nombre_cliente || normalized.nombrecliente),
+    recamaras: normalizeWhisperlistRecamaras(normalized.recamaras || normalized.recamara),
     clientEmail: normalizeClientEmail(normalized.correo_cliente || normalized.email_cliente || normalized.client_email),
     clientPhone: normalizeClientPhone(normalized.telefono_cliente || normalized.telefono || normalized.client_phone),
     updatedAt: new Date().toISOString()
@@ -583,11 +590,13 @@ async function ensureWhisperlistDbSchema() {
       canal TEXT NOT NULL DEFAULT '',
       tipo_venta TEXT NOT NULL DEFAULT '',
       nombre_cliente TEXT NOT NULL DEFAULT '',
+      recamaras TEXT NOT NULL DEFAULT '',
       client_email TEXT NOT NULL DEFAULT '',
       client_phone TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS recamaras TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS client_email TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS client_phone TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`
@@ -612,7 +621,7 @@ async function readWhisperlistData() {
 
   const [rowsRes, metaRes] = await Promise.all([
     whisperlistPool.query(`
-      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, client_email, client_phone, updated_at
+      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, client_email, client_phone, updated_at
       FROM whisperlist_rows
       ORDER BY updated_at DESC, id ASC
     `),
@@ -636,6 +645,7 @@ async function readWhisperlistData() {
       canal: String(row.canal || ''),
       tipoVenta: String(row.tipo_venta || ''),
       nombreCliente: String(row.nombre_cliente || ''),
+      recamaras: String(row.recamaras || ''),
       clientEmail: String(row.client_email || ''),
       clientPhone: String(row.client_phone || ''),
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
@@ -654,6 +664,7 @@ async function saveWhisperlistRows(rows, sourceFile) {
     correo: String(row.correo || '').trim().toLowerCase(),
     clientEmail: normalizeClientEmail(row.clientEmail),
     clientPhone: normalizeClientPhone(row.clientPhone),
+    recamaras: normalizeWhisperlistRecamaras(row.recamaras),
     canal: normalizeWhisperlistCanal(row.canal),
     tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta)
   }));
@@ -673,8 +684,8 @@ async function saveWhisperlistRows(rows, sourceFile) {
     await client.query('DELETE FROM whisperlist_rows');
     for (const row of normalizedRows) {
       await client.query(
-        `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, client_email, client_phone, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, client_email, client_phone, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
           normalizeWhisperlistPersonText(row.asesor),
@@ -682,6 +693,7 @@ async function saveWhisperlistRows(rows, sourceFile) {
           String(row.canal || '').trim(),
           String(row.tipoVenta || '').trim(),
           normalizeWhisperlistPersonText(row.nombreCliente),
+          normalizeWhisperlistRecamaras(row.recamaras),
           normalizeClientEmail(row.clientEmail),
           normalizeClientPhone(row.clientPhone),
           String(row.updatedAt || updatedAt)
@@ -764,6 +776,7 @@ function whisperlistExportRows(rows) {
     CANAL: normalizeWhisperlistCanal(row.canal),
     TIPO_DE_VENTA: normalizeWhisperlistTipoVenta(row.tipoVenta),
     NOMBRE_CLIENTE: normalizeWhisperlistPersonText(row.nombreCliente),
+    RECAMARAS: normalizeWhisperlistRecamaras(row.recamaras),
     CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
     TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
     UPDATED_AT: String(row.updatedAt || '')
@@ -1579,6 +1592,7 @@ app.get('/api/whisperlist', async (req, res) => {
       ...row,
       asesor: normalizeWhisperlistPersonText(row.asesor),
       nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+      recamaras: normalizeWhisperlistRecamaras(row.recamaras),
       clientEmail: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
         ? normalizeClientEmail(row.clientEmail)
         : '',
@@ -1662,6 +1676,7 @@ app.patch('/api/whisperlist/rows/:id', async (req, res) => {
       canal: normalizeWhisperlistCanal(body.canal !== undefined ? body.canal : target.canal),
       tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta),
       nombreCliente: normalizeWhisperlistPersonText(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente),
+      recamaras: normalizeWhisperlistRecamaras(body.recamaras !== undefined ? body.recamaras : target.recamaras),
       clientEmail: normalizeClientEmail(body.clientEmail !== undefined ? body.clientEmail : target.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone !== undefined ? body.clientPhone : target.clientPhone),
       updatedAt: new Date().toISOString()
@@ -1693,6 +1708,7 @@ app.post('/api/whisperlist/rows', async (req, res) => {
       canal: normalizeWhisperlistCanal(body.canal),
       tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta),
       nombreCliente,
+      recamaras: normalizeWhisperlistRecamaras(body.recamaras),
       clientEmail: normalizeClientEmail(body.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone),
       updatedAt: new Date().toISOString()
@@ -1752,6 +1768,7 @@ app.post('/api/lead/submit', async (req, res) => {
       canal: 'RELATED',
       tipoVenta: '',
       nombreCliente,
+      recamaras: normalizeWhisperlistRecamaras(req.body && req.body.recamaras),
       clientEmail,
       clientPhone,
       updatedAt: new Date().toISOString()
