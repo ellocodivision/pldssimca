@@ -223,6 +223,10 @@
         <h2>3) Unidad seleccionada</h2>
         <label for="unitLabel">Etiqueta (ej: A-101)</label>
         <input id="unitLabel" type="text" placeholder="Ej: 101">
+        <div id="tipologiaRow" style="display:none;margin-top:8px;">
+          <label for="unitTipologia">Tipología</label>
+          <input id="unitTipologia" type="text" placeholder="Ej: T1 / Tipo A">
+        </div>
         <div class="btn-row">
           <button id="applyUnitBtn">Guardar etiqueta</button>
           <button id="autoLabelBtn">Auto (1,2,3)</button>
@@ -263,6 +267,7 @@
     const URL_PARAMS = new URLSearchParams(window.location.search);
     const devMatch = window.location.pathname.match(/^\/gerente-ventas\/([^/]+)\/plano-interactivo$/i);
     const DEV = (URL_PARAMS.get("dev") || (devMatch && devMatch[1]) || "ceiba").toLowerCase();
+    const IS_VICEROY_PILOTO = DEV === "viceroy-piloto";
     const DEV_BASE = `/gerente-ventas/${encodeURIComponent(DEV)}`;
     const STEP2_URL = `${DEV_BASE}/plano-ventas?dev=${encodeURIComponent(DEV)}`;
     const LOCAL_STATE_KEYS = [
@@ -307,6 +312,8 @@
     const showLabelsInput = document.getElementById("showLabelsInput");
     const drawHint = document.getElementById("drawHint");
     const unitLabel = document.getElementById("unitLabel");
+    const tipologiaRow = document.getElementById("tipologiaRow");
+    const unitTipologia = document.getElementById("unitTipologia");
     const applyUnitBtn = document.getElementById("applyUnitBtn");
     const autoLabelBtn = document.getElementById("autoLabelBtn");
     const zoneList = document.getElementById("zoneList");
@@ -323,6 +330,9 @@
     const zoomRangeInput = document.getElementById("zoomRangeInput");
     const zoomValue = document.getElementById("zoomValue");
     const DEV_LABEL = String(DEV || "ceiba").replace(/[-_]+/g, " ").toUpperCase();
+    if (tipologiaRow) {
+      tipologiaRow.style.display = IS_VICEROY_PILOTO ? "block" : "none";
+    }
 
     function safeNameToken(value) {
       return String(value || "")
@@ -479,6 +489,7 @@
               return {
                 id: zoneId,
                 label: String((zone && zone.label) || ""),
+                tipologia: String((zone && zone.tipologia) || ""),
                 labelOffset,
                 points
               };
@@ -530,6 +541,9 @@
       state.selectedZoneId = zoneId;
       const zone = zoneById(zoneId);
       unitLabel.value = zone ? zone.label : "";
+      if (unitTipologia) {
+        unitTipologia.value = zone ? String(zone.tipologia || "") : "";
+      }
       render();
       enableButtons();
     }
@@ -537,6 +551,8 @@
     function switchFloor(floorId) {
       state.activeFloorId = floorId;
       state.selectedZoneId = null;
+      unitLabel.value = "";
+      if (unitTipologia) unitTipologia.value = "";
       state.drawing = false;
       state.drawingPoints = [];
       state.cursorPoint = null;
@@ -700,6 +716,7 @@
       state.cursorPoint = null;
       state.selectedZoneId = null;
       unitLabel.value = "";
+      if (unitTipologia) unitTipologia.value = "";
       updateHint();
       render();
       enableButtons();
@@ -711,6 +728,7 @@
       const zone = {
         id: `zone-${state.nextZoneId++}`,
         label: String(floor.zones.length + 1),
+        tipologia: "",
         labelOffset: { x: 0, y: 0 },
         points: [...state.drawingPoints]
       };
@@ -739,6 +757,7 @@
       floor.zones = floor.zones.filter((z) => z.id !== state.selectedZoneId);
       state.selectedZoneId = null;
       unitLabel.value = "";
+      if (unitTipologia) unitTipologia.value = "";
       render();
       enableButtons();
     }
@@ -749,6 +768,9 @@
       const label = unitLabel.value.trim();
       if (!label) return;
       zone.label = label;
+      if (IS_VICEROY_PILOTO && unitTipologia) {
+        zone.tipologia = String(unitTipologia.value || "").trim();
+      }
       render();
     }
 
@@ -847,7 +869,11 @@
       }
       zoneList.innerHTML = floor.zones.map((zone) => {
         const active = zone.id === state.selectedZoneId ? "active" : "";
-        return `<li class="zone-item ${active}" data-zone-id="${zone.id}"><span>${escapeHtml(zone.label)}</span><span>${zone.points.length} pts</span></li>`;
+        const tipologia = String(zone.tipologia || "").trim();
+        const left = tipologia
+          ? `${escapeHtml(zone.label)} · <strong>${escapeHtml(tipologia)}</strong>`
+          : escapeHtml(zone.label);
+        return `<li class="zone-item ${active}" data-zone-id="${zone.id}"><span>${left}</span><span>${zone.points.length} pts</span></li>`;
       }).join("");
 
       zoneList.querySelectorAll("[data-zone-id]").forEach((el) => {

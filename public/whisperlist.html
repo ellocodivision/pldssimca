@@ -202,7 +202,8 @@
       const state = {
         rows: [],
         currentEmail: '',
-        isGerente: false
+        isGerente: false,
+        appBuildId: ''
       };
 
       const els = {
@@ -397,6 +398,41 @@
       function renderListAndStats() {
         renderRows();
         renderStats();
+      }
+
+      async function fetchAppVersion() {
+        const res = await fetch('/api/app-version', {
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || 'No se pudo validar versión');
+        return String(data.buildId || '');
+      }
+
+      async function checkForNewDeployment() {
+        try {
+          const latestBuildId = await fetchAppVersion();
+          if (!latestBuildId) return;
+          if (!state.appBuildId) {
+            state.appBuildId = latestBuildId;
+            return;
+          }
+          if (state.appBuildId !== latestBuildId) {
+            setStatus(els.globalStatus, 'Nueva versión detectada. Recargando...', 'ok');
+            window.location.reload();
+          }
+        } catch (_) {}
+      }
+
+      function setupAutoRefreshOnDeploy() {
+        checkForNewDeployment();
+        setInterval(checkForNewDeployment, 30000);
+        window.addEventListener('focus', checkForNewDeployment);
+        window.addEventListener('online', checkForNewDeployment);
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) checkForNewDeployment();
+        });
       }
 
       async function fetchData() {
@@ -605,6 +641,7 @@
       fetchData().catch(function (err) {
         setStatus(els.globalStatus, err.message || 'Error de carga', 'error');
       });
+      setupAutoRefreshOnDeploy();
     })();
   </script>
 </body>

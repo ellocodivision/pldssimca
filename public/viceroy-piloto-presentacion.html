@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VICEROY PILOTO - Presentación</title>
+  <style>
+    :root {
+      --bg: #0f1211;
+      --panel: #141917;
+      --card: #1a211e;
+      --ink: #e7ebe6;
+      --muted: #a9b3aa;
+      --line: #2b332e;
+      --accent: #9ea598;
+      --ok: #3daa5c;
+      --sold: #d25349;
+      --off: #616b63;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top, #151b18 0%, #0c0f0e 70%);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      gap: 12px;
+    }
+    .side, .block {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 8px 26px rgba(0,0,0,0.32);
+    }
+    .side { padding: 12px; position: sticky; top: 10px; align-self: start; }
+    .block { padding: 10px; }
+    h1 { margin: 0 0 6px; font-size: 20px; letter-spacing: .08em; }
+    h2 { margin: 0 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .help, .status { font-size: 12px; color: var(--muted); line-height: 1.35; }
+    .status { min-height: 17px; margin-top: 8px; }
+    .row { display: grid; gap: 8px; margin-top: 8px; }
+    select, button {
+      width: 100%;
+      border: 1px solid #3a453f;
+      border-radius: 10px;
+      background: #111614;
+      color: var(--ink);
+      padding: 9px 10px;
+      font-size: 13px;
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: #566158; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { border: 1px solid #3a453f; border-radius: 999px; padding: 4px 8px; font-size: 12px; background: #121714; }
+
+    .main { display: grid; gap: 10px; }
+
+    .tip-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .scene-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .scene-card {
+      border: 1px solid #334039;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--card);
+    }
+    .scene-card .thumb { height: 120px; }
+    .tip-card {
+      border: 1px solid #334039;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--card);
+    }
+    .tip-card.active { border-color: #9ea598; box-shadow: inset 0 0 0 1px #9ea598; }
+    .thumb {
+      height: 140px;
+      background: linear-gradient(145deg, #202823, #151b18);
+      display: grid;
+      place-items: center;
+      color: #8e978f;
+      font-size: 12px;
+      text-align: center;
+      padding: 10px;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .meta { padding: 8px; }
+    .title { margin: 0 0 4px; font-size: 13px; font-weight: 700; }
+    .sub { margin: 0; font-size: 11px; color: var(--muted); }
+
+    .floor-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
+    .floor-tab {
+      border: 1px solid #38423c;
+      border-radius: 999px;
+      background: #111714;
+      color: var(--ink);
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .floor-tab.active { border-color: #93a08f; background: #1d2521; font-weight: 700; }
+
+    .map-wrap {
+      background: #0d1110;
+      border: 1px solid #2a332e;
+      border-radius: 14px;
+      padding: 10px;
+      min-height: 70vh;
+      overflow: auto;
+    }
+    .stage { position: relative; display: inline-block; line-height: 0; max-width: 100%; }
+    #baseImage { max-width: 100%; height: auto; display: block; border-radius: 8px; }
+    #overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+    .legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    @media (max-width: 980px) {
+      .wrap { grid-template-columns: 1fr; }
+      .side { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="side">
+      <h1>VICEROY PILOTO</h1>
+      <p class="help">Presentación visual: recámaras -> tipología -> unidades en plano.</p>
+      <p id="status" class="status"></p>
+
+      <div class="row">
+        <h2>Recámaras</h2>
+        <select id="recamarasSelect"></select>
+      </div>
+
+      <div class="row">
+        <button id="viewAllBtn" type="button">Ver todo el plano</button>
+        <button id="clearTipBtn" type="button">Quitar tipología</button>
+      </div>
+
+      <div id="chips" class="chips"></div>
+      <div class="legend">
+        <span class="chip"><span class="dot" style="background:#3daa5c"></span> Disponible</span>
+        <span class="chip"><span class="dot" style="background:#d25349"></span> Vendida</span>
+        <span class="chip"><span class="dot" style="background:#616b63"></span> Sin filtro</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section id="scenesBlock" class="block" style="display:none;">
+        <div id="sceneGrid" class="scene-grid"></div>
+      </section>
+
+      <section class="block">
+        <div id="tipGrid" class="tip-grid"></div>
+      </section>
+
+      <section class="block">
+        <div id="floorTabs" class="floor-tabs"></div>
+      </section>
+
+      <section class="map-wrap">
+        <div class="stage">
+          <img id="baseImage" alt="Plano">
+          <svg id="overlay"></svg>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search || '');
+      const token = params.get('token') || '';
+      const dataUrl = '/api/viceroy-piloto/public-data' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+
+      const state = {
+        floors: [],
+        activeFloorId: '',
+        config: { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] },
+        inventoryRows: [],
+        byUnit: new Map(),
+        selectedRecamaras: '',
+        selectedTip: '',
+        showAll: true
+      };
+
+      const els = {
+        status: document.getElementById('status'),
+        recamarasSelect: document.getElementById('recamarasSelect'),
+        viewAllBtn: document.getElementById('viewAllBtn'),
+        clearTipBtn: document.getElementById('clearTipBtn'),
+        chips: document.getElementById('chips'),
+        scenesBlock: document.getElementById('scenesBlock'),
+        sceneGrid: document.getElementById('sceneGrid'),
+        tipGrid: document.getElementById('tipGrid'),
+        floorTabs: document.getElementById('floorTabs'),
+        baseImage: document.getElementById('baseImage'),
+        overlay: document.getElementById('overlay')
+      };
+
+      function setStatus(msg) { els.status.textContent = msg || ''; }
+      function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+      function norm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
+      function unit(s) { return String(s || '').trim().toUpperCase(); }
+
+      function activeFloor() {
+        return state.floors.find(function (f) { return f.id === state.activeFloorId; }) || null;
+      }
+
+      function applyMapFloorOrder() {
+        const order = Array.isArray(state.config && state.config.mapFloorOrder)
+          ? state.config.mapFloorOrder.map(function (id) { return String(id || ''); }).filter(Boolean)
+          : [];
+        if (!order.length || !state.floors.length) return;
+        const idx = new Map(order.map(function (id, i) { return [id, i]; }));
+        state.floors.sort(function (a, b) {
+          const ai = idx.has(String(a.id)) ? idx.get(String(a.id)) : Number.MAX_SAFE_INTEGER;
+          const bi = idx.has(String(b.id)) ? idx.get(String(b.id)) : Number.MAX_SAFE_INTEGER;
+          if (ai !== bi) return ai - bi;
+          return String(a.name || '').localeCompare(String(b.name || ''), 'es', { numeric: true });
+        });
+      }
+
+      function buildIndex() {
+        const m = new Map();
+        state.inventoryRows.forEach(function (r) {
+          const k = unit(r.unidad);
+          if (!k || m.has(k)) return;
+          m.set(k, r);
+        });
+        state.byUnit = m;
+      }
+
+      function tipologias() {
+        const list = Array.isArray(state.config.tipologias) ? state.config.tipologias.slice() : [];
+        const seen = new Set(list.map(function (t) { return norm(t.id || t.name); }));
+        state.inventoryRows.forEach(function (r) {
+          const t = String(r.tipologia || '').trim();
+          const k = norm(t);
+          if (!t || !k || seen.has(k)) return;
+          seen.add(k);
+          list.push({ id: t, name: t, recamaras: String(r.recamaras || ''), imageUrl: '' });
+        });
+        return list;
+      }
+
+      function info(zoneLabel) {
+        const row = state.byUnit.get(unit(zoneLabel));
+        const mapTip = String((state.config.unitTipologiaMap || {})[unit(zoneLabel)] || '').trim();
+        const tipologia = String((row && row.tipologia) || mapTip || '').trim();
+        const recMap = String((state.config.unitRecamarasMap || {})[unit(zoneLabel)] || '').trim().toUpperCase();
+        const recamaras = String((row && row.recamaras) || recMap || '').trim().toUpperCase();
+        const status = row && String(row.status || '').toLowerCase() === 'vendida' ? 'vendida' : 'disponible';
+        return { tipologia: tipologia, tipKey: norm(tipologia), recamaras: recamaras, status: status };
+      }
+
+      function renderScenes() {
+        const scenes = Array.isArray(state.config.pages) ? state.config.pages : [];
+        if (!scenes.length) {
+          els.scenesBlock.style.display = 'none';
+          els.sceneGrid.innerHTML = '';
+          return;
+        }
+        els.scenesBlock.style.display = '';
+        els.sceneGrid.innerHTML = scenes.map(function (scene) {
+          const thumb = scene.imageUrl
+            ? '<img src="' + esc(scene.imageUrl) + '" alt="' + esc(scene.title || scene.id) + '">'
+            : '<span>Sin imagen</span>';
+          const sub = [scene.targetType || '', scene.targetValue || ''].filter(Boolean).join(' · ');
+          return '<article class="scene-card" data-target-type="' + esc(scene.targetType || '') + '" data-target-value="' + esc(scene.targetValue || '') + '">' +
+            '<div class="thumb">' + thumb + '</div>' +
+            '<div class="meta"><p class="title">' + esc(scene.title || scene.id || 'ESCENA') + '</p><p class="sub">' + esc(sub || 'Navegación visual') + '</p></div>' +
+          '</article>';
+        }).join('');
+      }
+
+      function matches(i) {
+        if (!state.showAll) {
+          if (!state.selectedTip) return false;
+          if (norm(state.selectedTip) !== i.tipKey) return false;
+        }
+        if (state.selectedRecamaras && i.recamaras !== state.selectedRecamaras) return false;
+        return true;
+      }
+
+      function renderRecamaras() {
+        const set = new Set();
+        tipologias().forEach(function (t) { if (t.recamaras) set.add(String(t.recamaras).toUpperCase()); });
+        state.inventoryRows.forEach(function (r) { if (r.recamaras) set.add(String(r.recamaras).toUpperCase()); });
+        const values = Array.from(set).sort(function (a, b) { return a.localeCompare(b, 'es', { numeric: true }); });
+        els.recamarasSelect.innerHTML = ['<option value="">Todas las recámaras</option>'].concat(values.map(function (v) {
+          return '<option value="' + esc(v) + '"' + (v === state.selectedRecamaras ? ' selected' : '') + '>' + esc(v) + '</option>';
+        })).join('');
+      }
+
+      function renderTipologias() {
+        let list = tipologias();
+        if (state.selectedRecamaras) {
+          list = list.filter(function (t) { return String(t.recamaras || '').toUpperCase() === state.selectedRecamaras; });
+        }
+        if (!list.length) {
+          els.tipGrid.innerHTML = '<span class="chip">Sin tipologías para este filtro.</span>';
+          return;
+        }
+        els.tipGrid.innerHTML = list.map(function (t) {
+          const k = norm(t.id || t.name);
+          const active = !state.showAll && norm(state.selectedTip) === k ? ' active' : '';
+          const thumb = t.imageUrl ? '<img src="' + esc(t.imageUrl) + '" alt="' + esc(t.name || t.id) + '">' : '<span>Sin imagen</span>';
+          return '<article class="tip-card' + active + '" data-tip="' + esc(t.id || t.name) + '">' +
+            '<div class="thumb">' + thumb + '</div>' +
+            '<div class="meta"><p class="title">' + esc(t.name || t.id) + '</p><p class="sub">' + esc((t.id || '') + (t.recamaras ? (' · ' + t.recamaras + ' REC') : '')) + '</p></div>' +
+          '</article>';
+        }).join('');
+      }
+
+      function renderFloorTabs() {
+        if (!state.floors.length) {
+          els.floorTabs.innerHTML = '<span class="chip">Sin pisos</span>';
+          return;
+        }
+        els.floorTabs.innerHTML = state.floors.map(function (f, idx) {
+          const active = f.id === state.activeFloorId ? ' active' : '';
+          return '<button class="floor-tab' + active + '" data-floor="' + esc(f.id) + '">Piso ' + (idx + 1) + ': ' + esc(f.name || ('PISO ' + (idx + 1))) + '</button>';
+        }).join('');
+      }
+
+      function draw() {
+        const floor = activeFloor();
+        if (!floor || !floor.imageDataUrl) {
+          els.baseImage.removeAttribute('src');
+          els.overlay.innerHTML = '';
+          return;
+        }
+        els.baseImage.src = floor.imageDataUrl;
+        const w = Number(floor.imageWidth) || els.baseImage.naturalWidth || 1200;
+        const h = Number(floor.imageHeight) || els.baseImage.naturalHeight || 800;
+        els.overlay.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+
+        const zones = Array.isArray(floor.zones) ? floor.zones : [];
+        let show = 0, disp = 0, vend = 0;
+        const svg = zones.map(function (z) {
+          const pts = Array.isArray(z.points) ? z.points : [];
+          if (!pts.length) return '';
+          const p = pts.map(function (xy) { return Number(xy[0]) + ',' + Number(xy[1]); }).join(' ');
+          const i = info(z.label);
+          if (!matches(i)) {
+            return '<polygon points="' + p + '" fill="rgba(97,107,99,0.08)" stroke="rgba(97,107,99,0.26)" stroke-width="1"></polygon>';
+          }
+          show += 1;
+          if (i.status === 'vendida') vend += 1; else disp += 1;
+          const color = i.status === 'vendida' ? '#d25349' : '#3daa5c';
+          const cx = pts.reduce(function (a, xy) { return a + Number(xy[0] || 0); }, 0) / pts.length;
+          const cy = pts.reduce(function (a, xy) { return a + Number(xy[1] || 0); }, 0) / pts.length;
+          return '<polygon points="' + p + '" fill="' + color + '" fill-opacity="0.42" stroke="' + color + '" stroke-width="2"></polygon>' +
+            '<text x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#101311">' + esc(z.label || '') + '</text>';
+        }).join('');
+        els.overlay.innerHTML = svg;
+        els.chips.innerHTML = [
+          '<span class="chip">Mostradas: ' + show + '</span>',
+          '<span class="chip">Disponibles: ' + disp + '</span>',
+          '<span class="chip">Vendidas: ' + vend + '</span>',
+          '<span class="chip">Inventario: ' + state.inventoryRows.length + '</span>'
+        ].join('');
+      }
+
+      function render() {
+        renderScenes();
+        renderRecamaras();
+        renderTipologias();
+        renderFloorTabs();
+        draw();
+      }
+
+      async function load() {
+        setStatus('Cargando presentación...');
+        const res = await fetch(dataUrl, { cache: 'no-store' });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar la presentación');
+        state.floors = Array.isArray(data.floors) ? data.floors.map(function (f, idx) {
+          const x = f && typeof f === 'object' ? f : {};
+          if (!x.id) x.id = 'floor-' + (idx + 1);
+          if (!x.name) x.name = 'PISO ' + (idx + 1);
+          return x;
+        }) : [];
+        state.activeFloorId = state.floors[0] ? state.floors[0].id : '';
+        state.config = data.config && typeof data.config === 'object' ? data.config : { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] };
+        applyMapFloorOrder();
+        state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
+        buildIndex();
+        render();
+        setStatus('Listo para presentación.');
+      }
+
+      els.recamarasSelect.addEventListener('change', function () {
+        state.selectedRecamaras = String(els.recamarasSelect.value || '');
+        render();
+      });
+
+      els.viewAllBtn.addEventListener('click', function () {
+        state.showAll = true;
+        state.selectedTip = '';
+        render();
+      });
+
+      els.clearTipBtn.addEventListener('click', function () {
+        state.selectedTip = '';
+        state.showAll = true;
+        render();
+      });
+
+      els.tipGrid.addEventListener('click', function (ev) {
+        const card = ev.target.closest('.tip-card');
+        if (!card) return;
+        state.showAll = false;
+        state.selectedTip = card.getAttribute('data-tip') || '';
+        render();
+      });
+
+      els.sceneGrid.addEventListener('click', function (ev) {
+        const card = ev.target.closest('.scene-card');
+        if (!card) return;
+        const targetType = String(card.getAttribute('data-target-type') || '').toLowerCase();
+        const targetValue = String(card.getAttribute('data-target-value') || '');
+        if (targetType === 'tipologia') {
+          state.showAll = false;
+          state.selectedTip = targetValue;
+        } else if (targetType === 'recamaras') {
+          state.selectedRecamaras = targetValue.toUpperCase();
+          state.showAll = true;
+        } else if (targetType === 'all') {
+          state.selectedTip = '';
+          state.showAll = true;
+        }
+        render();
+      });
+
+      els.floorTabs.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('.floor-tab');
+        if (!btn) return;
+        state.activeFloorId = btn.getAttribute('data-floor') || '';
+        renderFloorTabs();
+        draw();
+      });
+
+      load().catch(function (err) {
+        setStatus(err && err.message ? err.message : 'Error de carga');
+      });
+    })();
+  </script>
+</body>
+</html>

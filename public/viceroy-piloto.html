@@ -1,0 +1,1049 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VICEROY PILOTO</title>
+  <style>
+    :root {
+      --bg: #ecebe5;
+      --panel: #f8f8f5;
+      --card: #fff;
+      --ink: #141414;
+      --muted: #5e615a;
+      --line: #d1d3cc;
+      --accent: #2d6e56;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top, #f8f7f3 0%, var(--bg) 60%);
+      min-height: 100vh;
+    }
+    .layout {
+      max-width: 1880px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 14px;
+    }
+    .panel, .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .panel {
+      padding: 14px;
+      position: sticky;
+      top: 10px;
+      align-self: start;
+      max-height: calc(100vh - 20px);
+      overflow: auto;
+    }
+    .section + .section {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #e2e5de;
+    }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    h2 { margin: 0 0 8px; font-size: 15px; }
+    p { margin: 0; }
+    .help { font-size: 12px; color: var(--muted); line-height: 1.35; }
+    .status { min-height: 16px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+    .ok { color: #1f6f35; }
+    .err { color: #a0221b; }
+    .row { display: grid; gap: 8px; margin-top: 8px; }
+    .row.two { grid-template-columns: 1fr 1fr; }
+    .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    input[type="file"], input[type="text"], input[type="number"], input[type="color"], select, button {
+      width: 100%;
+      border: 1px solid #c9d0c6;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      background: #fff;
+      color: var(--ink);
+    }
+    button, .btn {
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      border: 1px solid #bbc4b8;
+      border-radius: 10px;
+      background: #fff;
+      color: #1c211f;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    .btn.primary, button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .list-box {
+      border: 1px solid #cfd7cc;
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px;
+      max-height: 190px;
+      overflow: auto;
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .list-item {
+      border: 1px solid #dde4db;
+      border-radius: 8px;
+      padding: 6px;
+      font-size: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      align-items: center;
+      background: #fafcf9;
+    }
+    .meta { color: var(--muted); font-size: 11px; }
+
+    .content { display: grid; gap: 12px; }
+    .toolbar { padding: 10px; }
+    .map-wrap {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      min-height: 72vh;
+      overflow: auto;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .stage {
+      position: relative;
+      display: inline-block;
+      line-height: 0;
+      max-width: none;
+    }
+    #overlay {
+      display: block;
+      width: 100%;
+      height: auto;
+      cursor: crosshair;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #d9ddd7;
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .panel { position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="panel">
+      <div class="section">
+        <h1>VICEROY PILOTO</h1>
+        <p class="help">Inventario + edición visual sobre JSON mapeado.</p>
+      </div>
+
+      <div class="section">
+        <h2>1) Inventario</h2>
+        <input id="inventoryFile" type="file" accept=".xlsx,.xls,.csv">
+        <div class="row two">
+          <button id="uploadInventoryBtn" type="button">Subir Excel</button>
+          <button id="reloadInventoryBtn" type="button">Recargar inventario</button>
+        </div>
+        <div class="row">
+          <a class="btn" href="/viceroy-piloto-presentacion" target="_blank" rel="noopener">Abrir presentación</a>
+        </div>
+        <p id="inventoryStatus" class="status"></p>
+      </div>
+
+      <div class="section">
+        <h2>2) Cargar JSON mapeado</h2>
+        <input id="mappedJsonInput" type="file" accept="application/json,.json">
+        <div class="row two">
+          <button id="loadMappedJsonBtn" type="button">Cargar JSON local</button>
+          <button id="loadServerMappedBtn" type="button">Cargar JSON guardado</button>
+        </div>
+        <select id="floorSelect"></select>
+        <p id="jsonStatus" class="status"></p>
+      </div>
+
+      <div class="section">
+        <h2>3) Hoja e imagen (A4 horizontal)</h2>
+        <p class="help">La hoja es A4 horizontal fija. Ajusta imagen por porcentaje y posición.</p>
+        <div class="row three">
+          <label class="help">Hoja ancho (px)
+            <input id="pageWidthInput" type="number" min="700" max="3000" step="10" value="1400">
+          </label>
+          <label class="help">Hoja alto (px)
+            <input id="pageHeightInput" type="number" min="500" max="2500" step="10" value="990">
+          </label>
+          <label class="help">Escala imagen (%)
+            <input id="imageScalePctInput" type="number" min="5" max="300" step="1" value="100">
+          </label>
+        </div>
+        <div class="row two">
+          <label class="help">Imagen X (px)
+            <input id="imageXInput" type="number" step="1" value="0">
+          </label>
+          <label class="help">Imagen Y (px)
+            <input id="imageYInput" type="number" step="1" value="0">
+          </label>
+        </div>
+        <div class="row two">
+          <button id="moveImageModeBtn" type="button">Modo mover imagen</button>
+          <button id="fitImageBtn" type="button">Ajustar imagen a hoja</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>4) Herramientas visuales</h2>
+        <label class="help"><input id="showZonesInput" type="checkbox" checked> Ver zonas mapeadas</label>
+        <label class="help"><input id="showGridInput" type="checkbox" checked> Ver cuadrícula</label>
+        <div class="row two">
+          <label class="help">Espaciado grid
+            <input id="gridSizeInput" type="number" min="20" max="300" step="5" value="80">
+          </label>
+          <label class="help">Color texto
+            <input id="textColorInput" type="color" value="#111111">
+          </label>
+        </div>
+        <div class="row two">
+          <select id="fontFamilyInput">
+            <option value="Akkurat, 'Segoe UI', Tahoma, sans-serif">Akkurat</option>
+            <option value="BiroScriptPlus, cursive">BiroScriptPlus</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Georgia, serif">Georgia</option>
+          </select>
+          <input id="fontSizeInput" type="number" min="10" max="140" step="1" value="36" placeholder="Tamaño letra">
+        </div>
+        <input id="textContentInput" type="text" placeholder="Texto a colocar">
+        <input id="logoFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        <div class="row two">
+          <button id="placeTextModeBtn" type="button">Modo colocar texto</button>
+          <button id="placeLogoModeBtn" type="button">Modo colocar logo</button>
+        </div>
+        <div class="row three">
+          <button id="cancelPlaceBtn" type="button">Salir de modo</button>
+          <button id="deleteSelectedBtn" type="button">Borrar seleccionado</button>
+          <button id="exportPageJsonBtn" class="primary" type="button">Exportar página JSON</button>
+        </div>
+        <p id="editorStatus" class="status"></p>
+        <div id="annotationsList" class="list-box"></div>
+      </div>
+
+      <div class="section">
+        <a class="btn" href="/">Volver al backend</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="card toolbar">
+        <p class="help"><strong>Uso:</strong> carga JSON mapeado, selecciona piso, ajusta tamaño/posición de imagen sobre hoja A4 horizontal, y coloca textos/logos con clic exacto. Puedes arrastrar imagen y elementos.</p>
+      </section>
+
+      <section class="map-wrap">
+        <div id="stage" class="stage">
+          <svg id="overlay" aria-label="Editor visual"></svg>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const DEFAULT_PAGE_W = 1400;
+      const DEFAULT_PAGE_H = 990;
+
+      const state = {
+        floors: [],
+        activeFloorId: '',
+        inventoryRows: [],
+        showZones: true,
+        showGrid: true,
+        gridSize: 80,
+        placingMode: '',
+        logoDataUrl: '',
+        selectedAnnotationId: '',
+        dragging: null,
+        annotationsByFloor: {},
+        imageLayoutByFloor: {},
+        pageWidth: DEFAULT_PAGE_W,
+        pageHeight: DEFAULT_PAGE_H,
+        suppressNextClick: false
+      };
+
+      const els = {
+        inventoryFile: document.getElementById('inventoryFile'),
+        uploadInventoryBtn: document.getElementById('uploadInventoryBtn'),
+        reloadInventoryBtn: document.getElementById('reloadInventoryBtn'),
+        inventoryStatus: document.getElementById('inventoryStatus'),
+        mappedJsonInput: document.getElementById('mappedJsonInput'),
+        loadMappedJsonBtn: document.getElementById('loadMappedJsonBtn'),
+        loadServerMappedBtn: document.getElementById('loadServerMappedBtn'),
+        floorSelect: document.getElementById('floorSelect'),
+        jsonStatus: document.getElementById('jsonStatus'),
+        pageWidthInput: document.getElementById('pageWidthInput'),
+        pageHeightInput: document.getElementById('pageHeightInput'),
+        imageScalePctInput: document.getElementById('imageScalePctInput'),
+        imageXInput: document.getElementById('imageXInput'),
+        imageYInput: document.getElementById('imageYInput'),
+        moveImageModeBtn: document.getElementById('moveImageModeBtn'),
+        fitImageBtn: document.getElementById('fitImageBtn'),
+        showZonesInput: document.getElementById('showZonesInput'),
+        showGridInput: document.getElementById('showGridInput'),
+        gridSizeInput: document.getElementById('gridSizeInput'),
+        textColorInput: document.getElementById('textColorInput'),
+        fontFamilyInput: document.getElementById('fontFamilyInput'),
+        fontSizeInput: document.getElementById('fontSizeInput'),
+        textContentInput: document.getElementById('textContentInput'),
+        logoFileInput: document.getElementById('logoFileInput'),
+        placeTextModeBtn: document.getElementById('placeTextModeBtn'),
+        placeLogoModeBtn: document.getElementById('placeLogoModeBtn'),
+        cancelPlaceBtn: document.getElementById('cancelPlaceBtn'),
+        deleteSelectedBtn: document.getElementById('deleteSelectedBtn'),
+        exportPageJsonBtn: document.getElementById('exportPageJsonBtn'),
+        editorStatus: document.getElementById('editorStatus'),
+        annotationsList: document.getElementById('annotationsList'),
+        overlay: document.getElementById('overlay')
+      };
+
+      function setStatus(el, text, cls) {
+        el.textContent = text || '';
+        el.classList.remove('ok', 'err');
+        if (cls) el.classList.add(cls);
+      }
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function fileToDataUrl(file) {
+        return new Promise(function (resolve, reject) {
+          if (!file) return resolve('');
+          const reader = new FileReader();
+          reader.onload = function () { resolve(String(reader.result || '')); };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function getActiveFloor() {
+        return state.floors.find(function (f) { return String(f.id) === String(state.activeFloorId); }) || null;
+      }
+
+      function ensureFloorAnnotationBucket(floorId) {
+        const key = String(floorId || '');
+        if (!state.annotationsByFloor[key]) state.annotationsByFloor[key] = [];
+        return state.annotationsByFloor[key];
+      }
+
+      function getActiveAnnotations() {
+        return ensureFloorAnnotationBucket(state.activeFloorId);
+      }
+
+      function normalizeFloorsPayload(payload) {
+        let rawFloors = [];
+        if (Array.isArray(payload)) {
+          rawFloors = payload;
+        } else if (payload && Array.isArray(payload.floors)) {
+          rawFloors = payload.floors;
+        } else if (payload && payload.imageDataUrl) {
+          rawFloors = [payload];
+        }
+
+        const floors = rawFloors.map(function (floor, idx) {
+          return {
+            id: String(floor && (floor.id || floor.floorId) || ('floor-' + (idx + 1))),
+            name: String(floor && (floor.name || floor.floorName) || ('PISO ' + (idx + 1))),
+            imageDataUrl: String(floor && floor.imageDataUrl || ''),
+            imageWidth: Number(floor && floor.imageWidth || 0),
+            imageHeight: Number(floor && floor.imageHeight || 0),
+            zones: Array.isArray(floor && floor.zones) ? floor.zones : []
+          };
+        }).filter(function (f) { return Boolean(f.imageDataUrl); });
+
+        if (payload && payload.floorId && payload.imageDataUrl && Array.isArray(payload.annotations)) {
+          const key = String(payload.floorId);
+          state.annotationsByFloor[key] = payload.annotations.map(function (item) { return Object.assign({}, item); });
+          if (payload.imageLayout && typeof payload.imageLayout === 'object') {
+            state.imageLayoutByFloor[key] = Object.assign({}, payload.imageLayout);
+          }
+        }
+
+        return floors;
+      }
+
+      function updateFloorSelect() {
+        if (!state.floors.length) {
+          els.floorSelect.innerHTML = '<option value="">Sin pisos</option>';
+          return;
+        }
+        els.floorSelect.innerHTML = state.floors.map(function (floor, idx) {
+          const selected = String(floor.id) === String(state.activeFloorId) ? ' selected' : '';
+          return '<option value="' + escapeHtml(floor.id) + '"' + selected + '>Piso ' + (idx + 1) + ': ' + escapeHtml(floor.name) + '</option>';
+        }).join('');
+      }
+
+      function svgPointFromEvent(evt) {
+        const pt = els.overlay.createSVGPoint();
+        pt.x = evt.clientX;
+        pt.y = evt.clientY;
+        const matrix = els.overlay.getScreenCTM();
+        if (!matrix) return null;
+        const p = pt.matrixTransform(matrix.inverse());
+        return { x: p.x, y: p.y };
+      }
+
+      function ensureFloorDimensions(floor) {
+        return new Promise(function (resolve) {
+          if (!floor || !floor.imageDataUrl) return resolve();
+          if (Number(floor.imageWidth) > 0 && Number(floor.imageHeight) > 0) return resolve();
+          const img = new Image();
+          img.onload = function () {
+            floor.imageWidth = Number(img.naturalWidth || 1600);
+            floor.imageHeight = Number(img.naturalHeight || 900);
+            resolve();
+          };
+          img.onerror = function () {
+            floor.imageWidth = Number(floor.imageWidth || 1600);
+            floor.imageHeight = Number(floor.imageHeight || 900);
+            resolve();
+          };
+          img.src = floor.imageDataUrl;
+        });
+      }
+
+      function fitImageLayoutToPage(floorId) {
+        const floor = getActiveFloor();
+        if (!floor || !String(floor.id) || String(floor.id) !== String(floorId || floor.id)) return;
+        const iw = Number(floor.imageWidth || 1600);
+        const ih = Number(floor.imageHeight || 900);
+        const fit = Math.min(state.pageWidth / iw, state.pageHeight / ih) * 0.92;
+        const w = iw * fit;
+        const h = ih * fit;
+        const x = (state.pageWidth - w) / 2;
+        const y = (state.pageHeight - h) / 2;
+        state.imageLayoutByFloor[String(floor.id)] = {
+          x: x,
+          y: y,
+          width: w,
+          height: h,
+          scalePct: fit * 100
+        };
+      }
+
+      function getFloorLayout(floor) {
+        if (!floor) return null;
+        const key = String(floor.id || '');
+        if (!state.imageLayoutByFloor[key]) {
+          fitImageLayoutToPage(key);
+        }
+        const layout = state.imageLayoutByFloor[key];
+        if (!layout) return null;
+        return layout;
+      }
+
+      function syncImageControlsFromLayout() {
+        const floor = getActiveFloor();
+        const layout = getFloorLayout(floor);
+        if (!layout) return;
+        els.imageScalePctInput.value = String(Math.round(Number(layout.scalePct || 100)));
+        els.imageXInput.value = String(Math.round(Number(layout.x || 0)));
+        els.imageYInput.value = String(Math.round(Number(layout.y || 0)));
+      }
+
+      function applyImageControlsToLayout() {
+        const floor = getActiveFloor();
+        if (!floor) return;
+        const key = String(floor.id || '');
+        const iw = Number(floor.imageWidth || 1600);
+        const ih = Number(floor.imageHeight || 900);
+        const current = getFloorLayout(floor);
+        const currentCenterX = Number(current.x || 0) + Number(current.width || 0) / 2;
+        const currentCenterY = Number(current.y || 0) + Number(current.height || 0) / 2;
+
+        const pct = Math.max(5, Number(els.imageScalePctInput.value || 100));
+        const width = iw * (pct / 100);
+        const height = ih * (pct / 100);
+
+        let x = Number(els.imageXInput.value);
+        let y = Number(els.imageYInput.value);
+        if (!Number.isFinite(x)) x = currentCenterX - width / 2;
+        if (!Number.isFinite(y)) y = currentCenterY - height / 2;
+
+        state.imageLayoutByFloor[key] = {
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          scalePct: pct
+        };
+        renderOverlay();
+      }
+
+      function imageToPagePoint(layout, p) {
+        const floor = getActiveFloor();
+        const iw = Number(floor && floor.imageWidth || 1);
+        const ih = Number(floor && floor.imageHeight || 1);
+        const sx = Number(layout.width || 1) / iw;
+        const sy = Number(layout.height || 1) / ih;
+        return {
+          x: Number(layout.x || 0) + Number(p[0] || 0) * sx,
+          y: Number(layout.y || 0) + Number(p[1] || 0) * sy
+        };
+      }
+
+      function renderAnnotationsList() {
+        const items = getActiveAnnotations();
+        if (!items.length) {
+          els.annotationsList.innerHTML = '<div class="help">Sin elementos en esta página.</div>';
+          return;
+        }
+        els.annotationsList.innerHTML = items.map(function (item) {
+          const active = String(item.id) === String(state.selectedAnnotationId) ? ' (seleccionado)' : '';
+          const title = item.type === 'logo' ? 'LOGO' : ('TEXTO: ' + (item.text || ''));
+          const meta = 'X:' + Math.round(item.x) + ' Y:' + Math.round(item.y) + ' · ' + item.type + active;
+          return '<div class="list-item"><div><strong>' + escapeHtml(title) + '</strong><div class="meta">' + escapeHtml(meta) + '</div></div><button type="button" data-action="select-annotation" data-id="' + escapeHtml(item.id) + '">Seleccionar</button></div>';
+        }).join('');
+      }
+
+      function renderOverlay() {
+        const floor = getActiveFloor();
+        if (!floor) {
+          els.overlay.setAttribute('viewBox', '0 0 ' + state.pageWidth + ' ' + state.pageHeight);
+          els.overlay.setAttribute('width', state.pageWidth);
+          els.overlay.setAttribute('height', state.pageHeight);
+          els.overlay.innerHTML = '';
+          return;
+        }
+
+        const layout = getFloorLayout(floor);
+        els.overlay.setAttribute('viewBox', '0 0 ' + state.pageWidth + ' ' + state.pageHeight);
+        els.overlay.setAttribute('width', state.pageWidth);
+        els.overlay.setAttribute('height', state.pageHeight);
+
+        const chunks = [];
+
+        chunks.push('<rect x="0" y="0" width="' + state.pageWidth + '" height="' + state.pageHeight + '" fill="#fff" stroke="#cfd4cd" stroke-width="2"></rect>');
+
+        if (state.showGrid) {
+          const g = Math.max(20, Number(state.gridSize) || 80);
+          for (let x = 0; x <= state.pageWidth; x += g) {
+            chunks.push('<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + state.pageHeight + '" stroke="rgba(33,72,58,0.25)" stroke-width="1"></line>');
+          }
+          for (let y = 0; y <= state.pageHeight; y += g) {
+            chunks.push('<line x1="0" y1="' + y + '" x2="' + state.pageWidth + '" y2="' + y + '" stroke="rgba(33,72,58,0.25)" stroke-width="1"></line>');
+          }
+        }
+
+        if (layout) {
+          chunks.push('<image x="' + layout.x + '" y="' + layout.y + '" width="' + layout.width + '" height="' + layout.height + '" href="' + escapeHtml(floor.imageDataUrl || '') + '"></image>');
+          chunks.push('<rect data-image-surface="1" x="' + layout.x + '" y="' + layout.y + '" width="' + layout.width + '" height="' + layout.height + '" fill="transparent" stroke="#7f897f" stroke-dasharray="7 4" stroke-width="2"></rect>');
+        }
+
+        if (state.showZones && layout) {
+          (Array.isArray(floor.zones) ? floor.zones : []).forEach(function (zone) {
+            const points = Array.isArray(zone.points) ? zone.points : [];
+            if (!points.length) return;
+            const pointsOnPage = points.map(function (p) {
+              const mapped = imageToPagePoint(layout, p);
+              return mapped.x + ',' + mapped.y;
+            }).join(' ');
+            chunks.push('<polygon points="' + pointsOnPage + '" fill="rgba(45,143,99,0.13)" stroke="rgba(29,90,63,0.65)" stroke-width="2"></polygon>');
+            const cx = points.reduce(function (a, p) { return a + Number(p[0] || 0); }, 0) / points.length;
+            const cy = points.reduce(function (a, p) { return a + Number(p[1] || 0); }, 0) / points.length;
+            const c = imageToPagePoint(layout, [cx, cy]);
+            const unitLabel = String(zone.label || '');
+            const tipologia = String(zone.tipologia || '');
+            const label = tipologia ? (unitLabel + ' · ' + tipologia) : unitLabel;
+            chunks.push('<text x="' + Math.round(c.x) + '" y="' + Math.round(c.y) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#10261d" stroke="#fff" stroke-width="2" paint-order="stroke">' + escapeHtml(label) + '</text>');
+          });
+        }
+
+        getActiveAnnotations().forEach(function (item) {
+          const selected = String(item.id) === String(state.selectedAnnotationId);
+          if (item.type === 'logo') {
+            const w = Number(item.width || 170);
+            const h = Number(item.height || 90);
+            chunks.push('<g data-annotation-id="' + escapeHtml(item.id) + '">'
+              + '<image x="' + item.x + '" y="' + item.y + '" width="' + w + '" height="' + h + '" href="' + escapeHtml(item.dataUrl || '') + '"></image>'
+              + '<rect x="' + item.x + '" y="' + item.y + '" width="' + w + '" height="' + h + '" fill="transparent" stroke="' + (selected ? '#ffb200' : 'transparent') + '" stroke-width="2"></rect>'
+              + '</g>');
+          } else {
+            const font = item.font || "Akkurat, 'Segoe UI', Tahoma, sans-serif";
+            const size = Number(item.size || 36);
+            const color = item.color || '#111111';
+            chunks.push('<text data-annotation-id="' + escapeHtml(item.id) + '" x="' + item.x + '" y="' + item.y + '" font-family="' + escapeHtml(font) + '" font-size="' + size + '" fill="' + escapeHtml(color) + '" stroke="' + (selected ? '#ffb200' : 'transparent') + '" stroke-width="0.9">' + escapeHtml(item.text || '') + '</text>');
+          }
+        });
+
+        els.overlay.innerHTML = chunks.join('');
+        renderAnnotationsList();
+        syncImageControlsFromLayout();
+      }
+
+      async function setActiveFloor(floorId) {
+        state.activeFloorId = String(floorId || '');
+        const floor = getActiveFloor();
+        if (floor) {
+          await ensureFloorDimensions(floor);
+          ensureFloorAnnotationBucket(state.activeFloorId);
+          if (!state.imageLayoutByFloor[String(floor.id)]) {
+            fitImageLayoutToPage(String(floor.id));
+          }
+        }
+        state.selectedAnnotationId = '';
+        updateFloorSelect();
+        renderOverlay();
+      }
+
+      async function applyFloors(floors, sourceLabel) {
+        state.floors = floors;
+        if (!state.floors.length) {
+          state.activeFloorId = '';
+          setStatus(els.jsonStatus, 'JSON sin pisos válidos.', 'err');
+          updateFloorSelect();
+          renderOverlay();
+          return;
+        }
+        await Promise.all(state.floors.map(function (f) { return ensureFloorDimensions(f); }));
+        setStatus(els.jsonStatus, 'JSON cargado (' + sourceLabel + '). Pisos: ' + state.floors.length + '.', 'ok');
+        await setActiveFloor(state.floors[0].id);
+      }
+
+      async function loadLocalMappedJson() {
+        const file = els.mappedJsonInput.files && els.mappedJsonInput.files[0];
+        if (!file) {
+          setStatus(els.jsonStatus, 'Selecciona un archivo JSON.', 'err');
+          return;
+        }
+        try {
+          const text = await file.text();
+          const payload = JSON.parse(text);
+          const floors = normalizeFloorsPayload(payload);
+          await applyFloors(floors, file.name);
+        } catch (err) {
+          setStatus(els.jsonStatus, 'No se pudo leer JSON local.', 'err');
+        }
+      }
+
+      async function loadServerMappedJson() {
+        try {
+          const res = await fetch('/api/viceroy-piloto/floors', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo cargar JSON del servidor');
+          const floors = normalizeFloorsPayload(data);
+          await applyFloors(floors, 'servidor');
+        } catch (err) {
+          setStatus(els.jsonStatus, err && err.message ? err.message : 'Error cargando JSON del servidor', 'err');
+        }
+      }
+
+      async function uploadInventory() {
+        const file = els.inventoryFile.files && els.inventoryFile.files[0];
+        if (!file) {
+          setStatus(els.inventoryStatus, 'Selecciona un Excel.', 'err');
+          return;
+        }
+        setStatus(els.inventoryStatus, 'Subiendo inventario...', null);
+        els.uploadInventoryBtn.disabled = true;
+        try {
+          const base64 = await fileToDataUrl(file);
+          const res = await fetch('/api/viceroy-piloto/inventory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ fileName: file.name, base64: base64 })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo subir inventario');
+          setStatus(els.inventoryStatus, 'Inventario subido: ' + String(data.fileName || file.name), 'ok');
+        } catch (err) {
+          setStatus(els.inventoryStatus, err && err.message ? err.message : 'Error subiendo inventario', 'err');
+        } finally {
+          els.uploadInventoryBtn.disabled = false;
+        }
+      }
+
+      async function reloadInventoryStatus() {
+        try {
+          const res = await fetch('/api/viceroy-piloto/inventory', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No disponible');
+          state.inventoryRows = Array.isArray(data.rows) ? data.rows : [];
+          setStatus(els.inventoryStatus, 'Inventario activo: ' + String(data.fileName || '-') + ' (' + state.inventoryRows.length + ' filas).', 'ok');
+        } catch (err) {
+          setStatus(els.inventoryStatus, err && err.message ? err.message : 'Sin inventario', 'err');
+        }
+      }
+
+      function createTextAnnotation(pt) {
+        const text = String(els.textContentInput.value || '').trim();
+        if (!text) {
+          setStatus(els.editorStatus, 'Escribe texto antes de colocarlo.', 'err');
+          return;
+        }
+        const item = {
+          id: 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+          type: 'text',
+          x: pt.x,
+          y: pt.y,
+          text: text,
+          font: String(els.fontFamilyInput.value || "Akkurat, 'Segoe UI', Tahoma, sans-serif"),
+          size: Number(els.fontSizeInput.value || 36),
+          color: String(els.textColorInput.value || '#111111')
+        };
+        getActiveAnnotations().push(item);
+        state.selectedAnnotationId = item.id;
+        setStatus(els.editorStatus, 'Texto colocado.', 'ok');
+        renderOverlay();
+      }
+
+      function createLogoAnnotation(pt) {
+        if (!state.logoDataUrl) {
+          setStatus(els.editorStatus, 'Sube un logo primero.', 'err');
+          return;
+        }
+        const item = {
+          id: 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+          type: 'logo',
+          x: pt.x,
+          y: pt.y,
+          width: 170,
+          height: 90,
+          dataUrl: state.logoDataUrl
+        };
+        getActiveAnnotations().push(item);
+        state.selectedAnnotationId = item.id;
+        setStatus(els.editorStatus, 'Logo colocado.', 'ok');
+        renderOverlay();
+      }
+
+      function beginAnnotationDrag(annotationId, startPoint) {
+        const items = getActiveAnnotations();
+        const item = items.find(function (x) { return String(x.id) === String(annotationId); });
+        if (!item) return;
+        state.dragging = {
+          kind: 'annotation',
+          annotationId: item.id,
+          startMouseX: startPoint.x,
+          startMouseY: startPoint.y,
+          startX: Number(item.x || 0),
+          startY: Number(item.y || 0)
+        };
+        state.selectedAnnotationId = item.id;
+      }
+
+      function beginImageDrag(startPoint) {
+        const floor = getActiveFloor();
+        const layout = getFloorLayout(floor);
+        if (!layout) return;
+        state.dragging = {
+          kind: 'image',
+          startMouseX: startPoint.x,
+          startMouseY: startPoint.y,
+          startX: Number(layout.x || 0),
+          startY: Number(layout.y || 0)
+        };
+      }
+
+      function updateDrag(currentPoint) {
+        if (!state.dragging) return;
+        if (state.dragging.kind === 'annotation') {
+          const items = getActiveAnnotations();
+          const item = items.find(function (x) { return String(x.id) === String(state.dragging.annotationId); });
+          if (!item) return;
+          const dx = currentPoint.x - state.dragging.startMouseX;
+          const dy = currentPoint.y - state.dragging.startMouseY;
+          item.x = state.dragging.startX + dx;
+          item.y = state.dragging.startY + dy;
+          renderOverlay();
+          return;
+        }
+        if (state.dragging.kind === 'image') {
+          const floor = getActiveFloor();
+          const layout = getFloorLayout(floor);
+          if (!layout) return;
+          const dx = currentPoint.x - state.dragging.startMouseX;
+          const dy = currentPoint.y - state.dragging.startMouseY;
+          layout.x = state.dragging.startX + dx;
+          layout.y = state.dragging.startY + dy;
+          state.imageLayoutByFloor[String(floor.id)] = layout;
+          renderOverlay();
+          return;
+        }
+      }
+
+      function stopDrag() {
+        if (state.dragging) state.suppressNextClick = true;
+        state.dragging = null;
+      }
+
+      function deleteSelectedAnnotation() {
+        if (!state.selectedAnnotationId) return;
+        const items = getActiveAnnotations();
+        const idx = items.findIndex(function (x) { return String(x.id) === String(state.selectedAnnotationId); });
+        if (idx < 0) return;
+        items.splice(idx, 1);
+        state.selectedAnnotationId = '';
+        setStatus(els.editorStatus, 'Elemento eliminado.', 'ok');
+        renderOverlay();
+      }
+
+      function exportCurrentPageJson() {
+        const floor = getActiveFloor();
+        if (!floor) {
+          setStatus(els.editorStatus, 'Carga un JSON y selecciona un piso.', 'err');
+          return;
+        }
+        const layout = getFloorLayout(floor);
+        const payload = {
+          floorId: floor.id,
+          floorName: floor.name,
+          imageDataUrl: floor.imageDataUrl,
+          imageWidth: floor.imageWidth,
+          imageHeight: floor.imageHeight,
+          imageLayout: layout ? {
+            x: Number(layout.x || 0),
+            y: Number(layout.y || 0),
+            width: Number(layout.width || 0),
+            height: Number(layout.height || 0),
+            scalePct: Number(layout.scalePct || 100)
+          } : null,
+          page: {
+            width: state.pageWidth,
+            height: state.pageHeight,
+            orientation: 'A4-landscape'
+          },
+          zones: floor.zones,
+          annotations: getActiveAnnotations(),
+          editor: {
+            showGrid: state.showGrid,
+            gridSize: state.gridSize,
+            showZones: state.showZones
+          },
+          exportedAt: new Date().toISOString()
+        };
+        const fileName = 'viceroy-piloto-page-' + String(floor.name || floor.id || 'piso').replace(/[^a-zA-Z0-9_-]+/g, '-') + '.json';
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setStatus(els.editorStatus, 'Página exportada: ' + fileName, 'ok');
+      }
+
+      function updateModeStatus() {
+        if (state.placingMode === 'text') {
+          setStatus(els.editorStatus, 'Modo texto activo: clic para colocar.', 'ok');
+          return;
+        }
+        if (state.placingMode === 'logo') {
+          setStatus(els.editorStatus, 'Modo logo activo: clic para colocar.', 'ok');
+          return;
+        }
+        if (state.placingMode === 'move-image') {
+          setStatus(els.editorStatus, 'Modo mover imagen activo: arrastra la imagen o haz clic para centrar.', 'ok');
+          return;
+        }
+        setStatus(els.editorStatus, 'Modo colocar desactivado.', null);
+      }
+
+      els.uploadInventoryBtn.addEventListener('click', function () {
+        uploadInventory();
+      });
+
+      els.reloadInventoryBtn.addEventListener('click', function () {
+        reloadInventoryStatus();
+      });
+
+      els.loadMappedJsonBtn.addEventListener('click', function () {
+        loadLocalMappedJson();
+      });
+
+      els.loadServerMappedBtn.addEventListener('click', function () {
+        loadServerMappedJson();
+      });
+
+      els.floorSelect.addEventListener('change', function () {
+        setActiveFloor(els.floorSelect.value);
+      });
+
+      els.pageWidthInput.addEventListener('input', function () {
+        state.pageWidth = Math.max(700, Number(els.pageWidthInput.value || DEFAULT_PAGE_W));
+        renderOverlay();
+      });
+
+      els.pageHeightInput.addEventListener('input', function () {
+        state.pageHeight = Math.max(500, Number(els.pageHeightInput.value || DEFAULT_PAGE_H));
+        renderOverlay();
+      });
+
+      els.imageScalePctInput.addEventListener('input', function () {
+        applyImageControlsToLayout();
+      });
+      els.imageXInput.addEventListener('input', function () {
+        applyImageControlsToLayout();
+      });
+      els.imageYInput.addEventListener('input', function () {
+        applyImageControlsToLayout();
+      });
+
+      els.fitImageBtn.addEventListener('click', function () {
+        const floor = getActiveFloor();
+        if (!floor) return;
+        fitImageLayoutToPage(String(floor.id));
+        renderOverlay();
+      });
+
+      els.moveImageModeBtn.addEventListener('click', function () {
+        state.placingMode = state.placingMode === 'move-image' ? '' : 'move-image';
+        updateModeStatus();
+      });
+
+      els.showZonesInput.addEventListener('change', function () {
+        state.showZones = Boolean(els.showZonesInput.checked);
+        renderOverlay();
+      });
+
+      els.showGridInput.addEventListener('change', function () {
+        state.showGrid = Boolean(els.showGridInput.checked);
+        renderOverlay();
+      });
+
+      els.gridSizeInput.addEventListener('input', function () {
+        state.gridSize = Math.max(20, Number(els.gridSizeInput.value) || 80);
+        renderOverlay();
+      });
+
+      els.logoFileInput.addEventListener('change', async function () {
+        const file = els.logoFileInput.files && els.logoFileInput.files[0];
+        if (!file) {
+          state.logoDataUrl = '';
+          return;
+        }
+        state.logoDataUrl = await fileToDataUrl(file);
+        setStatus(els.editorStatus, 'Logo cargado. Activa modo colocar logo.', 'ok');
+      });
+
+      els.placeTextModeBtn.addEventListener('click', function () {
+        state.placingMode = 'text';
+        updateModeStatus();
+      });
+
+      els.placeLogoModeBtn.addEventListener('click', function () {
+        state.placingMode = 'logo';
+        updateModeStatus();
+      });
+
+      els.cancelPlaceBtn.addEventListener('click', function () {
+        state.placingMode = '';
+        updateModeStatus();
+      });
+
+      els.deleteSelectedBtn.addEventListener('click', function () {
+        deleteSelectedAnnotation();
+      });
+
+      els.exportPageJsonBtn.addEventListener('click', function () {
+        exportCurrentPageJson();
+      });
+
+      els.annotationsList.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('button[data-action="select-annotation"]');
+        if (!btn) return;
+        state.selectedAnnotationId = String(btn.getAttribute('data-id') || '');
+        renderOverlay();
+      });
+
+      els.overlay.addEventListener('mousedown', function (ev) {
+        const pt = svgPointFromEvent(ev);
+        if (!pt) return;
+
+        const annoNode = ev.target.closest('[data-annotation-id]');
+        if (annoNode) {
+          const annotationId = String(annoNode.getAttribute('data-annotation-id') || '');
+          beginAnnotationDrag(annotationId, pt);
+          return;
+        }
+
+        const imageSurface = ev.target.closest('[data-image-surface]');
+        if (imageSurface && state.placingMode === 'move-image') {
+          beginImageDrag(pt);
+        }
+      });
+
+      window.addEventListener('mousemove', function (ev) {
+        if (!state.dragging) return;
+        const pt = svgPointFromEvent(ev);
+        if (!pt) return;
+        updateDrag(pt);
+      });
+
+      window.addEventListener('mouseup', function () {
+        stopDrag();
+      });
+
+      els.overlay.addEventListener('click', function (ev) {
+        if (state.suppressNextClick) {
+          state.suppressNextClick = false;
+          return;
+        }
+
+        const annoNode = ev.target.closest('[data-annotation-id]');
+        if (annoNode) {
+          state.selectedAnnotationId = String(annoNode.getAttribute('data-annotation-id') || '');
+          renderOverlay();
+          return;
+        }
+
+        const pt = svgPointFromEvent(ev);
+        if (!pt) return;
+
+        if (state.placingMode === 'move-image') {
+          const floor = getActiveFloor();
+          const layout = getFloorLayout(floor);
+          if (!layout) return;
+          layout.x = pt.x - (Number(layout.width || 0) / 2);
+          layout.y = pt.y - (Number(layout.height || 0) / 2);
+          state.imageLayoutByFloor[String(floor.id)] = layout;
+          renderOverlay();
+          return;
+        }
+
+        if (state.placingMode === 'text') {
+          createTextAnnotation(pt);
+          return;
+        }
+        if (state.placingMode === 'logo') {
+          createLogoAnnotation(pt);
+          return;
+        }
+      });
+
+      // initial state
+      state.showZones = true;
+      state.showGrid = true;
+      state.gridSize = Number(els.gridSizeInput.value || 80);
+      state.pageWidth = Number(els.pageWidthInput.value || DEFAULT_PAGE_W);
+      state.pageHeight = Number(els.pageHeightInput.value || DEFAULT_PAGE_H);
+      reloadInventoryStatus();
+      updateFloorSelect();
+      renderOverlay();
+    })();
+  </script>
+</body>
+</html>
