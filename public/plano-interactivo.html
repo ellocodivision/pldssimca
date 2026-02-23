@@ -155,6 +155,15 @@
     .stage { position: relative; display: inline-block; line-height: 0; }
     #baseImage { width: 100%; height: 100%; display: block; border-radius: 8px; object-fit: contain; }
     #overlay { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+    #paintMaskCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 3;
+      cursor: crosshair;
+    }
     @media (max-width: 980px) {
       .layout { grid-template-columns: 1fr; }
       .panel { position: static; max-height: none; }
@@ -201,9 +210,15 @@
           <button id="deleteZoneBtn" class="danger" disabled>Borrar zona</button>
         </div>
         <div id="autoMapWrap" style="display:none;">
-          <div class="btn-row" style="margin-top:8px;">
+          <div class="btn-row three" style="margin-top:8px;">
             <button id="autoMapBtn" type="button">Auto-mapear (semi)</button>
+            <button id="autoMapPresetBtn" type="button">Preset plano claro</button>
             <button id="autoMapResetBtn" type="button">Reset parámetros</button>
+          </div>
+          <div class="btn-row three" style="margin-top:8px;">
+            <button id="paintMaskToggleBtn" type="button">Pintar sombreado</button>
+            <button id="paintMaskClearBtn" type="button">Borrar sombra</button>
+            <input id="paintMaskBrushSize" type="text" value="28" title="Brocha (px)" aria-label="Brocha">
           </div>
           <div class="btn-row three" style="margin-top:8px;">
             <input id="autoMapThreshold" type="text" value="145" title="Umbral paredes (0-255)" aria-label="Umbral">
@@ -273,6 +288,7 @@
       <div id="stage" class="stage">
         <img id="baseImage" alt="Plano base">
         <svg id="overlay" aria-label="Editor de zonas"></svg>
+        <canvas id="paintMaskCanvas" aria-label="Sombreado asistido"></canvas>
       </div>
       <p class="hint">Tip: puedes mover el número de unidad arrastrándolo.</p>
     </main>
@@ -306,6 +322,9 @@
       snapParallel: true,
       showUnitLabels: true,
       draggingLabel: null,
+      paintingMask: false,
+      paintingMaskStroke: false,
+      paintingMaskLastPoint: null,
       nextZoneId: 1,
       zoom: 1,
       autoMapping: false
@@ -320,16 +339,22 @@
     const deleteFloorBtn = document.getElementById("deleteFloorBtn");
     const baseImage = document.getElementById("baseImage");
     const overlay = document.getElementById("overlay");
+    const paintMaskCanvas = document.getElementById("paintMaskCanvas");
+    const paintMaskCtx = paintMaskCanvas ? paintMaskCanvas.getContext("2d") : null;
     const startZoneBtn = document.getElementById("startZoneBtn");
     const finishZoneBtn = document.getElementById("finishZoneBtn");
     const cancelZoneBtn = document.getElementById("cancelZoneBtn");
     const deleteZoneBtn = document.getElementById("deleteZoneBtn");
     const autoMapWrap = document.getElementById("autoMapWrap");
     const autoMapBtn = document.getElementById("autoMapBtn");
+    const autoMapPresetBtn = document.getElementById("autoMapPresetBtn");
     const autoMapResetBtn = document.getElementById("autoMapResetBtn");
     const autoMapThreshold = document.getElementById("autoMapThreshold");
     const autoMapMinArea = document.getElementById("autoMapMinArea");
     const autoMapMaxArea = document.getElementById("autoMapMaxArea");
+    const paintMaskToggleBtn = document.getElementById("paintMaskToggleBtn");
+    const paintMaskClearBtn = document.getElementById("paintMaskClearBtn");
+    const paintMaskBrushSize = document.getElementById("paintMaskBrushSize");
     const snapParallelInput = document.getElementById("snapParallelInput");
     const showLabelsInput = document.getElementById("showLabelsInput");
     const drawHint = document.getElementById("drawHint");
@@ -527,6 +552,7 @@
             imageDataUrl: String(floor.imageDataUrl),
             imageWidth: Number(floor.imageWidth) || 0,
             imageHeight: Number(floor.imageHeight) || 0,
+            paintMaskDataUrl: String(floor.paintMaskDataUrl || ""),
             zones
           };
         })
@@ -562,6 +588,8 @@
       moveFloorDownBtn.disabled = !hasFloor || idx < 0 || idx >= state.floors.length - 1;
       if (autoMapBtn) autoMapBtn.disabled = !hasFloor || state.drawing || state.autoMapping;
       if (autoMapResetBtn) autoMapResetBtn.disabled = state.autoMapping;
+      if (paintMaskToggleBtn) paintMaskToggleBtn.disabled = !hasFloor || state.autoMapping;
+      if (paintMaskClearBtn) paintMaskClearBtn.disabled = !hasFloor || state.autoMapping;
     }
 
     function setSelectedZone(zoneId) {
@@ -587,6 +615,9 @@
       if (!floor) {
         baseImage.removeAttribute("src");
         overlay.innerHTML = "";
+        if (paintMaskCtx && paintMaskCanvas) {
+          paintMaskCtx.clearRect(0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
+        }
         applyZoomToStage();
       } else {
         loadFloorImage(floor);
@@ -647,10 +678,101 @@
         overlay.setAttribute("viewBox", `0 0 ${floor.imageWidth} ${floor.imageHeight}`);
         overlay.setAttribute("width", floor.imageWidth);
         overlay.setAttribute("height", floor.imageHeight);
+        if (paintMaskCanvas) {
+          paintMaskCanvas.width = floor.imageWidth;
+          paintMaskCanvas.height = floor.imageHeight;
+          paintMaskCanvas.style.display = "block";
+          if (paintMaskCtx) {
+            paintMaskCtx.clearRect(0, 0, floor.imageWidth, floor.imageHeight);
+            if (floor.paintMaskDataUrl) {
+              const maskImg = new Image();
+              maskImg.onload = () => {
+                paintMaskCtx.clearRect(0, 0, floor.imageWidth, floor.imageHeight);
+                paintMaskCtx.drawImage(maskImg, 0, 0, floor.imageWidth, floor.imageHeight);
+              };
+              maskImg.src = floor.paintMaskDataUrl;
+            }
+          }
+        }
         applyZoomToStage();
         render();
       };
       baseImage.src = floor.imageDataUrl;
+    }
+
+    function setPaintMaskMode(enabled) {
+      state.paintingMask = Boolean(enabled);
+      state.paintingMaskStroke = false;
+      if (paintMaskCanvas) {
+        paintMaskCanvas.style.pointerEvents = state.paintingMask ? "auto" : "none";
+      }
+      if (paintMaskToggleBtn) {
+        paintMaskToggleBtn.textContent = state.paintingMask ? "Salir de sombreado" : "Pintar sombreado";
+        paintMaskToggleBtn.classList.toggle("primary", state.paintingMask);
+      }
+      if (state.paintingMask) {
+        drawHint.textContent = "Modo sombreado activo: pinta áreas objetivo y luego usa Auto-mapear.";
+      } else {
+        updateHint();
+      }
+    }
+
+    function getBrushSize() {
+      const n = Math.max(4, Math.min(200, Number(paintMaskBrushSize && paintMaskBrushSize.value) || 28));
+      if (paintMaskBrushSize) paintMaskBrushSize.value = String(Math.round(n));
+      return n;
+    }
+
+    function persistPaintMaskForFloor() {
+      const floor = activeFloor();
+      if (!floor || !paintMaskCanvas) return;
+      floor.paintMaskDataUrl = paintMaskCanvas.toDataURL("image/png");
+    }
+
+    function clearPaintMask() {
+      const floor = activeFloor();
+      if (!floor || !paintMaskCtx || !paintMaskCanvas) return;
+      paintMaskCtx.clearRect(0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
+      floor.paintMaskDataUrl = "";
+    }
+
+    function paintAt(point, previousPoint) {
+      if (!paintMaskCtx || !paintMaskCanvas || !point) return;
+      const size = getBrushSize();
+      paintMaskCtx.save();
+      paintMaskCtx.globalCompositeOperation = "source-over";
+      paintMaskCtx.strokeStyle = "rgba(255,0,90,0.35)";
+      paintMaskCtx.fillStyle = "rgba(255,0,90,0.35)";
+      paintMaskCtx.lineCap = "round";
+      paintMaskCtx.lineJoin = "round";
+      paintMaskCtx.lineWidth = size;
+      if (previousPoint) {
+        paintMaskCtx.beginPath();
+        paintMaskCtx.moveTo(previousPoint[0], previousPoint[1]);
+        paintMaskCtx.lineTo(point[0], point[1]);
+        paintMaskCtx.stroke();
+      } else {
+        paintMaskCtx.beginPath();
+        paintMaskCtx.arc(point[0], point[1], size / 2, 0, Math.PI * 2);
+        paintMaskCtx.fill();
+      }
+      paintMaskCtx.restore();
+    }
+
+    function getAssistMaskFromCanvas(width, height) {
+      if (!paintMaskCtx || !paintMaskCanvas) return null;
+      if (paintMaskCanvas.width !== width || paintMaskCanvas.height !== height) return null;
+      const data = paintMaskCtx.getImageData(0, 0, width, height).data;
+      const out = new Uint8Array(width * height);
+      let hits = 0;
+      for (let i = 0, p = 0; i < out.length; i += 1, p += 4) {
+        const alpha = data[p + 3];
+        if (alpha > 15) {
+          out[i] = 1;
+          hits += 1;
+        }
+      }
+      return hits ? out : null;
     }
 
     function getRawPointFromEvent(evt) {
@@ -911,6 +1033,8 @@
 
       const visited = new Uint8Array(pixelCount);
       const componentMask = new Uint8Array(pixelCount);
+      const assistMask = options && options.assistMask instanceof Uint8Array ? options.assistMask : null;
+      const assistMinHits = Math.max(1, Number(options && options.assistMinHits) || 1);
       const zones = [];
       const compQueue = new Int32Array(pixelCount);
 
@@ -926,6 +1050,7 @@
         let minY = height;
         let maxX = 0;
         let maxY = 0;
+        let assistHits = 0;
         const compPixels = [];
 
         while (cHead < cTail) {
@@ -934,6 +1059,7 @@
           const y = (idx - x) / width;
           area += 1;
           compPixels.push(idx);
+          if (assistMask && assistMask[idx]) assistHits += 1;
           componentMask[idx] = 1;
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
@@ -953,6 +1079,12 @@
         const boxW = maxX - minX + 1;
         const boxH = maxY - minY + 1;
         if (boxW >= options.minWidth && boxH >= options.minHeight && area >= options.minArea && area <= options.maxArea) {
+          if (assistMask && assistHits < assistMinHits) {
+            for (let i = 0; i < compPixels.length; i += 1) {
+              componentMask[compPixels[i]] = 0;
+            }
+            continue;
+          }
           const boxArea = boxW * boxH;
           const fill = boxArea ? area / boxArea : 0;
           const aspect = Math.max(boxW / boxH, boxH / boxW);
@@ -1009,6 +1141,11 @@
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const assistMask = getAssistMaskFromCanvas(canvas.width, canvas.height);
+        if (assistMask) {
+          options.assistMask = assistMask;
+          options.assistMinHits = Math.max(8, Math.round((Number(getBrushSize()) || 28) * 0.4));
+        }
         const polygons = buildAutoZonesFromImageData(imageData, options);
 
         floor.zones = polygons.map((points, idx) => ({
@@ -1388,6 +1525,7 @@
     });
 
     overlay.addEventListener("click", (evt) => {
+      if (state.paintingMask) return;
       if (!state.drawing) return;
       const rawPoint = getRawPointFromEvent(evt);
       if (!rawPoint) return;
@@ -1399,6 +1537,7 @@
     });
 
     overlay.addEventListener("mousemove", (evt) => {
+      if (state.paintingMask) return;
       if (!state.draggingLabel) return;
       const zone = zoneById(state.draggingLabel.zoneId);
       if (!zone) return;
@@ -1414,6 +1553,7 @@
     });
 
     overlay.addEventListener("mousemove", (evt) => {
+      if (state.paintingMask) return;
       if (!state.drawing || state.draggingLabel) return;
       const rawPoint = getRawPointFromEvent(evt);
       if (!rawPoint) return;
@@ -1443,6 +1583,53 @@
         if (autoMapMinArea) autoMapMinArea.value = "1400";
         if (autoMapMaxArea) autoMapMaxArea.value = "75000";
       });
+    }
+    if (autoMapPresetBtn) {
+      autoMapPresetBtn.addEventListener("click", () => {
+        if (autoMapThreshold) autoMapThreshold.value = "210";
+        if (autoMapMinArea) autoMapMinArea.value = "12000";
+        if (autoMapMaxArea) autoMapMaxArea.value = "300000";
+        drawHint.textContent = "Preset aplicado: plano claro. Puedes ajustar y luego correr Auto-mapear.";
+      });
+    }
+    if (paintMaskToggleBtn) {
+      paintMaskToggleBtn.addEventListener("click", () => {
+        setPaintMaskMode(!state.paintingMask);
+      });
+    }
+    if (paintMaskClearBtn) {
+      paintMaskClearBtn.addEventListener("click", () => {
+        clearPaintMask();
+        drawHint.textContent = "Sombreado borrado. Puedes pintar de nuevo y auto-mapear.";
+      });
+    }
+    if (paintMaskCanvas) {
+      paintMaskCanvas.addEventListener("pointerdown", (evt) => {
+        if (!state.paintingMask) return;
+        evt.preventDefault();
+        const point = getRawPointFromEvent(evt);
+        if (!point) return;
+        state.paintingMaskStroke = true;
+        state.paintingMaskLastPoint = point;
+        paintAt(point, null);
+      });
+      paintMaskCanvas.addEventListener("pointermove", (evt) => {
+        if (!state.paintingMask || !state.paintingMaskStroke) return;
+        evt.preventDefault();
+        const point = getRawPointFromEvent(evt);
+        if (!point) return;
+        paintAt(point, state.paintingMaskLastPoint);
+        state.paintingMaskLastPoint = point;
+      });
+      const stopPaint = () => {
+        if (!state.paintingMaskStroke) return;
+        state.paintingMaskStroke = false;
+        state.paintingMaskLastPoint = null;
+        persistPaintMaskForFloor();
+      };
+      paintMaskCanvas.addEventListener("pointerup", stopPaint);
+      paintMaskCanvas.addEventListener("pointerleave", stopPaint);
+      paintMaskCanvas.addEventListener("pointercancel", stopPaint);
     }
     snapParallelInput.addEventListener("change", () => {
       state.snapParallel = snapParallelInput.checked;
