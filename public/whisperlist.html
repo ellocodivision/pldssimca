@@ -44,7 +44,7 @@
     .check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
     .kpi{font-size:13px;color:var(--muted)}
     .dup-row{background:#fff4c4}
-    .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:10px}
     .stats-box{border:1px solid var(--line);border-radius:10px;padding:10px}
     .stats-box h3{margin:0 0 8px;font-size:13px}
     .stats-table{width:100%;border-collapse:collapse;min-width:0}
@@ -163,6 +163,13 @@
             <tbody id="statsByTipo"></tbody>
           </table>
         </section>
+        <section class="stats-box">
+          <h3>Vendedor por recámaras</h3>
+          <table class="stats-table">
+            <thead><tr><th>Vendedor</th><th>1</th><th>2</th><th>3</th><th>2PH</th><th>3PH</th><th>Total</th></tr></thead>
+            <tbody id="statsByAsesorRecamaras"></tbody>
+          </table>
+        </section>
       </div>
     </div>
 
@@ -226,6 +233,7 @@
         statsByAsesor: document.getElementById('statsByAsesor'),
         statsByCanal: document.getElementById('statsByCanal'),
         statsByTipo: document.getElementById('statsByTipo'),
+        statsByAsesorRecamaras: document.getElementById('statsByAsesorRecamaras'),
         clientModal: document.getElementById('clientModal'),
         closeModalBtn: document.getElementById('closeModalBtn'),
         modalNombre: document.getElementById('modalNombre'),
@@ -328,6 +336,44 @@
         }).join('');
       }
 
+      function normalizeRecamarasKey(value) {
+        const key = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (key === '1' || key === '1B') return '1';
+        if (key === '2' || key === '2B') return '2';
+        if (key === '3' || key === '3B') return '3';
+        if (key === '2PH' || key === 'PH2') return '2PH';
+        if (key === '3PH' || key === 'PH3') return '3PH';
+        return '';
+      }
+
+      function renderSellerBedroomsTable(tbody, rows) {
+        const bedroomOrder = ['1', '2', '3', '2PH', '3PH'];
+        const bySeller = new Map();
+        rows.forEach(function (row) {
+          const seller = String(row.asesor || '').trim() || '(VACIO)';
+          if (!bySeller.has(seller)) {
+            bySeller.set(seller, { '1': 0, '2': 0, '3': 0, '2PH': 0, '3PH': 0, total: 0 });
+          }
+          const bucket = bySeller.get(seller);
+          const recKey = normalizeRecamarasKey(row.recamaras);
+          if (recKey) bucket[recKey] += 1;
+          bucket.total += 1;
+        });
+        const sorted = Array.from(bySeller.entries()).sort(function (a, b) {
+          if (b[1].total !== a[1].total) return b[1].total - a[1].total;
+          return String(a[0]).localeCompare(String(b[0]));
+        });
+        tbody.innerHTML = sorted.map(function (entry) {
+          const seller = entry[0];
+          const bucket = entry[1];
+          return '<tr>' +
+            '<td>' + escapeHtml(seller) + '</td>' +
+            bedroomOrder.map(function (k) { return '<td>' + String(bucket[k] || 0) + '</td>'; }).join('') +
+            '<td>' + String(bucket.total || 0) + '</td>' +
+          '</tr>';
+        }).join('');
+      }
+
       function buildSellerFilter() {
         const sellers = Array.from(new Set(state.rows.map(function (r) {
           return String(r.asesor || '').trim();
@@ -369,6 +415,7 @@
         renderCountTable(els.statsByAsesor, mapCounts(filtered, function (r) { return r.asesor; }));
         renderCountTable(els.statsByCanal, mapCounts(filtered, function (r) { return r.canal; }));
         renderCountTable(els.statsByTipo, mapCounts(filtered, function (r) { return r.tipoVenta; }));
+        renderSellerBedroomsTable(els.statsByAsesorRecamaras, filtered);
         els.filterSummary.textContent = 'Mostrando ' + filtered.length + ' de ' + state.rows.length + ' filas.';
       }
 
