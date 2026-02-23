@@ -3,185 +3,413 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VICEROY PILOTO - Presentación</title>
+  <title>VICEROY PILOTO - Presentacion</title>
   <style>
     :root {
-      --bg: #0f1211;
-      --panel: #141917;
-      --card: #1a211e;
-      --ink: #e7ebe6;
-      --muted: #a9b3aa;
-      --line: #2b332e;
-      --accent: #9ea598;
-      --ok: #3daa5c;
-      --sold: #d25349;
-      --off: #616b63;
+      --beige: #ecebe2;
+      --ink: #36363f;
+      --ink-soft: #575760;
+      --black: #07090d;
+      --panel: #0d1117;
+      --line: #2c313a;
+      --ok: #41ac63;
+      --sold: #d65353;
+      --ghost: #6c7482;
+      --accent: #a6ac9b;
+      --overlay-left: 18px;
+      --overlay-top: 18px;
+      --overlay-width: 360px;
+      --overlay-bg: rgba(255,255,255,0.88);
+      --overlay-border: #cdd2c6;
+      --table-header-bg: #ecece4;
+      --table-header-text: #666a75;
+      --table-text: #31353e;
+      --table-font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
+      --table-header-font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
+      --table-font-size: 12px;
+      --table-header-font-size: 12px;
+      --table-text-align: left;
+      --table-header-align: left;
+      --col-w-1: 24%;
+      --col-w-2: 12%;
+      --col-w-3: 20%;
+      --col-w-4: 12%;
+      --col-w-5: 32%;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
       color: var(--ink);
-      background: radial-gradient(circle at top, #151b18 0%, #0c0f0e 70%);
+      background: var(--beige);
       min-height: 100vh;
     }
-    .wrap {
-      max-width: 1800px;
+    .hidden { display: none !important; }
+
+    .home {
+      min-height: 100vh;
+      display: block;
+      padding: 22px 16px 28px;
+      background: var(--beige);
+    }
+    .home-card {
+      width: min(1180px, 100%);
       margin: 0 auto;
-      padding: 14px;
-      display: grid;
-      grid-template-columns: 290px 1fr;
-      gap: 12px;
+      border: 0;
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
     }
-    .side, .block {
-      background: var(--panel);
-      border: 1px solid var(--line);
+    .logo {
+      text-align: center;
+      line-height: 1;
+      margin: 18px 0 22px;
+      color: #3d3d45;
+    }
+    .logo .v1 { font-size: clamp(42px, 8vw, 92px); letter-spacing: 0.09em; font-weight: 500; }
+    .logo .v2 { font-size: clamp(22px, 4vw, 44px); letter-spacing: 0.1em; margin-top: 8px; }
+    .logo .v3 { font-size: clamp(26px, 4.8vw, 52px); margin-top: 10px; }
+
+    .home-title {
+      text-align: center;
+      margin: 0 0 14px;
+      font-size: 14px;
+      color: var(--ink-soft);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .bed-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .bed-card {
+      border: 1px solid #cfd2c8;
       border-radius: 14px;
-      box-shadow: 0 8px 26px rgba(0,0,0,0.32);
-    }
-    .side { padding: 12px; position: sticky; top: 10px; align-self: start; }
-    .block { padding: 10px; }
-    h1 { margin: 0 0 6px; font-size: 20px; letter-spacing: .08em; }
-    h2 { margin: 0 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-    .help, .status { font-size: 12px; color: var(--muted); line-height: 1.35; }
-    .status { min-height: 17px; margin-top: 8px; }
-    .row { display: grid; gap: 8px; margin-top: 8px; }
-    select, button {
-      width: 100%;
-      border: 1px solid #3a453f;
-      border-radius: 10px;
-      background: #111614;
+      background: #fff;
+      padding: 14px;
+      cursor: pointer;
+      text-align: left;
       color: var(--ink);
-      padding: 9px 10px;
+      min-height: 110px;
+    }
+    .bed-card:hover { border-color: #aeb5a0; transform: translateY(-1px); }
+    .bed-name { margin: 0; font-size: 18px; font-weight: 700; }
+    .bed-price { margin: 8px 0 0; font-size: 15px; color: #4c4f56; }
+    .muted-note { margin: 12px 0 0; font-size: 12px; color: #656872; }
+
+    .topbar {
+      background: #f6f6f0;
+      border-bottom: 1px solid #d4d6cc;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    .topbar .label { font-size: 12px; color: #646771; text-transform: uppercase; letter-spacing: 0.07em; }
+    .btn {
+      border: 1px solid #b9beb1;
+      background: #fff;
+      color: #242830;
+      border-radius: 10px;
+      padding: 8px 12px;
       font-size: 13px;
+      cursor: pointer;
     }
-    button { cursor: pointer; }
-    button:hover { border-color: #566158; }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .chip { border: 1px solid #3a453f; border-radius: 999px; padding: 4px 8px; font-size: 12px; background: #121714; }
+    .btn:hover { border-color: #8f9587; }
+    .btn.primary { background: #a6ac9b; border-color: #a6ac9b; color: #0d1015; font-weight: 700; }
 
-    .main { display: grid; gap: 10px; }
-
-    .tip-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px;
+    .tipo-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
     }
-    .scene-grid {
+    .tipo-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
     }
-    .scene-card {
-      border: 1px solid #334039;
-      border-radius: 12px;
+    .tipo-card {
+      border: 1px solid #d3d6cc;
+      border-radius: 14px;
+      background: #fff;
       overflow: hidden;
       cursor: pointer;
-      background: var(--card);
     }
-    .scene-card .thumb { height: 120px; }
-    .tip-card {
-      border: 1px solid #334039;
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      background: var(--card);
-    }
-    .tip-card.active { border-color: #9ea598; box-shadow: inset 0 0 0 1px #9ea598; }
-    .thumb {
-      height: 140px;
-      background: linear-gradient(145deg, #202823, #151b18);
+    .tipo-card:hover { border-color: #aeb5a0; }
+    .tipo-thumb {
+      height: 150px;
+      background: linear-gradient(140deg, #e8e8df, #deddcf);
       display: grid;
       place-items: center;
-      color: #8e978f;
+      color: #646876;
       font-size: 12px;
-      text-align: center;
-      padding: 10px;
     }
-    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .meta { padding: 8px; }
-    .title { margin: 0 0 4px; font-size: 13px; font-weight: 700; }
-    .sub { margin: 0; font-size: 11px; color: var(--muted); }
+    .tipo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tipo-meta { padding: 10px; }
+    .tipo-name { margin: 0; font-size: 16px; }
+    .tipo-sub { margin: 4px 0 0; font-size: 12px; color: #60646f; }
 
-    .floor-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
-    .floor-tab {
-      border: 1px solid #38423c;
-      border-radius: 999px;
-      background: #111714;
+    .floors-page {
+      min-height: 100vh;
+      background: #ffffff;
       color: var(--ink);
-      padding: 6px 10px;
+    }
+    .floors-wrap {
+      display: block;
+      padding: 8px 10px 14px;
+      max-width: none;
+      margin: 0 auto;
+    }
+    .main-panel {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .side h3 {
+      margin: 10px 0 8px;
+      font-size: 12px;
+      color: #666977;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+    .chip {
+      border: 1px solid #cfd2c8;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: #3d414a;
+      background: #f4f4ee;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+    .table-wrap {
+      margin-top: 8px;
+      border: 0;
+      border-radius: 0;
+      overflow: visible;
+      background: transparent;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      border-bottom: 0;
+      padding: 7px 8px;
+      text-align: left;
+      vertical-align: top;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    th {
+      color: var(--table-header-text);
+      background: var(--table-header-bg);
+      font-weight: 600;
+      font-family: var(--table-header-font-family);
+      font-size: var(--table-header-font-size);
+      text-align: var(--table-header-align);
+    }
+    td {
+      color: var(--table-text);
+      font-family: var(--table-font-family);
+      font-size: var(--table-font-size);
+      text-align: var(--table-text-align);
+    }
+    th:nth-child(1), td:nth-child(1) { width: var(--col-w-1); }
+    th:nth-child(2), td:nth-child(2) { width: var(--col-w-2); }
+    th:nth-child(3), td:nth-child(3) { width: var(--col-w-3); }
+    th:nth-child(4), td:nth-child(4) { width: var(--col-w-4); }
+    th:nth-child(5), td:nth-child(5) { width: var(--col-w-5); }
+    tr:last-child td { border-bottom: 0; }
+
+    .main-panel { padding: 6px 4px; }
+    .floor-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .floor-tab {
+      border: 1px solid #cbcfc4;
+      background: #f6f6f0;
+      color: #2d323a;
+      border-radius: 999px;
+      padding: 6px 11px;
       font-size: 12px;
       cursor: pointer;
     }
-    .floor-tab.active { border-color: #93a08f; background: #1d2521; font-weight: 700; }
+    .floor-tab.active { background: #e8e9df; border-color: #939a89; }
 
     .map-wrap {
-      background: #0d1110;
-      border: 1px solid #2a332e;
-      border-radius: 14px;
-      padding: 10px;
-      min-height: 70vh;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      min-height: calc(100vh - 110px);
       overflow: auto;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
     }
-    .stage { position: relative; display: inline-block; line-height: 0; max-width: 100%; }
-    #baseImage { max-width: 100%; height: auto; display: block; border-radius: 8px; }
-    #overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .stage {
+      position: relative;
+      display: inline-block;
+      line-height: 0;
+      width: auto;
+      max-width: 96vw;
+    }
+    #baseImage {
+      display: block;
+      width: min(96vw, 1500px);
+      max-width: 100%;
+      height: auto;
+      border-radius: 0;
+      background: #ddd;
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
+    }
 
-    .legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .status {
+      font-size: 12px;
+      color: #6d717b;
+      margin-top: 8px;
+      min-height: 17px;
+    }
+    .status.dark { color: #646874; }
+    .map-info-overlay {
+      position: absolute;
+      left: var(--overlay-left);
+      top: var(--overlay-top);
+      width: var(--overlay-width);
+      max-height: calc(100% - 36px);
+      overflow: auto;
+      padding: 10px 10px 12px;
+      background: var(--overlay-bg);
+      border: 0;
+      border-radius: 12px;
+      line-height: normal;
+      z-index: 2;
+      backdrop-filter: blur(2px);
+    }
+    .map-info-overlay h3 { margin: 6px 0 8px; font-size: 12px; color: #666977; text-transform: uppercase; letter-spacing: 0.08em; }
+    .upload-tools {
+      position: fixed;
+      right: 12px;
+      top: 12px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(246, 246, 240, 0.95);
+      border: 1px solid #cbcfbf;
+      border-radius: 12px;
+      padding: 6px 8px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    .upload-status {
+      font-size: 11px;
+      color: #5f6573;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     @media (max-width: 980px) {
-      .wrap { grid-template-columns: 1fr; }
-      .side { position: static; }
+      .map-info-overlay {
+        position: static;
+        width: 100%;
+        max-height: none;
+        margin-bottom: 10px;
+      }
+      .logo .v1 { letter-spacing: 0.06em; }
+      .logo .v2, .logo .v3 { letter-spacing: 0.04em; }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <aside class="side">
-      <h1>VICEROY PILOTO</h1>
-      <p class="help">Presentación visual: recámaras -> tipología -> unidades en plano.</p>
-      <p id="status" class="status"></p>
-
-      <div class="row">
-        <h2>Recámaras</h2>
-        <select id="recamarasSelect"></select>
-      </div>
-
-      <div class="row">
-        <button id="viewAllBtn" type="button">Ver todo el plano</button>
-        <button id="clearTipBtn" type="button">Quitar tipología</button>
-      </div>
-
-      <div id="chips" class="chips"></div>
-      <div class="legend">
-        <span class="chip"><span class="dot" style="background:#3daa5c"></span> Disponible</span>
-        <span class="chip"><span class="dot" style="background:#d25349"></span> Vendida</span>
-        <span class="chip"><span class="dot" style="background:#616b63"></span> Sin filtro</span>
-      </div>
-    </aside>
-
-    <main class="main">
-      <section id="scenesBlock" class="block" style="display:none;">
-        <div id="sceneGrid" class="scene-grid"></div>
-      </section>
-
-      <section class="block">
-        <div id="tipGrid" class="tip-grid"></div>
-      </section>
-
-      <section class="block">
-        <div id="floorTabs" class="floor-tabs"></div>
-      </section>
-
-      <section class="map-wrap">
-        <div class="stage">
-          <img id="baseImage" alt="Plano">
-          <svg id="overlay"></svg>
-        </div>
-      </section>
-    </main>
+  <div class="upload-tools">
+    <input id="inventoryUploadInput" type="file" accept=".xlsx,.xls,.csv" class="hidden">
+    <button id="inventoryUploadBtn" class="btn" type="button">Cargar Excel</button>
+    <span id="inventoryUploadStatus" class="upload-status">Sin carga nueva</span>
   </div>
+
+  <section id="homeView" class="home">
+    <div class="home-card">
+      <div class="logo">
+        <div class="v1">VICEROY</div>
+        <div class="v2">RESIDENCES</div>
+        <div class="v3">PLAYA DEL CARMEN</div>
+      </div>
+      <p class="home-title">Seleccion de recamaras</p>
+      <div id="bedGrid" class="bed-grid"></div>
+      <p class="muted-note">* Modo piloto: precios y tipologias pueden mostrarse como placeholder hasta cargar Excel final.</p>
+      <p id="homeStatus" class="status"></p>
+    </div>
+  </section>
+
+  <section id="tipologiasView" class="hidden">
+    <div class="topbar">
+      <span class="label" id="tipoTopLabel">Tipologias</span>
+      <div>
+        <button id="backToHomeBtn" class="btn" type="button">Volver a recamaras</button>
+      </div>
+    </div>
+    <div class="tipo-wrap">
+      <div id="tipoGrid" class="tipo-grid"></div>
+      <p id="tipoStatus" class="status"></p>
+    </div>
+  </section>
+
+  <section id="floorsView" class="floors-page hidden">
+    <div class="topbar">
+      <span class="label" id="floorsTopLabel">Plano interactivo</span>
+      <div>
+        <button id="backToTiposBtn" class="btn" type="button">Volver a tipologias</button>
+        <button id="showAllOnMapBtn" class="btn primary" type="button">Ver todo el plano</button>
+      </div>
+    </div>
+
+    <div class="floors-wrap">
+      <main class="main-panel">
+        <div id="floorTabs" class="floor-tabs"></div>
+        <div class="map-wrap">
+          <div class="stage">
+            <div class="map-info-overlay">
+              <div id="activeFilterChips" class="hidden"></div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Unidad</th>
+                      <th>Rec</th>
+                      <th>Vista</th>
+                      <th>m2</th>
+                      <th>Precio</th>
+                    </tr>
+                  </thead>
+                  <tbody id="unitsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <img id="baseImage" alt="Plano">
+            <svg id="overlay"></svg>
+          </div>
+        </div>
+      </main>
+    </div>
+  </section>
 
   <script>
     (function () {
@@ -189,265 +417,579 @@
       const token = params.get('token') || '';
       const dataUrl = '/api/viceroy-piloto/public-data' + (token ? ('?token=' + encodeURIComponent(token)) : '');
 
+      const DEMO_PRICE_BY_BEDROOM = {
+        '1B': 420000,
+        '2B': 590000,
+        '3B': 780000,
+        '2PH': 980000,
+        '3PH': 1250000
+      };
+
+      const BEDROOM_BUCKETS = [
+        { id: '1B', name: 'ONE BEDROOM', aliases: ['1B', '1 BR', '1BR', '1 REC'] },
+        { id: '2B', name: 'TWO BEDROOM', aliases: ['2B', '2 BR', '2BR', '2 REC'] },
+        { id: '3B', name: 'THREE BEDROOM', aliases: ['3B', '3 BR', '3BR', '3 REC'] },
+        { id: '2PH', name: 'PENTHOUSE TWO BEDROOM', aliases: ['2PH', 'PH2', 'PH 2'] },
+        { id: '3PH', name: 'PENTHOUSE THREE BEDROOM', aliases: ['3PH', 'PH3', 'PH 3'] }
+      ];
+
       const state = {
+        view: 'home',
         floors: [],
         activeFloorId: '',
         config: { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] },
         inventoryRows: [],
         byUnit: new Map(),
-        selectedRecamaras: '',
-        selectedTip: '',
-        showAll: true
+        selectedBedroom: '',
+        selectedTipologia: '',
+        showAllOnMap: false,
+        selectedFloorRows: []
       };
 
       const els = {
-        status: document.getElementById('status'),
-        recamarasSelect: document.getElementById('recamarasSelect'),
-        viewAllBtn: document.getElementById('viewAllBtn'),
-        clearTipBtn: document.getElementById('clearTipBtn'),
-        chips: document.getElementById('chips'),
-        scenesBlock: document.getElementById('scenesBlock'),
-        sceneGrid: document.getElementById('sceneGrid'),
-        tipGrid: document.getElementById('tipGrid'),
+        uploadTools: document.querySelector('.upload-tools'),
+        homeView: document.getElementById('homeView'),
+        tipologiasView: document.getElementById('tipologiasView'),
+        floorsView: document.getElementById('floorsView'),
+        homeStatus: document.getElementById('homeStatus'),
+        bedGrid: document.getElementById('bedGrid'),
+        tipoTopLabel: document.getElementById('tipoTopLabel'),
+        tipoGrid: document.getElementById('tipoGrid'),
+        tipoStatus: document.getElementById('tipoStatus'),
+        floorsTopLabel: document.getElementById('floorsTopLabel'),
+        activeFilterChips: document.getElementById('activeFilterChips'),
+        unitsTableBody: document.getElementById('unitsTableBody'),
         floorTabs: document.getElementById('floorTabs'),
         baseImage: document.getElementById('baseImage'),
-        overlay: document.getElementById('overlay')
+        overlay: document.getElementById('overlay'),
+        mapInfoOverlay: document.querySelector('.map-info-overlay'),
+        backToHomeBtn: document.getElementById('backToHomeBtn'),
+        backToTiposBtn: document.getElementById('backToTiposBtn'),
+        showAllOnMapBtn: document.getElementById('showAllOnMapBtn'),
+        inventoryUploadInput: document.getElementById('inventoryUploadInput'),
+        inventoryUploadBtn: document.getElementById('inventoryUploadBtn'),
+        inventoryUploadStatus: document.getElementById('inventoryUploadStatus')
       };
 
-      function setStatus(msg) { els.status.textContent = msg || ''; }
-      function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-      function norm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
-      function unit(s) { return String(s || '').trim().toUpperCase(); }
+      function esc(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function norm(s) {
+        return String(s || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, '');
+      }
+
+      function unitKey(s) {
+        return String(s || '').trim().toUpperCase();
+      }
+
+      function normalizeBedroom(raw) {
+        const v = String(raw || '').toUpperCase().replace(/\s+/g, ' ').trim();
+        const vn = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (!v) return '';
+        if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES'))) return '3PH';
+        if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS'))) return '2PH';
+        if (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES')) return '3B';
+        if (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS')) return '2B';
+        if (vn.includes('1') || vn.includes('ONE') || vn.includes('UNA') || vn.includes('UNO') || vn === 'UN') return '1B';
+        return v.replace(/\s+/g, '');
+      }
+
+      function getBucketMeta(bucketId) {
+        return BEDROOM_BUCKETS.find(function (b) { return b.id === bucketId; }) || { id: bucketId, name: bucketId };
+      }
+
+      function parseMoneyLike(value) {
+        if (value == null || value === '') return null;
+        const txt = String(value).replace(/[^0-9.\-]/g, '');
+        if (!txt) return null;
+        const n = Number(txt);
+        return Number.isFinite(n) ? n : null;
+      }
+
+      function toDataUrl(file) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function () { resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadInventoryFile(file) {
+        if (!file) return;
+        els.inventoryUploadStatus.textContent = 'Subiendo Excel...';
+        let base64;
+        try {
+          base64 = await toDataUrl(file);
+        } catch {
+          els.inventoryUploadStatus.textContent = 'No se pudo leer el archivo.';
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/viceroy-piloto/inventory', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName: file.name, base64: base64 })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            els.inventoryUploadStatus.textContent = data.error || 'No autorizado o error de carga.';
+            return;
+          }
+          els.inventoryUploadStatus.textContent = 'Excel cargado. Actualizando...';
+          await load();
+          els.inventoryUploadStatus.textContent = 'Excel cargado correctamente.';
+        } catch (err) {
+          const detail = err && err.message ? (' (' + err.message + ')') : '';
+          els.inventoryUploadStatus.textContent = 'Error al subir Excel. Revisa sesion interna' + detail;
+        }
+      }
+
+      function formatPrice(value, isDemo) {
+        if (!Number.isFinite(value)) return 'FROM: POR DEFINIR';
+        const text = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+        return isDemo ? ('FROM: ' + text + ' *') : ('FROM: ' + text);
+      }
+
+      function normalizeConfig(raw) {
+        const cfg = raw && typeof raw === 'object' ? raw : {};
+        return {
+          tipologias: Array.isArray(cfg.tipologias) ? cfg.tipologias : [],
+          unitTipologiaMap: cfg.unitTipologiaMap && typeof cfg.unitTipologiaMap === 'object' ? cfg.unitTipologiaMap : {},
+          unitRecamarasMap: cfg.unitRecamarasMap && typeof cfg.unitRecamarasMap === 'object' ? cfg.unitRecamarasMap : {},
+          mapFloorOrder: Array.isArray(cfg.mapFloorOrder) ? cfg.mapFloorOrder : [],
+          presentationLayout: cfg.presentationLayout && typeof cfg.presentationLayout === 'object' ? cfg.presentationLayout : {},
+          pages: Array.isArray(cfg.pages) ? cfg.pages : []
+        };
+      }
+
+      function applyPresentationLayout() {
+        const layout = state.config && state.config.presentationLayout && typeof state.config.presentationLayout === 'object'
+          ? state.config.presentationLayout
+          : {};
+        const root = document.documentElement;
+        const imgW = Number(els.baseImage && els.baseImage.clientWidth || 0);
+        const imgH = Number(els.baseImage && els.baseImage.clientHeight || 0);
+        const fallbackW = Number(els.baseImage && els.baseImage.naturalWidth || 1500);
+        const fallbackH = Number(els.baseImage && els.baseImage.naturalHeight || 900);
+        const currentW = imgW > 0 ? imgW : fallbackW;
+        const currentH = imgH > 0 ? imgH : fallbackH;
+        const refW = Number(layout.overlayRefWidth || currentW || 1500);
+        const refH = Number(layout.overlayRefHeight || currentH || 900);
+        const sx = refW > 0 ? (currentW / refW) : 1;
+        const sy = refH > 0 ? (currentH / refH) : 1;
+        const scaledPx = function (v, fallback, scale) {
+          const n = Number(v);
+          if (!Number.isFinite(n)) return fallback;
+          return (Math.max(0, n * scale) + 'px');
+        };
+        root.style.setProperty('--overlay-left', scaledPx(layout.overlayX, '18px', sx));
+        root.style.setProperty('--overlay-top', scaledPx(layout.overlayY, '18px', sy));
+        root.style.setProperty('--overlay-width', scaledPx(layout.overlayWidth, '360px', sx));
+        root.style.setProperty('--overlay-bg', String(layout.overlayBg || 'rgba(255,255,255,0.88)'));
+        root.style.setProperty('--overlay-border', String(layout.overlayBorder || '#cdd2c6'));
+        root.style.setProperty('--table-header-bg', String(layout.tableHeaderBg || '#ecece4'));
+        root.style.setProperty('--table-header-text', String(layout.tableHeaderText || '#666a75'));
+        root.style.setProperty('--table-text', String(layout.tableText || '#31353e'));
+        root.style.setProperty('--table-font-family', String(layout.tableFontFamily || '"Akkurat", "Segoe UI", Tahoma, sans-serif'));
+        root.style.setProperty('--table-header-font-family', String(layout.tableHeaderFontFamily || '"Akkurat", "Segoe UI", Tahoma, sans-serif'));
+        root.style.setProperty('--table-font-size', String(Math.max(9, Math.round(Number(layout.tableFontSize || 12) * sx))) + 'px');
+        root.style.setProperty('--table-header-font-size', String(Math.max(9, Math.round(Number(layout.tableHeaderFontSize || 12) * sx))) + 'px');
+        root.style.setProperty('--table-text-align', String(layout.tableTextAlign || 'left'));
+        root.style.setProperty('--table-header-align', String(layout.tableHeaderAlign || 'left'));
+        root.style.setProperty('--col-w-1', String(Number(layout.colWUnidad || 24)) + '%');
+        root.style.setProperty('--col-w-2', String(Number(layout.colWRec || 12)) + '%');
+        root.style.setProperty('--col-w-3', String(Number(layout.colWVista || 20)) + '%');
+        root.style.setProperty('--col-w-4', String(Number(layout.colWM2 || 12)) + '%');
+        root.style.setProperty('--col-w-5', String(Number(layout.colWPrecio || 32)) + '%');
+      }
+
+      function buildUnitIndex() {
+        const m = new Map();
+        state.inventoryRows.forEach(function (row) {
+          const key = unitKey(row.unidad);
+          if (!key || m.has(key)) return;
+          m.set(key, row);
+        });
+        state.byUnit = m;
+      }
+
+      function normalizeFloorName(name, idx) {
+        const value = String(name || '').trim();
+        const key = norm(value);
+        if (key.includes('ground')) return 'Ground Level';
+        if (key.includes('lower_penthouse') || key.includes('level_5')) return 'Level 5: Lower Penthouse';
+        if (key.includes('upper_penthouse') || key.includes('level_6')) return 'Level 6: Upper Penthouse';
+        if (key.includes('level_1')) return 'Level 1';
+        if (key.includes('level_2')) return 'Level 2';
+        if (key.includes('level_3')) return 'Level 3';
+        if (key.includes('level_4')) return 'Level 4';
+        if (idx === 0) return 'Ground Level';
+        if (idx === 1) return 'Level 1';
+        if (idx === 2) return 'Level 2';
+        if (idx === 3) return 'Level 3';
+        if (idx === 4) return 'Level 4';
+        if (idx === 5) return 'Level 5: Lower Penthouse';
+        if (idx === 6) return 'Level 6: Upper Penthouse';
+        return value || ('Level ' + idx);
+      }
+
+      function orderFloors() {
+        const order = state.config.mapFloorOrder.map(function (x) { return String(x || ''); }).filter(Boolean);
+        const idxBy = new Map(order.map(function (id, i) { return [id, i]; }));
+        state.floors.sort(function (a, b) {
+          const ai = idxBy.has(String(a.id)) ? idxBy.get(String(a.id)) : Number.MAX_SAFE_INTEGER;
+          const bi = idxBy.has(String(b.id)) ? idxBy.get(String(b.id)) : Number.MAX_SAFE_INTEGER;
+          if (ai !== bi) return ai - bi;
+          return String(a.floorDisplay || '').localeCompare(String(b.floorDisplay || ''), 'es', { numeric: true });
+        });
+      }
 
       function activeFloor() {
         return state.floors.find(function (f) { return f.id === state.activeFloorId; }) || null;
       }
 
-      function applyMapFloorOrder() {
-        const order = Array.isArray(state.config && state.config.mapFloorOrder)
-          ? state.config.mapFloorOrder.map(function (id) { return String(id || ''); }).filter(Boolean)
-          : [];
-        if (!order.length || !state.floors.length) return;
-        const idx = new Map(order.map(function (id, i) { return [id, i]; }));
-        state.floors.sort(function (a, b) {
-          const ai = idx.has(String(a.id)) ? idx.get(String(a.id)) : Number.MAX_SAFE_INTEGER;
-          const bi = idx.has(String(b.id)) ? idx.get(String(b.id)) : Number.MAX_SAFE_INTEGER;
-          if (ai !== bi) return ai - bi;
-          return String(a.name || '').localeCompare(String(b.name || ''), 'es', { numeric: true });
-        });
+      function inferTipologiaFromUnit(unit) {
+        const normalized = unitKey(unit);
+        const fromMap = state.config.unitTipologiaMap[normalized];
+        if (fromMap) return String(fromMap).trim();
+        const tipList = getTipologiasByBedroom(state.selectedBedroom);
+        if (!tipList.length) return '';
+        const digits = Number(String(normalized).replace(/[^0-9]/g, ''));
+        if (!Number.isFinite(digits) || digits <= 0) return tipList[0].id;
+        const pos = (digits - 1) % tipList.length;
+        return tipList[pos].id;
       }
 
-      function buildIndex() {
-        const m = new Map();
-        state.inventoryRows.forEach(function (r) {
-          const k = unit(r.unidad);
-          if (!k || m.has(k)) return;
-          m.set(k, r);
-        });
-        state.byUnit = m;
-      }
-
-      function tipologias() {
-        const list = Array.isArray(state.config.tipologias) ? state.config.tipologias.slice() : [];
-        const seen = new Set(list.map(function (t) { return norm(t.id || t.name); }));
-        state.inventoryRows.forEach(function (r) {
-          const t = String(r.tipologia || '').trim();
-          const k = norm(t);
-          if (!t || !k || seen.has(k)) return;
-          seen.add(k);
-          list.push({ id: t, name: t, recamaras: String(r.recamaras || ''), imageUrl: '' });
-        });
-        return list;
-      }
-
-      function info(zoneLabel) {
-        const row = state.byUnit.get(unit(zoneLabel));
-        const mapTip = String((state.config.unitTipologiaMap || {})[unit(zoneLabel)] || '').trim();
-        const tipologia = String((row && row.tipologia) || mapTip || '').trim();
-        const recMap = String((state.config.unitRecamarasMap || {})[unit(zoneLabel)] || '').trim().toUpperCase();
-        const recamaras = String((row && row.recamaras) || recMap || '').trim().toUpperCase();
+      function resolveZoneInfo(zone) {
+        const u = unitKey(zone && zone.label);
+        const row = state.byUnit.get(u) || null;
+        const tipologia = String((row && row.tipologia) || zone.tipologia || inferTipologiaFromUnit(u) || '').trim();
+        const rec = normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || '');
         const status = row && String(row.status || '').toLowerCase() === 'vendida' ? 'vendida' : 'disponible';
-        return { tipologia: tipologia, tipKey: norm(tipologia), recamaras: recamaras, status: status };
+        const m2 = row && row.m2 != null ? row.m2 : (row && row.metros2 != null ? row.metros2 : null);
+        const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
+        const vista = String((row && (row.vista || row.view)) || '').trim();
+        const price = row && row.price != null ? row.price : (row && row.precio != null ? row.precio : null);
+        return {
+          unidad: u,
+          tipologia: tipologia,
+          tipKey: norm(tipologia),
+          recamaras: rec,
+          status: status,
+          m2: m2,
+          sqft: sqft,
+          vista: vista,
+          price: price
+        };
       }
 
-      function renderScenes() {
-        const scenes = Array.isArray(state.config.pages) ? state.config.pages : [];
-        if (!scenes.length) {
-          els.scenesBlock.style.display = 'none';
-          els.sceneGrid.innerHTML = '';
-          return;
+      function getMinimumPriceByBedroom(bucketId) {
+        const matches = state.inventoryRows
+          .filter(function (r) { return normalizeBedroom(r.recamaras) === bucketId; })
+          .map(function (r) {
+            return parseMoneyLike(r.price || r.precio || r.precio_desde || r.starting_price || r.startingprice || r.importe);
+          })
+          .filter(function (n) { return Number.isFinite(n) && n > 0; });
+
+        if (matches.length) {
+          return { value: Math.min.apply(Math, matches), isDemo: false };
         }
-        els.scenesBlock.style.display = '';
-        els.sceneGrid.innerHTML = scenes.map(function (scene) {
-          const thumb = scene.imageUrl
-            ? '<img src="' + esc(scene.imageUrl) + '" alt="' + esc(scene.title || scene.id) + '">'
-            : '<span>Sin imagen</span>';
-          const sub = [scene.targetType || '', scene.targetValue || ''].filter(Boolean).join(' · ');
-          return '<article class="scene-card" data-target-type="' + esc(scene.targetType || '') + '" data-target-value="' + esc(scene.targetValue || '') + '">' +
-            '<div class="thumb">' + thumb + '</div>' +
-            '<div class="meta"><p class="title">' + esc(scene.title || scene.id || 'ESCENA') + '</p><p class="sub">' + esc(sub || 'Navegación visual') + '</p></div>' +
-          '</article>';
+        if (Object.prototype.hasOwnProperty.call(DEMO_PRICE_BY_BEDROOM, bucketId)) {
+          return { value: DEMO_PRICE_BY_BEDROOM[bucketId], isDemo: true };
+        }
+        return { value: null, isDemo: true };
+      }
+
+      function getTipologiasByBedroom(bucketId) {
+        const out = [];
+        const seen = new Set();
+
+        state.config.tipologias.forEach(function (tip) {
+          const rec = normalizeBedroom(tip.recamaras);
+          const id = String(tip.id || tip.name || '').trim();
+          if (!id || seen.has(norm(id))) return;
+          if (bucketId && rec && rec !== bucketId) return;
+          seen.add(norm(id));
+          out.push({
+            id: id,
+            name: String(tip.name || id),
+            recamaras: rec || bucketId,
+            imageUrl: String(tip.imageUrl || '').trim()
+          });
+        });
+
+        state.inventoryRows.forEach(function (row) {
+          const rec = normalizeBedroom(row.recamaras);
+          const id = String(row.tipologia || '').trim();
+          if (!id || seen.has(norm(id))) return;
+          if (bucketId && rec && rec !== bucketId) return;
+          seen.add(norm(id));
+          out.push({
+            id: id,
+            name: id,
+            recamaras: rec || bucketId,
+            imageUrl: ''
+          });
+        });
+
+        if (bucketId === '1B' && !seen.has(norm('C3'))) {
+          seen.add(norm('C3'));
+          out.unshift({ id: 'C3', name: 'C3', recamaras: '1B', imageUrl: '' });
+        }
+
+        if (!out.length && bucketId) {
+          out.push({ id: bucketId + '-TIPO-A', name: 'TIPO A', recamaras: bucketId, imageUrl: '' });
+          out.push({ id: bucketId + '-TIPO-B', name: 'TIPO B', recamaras: bucketId, imageUrl: '' });
+        }
+
+        return out;
+      }
+
+      function visibleBedroomBuckets() {
+        if (!state.inventoryRows.length) return BEDROOM_BUCKETS;
+        const present = new Set();
+        state.inventoryRows.forEach(function (r) {
+          const b = normalizeBedroom(r.recamaras);
+          if (b) present.add(b);
+        });
+        const filtered = BEDROOM_BUCKETS.filter(function (b) { return present.has(b.id); });
+        return filtered.length ? filtered : BEDROOM_BUCKETS;
+      }
+
+      function showView(viewName) {
+        state.view = viewName;
+        els.homeView.classList.toggle('hidden', viewName !== 'home');
+        els.tipologiasView.classList.toggle('hidden', viewName !== 'tipologias');
+        els.floorsView.classList.toggle('hidden', viewName !== 'floors');
+        if (els.uploadTools) {
+          els.uploadTools.classList.toggle('hidden', viewName !== 'home');
+        }
+      }
+
+      function renderHome() {
+        els.bedGrid.innerHTML = BEDROOM_BUCKETS.map(function (bucket) {
+          const p = getMinimumPriceByBedroom(bucket.id);
+          return '<button class="bed-card" data-bedroom="' + esc(bucket.id) + '">' +
+            '<p class="bed-name">' + esc(bucket.name) + '</p>' +
+            '<p class="bed-price">' + esc(formatPrice(p.value, p.isDemo)) + '</p>' +
+          '</button>';
         }).join('');
-      }
 
-      function matches(i) {
-        if (!state.showAll) {
-          if (!state.selectedTip) return false;
-          if (norm(state.selectedTip) !== i.tipKey) return false;
+        const invCount = state.inventoryRows.length;
+        if (invCount) {
+          els.homeStatus.textContent = 'Inventario detectado: ' + invCount + ' registros.';
+        } else {
+          els.homeStatus.textContent = 'Sin inventario cargado aun. Se muestran datos piloto.';
         }
-        if (state.selectedRecamaras && i.recamaras !== state.selectedRecamaras) return false;
-        return true;
-      }
-
-      function renderRecamaras() {
-        const set = new Set();
-        tipologias().forEach(function (t) { if (t.recamaras) set.add(String(t.recamaras).toUpperCase()); });
-        state.inventoryRows.forEach(function (r) { if (r.recamaras) set.add(String(r.recamaras).toUpperCase()); });
-        const values = Array.from(set).sort(function (a, b) { return a.localeCompare(b, 'es', { numeric: true }); });
-        els.recamarasSelect.innerHTML = ['<option value="">Todas las recámaras</option>'].concat(values.map(function (v) {
-          return '<option value="' + esc(v) + '"' + (v === state.selectedRecamaras ? ' selected' : '') + '>' + esc(v) + '</option>';
-        })).join('');
       }
 
       function renderTipologias() {
-        let list = tipologias();
-        if (state.selectedRecamaras) {
-          list = list.filter(function (t) { return String(t.recamaras || '').toUpperCase() === state.selectedRecamaras; });
-        }
-        if (!list.length) {
-          els.tipGrid.innerHTML = '<span class="chip">Sin tipologías para este filtro.</span>';
+        const bucket = getBucketMeta(state.selectedBedroom);
+        const tips = getTipologiasByBedroom(state.selectedBedroom);
+        els.tipoTopLabel.textContent = 'Tipologias · ' + bucket.name;
+
+        if (!tips.length) {
+          els.tipoGrid.innerHTML = '<div class="tipo-card"><div class="tipo-meta"><p class="tipo-name">Sin tipologias</p><p class="tipo-sub">Carga config o inventario.</p></div></div>';
           return;
         }
-        els.tipGrid.innerHTML = list.map(function (t) {
-          const k = norm(t.id || t.name);
-          const active = !state.showAll && norm(state.selectedTip) === k ? ' active' : '';
-          const thumb = t.imageUrl ? '<img src="' + esc(t.imageUrl) + '" alt="' + esc(t.name || t.id) + '">' : '<span>Sin imagen</span>';
-          return '<article class="tip-card' + active + '" data-tip="' + esc(t.id || t.name) + '">' +
-            '<div class="thumb">' + thumb + '</div>' +
-            '<div class="meta"><p class="title">' + esc(t.name || t.id) + '</p><p class="sub">' + esc((t.id || '') + (t.recamaras ? (' · ' + t.recamaras + ' REC') : '')) + '</p></div>' +
+
+        els.tipoGrid.innerHTML = tips.map(function (tip) {
+          const thumb = tip.imageUrl
+            ? '<img src="' + esc(tip.imageUrl) + '" alt="' + esc(tip.name) + '">'
+            : '<span>Tipologia</span>';
+          return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '">' +
+            '<div class="tipo-thumb">' + thumb + '</div>' +
+            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p></div>' +
           '</article>';
         }).join('');
+
+        els.tipoStatus.textContent = tips.length + ' tipologias disponibles en piloto.';
       }
 
       function renderFloorTabs() {
         if (!state.floors.length) {
-          els.floorTabs.innerHTML = '<span class="chip">Sin pisos</span>';
+          els.floorTabs.innerHTML = '<span class="chip">Sin pisos cargados</span>';
           return;
         }
-        els.floorTabs.innerHTML = state.floors.map(function (f, idx) {
-          const active = f.id === state.activeFloorId ? ' active' : '';
-          return '<button class="floor-tab' + active + '" data-floor="' + esc(f.id) + '">Piso ' + (idx + 1) + ': ' + esc(f.name || ('PISO ' + (idx + 1))) + '</button>';
+        els.floorTabs.innerHTML = state.floors.map(function (floor, idx) {
+          const active = floor.id === state.activeFloorId ? ' active' : '';
+          return '<button class="floor-tab' + active + '" data-floor="' + esc(floor.id) + '">Piso ' + (idx + 1) + ': ' + esc(floor.floorDisplay || floor.name || floor.id) + '</button>';
         }).join('');
       }
 
-      function draw() {
+      function matchesFilter(info) {
+        if (state.showAllOnMap) return true;
+        if (!state.selectedTipologia) return true;
+        return norm(info.tipologia) === norm(state.selectedTipologia);
+      }
+
+      function renderFilterChips(stats) {
+        const bucket = getBucketMeta(state.selectedBedroom);
+        const chips = [
+          '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
+          '<span class="chip">Tipologia: ' + esc(state.showAllOnMap ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
+          '<span class="chip">Mostradas: ' + stats.shown + '</span>',
+          '<span class="chip">Disponibles: ' + stats.available + '</span>',
+          '<span class="chip">Vendidas: ' + stats.sold + '</span>'
+        ];
+        els.activeFilterChips.innerHTML = chips.join('');
+      }
+
+      function renderUnitsTable(rows) {
+        if (!rows.length) {
+          els.unitsTableBody.innerHTML = '<tr><td colspan="5" style="color:#93a1b8">Sin unidades en este filtro</td></tr>';
+          return;
+        }
+        const html = rows.slice(0, 80).map(function (r) {
+          const m2Num = Number(String(r.m2 == null ? '' : r.m2).replace(/[^0-9.\-]/g, ''));
+          const m2 = Number.isFinite(m2Num)
+            ? String(Math.round(m2Num))
+            : (r.m2 == null || r.m2 === '' ? 'N/D' : String(r.m2));
+          const vista = r.vista || 'N/D';
+          const priceNum = parseMoneyLike(r.price);
+          const price = Number.isFinite(priceNum)
+            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(priceNum)
+            : (r.price == null || r.price === '' ? 'N/D' : String(r.price));
+          return '<tr>' +
+            '<td>' + esc(r.unidad || '') + '</td>' +
+            '<td>' + esc(r.recamaras || 'N/D') + '</td>' +
+            '<td>' + esc(vista) + '</td>' +
+            '<td>' + esc(m2) + '</td>' +
+            '<td>' + esc(price) + '</td>' +
+          '</tr>';
+        }).join('');
+        els.unitsTableBody.innerHTML = html;
+      }
+
+      function drawFloor() {
         const floor = activeFloor();
         if (!floor || !floor.imageDataUrl) {
           els.baseImage.removeAttribute('src');
           els.overlay.innerHTML = '';
+          state.selectedFloorRows = [];
+          renderUnitsTable([]);
+          renderFilterChips({ shown: 0, available: 0, sold: 0 });
           return;
         }
+
+        els.baseImage.onload = function () {
+          applyPresentationLayout();
+        };
         els.baseImage.src = floor.imageDataUrl;
         const w = Number(floor.imageWidth) || els.baseImage.naturalWidth || 1200;
         const h = Number(floor.imageHeight) || els.baseImage.naturalHeight || 800;
         els.overlay.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
 
         const zones = Array.isArray(floor.zones) ? floor.zones : [];
-        let show = 0, disp = 0, vend = 0;
-        const svg = zones.map(function (z) {
-          const pts = Array.isArray(z.points) ? z.points : [];
-          if (!pts.length) return '';
-          const p = pts.map(function (xy) { return Number(xy[0]) + ',' + Number(xy[1]); }).join(' ');
-          const i = info(z.label);
-          if (!matches(i)) {
-            return '<polygon points="' + p + '" fill="rgba(97,107,99,0.08)" stroke="rgba(97,107,99,0.26)" stroke-width="1"></polygon>';
+        let shown = 0;
+        let sold = 0;
+        let available = 0;
+        const rows = [];
+
+        const svg = zones.map(function (zone) {
+          const points = Array.isArray(zone.points) ? zone.points : [];
+          if (!points.length) return '';
+          const polygon = points.map(function (xy) { return Number(xy[0]) + ',' + Number(xy[1]); }).join(' ');
+          const info = resolveZoneInfo(zone);
+          const tipAttr = esc(info.tipologia || '');
+          const unitAttr = esc(info.unidad || '');
+          const match = matchesFilter(info);
+
+          if (!match) {
+            return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="rgba(108,116,130,0.08)" stroke="rgba(108,116,130,0.35)" stroke-width="1" style="cursor:pointer"></polygon>';
           }
-          show += 1;
-          if (i.status === 'vendida') vend += 1; else disp += 1;
-          const color = i.status === 'vendida' ? '#d25349' : '#3daa5c';
-          const cx = pts.reduce(function (a, xy) { return a + Number(xy[0] || 0); }, 0) / pts.length;
-          const cy = pts.reduce(function (a, xy) { return a + Number(xy[1] || 0); }, 0) / pts.length;
-          return '<polygon points="' + p + '" fill="' + color + '" fill-opacity="0.42" stroke="' + color + '" stroke-width="2"></polygon>' +
-            '<text x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#101311">' + esc(z.label || '') + '</text>';
+
+          shown += 1;
+          if (info.status === 'vendida') sold += 1; else available += 1;
+          rows.push(info);
+
+          const color = info.status === 'vendida' ? '#d65353' : '#41ac63';
+          const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
+          const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
+
+          return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="' + color + '" fill-opacity="0.38" stroke="' + color + '" stroke-width="2" style="cursor:pointer"></polygon>' +
+            '<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#0f1014" style="cursor:pointer">' + esc(info.unidad || '') + '</text>';
         }).join('');
+
+        state.selectedFloorRows = rows;
         els.overlay.innerHTML = svg;
-        els.chips.innerHTML = [
-          '<span class="chip">Mostradas: ' + show + '</span>',
-          '<span class="chip">Disponibles: ' + disp + '</span>',
-          '<span class="chip">Vendidas: ' + vend + '</span>',
-          '<span class="chip">Inventario: ' + state.inventoryRows.length + '</span>'
-        ].join('');
+        renderUnitsTable(rows);
+        renderFilterChips({ shown: shown, available: available, sold: sold });
+
+        const floorName = floor.floorDisplay || floor.name || floor.id;
+        const tipTxt = state.showAllOnMap ? 'TODAS' : (state.selectedTipologia || 'N/D');
+        els.floorsTopLabel.textContent = floorName + ' · Tipologia: ' + tipTxt;
+        applyPresentationLayout();
       }
 
-      function render() {
-        renderScenes();
-        renderRecamaras();
+      function enterTipologias(bedroomId) {
+        state.selectedBedroom = bedroomId;
+        state.selectedTipologia = '';
+        state.showAllOnMap = false;
+        showView('tipologias');
         renderTipologias();
+      }
+
+      function enterFloors(tipologiaId) {
+        state.selectedTipologia = tipologiaId;
+        state.showAllOnMap = false;
+        if (!state.activeFloorId && state.floors[0]) state.activeFloorId = state.floors[0].id;
+        showView('floors');
         renderFloorTabs();
-        draw();
+        drawFloor();
       }
 
       async function load() {
-        setStatus('Cargando presentación...');
+        els.homeStatus.textContent = 'Cargando datos...';
         const res = await fetch(dataUrl, { cache: 'no-store' });
         const data = await res.json().catch(function () { return {}; });
-        if (!res.ok) throw new Error(data.error || 'No se pudo cargar la presentación');
-        state.floors = Array.isArray(data.floors) ? data.floors.map(function (f, idx) {
-          const x = f && typeof f === 'object' ? f : {};
-          if (!x.id) x.id = 'floor-' + (idx + 1);
-          if (!x.name) x.name = 'PISO ' + (idx + 1);
-          return x;
-        }) : [];
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar presentacion');
+
+        const floors = Array.isArray(data.floors) ? data.floors : [];
+        state.floors = floors.map(function (floor, idx) {
+          const f = floor && typeof floor === 'object' ? floor : {};
+          if (!f.id) f.id = 'floor-' + (idx + 1);
+          if (!f.name) f.name = 'FLOOR-' + (idx + 1);
+          f.floorDisplay = normalizeFloorName(f.name, idx);
+          return f;
+        });
         state.activeFloorId = state.floors[0] ? state.floors[0].id : '';
-        state.config = data.config && typeof data.config === 'object' ? data.config : { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] };
-        applyMapFloorOrder();
+        state.config = normalizeConfig(data.config);
         state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
-        buildIndex();
-        render();
-        setStatus('Listo para presentación.');
+        applyPresentationLayout();
+
+        orderFloors();
+        buildUnitIndex();
+
+        renderHome();
+        showView('home');
       }
 
-      els.recamarasSelect.addEventListener('change', function () {
-        state.selectedRecamaras = String(els.recamarasSelect.value || '');
-        render();
-      });
-
-      els.viewAllBtn.addEventListener('click', function () {
-        state.showAll = true;
-        state.selectedTip = '';
-        render();
-      });
-
-      els.clearTipBtn.addEventListener('click', function () {
-        state.selectedTip = '';
-        state.showAll = true;
-        render();
-      });
-
-      els.tipGrid.addEventListener('click', function (ev) {
-        const card = ev.target.closest('.tip-card');
+      els.bedGrid.addEventListener('click', function (ev) {
+        const card = ev.target.closest('.bed-card');
         if (!card) return;
-        state.showAll = false;
-        state.selectedTip = card.getAttribute('data-tip') || '';
-        render();
+        enterTipologias(card.getAttribute('data-bedroom') || '');
       });
 
-      els.sceneGrid.addEventListener('click', function (ev) {
-        const card = ev.target.closest('.scene-card');
+      els.tipoGrid.addEventListener('click', function (ev) {
+        const card = ev.target.closest('.tipo-card');
         if (!card) return;
-        const targetType = String(card.getAttribute('data-target-type') || '').toLowerCase();
-        const targetValue = String(card.getAttribute('data-target-value') || '');
-        if (targetType === 'tipologia') {
-          state.showAll = false;
-          state.selectedTip = targetValue;
-        } else if (targetType === 'recamaras') {
-          state.selectedRecamaras = targetValue.toUpperCase();
-          state.showAll = true;
-        } else if (targetType === 'all') {
-          state.selectedTip = '';
-          state.showAll = true;
-        }
-        render();
+        const tip = card.getAttribute('data-tipologia') || '';
+        enterFloors(tip);
       });
 
       els.floorTabs.addEventListener('click', function (ev) {
@@ -455,11 +997,52 @@
         if (!btn) return;
         state.activeFloorId = btn.getAttribute('data-floor') || '';
         renderFloorTabs();
-        draw();
+        drawFloor();
+      });
+
+      els.overlay.addEventListener('click', function (ev) {
+        const target = ev.target;
+        if (!target || typeof target.getAttribute !== 'function') return;
+        const tipologia = String(target.getAttribute('data-tipologia') || '').trim();
+        if (!tipologia) return;
+        state.selectedTipologia = tipologia;
+        state.showAllOnMap = false;
+        els.showAllOnMapBtn.textContent = 'Ver todo el plano';
+        drawFloor();
+      });
+
+      els.backToHomeBtn.addEventListener('click', function () {
+        showView('home');
+      });
+
+      els.backToTiposBtn.addEventListener('click', function () {
+        showView('tipologias');
+      });
+
+      els.showAllOnMapBtn.addEventListener('click', function () {
+        state.showAllOnMap = !state.showAllOnMap;
+        els.showAllOnMapBtn.textContent = state.showAllOnMap ? 'Aplicar tipologia seleccionada' : 'Ver todo el plano';
+        drawFloor();
+      });
+
+      window.addEventListener('resize', function () {
+        applyPresentationLayout();
+      });
+
+      els.inventoryUploadBtn.addEventListener('click', function () {
+        els.inventoryUploadInput.click();
+      });
+
+      els.inventoryUploadInput.addEventListener('change', function () {
+        const file = els.inventoryUploadInput.files && els.inventoryUploadInput.files[0];
+        uploadInventoryFile(file);
+        els.inventoryUploadInput.value = '';
       });
 
       load().catch(function (err) {
-        setStatus(err && err.message ? err.message : 'Error de carga');
+        const msg = err && err.message ? err.message : 'Error de carga';
+        els.homeStatus.textContent = msg;
+        els.tipoStatus.textContent = msg;
       });
     })();
   </script>

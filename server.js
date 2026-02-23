@@ -69,6 +69,7 @@ const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
 const DEFAULT_DEVELOPMENT_SLUG = 'ceiba';
 const FLOOR_JSON_FILE_RE = /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i;
+const FLOOR_MAPPED_JSON_FILE_RE = /^imagen-mapeada-.*\.json$/i;
 const DEVELOPMENTS = [
   { slug: 'ceiba', name: 'CEIBA' },
   { slug: 'costa-caribe', name: 'COSTA CARIBE' },
@@ -361,8 +362,82 @@ function defaultViceroyPilotoConfig() {
     unitTipologiaMap: {},
     unitRecamarasMap: {},
     mapFloorOrder: [],
+    presentationLayout: {
+      showBrand: false,
+      showLevel: false,
+      overlayX: 18,
+      overlayY: 18,
+      overlayWidth: 360,
+      overlayBg: 'rgba(255,255,255,0.88)',
+      overlayBorder: '#cdd2c6',
+      tableHeaderBg: '#ecece4',
+      tableHeaderText: '#666a75',
+      tableText: '#31353e',
+      tableFontFamily: '"Akkurat", "Segoe UI", Tahoma, sans-serif',
+      tableHeaderFontFamily: '"Akkurat", "Segoe UI", Tahoma, sans-serif',
+      tableFontSize: 12,
+      tableHeaderFontSize: 12,
+      tableTextAlign: 'left',
+      tableHeaderAlign: 'left',
+      overlayRefWidth: 1500,
+      overlayRefHeight: 900,
+      colWUnidad: 24,
+      colWRec: 12,
+      colWVista: 20,
+      colWM2: 12,
+      colWPrecio: 32
+    },
     pages: [],
     updatedAt: new Date().toISOString()
+  };
+}
+
+function normalizeViceroyPresentationLayout(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const toNum = (value, fallback, min, max) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(min, Math.min(max, n));
+  };
+  const toColor = (value, fallback) => {
+    const txt = String(value || '').trim();
+    if (!txt) return fallback;
+    return txt;
+  };
+  const toText = (value, fallback, maxLen = 160) => {
+    const txt = String(value || '').trim();
+    if (!txt) return fallback;
+    return txt.slice(0, maxLen);
+  };
+  const toAlign = (value, fallback = 'left') => {
+    const txt = String(value || '').trim().toLowerCase();
+    if (txt === 'left' || txt === 'center' || txt === 'right') return txt;
+    return fallback;
+  };
+  return {
+    showBrand: Boolean(source.showBrand),
+    showLevel: Boolean(source.showLevel),
+    overlayX: toNum(source.overlayX, 18, 0, 5000),
+    overlayY: toNum(source.overlayY, 18, 0, 5000),
+    overlayWidth: toNum(source.overlayWidth, 360, 220, 1800),
+    overlayBg: toColor(source.overlayBg, 'rgba(255,255,255,0.88)'),
+    overlayBorder: toColor(source.overlayBorder, '#cdd2c6'),
+    tableHeaderBg: toColor(source.tableHeaderBg, '#ecece4'),
+    tableHeaderText: toColor(source.tableHeaderText, '#666a75'),
+    tableText: toColor(source.tableText, '#31353e'),
+    tableFontFamily: toText(source.tableFontFamily, '"Akkurat", "Segoe UI", Tahoma, sans-serif'),
+    tableHeaderFontFamily: toText(source.tableHeaderFontFamily, '"Akkurat", "Segoe UI", Tahoma, sans-serif'),
+    tableFontSize: toNum(source.tableFontSize, 12, 9, 30),
+    tableHeaderFontSize: toNum(source.tableHeaderFontSize, 12, 9, 30),
+    tableTextAlign: toAlign(source.tableTextAlign, 'left'),
+    tableHeaderAlign: toAlign(source.tableHeaderAlign, 'left'),
+    overlayRefWidth: toNum(source.overlayRefWidth, 1500, 200, 8000),
+    overlayRefHeight: toNum(source.overlayRefHeight, 900, 200, 8000),
+    colWUnidad: toNum(source.colWUnidad, 24, 5, 80),
+    colWRec: toNum(source.colWRec, 12, 5, 80),
+    colWVista: toNum(source.colWVista, 20, 5, 80),
+    colWM2: toNum(source.colWM2, 12, 5, 80),
+    colWPrecio: toNum(source.colWPrecio, 32, 5, 80)
   };
 }
 
@@ -423,11 +498,13 @@ function normalizeViceroyPilotoConfig(raw) {
       .map((item) => String(item || '').trim())
       .filter(Boolean)
     : [];
+  const presentationLayout = normalizeViceroyPresentationLayout(source.presentationLayout);
   return {
     tipologias,
     unitTipologiaMap,
     unitRecamarasMap,
     mapFloorOrder,
+    presentationLayout,
     pages,
     updatedAt: new Date().toISOString()
   };
@@ -438,7 +515,20 @@ function readViceroyPilotoConfig() {
   if (!fs.existsSync(filePath)) return defaultViceroyPilotoConfig();
   try {
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    return normalizeViceroyPilotoConfig(raw);
+    const normalized = normalizeViceroyPilotoConfig(raw);
+    // Self-heal legacy/incomplete files so presentationLayout is always persisted.
+    const rawLayout = raw && raw.presentationLayout && typeof raw.presentationLayout === 'object' ? raw.presentationLayout : null;
+    const hasLayoutKeys = rawLayout && (
+      Object.prototype.hasOwnProperty.call(rawLayout, 'overlayX') ||
+      Object.prototype.hasOwnProperty.call(rawLayout, 'overlayY') ||
+      Object.prototype.hasOwnProperty.call(rawLayout, 'overlayWidth')
+    );
+    if (!hasLayoutKeys) {
+      try {
+        fs.writeFileSync(filePath, JSON.stringify(normalized, null, 2), 'utf-8');
+      } catch {}
+    }
+    return normalized;
   } catch {
     return defaultViceroyPilotoConfig();
   }
@@ -451,6 +541,15 @@ function writeViceroyPilotoConfig(payload) {
   const normalized = normalizeViceroyPilotoConfig(payload);
   fs.writeFileSync(filePath, JSON.stringify(normalized, null, 2), 'utf-8');
   return normalized;
+}
+
+function updateViceroyPilotoPresentationLayout(layoutPayload) {
+  const current = readViceroyPilotoConfig();
+  const next = {
+    ...current,
+    presentationLayout: normalizeViceroyPresentationLayout(layoutPayload)
+  };
+  return writeViceroyPilotoConfig(next);
 }
 
 function listFloorJsonFiles(dir) {
@@ -1291,7 +1390,11 @@ const VICEROY_PILOTO_COLUMN_ALIASES = {
   development: ['development', 'desarrollo', 'proyecto'],
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
   recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'habitaciones'],
-  tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad'],
+  tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad', 'type'],
+  view: ['vista', 'view', 'vistas'],
+  m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area'],
+  sqft: ['sqft', 'ft2', 'pies2', 'pies_cuadrados', 'square_feet', 'area_sqft'],
+  price: ['precio_final', 'precio final', 'precio', 'precio_venta', 'venta', 'sale_price', 'price'],
   status: ['estatus', 'estado', 'status', 'disponibilidad', 'availability', 'inventario']
 };
 
@@ -1329,16 +1432,105 @@ function normalizeViceroyInventoryRow(rawRow) {
   const unit = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit) || '').trim();
   if (!unit) return null;
   const development = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.development) || '').trim();
-  const recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
-  const tipologia = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
+  const rawType = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
+  let recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!recamaras && rawType) {
+    const typeKey = normalizeHeaderKey(rawType);
+    if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('3')) recamaras = '3PH';
+    else if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('2')) recamaras = '2PH';
+    else if (typeKey.includes('3')) recamaras = '3B';
+    else if (typeKey.includes('2')) recamaras = '2B';
+    else if (typeKey.includes('1')) recamaras = '1B';
+  }
+  const tipologia = rawType;
+  const view = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.view) || '').trim();
+  const m2Raw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.m2);
+  const sqftRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.sqft);
+  const priceRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.price);
   const status = normalizeViceroyRowStatus(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.status));
   return {
     development,
     unidad: unit,
     recamaras,
     tipologia,
+    vista: view,
+    m2: m2Raw === '' ? '' : m2Raw,
+    sqft: sqftRaw === '' ? '' : sqftRaw,
+    price: priceRaw === '' ? '' : priceRaw,
     status
   };
+}
+
+function normalizeViceroyRawBedroom(value) {
+  const key = normalizeHeaderKey(value);
+  if (!key) return '';
+  if ((key.includes('ph') || key.includes('pent')) && (key.includes('3') || key.includes('three') || key.includes('tres'))) return '3PH';
+  if ((key.includes('ph') || key.includes('pent')) && (key.includes('2') || key.includes('two') || key.includes('dos'))) return '2PH';
+  if (key.includes('3') || key.includes('three') || key.includes('tres')) return '3B';
+  if (key.includes('2') || key.includes('two') || key.includes('dos')) return '2B';
+  if (key.includes('1') || key.includes('one') || key.includes('uno') || key.includes('una') || key === 'un') return '1B';
+  return '';
+}
+
+function rowDataByIndex(row, index) {
+  const value = Array.isArray(row) ? row[index] : '';
+  return value === undefined || value === null ? '' : value;
+}
+
+function parseViceroyRowsByFixedColumns(sheet) {
+  const out = [];
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+  if (!Array.isArray(matrix) || !matrix.length) return out;
+
+  matrix.forEach((row) => {
+    const unidad = String(rowDataByIndex(row, 0) || '').trim(); // A
+    if (!unidad) return;
+    const unitKey = normalizeHeaderKey(unidad);
+    if (!unitKey) return;
+    if (['unidad', 'unit', 'departamento', 'depto', 'no'].includes(unitKey)) return;
+
+    const tipologia = String(rowDataByIndex(row, 3) || '').trim(); // D
+    const vista = String(rowDataByIndex(row, 4) || '').trim(); // E
+    const m2 = rowDataByIndex(row, 14); // O
+    const recRaw = rowDataByIndex(row, 15); // P
+    const price = rowDataByIndex(row, 19); // T
+
+    out.push({
+      development: '',
+      unidad,
+      recamaras: normalizeViceroyRawBedroom(recRaw),
+      tipologia,
+      vista,
+      m2: m2 === '' ? '' : m2,
+      sqft: '',
+      price: price === '' ? '' : price,
+      status: 'disponible'
+    });
+  });
+
+  return out;
+}
+
+function pickRicherViceroyRow(current, next) {
+  if (!current) return next;
+  if (!next) return current;
+  const currentScore = ['recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
+    return acc + (String(current[key] || '').trim() ? 1 : 0);
+  }, 0);
+  const nextScore = ['recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
+    return acc + (String(next[key] || '').trim() ? 1 : 0);
+  }, 0);
+  return nextScore >= currentScore ? next : current;
+}
+
+function dedupeViceroyRows(rows) {
+  const byUnit = new Map();
+  rows.forEach((row) => {
+    const key = String(row && row.unidad || '').trim().toUpperCase();
+    if (!key) return;
+    byUnit.set(key, pickRicherViceroyRow(byUnit.get(key), row));
+  });
+  return Array.from(byUnit.values());
 }
 
 function parseViceroyInventoryFile(filePath) {
@@ -1349,8 +1541,11 @@ function parseViceroyInventoryFile(filePath) {
     const firstSheetName = workbook.SheetNames[0];
     const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
     if (!firstSheet) return [];
-    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
-    return rows.map((row) => normalizeViceroyInventoryRow(row)).filter(Boolean);
+    const headerRows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' })
+      .map((row) => normalizeViceroyInventoryRow(row))
+      .filter(Boolean);
+    const indexRows = parseViceroyRowsByFixedColumns(firstSheet);
+    return dedupeViceroyRows([...headerRows, ...indexRows]);
   }
 
   const workbook = XLSX.readFile(filePath);
@@ -1363,8 +1558,9 @@ function parseViceroyInventoryFile(filePath) {
       const normalized = normalizeViceroyInventoryRow(row);
       if (normalized) out.push(normalized);
     });
+    out.push(...parseViceroyRowsByFixedColumns(sheet));
   });
-  return out;
+  return dedupeViceroyRows(out);
 }
 
 function filterViceroyInventoryRows(rows) {
@@ -1415,6 +1611,7 @@ function readMergedFloorsByDevelopment(devSlug) {
           const lower = String(name || '').toLowerCase();
           if (!lower.endsWith('.json')) return false;
           if (/^version-.*\.json$/i.test(name)) return true;
+          if (FLOOR_MAPPED_JSON_FILE_RE.test(name)) return true;
           return FLOOR_JSON_FILE_RE.test(name);
         })
         .forEach((name) => {
@@ -1439,7 +1636,17 @@ function readMergedFloorsByDevelopment(devSlug) {
 
   const floors = [];
   const loadedFiles = [];
-  unique.forEach((entry) => {
+  const filesToLoad = [];
+  if (devSlug === 'viceroy-piloto') {
+    const latestMapped = unique.find((entry) => FLOOR_MAPPED_JSON_FILE_RE.test(entry.name));
+    const latestCanonical = unique.find((entry) => FLOOR_JSON_FILE_RE.test(entry.name));
+    if (latestMapped) filesToLoad.push(latestMapped);
+    else if (latestCanonical) filesToLoad.push(latestCanonical);
+  } else {
+    filesToLoad.push(...unique);
+  }
+
+  filesToLoad.forEach((entry) => {
     try {
       const raw = JSON.parse(fs.readFileSync(entry.fullPath, 'utf-8'));
       const payloadFloors = Array.isArray(raw)
@@ -2207,16 +2414,24 @@ app.get('/api/viceroy-piloto/config', (req, res) => {
 });
 
 app.post('/api/viceroy-piloto/config', (req, res) => {
-  const email = String(req.user && req.user.email || '').trim().toLowerCase();
-  if (!LOCAL_NO_AUTH && email !== GERENTE_EMAIL) {
-    return res.status(403).json({ error: 'Solo gerente puede guardar configuración' });
-  }
   const body = req.body || {};
   const payload = body.config && typeof body.config === 'object' ? body.config : body;
   const saved = writeViceroyPilotoConfig(payload);
   return res.json({
     ok: true,
     config: saved
+  });
+});
+
+app.post('/api/viceroy-piloto/layout', (req, res) => {
+  const body = req.body || {};
+  const layoutPayload = body.presentationLayout && typeof body.presentationLayout === 'object'
+    ? body.presentationLayout
+    : body;
+  const saved = updateViceroyPilotoPresentationLayout(layoutPayload);
+  return res.json({
+    ok: true,
+    presentationLayout: saved.presentationLayout
   });
 });
 

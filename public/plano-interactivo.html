@@ -86,6 +86,9 @@
       gap: 8px;
       margin-top: 8px;
     }
+    .btn-row.three {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
     .zoom-row {
       display: grid;
       grid-template-columns: auto 1fr auto;
@@ -197,6 +200,18 @@
           <button id="cancelZoneBtn" disabled>Cancelar</button>
           <button id="deleteZoneBtn" class="danger" disabled>Borrar zona</button>
         </div>
+        <div id="autoMapWrap" style="display:none;">
+          <div class="btn-row" style="margin-top:8px;">
+            <button id="autoMapBtn" type="button">Auto-mapear (semi)</button>
+            <button id="autoMapResetBtn" type="button">Reset parámetros</button>
+          </div>
+          <div class="btn-row three" style="margin-top:8px;">
+            <input id="autoMapThreshold" type="text" value="145" title="Umbral paredes (0-255)" aria-label="Umbral">
+            <input id="autoMapMinArea" type="text" value="1400" title="Área mínima sugerida" aria-label="Área mínima">
+            <input id="autoMapMaxArea" type="text" value="75000" title="Área máxima sugerida" aria-label="Área máxima">
+          </div>
+          <p class="hint">Beta: genera zonas sugeridas desde la imagen. Luego corrige manualmente.</p>
+        </div>
         <label style="margin-top:8px;">
           <input id="snapParallelInput" type="checkbox" checked>
           Regla paralela
@@ -292,7 +307,8 @@
       showUnitLabels: true,
       draggingLabel: null,
       nextZoneId: 1,
-      zoom: 1
+      zoom: 1,
+      autoMapping: false
     };
 
     const stage = document.getElementById("stage");
@@ -308,6 +324,12 @@
     const finishZoneBtn = document.getElementById("finishZoneBtn");
     const cancelZoneBtn = document.getElementById("cancelZoneBtn");
     const deleteZoneBtn = document.getElementById("deleteZoneBtn");
+    const autoMapWrap = document.getElementById("autoMapWrap");
+    const autoMapBtn = document.getElementById("autoMapBtn");
+    const autoMapResetBtn = document.getElementById("autoMapResetBtn");
+    const autoMapThreshold = document.getElementById("autoMapThreshold");
+    const autoMapMinArea = document.getElementById("autoMapMinArea");
+    const autoMapMaxArea = document.getElementById("autoMapMaxArea");
     const snapParallelInput = document.getElementById("snapParallelInput");
     const showLabelsInput = document.getElementById("showLabelsInput");
     const drawHint = document.getElementById("drawHint");
@@ -332,6 +354,9 @@
     const DEV_LABEL = String(DEV || "ceiba").replace(/[-_]+/g, " ").toUpperCase();
     if (tipologiaRow) {
       tipologiaRow.style.display = IS_VICEROY_PILOTO ? "block" : "none";
+    }
+    if (autoMapWrap) {
+      autoMapWrap.style.display = "block";
     }
 
     function safeNameToken(value) {
@@ -535,6 +560,8 @@
       const idx = activeFloorIndex();
       moveFloorUpBtn.disabled = !hasFloor || idx <= 0;
       moveFloorDownBtn.disabled = !hasFloor || idx < 0 || idx >= state.floors.length - 1;
+      if (autoMapBtn) autoMapBtn.disabled = !hasFloor || state.drawing || state.autoMapping;
+      if (autoMapResetBtn) autoMapResetBtn.disabled = state.autoMapping;
     }
 
     function setSelectedZone(zoneId) {
@@ -707,6 +734,306 @@
       const dirY = Math.sin(bestAngle);
       const t = vx * dirX + vy * dirY;
       return [Math.round(last[0] + t * dirX), Math.round(last[1] + t * dirY)];
+    }
+
+    function readAutoMapOptions() {
+      const threshold = Math.max(40, Math.min(240, Number(autoMapThreshold && autoMapThreshold.value) || 145));
+      const minArea = Math.max(100, Number(autoMapMinArea && autoMapMinArea.value) || 1400);
+      const maxArea = Math.max(minArea + 1, Number(autoMapMaxArea && autoMapMaxArea.value) || 75000);
+      if (autoMapThreshold) autoMapThreshold.value = String(Math.round(threshold));
+      if (autoMapMinArea) autoMapMinArea.value = String(Math.round(minArea));
+      if (autoMapMaxArea) autoMapMaxArea.value = String(Math.round(maxArea));
+      return {
+        threshold,
+        minArea,
+        maxArea,
+        minWidth: 24,
+        minHeight: 24,
+        minFill: 0.18,
+        maxAspect: 7.5,
+        dilateIterations: 1
+      };
+    }
+
+    function dilateBinaryMask(mask, width, height, iterations) {
+      if (!iterations) return mask;
+      let source = mask;
+      for (let iter = 0; iter < iterations; iter += 1) {
+        const next = new Uint8Array(source.length);
+        for (let y = 0; y < height; y += 1) {
+          const row = y * width;
+          for (let x = 0; x < width; x += 1) {
+            const idx = row + x;
+            if (!source[idx]) continue;
+            for (let ny = Math.max(0, y - 1); ny <= Math.min(height - 1, y + 1); ny += 1) {
+              const nrow = ny * width;
+              for (let nx = Math.max(0, x - 1); nx <= Math.min(width - 1, x + 1); nx += 1) {
+                next[nrow + nx] = 1;
+              }
+            }
+          }
+        }
+        source = next;
+      }
+      return source;
+    }
+
+    function vertexKey(x, y) {
+      return `${x},${y}`;
+    }
+
+    function parseVertexKey(key) {
+      const parts = String(key || "").split(",");
+      return [Number(parts[0]) || 0, Number(parts[1]) || 0];
+    }
+
+    function simplifyOrthogonalPolygon(points) {
+      if (!Array.isArray(points) || points.length < 4) return points || [];
+      const out = [];
+      for (let i = 0; i < points.length; i += 1) {
+        const prev = points[(i - 1 + points.length) % points.length];
+        const curr = points[i];
+        const next = points[(i + 1) % points.length];
+        const v1x = curr[0] - prev[0];
+        const v1y = curr[1] - prev[1];
+        const v2x = next[0] - curr[0];
+        const v2y = next[1] - curr[1];
+        const cross = v1x * v2y - v1y * v2x;
+        if (cross === 0) continue;
+        out.push(curr);
+      }
+      if (out.length < 4) return points;
+      if (out.length > 120) {
+        const step = Math.ceil(out.length / 120);
+        return out.filter((_, idx) => idx % step === 0);
+      }
+      return out;
+    }
+
+    function buildContourPolygon(compPixels, width, height, compMask) {
+      if (!compPixels.length) return [];
+      const startMap = new Map();
+
+      function addEdge(ax, ay, bx, by) {
+        const aKey = vertexKey(ax, ay);
+        const bKey = vertexKey(bx, by);
+        if (!startMap.has(aKey)) startMap.set(aKey, []);
+        startMap.get(aKey).push(bKey);
+      }
+
+      for (let i = 0; i < compPixels.length; i += 1) {
+        const idx = compPixels[i];
+        const x = idx % width;
+        const y = (idx - x) / width;
+        const upEmpty = y === 0 || compMask[idx - width] === 0;
+        const rightEmpty = x === width - 1 || compMask[idx + 1] === 0;
+        const downEmpty = y === height - 1 || compMask[idx + width] === 0;
+        const leftEmpty = x === 0 || compMask[idx - 1] === 0;
+
+        if (upEmpty) addEdge(x, y, x + 1, y);
+        if (rightEmpty) addEdge(x + 1, y, x + 1, y + 1);
+        if (downEmpty) addEdge(x + 1, y + 1, x, y + 1);
+        if (leftEmpty) addEdge(x, y + 1, x, y);
+      }
+
+      const starts = Array.from(startMap.keys());
+      if (!starts.length) return [];
+      starts.sort((a, b) => {
+        const [ax, ay] = parseVertexKey(a);
+        const [bx, by] = parseVertexKey(b);
+        if (ay !== by) return ay - by;
+        return ax - bx;
+      });
+
+      const start = starts[0];
+      const polygon = [parseVertexKey(start)];
+      let current = start;
+      const maxSteps = compPixels.length * 12;
+      let steps = 0;
+
+      while (steps < maxSteps) {
+        steps += 1;
+        const nextList = startMap.get(current);
+        if (!nextList || !nextList.length) break;
+        const next = nextList.pop();
+        if (!nextList.length) startMap.delete(current);
+        const [nx, ny] = parseVertexKey(next);
+        if (next === start) break;
+        polygon.push([nx, ny]);
+        current = next;
+      }
+
+      return simplifyOrthogonalPolygon(polygon);
+    }
+
+    function buildAutoZonesFromImageData(imageData, options) {
+      const width = imageData.width;
+      const height = imageData.height;
+      const data = imageData.data;
+      const pixelCount = width * height;
+      const wallMask = new Uint8Array(pixelCount);
+
+      for (let i = 0, p = 0; i < pixelCount; i += 1, p += 4) {
+        const gray = (data[p] * 299 + data[p + 1] * 587 + data[p + 2] * 114) / 1000;
+        if (gray < options.threshold) wallMask[i] = 1;
+      }
+      const walls = dilateBinaryMask(wallMask, width, height, options.dilateIterations);
+
+      const outside = new Uint8Array(pixelCount);
+      const queue = new Int32Array(pixelCount);
+      let head = 0;
+      let tail = 0;
+
+      function pushOutside(idx) {
+        if (walls[idx] || outside[idx]) return;
+        outside[idx] = 1;
+        queue[tail++] = idx;
+      }
+
+      for (let x = 0; x < width; x += 1) {
+        pushOutside(x);
+        pushOutside((height - 1) * width + x);
+      }
+      for (let y = 1; y < height - 1; y += 1) {
+        pushOutside(y * width);
+        pushOutside(y * width + (width - 1));
+      }
+
+      while (head < tail) {
+        const idx = queue[head++];
+        const x = idx % width;
+        const y = (idx - x) / width;
+        if (x > 0) pushOutside(idx - 1);
+        if (x < width - 1) pushOutside(idx + 1);
+        if (y > 0) pushOutside(idx - width);
+        if (y < height - 1) pushOutside(idx + width);
+      }
+
+      const visited = new Uint8Array(pixelCount);
+      const componentMask = new Uint8Array(pixelCount);
+      const zones = [];
+      const compQueue = new Int32Array(pixelCount);
+
+      for (let start = 0; start < pixelCount; start += 1) {
+        if (walls[start] || outside[start] || visited[start]) continue;
+        let cHead = 0;
+        let cTail = 0;
+        compQueue[cTail++] = start;
+        visited[start] = 1;
+
+        let area = 0;
+        let minX = width;
+        let minY = height;
+        let maxX = 0;
+        let maxY = 0;
+        const compPixels = [];
+
+        while (cHead < cTail) {
+          const idx = compQueue[cHead++];
+          const x = idx % width;
+          const y = (idx - x) / width;
+          area += 1;
+          compPixels.push(idx);
+          componentMask[idx] = 1;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+
+          const left = idx - 1;
+          const right = idx + 1;
+          const up = idx - width;
+          const down = idx + width;
+          if (x > 0 && !walls[left] && !outside[left] && !visited[left]) { visited[left] = 1; compQueue[cTail++] = left; }
+          if (x < width - 1 && !walls[right] && !outside[right] && !visited[right]) { visited[right] = 1; compQueue[cTail++] = right; }
+          if (y > 0 && !walls[up] && !outside[up] && !visited[up]) { visited[up] = 1; compQueue[cTail++] = up; }
+          if (y < height - 1 && !walls[down] && !outside[down] && !visited[down]) { visited[down] = 1; compQueue[cTail++] = down; }
+        }
+
+        const boxW = maxX - minX + 1;
+        const boxH = maxY - minY + 1;
+        if (boxW >= options.minWidth && boxH >= options.minHeight && area >= options.minArea && area <= options.maxArea) {
+          const boxArea = boxW * boxH;
+          const fill = boxArea ? area / boxArea : 0;
+          const aspect = Math.max(boxW / boxH, boxH / boxW);
+          if (fill >= options.minFill && aspect <= options.maxAspect) {
+            const contour = buildContourPolygon(compPixels, width, height, componentMask);
+            if (contour.length >= 4) {
+              zones.push({
+                points: contour,
+                sortX: minX,
+                sortY: minY
+              });
+            }
+          }
+        }
+
+        for (let i = 0; i < compPixels.length; i += 1) {
+          componentMask[compPixels[i]] = 0;
+        }
+      }
+
+      zones.sort((a, b) => {
+        if (Math.abs(a.sortY - b.sortY) < 22) return a.sortX - b.sortX;
+        return a.sortY - b.sortY;
+      });
+      return zones.map((z) => z.points);
+    }
+
+    async function runAutoMap() {
+      if (!IS_VICEROY_PILOTO) return;
+      const floor = activeFloor();
+      if (!floor || !floor.imageDataUrl) return;
+
+      const options = readAutoMapOptions();
+      if (Array.isArray(floor.zones) && floor.zones.length) {
+        const ok = window.confirm(`Se reemplazarán ${floor.zones.length} zonas del piso actual por sugerencias automáticas. ¿Continuar?`);
+        if (!ok) return;
+      }
+
+      state.autoMapping = true;
+      drawHint.textContent = "Auto-mapeando... esto puede tardar unos segundos.";
+      enableButtons();
+
+      try {
+        const img = new Image();
+        img.decoding = "async";
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = floor.imageDataUrl;
+        });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || floor.imageWidth || 1;
+        canvas.height = img.naturalHeight || floor.imageHeight || 1;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const polygons = buildAutoZonesFromImageData(imageData, options);
+
+        floor.zones = polygons.map((points, idx) => ({
+          id: `zone-${state.nextZoneId++}`,
+          label: String(idx + 1),
+          tipologia: "",
+          labelOffset: { x: 0, y: 0 },
+          points
+        }));
+
+        state.selectedZoneId = floor.zones[0] ? floor.zones[0].id : null;
+        if (unitLabel) unitLabel.value = state.selectedZoneId ? floor.zones[0].label : "";
+        if (unitTipologia) unitTipologia.value = "";
+        updateHint();
+        render();
+        alert(`Auto-mapeo terminado. Zonas sugeridas: ${floor.zones.length}. Revisa y corrige manualmente.`);
+      } catch (err) {
+        console.error(err);
+        alert("No se pudo auto-mapear esta imagen. Prueba con otra o ajusta parámetros.");
+      } finally {
+        state.autoMapping = false;
+        updateHint();
+        enableButtons();
+      }
     }
 
     function startDrawing() {
@@ -1108,6 +1435,16 @@
     deleteFloorBtn.addEventListener("click", deleteActiveFloor);
     applyUnitBtn.addEventListener("click", applySelectedUnitChanges);
     autoLabelBtn.addEventListener("click", autoLabel);
+    if (autoMapBtn) {
+      autoMapBtn.addEventListener("click", runAutoMap);
+    }
+    if (autoMapResetBtn) {
+      autoMapResetBtn.addEventListener("click", () => {
+        if (autoMapThreshold) autoMapThreshold.value = "145";
+        if (autoMapMinArea) autoMapMinArea.value = "1400";
+        if (autoMapMaxArea) autoMapMaxArea.value = "75000";
+      });
+    }
     snapParallelInput.addEventListener("change", () => {
       state.snapParallel = snapParallelInput.checked;
       updateHint();
