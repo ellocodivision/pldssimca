@@ -713,6 +713,15 @@ function normalizeWhisperlistPersonText(raw) {
     .toUpperCase();
 }
 
+function normalizeWhisperlistAsesor(raw) {
+  const normalized = normalizeWhisperlistPersonText(raw);
+  const key = normalized
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (key === 'ABIGAIL PEREZ') return 'ABIGAIL ZARATE';
+  return normalized;
+}
+
 function normalizeClientEmail(raw) {
   return String(raw || '').trim().toLowerCase();
 }
@@ -758,7 +767,7 @@ function verifyLeadToken(token) {
   if (signature !== expected) return null;
   try {
     const payload = JSON.parse(decodeBase64Url(encoded));
-    const asesor = normalizeWhisperlistPersonText(payload.asesor);
+    const asesor = normalizeWhisperlistAsesor(payload.asesor);
     const correo = String(payload.correo || '').trim().toLowerCase();
     if (!asesor || !correo) return null;
     return { asesor, correo };
@@ -773,7 +782,7 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
     normalized[normalizeWhisperlistKey(key)] = value;
   });
 
-  const asesor = normalizeWhisperlistPersonText(normalized.asesor);
+  const asesor = normalizeWhisperlistAsesor(normalized.asesor);
   const correo = String(normalized.correo || '').trim().toLowerCase();
   if (!asesor || !correo) return null;
 
@@ -892,7 +901,7 @@ async function saveWhisperlistRows(rows, sourceFile) {
   const safeRows = Array.isArray(rows) ? rows : [];
   const normalizedRows = safeRows.map((row) => ({
     ...row,
-    asesor: normalizeWhisperlistPersonText(row.asesor),
+    asesor: normalizeWhisperlistAsesor(row.asesor),
     nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
     correo: String(row.correo || '').trim().toLowerCase(),
     clientEmail: normalizeClientEmail(row.clientEmail),
@@ -921,7 +930,7 @@ async function saveWhisperlistRows(rows, sourceFile) {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
-          normalizeWhisperlistPersonText(row.asesor),
+          normalizeWhisperlistAsesor(row.asesor),
           String(row.correo || '').trim().toLowerCase(),
           String(row.canal || '').trim(),
           String(row.tipoVenta || '').trim(),
@@ -979,7 +988,7 @@ function getWhisperlistSellers(rows) {
   const byEmail = new Map();
   items.forEach((row) => {
     const correo = String(row && row.correo || '').trim().toLowerCase();
-    const asesor = normalizeWhisperlistPersonText(row && row.asesor || '');
+    const asesor = normalizeWhisperlistAsesor(row && row.asesor || '');
     if (!correo || !asesor) return;
     if (!byEmail.has(correo)) {
       byEmail.set(correo, { asesor, correo });
@@ -991,8 +1000,8 @@ function getWhisperlistSellers(rows) {
 function sortWhisperlistRows(rows) {
   const list = Array.isArray(rows) ? [...rows] : [];
   return list.sort((a, b) => {
-    const asesorA = normalizeWhisperlistPersonText(a && a.asesor || '');
-    const asesorB = normalizeWhisperlistPersonText(b && b.asesor || '');
+    const asesorA = normalizeWhisperlistAsesor(a && a.asesor || '');
+    const asesorB = normalizeWhisperlistAsesor(b && b.asesor || '');
     const byAsesor = asesorA.localeCompare(asesorB, 'es');
     if (byAsesor !== 0) return byAsesor;
     const clienteA = normalizeWhisperlistPersonText(a && a.nombreCliente || '');
@@ -1004,7 +1013,7 @@ function sortWhisperlistRows(rows) {
 function whisperlistExportRows(rows) {
   const items = Array.isArray(rows) ? rows : [];
   return items.map((row) => ({
-    ASESOR: normalizeWhisperlistPersonText(row.asesor),
+    ASESOR: normalizeWhisperlistAsesor(row.asesor),
     CORREO_ASESOR: String(row.correo || '').trim().toLowerCase(),
     CANAL: normalizeWhisperlistCanal(row.canal),
     TIPO_DE_VENTA: normalizeWhisperlistTipoVenta(row.tipoVenta),
@@ -2111,7 +2120,7 @@ app.get('/api/whisperlist', async (req, res) => {
     const data = await readWhisperlistData();
     const rows = data.rows.map((row) => ({
       ...row,
-      asesor: normalizeWhisperlistPersonText(row.asesor),
+      asesor: normalizeWhisperlistAsesor(row.asesor),
       nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
       recamaras: normalizeWhisperlistRecamaras(row.recamaras),
       clientEmail: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
@@ -2216,7 +2225,7 @@ app.post('/api/whisperlist/rows', async (req, res) => {
     const fallbackName = String(req.user && req.user.name || '').trim();
     const data = await readWhisperlistData();
     const existing = data.rows.find((row) => String(row.correo || '').trim().toLowerCase() === currentEmail);
-    const asesor = normalizeWhisperlistPersonText(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '');
+    const asesor = normalizeWhisperlistAsesor(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '');
 
     const body = req.body || {};
     const nombreCliente = normalizeWhisperlistPersonText(body.nombreCliente);

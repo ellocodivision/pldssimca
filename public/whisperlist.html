@@ -50,6 +50,8 @@
     .stats-table{width:100%;border-collapse:collapse;min-width:0}
     .stats-table th,.stats-table td{padding:6px 4px;border-bottom:1px solid #eee7d9;font-size:12px}
     .stats-table th{position:static;background:transparent}
+    .missing-num{color:#c23a2b;font-weight:700}
+    .totals-row td{font-weight:700;border-top:2px solid #d8d1c1}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:30}
     .modal.open{display:flex}
     .modal-card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
@@ -159,7 +161,7 @@
         <section class="stats-box">
           <h3>Clientes por vendedor y recámaras</h3>
           <table class="stats-table">
-            <thead><tr><th>Vendedor</th><th>1</th><th>2</th><th>3</th><th>2PH</th><th>3PH</th><th>Total</th></tr></thead>
+            <thead><tr><th>Vendedor</th><th>1</th><th>2</th><th>3</th><th>2PH</th><th>3PH</th><th>Total</th><th>Faltan</th></tr></thead>
             <tbody id="statsByAsesorRecamaras"></tbody>
           </table>
         </section>
@@ -344,26 +346,42 @@
         rows.forEach(function (row) {
           const seller = String(row.asesor || '').trim() || '(VACIO)';
           if (!bySeller.has(seller)) {
-            bySeller.set(seller, { '1': 0, '2': 0, '3': 0, '2PH': 0, '3PH': 0, total: 0 });
+            bySeller.set(seller, { '1': 0, '2': 0, '3': 0, '2PH': 0, '3PH': 0, filled: 0, total: 0 });
           }
           const bucket = bySeller.get(seller);
           const recKey = normalizeRecamarasKey(row.recamaras);
-          if (recKey) bucket[recKey] += 1;
+          if (recKey) {
+            bucket[recKey] += 1;
+            bucket.filled += 1;
+          }
           bucket.total += 1;
         });
         const sorted = Array.from(bySeller.entries()).sort(function (a, b) {
           if (b[1].total !== a[1].total) return b[1].total - a[1].total;
           return String(a[0]).localeCompare(String(b[0]));
         });
-        tbody.innerHTML = sorted.map(function (entry) {
+        const totals = { '1': 0, '2': 0, '3': 0, '2PH': 0, '3PH': 0, total: 0, missing: 0 };
+        const bodyRows = sorted.map(function (entry) {
           const seller = entry[0];
           const bucket = entry[1];
+          const missing = Math.max(0, Number(bucket.total || 0) - Number(bucket.filled || 0));
+          bedroomOrder.forEach(function (k) { totals[k] += Number(bucket[k] || 0); });
+          totals.total += Number(bucket.total || 0);
+          totals.missing += missing;
           return '<tr>' +
             '<td>' + escapeHtml(seller) + '</td>' +
             bedroomOrder.map(function (k) { return '<td>' + String(bucket[k] || 0) + '</td>'; }).join('') +
             '<td>' + String(bucket.total || 0) + '</td>' +
+            '<td class="missing-num">' + String(missing) + '</td>' +
           '</tr>';
         }).join('');
+        const totalsRow = '<tr class="totals-row">' +
+          '<td>TOTAL</td>' +
+          bedroomOrder.map(function (k) { return '<td>' + String(totals[k] || 0) + '</td>'; }).join('') +
+          '<td>' + String(totals.total || 0) + '</td>' +
+          '<td class="missing-num">' + String(totals.missing || 0) + '</td>' +
+        '</tr>';
+        tbody.innerHTML = bodyRows + totalsRow;
       }
 
       function buildSellerFilter() {
