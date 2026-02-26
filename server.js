@@ -543,8 +543,38 @@ function normalizeViceroyPilotoConfig(raw) {
     mapFloorOrder,
     presentationLayout,
     pages,
+    layoutSource: String(source.layoutSource || '').trim().toLowerCase() === 'custom' ? 'custom' : '',
     updatedAt: new Date().toISOString()
   };
+}
+
+function getViceroyInventoryCachePath() {
+  return path.join(DEVELOPMENTS_DIR, 'viceroy-piloto', 'inventory-cache.json');
+}
+
+function readViceroyInventoryCache() {
+  const cachePath = getViceroyInventoryCachePath();
+  if (!fs.existsSync(cachePath)) return { rows: [], fileName: '' };
+  try {
+    const raw = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+    const rows = Array.isArray(raw.rows) ? raw.rows : [];
+    const fileName = String(raw.fileName || '').trim();
+    return { rows, fileName };
+  } catch {
+    return { rows: [], fileName: '' };
+  }
+}
+
+function writeViceroyInventoryCache(rows, fileName) {
+  const cachePath = getViceroyInventoryCachePath();
+  const dir = path.dirname(cachePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const payload = {
+    fileName: String(fileName || '').trim(),
+    rows: Array.isArray(rows) ? rows : [],
+    updatedAt: new Date().toISOString()
+  };
+  fs.writeFileSync(cachePath, JSON.stringify(payload, null, 2), 'utf-8');
 }
 
 function readViceroyPilotoConfig() {
@@ -567,8 +597,11 @@ function readViceroyPilotoConfig() {
       : defaultLayout;
     const isDefaultLikeLayout = JSON.stringify(normalizedLayout) === JSON.stringify(defaultLayout);
 
-    // If runtime file exists but is still default-like, prefer seeded layout saved from local.
-    if (seedConfig && isDefaultLikeLayout) {
+    const runtimeLayoutSource = String(normalized.layoutSource || '').trim().toLowerCase();
+    // Seed layout rules:
+    // 1) If runtime is default-like, prefer local seed.
+    // 2) If runtime has no explicit custom marker, seed still wins (one-time migration from local).
+    if (seedConfig && (isDefaultLikeLayout || runtimeLayoutSource !== 'custom')) {
       const merged = {
         ...normalized,
         presentationLayout: {
@@ -609,6 +642,7 @@ function updateViceroyPilotoPresentationLayout(layoutPayload) {
   const current = readViceroyPilotoConfig();
   const next = {
     ...current,
+    layoutSource: 'custom',
     presentationLayout: normalizeViceroyPresentationLayout(layoutPayload)
   };
   return writeViceroyPilotoConfig(next);
@@ -2471,6 +2505,11 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
       inventoryFileName = candidates[0].name;
     } catch {}
   }
+  if (!inventoryRows.length) {
+    const cached = readViceroyInventoryCache();
+    inventoryRows = cached.rows;
+    inventoryFileName = cached.fileName || inventoryFileName;
+  }
   return res.json({
     ok: true,
     dev: devSlug,
@@ -2545,12 +2584,21 @@ app.get('/api/viceroy-piloto/inventory', (req, res) => {
   const file = candidates[0];
   try {
     const rows = filterViceroyInventoryRows(parseViceroyInventoryFile(file.fullPath));
+    if (rows.length) writeViceroyInventoryCache(rows, file.name);
     return res.json({
       ok: true,
       fileName: file.name,
       rows
     });
   } catch (err) {
+    const cached = readViceroyInventoryCache();
+    if (cached.rows.length) {
+      return res.json({
+        ok: true,
+        fileName: cached.fileName || file.name,
+        rows: cached.rows
+      });
+    }
     return res.status(500).json({
       error: 'No se pudo leer inventario',
       details: err && err.message ? err.message : 'error desconocido'
@@ -2594,6 +2642,7 @@ app.post('/api/viceroy-piloto/inventory', (req, res) => {
     if (!persistedRows.length) {
       return res.status(500).json({ error: 'Se guardó archivo pero no se pudo leer inventario persistido' });
     }
+    writeViceroyInventoryCache(persistedRows, canonicalName);
   } catch (err) {
     return res.status(500).json({
       error: 'Archivo guardado pero lectura de verificación falló',
