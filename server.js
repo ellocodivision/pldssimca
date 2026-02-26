@@ -2422,6 +2422,12 @@ app.get('/api/viceroy-piloto/config', (req, res) => {
   });
 });
 
+app.get('/api/viceroy-piloto/upload-access', (req, res) => {
+  const email = String(req.user && req.user.email || '').trim().toLowerCase();
+  const canUpload = LOCAL_NO_AUTH || email === GERENTE_EMAIL;
+  return res.json({ ok: true, canUpload });
+});
+
 app.post('/api/viceroy-piloto/config', (req, res) => {
   const body = req.body || {};
   const payload = body.config && typeof body.config === 'object' ? body.config : body;

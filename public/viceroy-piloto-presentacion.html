@@ -339,7 +339,7 @@
   </style>
 </head>
 <body>
-  <div class="upload-tools">
+  <div class="upload-tools hidden">
     <input id="inventoryUploadInput" type="file" accept=".xlsx,.xls,.csv" class="hidden">
     <button id="inventoryUploadBtn" class="btn" type="button">Cargar Excel</button>
     <span id="inventoryUploadStatus" class="upload-status">Sin carga nueva</span>
@@ -439,6 +439,7 @@
         activeFloorId: '',
         config: { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] },
         inventoryRows: [],
+        canUploadInventory: false,
         byUnit: new Map(),
         selectedBedroom: '',
         selectedTipologia: '',
@@ -528,6 +529,7 @@
 
       async function uploadInventoryFile(file) {
         if (!file) return;
+        if (!state.canUploadInventory) return;
         els.inventoryUploadStatus.textContent = 'Subiendo Excel...';
         let base64;
         try {
@@ -771,7 +773,8 @@
         els.tipologiasView.classList.toggle('hidden', viewName !== 'tipologias');
         els.floorsView.classList.toggle('hidden', viewName !== 'floors');
         if (els.uploadTools) {
-          els.uploadTools.classList.toggle('hidden', viewName !== 'home');
+          const shouldShowUpload = state.canUploadInventory && viewName === 'home';
+          els.uploadTools.classList.toggle('hidden', !shouldShowUpload);
         }
       }
 
@@ -950,9 +953,18 @@
 
       async function load() {
         els.homeStatus.textContent = 'Cargando datos...';
+        const permissionPromise = fetch('/api/viceroy-piloto/upload-access', {
+          cache: 'no-store',
+          credentials: 'same-origin'
+        })
+          .then(function (res) { return res.json().catch(function () { return {}; }); })
+          .then(function (data) { return Boolean(data && data.canUpload); })
+          .catch(function () { return false; });
+
         const res = await fetch(dataUrl, { cache: 'no-store' });
         const data = await res.json().catch(function () { return {}; });
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar presentacion');
+        state.canUploadInventory = await permissionPromise;
 
         const floors = Array.isArray(data.floors) ? data.floors : [];
         state.floors = floors.map(function (floor, idx) {
@@ -1024,15 +1036,18 @@
         applyPresentationLayout();
       });
 
-      els.inventoryUploadBtn.addEventListener('click', function () {
-        els.inventoryUploadInput.click();
-      });
+      if (els.inventoryUploadBtn && els.inventoryUploadInput) {
+        els.inventoryUploadBtn.addEventListener('click', function () {
+          if (!state.canUploadInventory) return;
+          els.inventoryUploadInput.click();
+        });
 
-      els.inventoryUploadInput.addEventListener('change', function () {
-        const file = els.inventoryUploadInput.files && els.inventoryUploadInput.files[0];
-        uploadInventoryFile(file);
-        els.inventoryUploadInput.value = '';
-      });
+        els.inventoryUploadInput.addEventListener('change', function () {
+          const file = els.inventoryUploadInput.files && els.inventoryUploadInput.files[0];
+          uploadInventoryFile(file);
+          els.inventoryUploadInput.value = '';
+        });
+      }
 
       load().catch(function (err) {
         const msg = err && err.message ? err.message : 'Error de carga';
