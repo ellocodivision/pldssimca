@@ -1996,7 +1996,10 @@ app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
 app.use('/viceroy-piloto', requireInternalUser);
-app.use('/api/viceroy-piloto', requireInternalUser);
+app.use('/api/viceroy-piloto', (req, res, next) => {
+  if (req.path === '/public-data') return next();
+  return requireInternalUser(req, res, next);
+});
 app.use('/whisperlist/qr', requireGerente);
 app.use('/whisperlist', requireAuth);
 app.use('/api/whisperlist', requireAuth);
