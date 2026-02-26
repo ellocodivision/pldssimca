@@ -549,19 +549,35 @@ function normalizeViceroyPilotoConfig(raw) {
 
 function readViceroyPilotoConfig() {
   const filePath = getViceroyPilotoConfigPath();
-  if (!fs.existsSync(filePath)) {
-    const seedPath = getViceroyPilotoSeedConfigPath();
-    if (fs.existsSync(seedPath)) {
-      try {
-        const rawSeed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
-        return normalizeViceroyPilotoConfig(rawSeed);
-      } catch {}
-    }
-    return defaultViceroyPilotoConfig();
+  let seedConfig = null;
+  const seedPath = getViceroyPilotoSeedConfigPath();
+  if (fs.existsSync(seedPath)) {
+    try {
+      const rawSeed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
+      seedConfig = normalizeViceroyPilotoConfig(rawSeed);
+    } catch {}
   }
+  if (!fs.existsSync(filePath)) return seedConfig || defaultViceroyPilotoConfig();
   try {
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const normalized = normalizeViceroyPilotoConfig(raw);
+    const defaultLayout = defaultViceroyPilotoConfig().presentationLayout;
+    const normalizedLayout = normalized && normalized.presentationLayout && typeof normalized.presentationLayout === 'object'
+      ? normalized.presentationLayout
+      : defaultLayout;
+    const isDefaultLikeLayout = JSON.stringify(normalizedLayout) === JSON.stringify(defaultLayout);
+
+    // If runtime file exists but is still default-like, prefer seeded layout saved from local.
+    if (seedConfig && isDefaultLikeLayout) {
+      const merged = {
+        ...normalized,
+        presentationLayout: {
+          ...(normalized.presentationLayout || {}),
+          ...(seedConfig.presentationLayout || {})
+        }
+      };
+      return normalizeViceroyPilotoConfig(merged);
+    }
     // Self-heal legacy/incomplete files so presentationLayout is always persisted.
     const rawLayout = raw && raw.presentationLayout && typeof raw.presentationLayout === 'object' ? raw.presentationLayout : null;
     const hasLayoutKeys = rawLayout && (
@@ -1631,17 +1647,23 @@ function filterViceroyInventoryRows(rows) {
 }
 
 function resolveInventoryCandidatesByDevSlug(devSlug) {
-  const devDir = path.join(DEVELOPMENTS_DIR, devSlug);
+  const devDirs = [];
+  const primary = path.join(DEVELOPMENTS_DIR, devSlug);
+  devDirs.push(primary);
+  const repoDir = path.join(REPO_DATA_DIR, 'developments', devSlug);
+  if (repoDir !== primary) devDirs.push(repoDir);
   const files = [];
-  try {
-    fs.readdirSync(devDir).forEach((name) => {
-      if (!/\.(xls|xlsx|csv)$/i.test(name)) return;
-      const fullPath = path.join(devDir, name);
-      let mtimeMs = 0;
-      try { mtimeMs = fs.statSync(fullPath).mtimeMs || 0; } catch {}
-      files.push({ name, fullPath, mtimeMs });
-    });
-  } catch {}
+  devDirs.forEach((devDir) => {
+    try {
+      fs.readdirSync(devDir).forEach((name) => {
+        if (!/\.(xls|xlsx|csv)$/i.test(name)) return;
+        const fullPath = path.join(devDir, name);
+        let mtimeMs = 0;
+        try { mtimeMs = fs.statSync(fullPath).mtimeMs || 0; } catch {}
+        files.push({ name, fullPath, mtimeMs });
+      });
+    } catch {}
+  });
   const canonicalNames = new Set([
     'inventariomaestrowix.xls',
     'inventariomaestrowix.xlsx',
@@ -2558,6 +2580,26 @@ app.post('/api/viceroy-piloto/inventory', (req, res) => {
   const canonicalName = `INVENTARIOMAESTROWIX.${ext}`;
   const canonicalPath = path.join(devDir, canonicalName);
   fs.writeFileSync(canonicalPath, buffer);
+  // Mirror write to repo data path when runtime storage points elsewhere.
+  const repoDevDir = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto');
+  if (repoDevDir !== devDir) {
+    try {
+      if (!fs.existsSync(repoDevDir)) fs.mkdirSync(repoDevDir, { recursive: true });
+      fs.writeFileSync(path.join(repoDevDir, canonicalName), buffer);
+    } catch {}
+  }
+  // Verify file is readable right away so frontend does not show false-positive success.
+  try {
+    const persistedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(canonicalPath));
+    if (!persistedRows.length) {
+      return res.status(500).json({ error: 'Se guardó archivo pero no se pudo leer inventario persistido' });
+    }
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Archivo guardado pero lectura de verificación falló',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
   return res.json({
     ok: true,
     fileName: canonicalName
