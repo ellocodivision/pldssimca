@@ -746,11 +746,6 @@
           });
         });
 
-        if (bucketId === '1B' && !seen.has(norm('C3'))) {
-          seen.add(norm('C3'));
-          out.unshift({ id: 'C3', name: 'C3', recamaras: '1B', imageUrl: '' });
-        }
-
         if (!out.length && bucketId) {
           out.push({ id: bucketId + '-TIPO-A', name: 'TIPO A', recamaras: bucketId, imageUrl: '' });
           out.push({ id: bucketId + '-TIPO-B', name: 'TIPO B', recamaras: bucketId, imageUrl: '' });
