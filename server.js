@@ -349,6 +349,9 @@ function getDevelopmentFloorSearchDirs(devSlug) {
   if (devSlug === DEFAULT_DEVELOPMENT_SLUG) {
     return [primary, FLOOR_JSON_DIR];
   }
+  if (devSlug === 'viceroy-piloto') {
+    return [primary, FLOOR_JSON_DIR];
+  }
   return [primary];
 }
 
@@ -1645,27 +1648,28 @@ function readMergedFloorsByDevelopment(devSlug) {
 
   const floors = [];
   const loadedFiles = [];
-  const filesToLoad = [];
+  let filesToLoad = [];
   if (devSlug === 'viceroy-piloto') {
-    const latestMapped = unique.find((entry) => FLOOR_MAPPED_JSON_FILE_RE.test(entry.name));
-    const latestCanonical = unique.find((entry) => FLOOR_JSON_FILE_RE.test(entry.name));
-    if (latestMapped) filesToLoad.push(latestMapped);
-    else if (latestCanonical) filesToLoad.push(latestCanonical);
+    const mapped = unique.filter((entry) => FLOOR_MAPPED_JSON_FILE_RE.test(entry.name));
+    const canonical = unique.filter((entry) => FLOOR_JSON_FILE_RE.test(entry.name));
+    const rest = unique.filter((entry) => !FLOOR_MAPPED_JSON_FILE_RE.test(entry.name) && !FLOOR_JSON_FILE_RE.test(entry.name));
+    filesToLoad = [...mapped, ...canonical, ...rest];
   } else {
-    filesToLoad.push(...unique);
+    filesToLoad = [...unique];
   }
 
-  filesToLoad.forEach((entry) => {
+  for (const entry of filesToLoad) {
     try {
       const raw = JSON.parse(fs.readFileSync(entry.fullPath, 'utf-8'));
       const payloadFloors = Array.isArray(raw)
         ? raw
         : (raw && Array.isArray(raw.floors) ? raw.floors : (raw && raw.imageDataUrl ? [raw] : []));
-      if (!payloadFloors.length) return;
+      if (!payloadFloors.length) continue;
       floors.push(...payloadFloors);
       loadedFiles.push(path.basename(entry.fullPath));
+      if (devSlug === 'viceroy-piloto' && floors.length) break;
     } catch {}
-  });
+  }
   return { floors, loadedFiles };
 }
 
