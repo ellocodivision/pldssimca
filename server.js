@@ -1896,11 +1896,18 @@ app.get('/', requireAuth, (req, res) => {
     return res.redirect('/whisperlist');
   }
   const isGerente = currentEmail === GERENTE_EMAIL;
+  const showViceroyPilotoCard = currentEmail === 'martin@simca.mx';
   const ownerServicesCard = isGerente ? `
         <a class="card" href="/owner-services">
           <span class="tag">Módulo</span>
           <h2 class="name">Owner Services</h2>
           <p class="desc">Prioriza entregas y coordina obra, jurídico y finanzas.</p>
+        </a>` : '';
+  const viceroyPilotoCard = showViceroyPilotoCard ? `
+        <a class="card" href="/viceroy-piloto">
+          <span class="tag">Módulo</span>
+          <h2 class="name">VICEROY PILOTO</h2>
+          <p class="desc">Flujo visual de recámaras, tipologías y plano por piso.</p>
         </a>` : '';
   const gerenteCard = isGerente ? `
         <a class="card" href="/gerente-ventas">
@@ -2022,11 +2029,7 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
-        <a class="card" href="/viceroy-piloto">
-          <span class="tag">Módulo</span>
-          <h2 class="name">VICEROY PILOTO</h2>
-          <p class="desc">Flujo visual de recámaras, tipologías y plano por piso.</p>
-        </a>
+        ${viceroyPilotoCard}
         <a class="card" href="/whisperlist">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy Whisperlist</h2>
