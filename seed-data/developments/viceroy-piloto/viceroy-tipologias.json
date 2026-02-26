@@ -1,0 +1,33 @@
+{
+  "tipologias": [],
+  "unitTipologiaMap": {},
+  "unitRecamarasMap": {},
+  "mapFloorOrder": [],
+  "presentationLayout": {
+    "showBrand": false,
+    "showLevel": false,
+    "overlayX": 1,
+    "overlayY": 171,
+    "overlayWidth": 320,
+    "overlayBg": "rgba(255,255,255,0.88)",
+    "overlayBorder": "#cdd2c6",
+    "tableHeaderBg": "#ecece4",
+    "tableHeaderText": "#403e3f",
+    "tableText": "#31353e",
+    "tableFontFamily": "\"Gill Sans\", \"Gill Sans MT\", Calibri, sans-serif",
+    "tableHeaderFontFamily": "\"Gill Sans\", \"Gill Sans MT\", Calibri, sans-serif",
+    "tableFontSize": 14,
+    "tableHeaderFontSize": 12,
+    "tableTextAlign": "center",
+    "tableHeaderAlign": "center",
+    "overlayRefWidth": 966,
+    "overlayRefHeight": 625,
+    "colWUnidad": 24,
+    "colWRec": 16,
+    "colWVista": 20,
+    "colWM2": 13,
+    "colWPrecio": 32
+  },
+  "pages": [],
+  "updatedAt": "2026-02-23T02:41:47.039Z"
+}

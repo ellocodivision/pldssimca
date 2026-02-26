@@ -361,6 +361,10 @@ function getViceroyPilotoConfigPath() {
   return path.join(DEVELOPMENTS_DIR, 'viceroy-piloto', VICEROY_PILOTO_CONFIG_NAME);
 }
 
+function getViceroyPilotoSeedConfigPath() {
+  return path.join(SEED_DEVELOPMENTS_DIR, 'viceroy-piloto', VICEROY_PILOTO_CONFIG_NAME);
+}
+
 function defaultViceroyPilotoConfig() {
   return {
     tipologias: [],
@@ -517,7 +521,16 @@ function normalizeViceroyPilotoConfig(raw) {
 
 function readViceroyPilotoConfig() {
   const filePath = getViceroyPilotoConfigPath();
-  if (!fs.existsSync(filePath)) return defaultViceroyPilotoConfig();
+  if (!fs.existsSync(filePath)) {
+    const seedPath = getViceroyPilotoSeedConfigPath();
+    if (fs.existsSync(seedPath)) {
+      try {
+        const rawSeed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
+        return normalizeViceroyPilotoConfig(rawSeed);
+      } catch {}
+    }
+    return defaultViceroyPilotoConfig();
+  }
   try {
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const normalized = normalizeViceroyPilotoConfig(raw);
