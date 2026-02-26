@@ -67,6 +67,7 @@ const WHISPERLIST_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY WHISPERLIST.xlsx');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
+const SEED_DEVELOPMENTS_DIR = path.join(__dirname, 'seed-data', 'developments');
 const DEFAULT_DEVELOPMENT_SLUG = 'ceiba';
 const FLOOR_JSON_FILE_RE = /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i;
 const FLOOR_MAPPED_JSON_FILE_RE = /^imagen-mapeada-.*\.json$/i;
@@ -350,7 +351,8 @@ function getDevelopmentFloorSearchDirs(devSlug) {
     return [primary, FLOOR_JSON_DIR];
   }
   if (devSlug === 'viceroy-piloto') {
-    return [primary, FLOOR_JSON_DIR];
+    const seedFloorDir = path.join(SEED_DEVELOPMENTS_DIR, devSlug, 'plano-ventas-floors');
+    return [primary, FLOOR_JSON_DIR, seedFloorDir];
   }
   return [primary];
 }
