@@ -3,6 +3,10 @@ services:
     name: aml-formats-app
     env: node
     plan: starter
+    disk:
+      name: app-data
+      mountPath: /var/data
+      sizeGB: 2
     buildCommand: PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer npm install && PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer npx puppeteer browsers install chrome
     startCommand: npm start
     healthCheckPath: /health
@@ -15,6 +19,8 @@ services:
         value: /opt/render/project/src/.cache/puppeteer
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: "false"
+      - key: APP_DATA_DIR
+        value: /var/data
       - key: ALLOWED_EMAILS
         value: michelle@viceroyplayadelcarmen.com,marion@viceroyplayadelcarmen.com,manuel@viceroyplayadelcarmen.com,karla@viceroyplayadelcarmen.com,daniela@viceroyplayadelcarmen.com,martin@viceroyplayadelcarmen.com
       - key: MICROSOFT_CLIENT_ID

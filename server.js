@@ -57,8 +57,9 @@ const PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.join(__dirna
 
 const TEMPLATE_DIR = path.join(__dirname, 'templates');
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const DATA_PATH = path.join(__dirname, 'data', 'sample.json');
-const DATA_DIR = path.join(__dirname, 'data');
+const REPO_DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = path.resolve(String(process.env.APP_DATA_DIR || REPO_DATA_DIR));
+const DATA_PATH = path.join(DATA_DIR, 'sample.json');
 const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
@@ -299,6 +300,15 @@ process.on('unhandledRejection', (err) => {
 });
 
 function ensureDataFiles() {
+  const copyIfMissing = (src, dst) => {
+    try {
+      if (!fs.existsSync(src) || fs.existsSync(dst)) return;
+      const parent = path.dirname(dst);
+      if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true });
+      fs.copyFileSync(src, dst);
+    } catch {}
+  };
+
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(FLOOR_JSON_DIR)) fs.mkdirSync(FLOOR_JSON_DIR, { recursive: true });
   if (!fs.existsSync(DEVELOPMENTS_DIR)) fs.mkdirSync(DEVELOPMENTS_DIR, { recursive: true });
@@ -321,6 +331,24 @@ function ensureDataFiles() {
     };
     fs.writeFileSync(OWNER_SERVICES_PATH, JSON.stringify(initialOwnerServices, null, 2), 'utf-8');
   }
+
+  // Bootstraps Viceroy files in mutable storage (Render disk, etc.) once.
+  const viceroyDir = path.join(DEVELOPMENTS_DIR, 'viceroy-piloto');
+  const viceroyFloorDir = path.join(viceroyDir, 'plano-ventas-floors');
+  if (!fs.existsSync(viceroyFloorDir)) fs.mkdirSync(viceroyFloorDir, { recursive: true });
+
+  copyIfMissing(
+    path.join(SEED_DEVELOPMENTS_DIR, 'viceroy-piloto', VICEROY_PILOTO_CONFIG_NAME),
+    path.join(viceroyDir, VICEROY_PILOTO_CONFIG_NAME)
+  );
+  copyIfMissing(
+    path.join(SEED_DEVELOPMENTS_DIR, 'viceroy-piloto', 'plano-ventas-floors', 'imagen-mapeada-viceroy-piloto-2026-02-23T00-58-00-513Z.json'),
+    path.join(viceroyFloorDir, 'imagen-mapeada-viceroy-piloto-2026-02-23T00-58-00-513Z.json')
+  );
+  copyIfMissing(
+    path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto', 'INVENTARIOMAESTROWIX.xlsx'),
+    path.join(viceroyDir, 'INVENTARIOMAESTROWIX.xlsx')
+  );
 }
 
 function normalizeDevelopmentSlug(raw) {
