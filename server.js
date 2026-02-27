@@ -702,7 +702,7 @@ async function getSharedPdfBrowser() {
   return sharedPdfBrowser;
 }
 
-async function buildPdfBufferWithBrowser(browser, html) {
+async function buildPdfBufferWithBrowser(browser, html, pdfOptions = {}) {
   const page = await browser.newPage();
   try {
     page.setDefaultTimeout(120000);
@@ -720,7 +720,8 @@ async function buildPdfBufferWithBrowser(browser, html) {
     }
     return await page.pdf({
       printBackground: true,
-      preferCSSPageSize: true
+      preferCSSPageSize: true,
+      ...pdfOptions
     });
   } finally {
     try { await page.close(); } catch {}
@@ -1077,6 +1078,21 @@ async function isAllowedLoginEmail(email) {
   if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
   if ((await whisperlistAllowedEmails()).has(normalized)) return true;
   return false;
+}
+
+async function generatePdfWithSharedBrowser(html, pdfOptions = {}) {
+  try {
+    const browser = await getSharedPdfBrowser();
+    return await buildPdfBufferWithBrowser(browser, html, pdfOptions);
+  } catch (firstErr) {
+    if (!isRetryablePdfError(firstErr)) throw firstErr;
+    try {
+      if (sharedPdfBrowser) await sharedPdfBrowser.close();
+    } catch {}
+    sharedPdfBrowser = null;
+    const retryBrowser = await getSharedPdfBrowser();
+    return await buildPdfBufferWithBrowser(retryBrowser, html, pdfOptions);
+  }
 }
 
 function getWhisperlistSellers(rows) {
@@ -3503,7 +3519,6 @@ app.get('/format/:id/pdf', async (req, res) => {
   const format = formats[id];
   if (!format) return res.status(404).send('Formato no encontrado');
 
-  const puppeteer = require('puppeteer');
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
   const html = renderTemplate(format.file, data, {
@@ -3513,11 +3528,8 @@ app.get('/format/:id/pdf', async (req, res) => {
     bodyClass: 'print'
   });
 
-  const browser = await puppeteer.launch({ headless: 'new' });
   try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({
+    const pdf = await generatePdfWithSharedBrowser(html, {
       format: 'Letter',
       printBackground: true,
       margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' }
@@ -3528,8 +3540,9 @@ app.get('/format/:id/pdf', async (req, res) => {
       'Content-Disposition': `attachment; filename=${format.file.replace('.html', '')}.pdf`
     });
     res.send(pdf);
-  } finally {
-    await browser.close();
+  } catch (err) {
+    log(`Error en GET /format/${id}/pdf: ${err && err.stack ? err.stack : err}`);
+    res.status(500).send('No se pudo generar el PDF');
   }
 });
 
@@ -3550,7 +3563,6 @@ app.post('/format/:id/pdf', async (req, res) => {
   const saved = persistSubmission(id, format.name, data);
   log(`Submission guardado: ${saved.id} formato=${id}`);
 
-  const puppeteer = require('puppeteer');
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const html = renderTemplate(format.file, data, {
     baseUrl,
@@ -3559,25 +3571,23 @@ app.post('/format/:id/pdf', async (req, res) => {
     bodyClass: 'print'
   });
 
-  const browser = await puppeteer.launch({ headless: 'new' });
   try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfOpts = {
       format: 'letter',
       printBackground: true,
       margin: { top: '0in', right: '0in', bottom: '0.6in', left: '0in' }
     };
     // FR-VEN-19 footer is rendered in HTML to match FR-VEN-10 layout
-    const pdf = await page.pdf(pdfOpts);
+    const pdf = await generatePdfWithSharedBrowser(html, pdfOpts);
 
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=${format.file.replace('.html', '')}.pdf`
     });
     res.send(pdf);
-  } finally {
-    await browser.close();
+  } catch (err) {
+    log(`Error en POST /format/${id}/pdf: ${err && err.stack ? err.stack : err}`);
+    res.status(500).send('No se pudo generar el PDF');
   }
 });
 
