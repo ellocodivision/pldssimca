@@ -648,6 +648,14 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+    if (!res.ok || !contentType.includes('application/pdf')) {
+      let detail = '';
+      try { detail = await res.text(); } catch {}
+      const short = detail ? detail.slice(0, 200) : `HTTP ${res.status}`;
+      alert(`No se pudo generar el PDF (${short}).`);
+      return;
+    }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
