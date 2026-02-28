@@ -1,347 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>FR-VEN-10 Identificación del Cliente -Clte.Nacional -P.Física</title>
-<style>
-@page { size: Letter; margin: 0; }
-body {
-  background-color: #ffffff;
-  margin: 0;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 10pt;
-}
-.page {
-  width: 216mm; /* Letter width */
-  min-height: 279mm; /* Letter height */
-  box-sizing: border-box;
-  padding: 16mm; /* inner content margin */
-  position: relative;
-  background: #fff;
-}
-.page + .page { page-break-before: always; }
-.page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("{{watermarkUrl}}");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 60%;
-  opacity: 0.12;
-  pointer-events: none;
-}
-.page::after {
-  content: "";
-  position: absolute;
-  left: 8mm; right: 8mm; top: 8mm; bottom: 8mm;
-  border: 0.5pt solid #000;
-  pointer-events: none;
-}
-.content {
-  position: relative;
-  z-index: 1;
-}
-.footer {
-  position: absolute;
-  left: 8mm;
-  right: 8mm;
-  bottom: 8mm;
-  font-size: 8pt;
-  display: flex;
-  align-items: center;
-}
-.footer .footer-left { width: 20%; }
-.footer .footer-center { width: 60%; text-align: center; }
-.footer .footer-right { width: 20%; text-align: right; font-size: 9pt; font-weight: bold; }
-
-.center { text-align: center; }
-.bold { font-weight: bold; }
-.justify { text-align: justify; }
-.small { font-size: 9pt; }
-.italic { font-style: italic; }
-.spacer-1 { height: 10px; }
-.spacer-2 { height: 16px; }
-.two-cols { display: flex; gap: 16px; }
-.col { width: 50%; }
-.box-title { border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold; font-size: 10pt; }
-.section-title { font-weight: bold; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; }
- table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 9pt; }
- td { padding: 2px 3px; vertical-align: bottom; }
- .label { width: 45%; font-weight: bold; }
- .line {
-  width: 100%;
-  display: block;
-  min-height: 16px;
-  line-height: 16px;
-  padding-top: 1px;
-  padding-bottom: 2px;
-  border-bottom: 1px solid #000;
-  white-space: pre-wrap;
-  word-break: break-word;
- }
- .cb {
-  width: 10px; height: 10px;
-  border: 1px solid #000;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 9px; margin-left: 4px;
- }
- .cb.checked { background: #000; color: #fff; }
- .cb.checked::after { content: "✔"; font-size: 8px; }
- .circle {
-  width: 10px; height: 10px; border: 1px solid #000; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  margin-left: 4px;
- }
- .circle.checked { background: #000; }
-
-@media print {
-  body { background: #fff; }
-  .page { page-break-after: always; }
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FR-VEN-10 Identificación del Cliente - Clte. Nacional - P. Física</title>
+  <style>
+    @page { size: Letter; margin: 14mm; }
+    body { font-family: "Times New Roman", serif; font-size: 11pt; line-height: 1.3; color: #111; }
+    h1,h2,h3 { margin: 0 0 8px; }
+    h1 { text-align: center; font-size: 15pt; }
+    h2 { font-size: 12pt; margin-top: 12px; }
+    h3 { font-size: 11pt; margin-top: 10px; }
+    p { margin: 0 0 8px; text-align: justify; }
+    .company { text-align:center; font-weight:700; margin-bottom: 8px; }
+    .field { border-bottom: 1px solid #111; min-height: 16px; padding: 2px 3px; }
+    .grid { display: grid; grid-template-columns: 42% 58%; gap: 6px 10px; margin-bottom: 8px; }
+    .label { font-weight: 700; }
+    .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin: 6px 0; }
+    .check { display: flex; align-items: center; gap: 8px; }
+    .box { width: 12px; height: 12px; border: 1px solid #111; display: inline-flex; align-items: center; justify-content: center; }
+    .box.checked::after { content: "X"; font-size: 10px; }
+    .page-break { page-break-before: always; }
+    .footer { margin-top: 14px; font-size: 9pt; text-align: right; }
+  </style>
 </head>
-<body>
+<body class="{{bodyClass}}">
+  {{controls}}
 
-<!-- PAGE 1 -->
-<div class="page">
-  <div class="content">
+  <div class="company">{{desarrolladoraText}}</div>
+  <h1>FORMATO "CONOCE A TU CLIENTE"</h1>
+  <h1 style="font-size:12pt; margin-bottom:10px;">Persona Física</h1>
 
-    <div class="center bold" style="margin-bottom:6px;">
-       <span id="desarrolladoraText">{{desarrolladoraText}}</span>
-    </div>
+  <p>Se hace referencia a la operación para la adquisición de los derechos de uso y disfrute (la "Operación") por parte de la persona física cuyos datos se asientan en el apartado I de este documento (el "Cliente"), en su carácter de "adquiriente", respecto de la unidad no. <strong>{{cbUnidadES}}</strong> del desarrollo inmobiliario denominado "<strong>{{cbDesarrolloES}}</strong>", ubicado en la ciudad de <strong>{{txtCiudadES}}</strong>, México, el cual es actualmente desarrollado y comercializado por la compañía cuya denominación se señala al rubro.</p>
+  <p>En relación con la Operación, en su carácter de adquirente de la Unidad y para efectos de la fracción I del artículo 18 de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, el Cliente en este acto manifiesta, bajo protesta de decir verdad, que los mismos son ciertos y correctos (los "Datos de Identificación").</p>
 
-    <div class="two-cols">
-        <div class="col"><div class="box-title">FORMATO "CONOCE A TU CLIENTE"<br><span class="small">Persona Física</span></div></div>
-        <div class="col"><div class="box-title">"KNOW YOUR CLIENT" FORM<br><span class="small">Individual</span></div></div>
-    </div>
-
-    <div class="spacer-2"></div>
-
-    <div class="two-cols justify small">
-        <div class="col">
-      Se hace referencia a la operación para la adquisición de los derechos de uso y disfrute (la "Operación") por parte de la persona física cuyos datos se asientan en el apartado I de este documento (el "Cliente"), en su carácter de "adquiriente", respecto de la unidad no. <span id="txtLoteES">{{txtLoteES}}</span>
- del desarrollo inmobiliario denominado "<span id="txtDesarrolloES">{{txtDesarrolloES}}</span>
-, ubicado en la ciudad de <span id="txtCiudadES">{{txtCiudadES}}</span>
-, México, el cual es actualmente desarrollado y comercializado por la compañía cuya denominación se señala al rubro. 
-      <br><br>
-En relación con la Operación, en su carácter de adquirente de la Unidad y para efectos de la fracción I del artículo 18 de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, el Cliente en este acto manifiesta, bajo protesta de decir verdad, que los mismos son ciertos y correctos (los "Datos de Identificación"):     </div>
-        <div class="col">
-Reference is made to the transaction for the acquisition of the rights of use and enjoyment (the "Transaction") by the foreign individual whose data are set forth in Section I of this document (the "Client"), in its capacity as "acquirer", with respect to unit no. <span id="txtLoteEN">{{txtLoteEN}}</span> of the real estate development called <span id="txtDesarrolloEN">{{txtDesarrolloEN}}</span>
-, located in the city of <span id="txtCiudadEN">{{txtCiudadEN}}</span>
-, Mexico, which is currently developed and marketed by the company whose name is set forth in the heading of this document.       <br><br>
-In connection with the Transaction, in its capacity as acquirer of the Unit and for purposes of the Federal Law for Prevention and Identification of Transactions with Resources of Illicit Origin, the Client hereby declares, under oath, that the details indicated below are true and correct (the "Identification Details"):    </div>
-    </div>
-
-    <div class="section-title">I. DATOS DE IDENTIFICACIÓN DEL CLIENTE / CLIENT'S IDENTIFICATION DETAILS</div>
-
-  <table>
-    <tr><td class="label">1. Nombre Completo / Full Name:</td><td class="line"><span id="spanNombreCompleto">{{spanNombreCompleto}}</span></td></tr>
-    <tr><td class="label">2. Fecha de Nacimiento / Date of Birth:</td><td class="line"><span id="spanFechaNacimiento">{{spanFechaNacimiento}}</span></td></tr>
-    <tr><td class="label">3. Lugar de Nacimiento / Place of Birth:</td><td class="line"><span id="spanLugarNacimiento">{{spanLugarNacimiento}}</span></td></tr>
-    <tr><td class="label">4. Nacionalidad / Citizenship:</td><td class="line"><span id="spanNacionalidad">{{spanNacionalidad}}</span></td></tr>
-    <tr><td class="label">5. Ocupación/Profesión / Occupation/Profession:</td><td class="line"><span id="spanOcupacion">{{spanOcupacion}}</span></td></tr>
-    <tr><td class="label">6. No. de Identificación Fiscal / Tax Identification Number:</td><td class="line"><span id="spanIdentificacionFiscal">{{spanIdentificacionFiscal}}</span></td></tr>
-    <tr><td class="label">6.1 Uso de la Factura / Invoice usage</td><td class="line"><span id="spanFactura">{{spanFactura}}</span></td></tr>
-    <tr><td class="label">6.2 Régimen Fiscal en el SAT (si aplica) / Tax classification of Mexican Revenue Service (if aplicable):</td><td class="line"><span id="spanRegimen">{{spanRegimen}}</span></td></tr>
-    <tr><td class="label">6.3 Código Postal registrado en el SAT (Si Aplica) / Zip Code registered in  Mexican Revenue Service (if aplicable)</td><td class="line"><span id="spanCodigoPostalSAT">{{spanCodigoPostalSAT}}</span></td></tr>
-    <tr><td class="label">7. Tarjeta de Seguridad Social / Social Security No.:</td><td class="line"><span id="spanSeguridadSocial">{{spanSeguridadSocial}}</span></td></tr>
-    <tr><td class="label">8. Domicilio / Address:</td><td class="line"><span id="spanDomicilio">{{spanDomicilio}}</span></td></tr>
-    </table>
-
-    <div class="bold small" style="margin-top:4px;">8.1 Domicilio en México (si cuenta con residencia temporal o permanente para efectos fiscales) / Address in Mexico (if it's a permanent or temporary resident for fiscal purposes):</div>
-    <table>
- <tr><td class="label">i. Calle/Avenida / Street/Avenue:</td><td class="line"><span id="spanCalle">{{spanCalle}}</span>
-</td></tr>
-    <tr><td class="label">ii. No. Exterior / Property No.:</td><td class="line"><span id="spanExterior">{{spanExterior}}</span>
-</td></tr>
-    <tr><td class="label">iii. No. Interior (si aplica) / Suite No. (if applicable):</td><td class="line"><span id="spanInterior">{{spanInterior}}</span>
-</td></tr>
-    <tr><td class="label">iv. Colonia / Quarter:</td><td class="line"><span id="spanColonia">{{spanColonia}}</span>
-</td></tr>
-    <tr><td class="label">v. Código Postal / Zip Code:</td><td class="line"><span id="spanCodigoPostal">{{spanCodigoPostal}}</span>
-</td></tr>
-    <tr><td class="label">vi. Ciudad y Estado / City and State:</td><td class="line"><span id="spanCiudadEstado">{{spanCiudadEstado}}</span>
-</td></tr>
-    <tr><td class="label">9. No. de Teléfono / Telephone Number:</td><td class="line"><span id="spanTelefono">{{spanTelefono}}</span>
-</td></tr>
-    <tr><td class="label">10. Correo Electrónico / Email:</td><td class="line"><span id="spanEmail">{{spanEmail}}</span>
-</td></tr>
-    <tr><td class="label">11. Tipo, No. Identificación y Autoridad Emisora / ID Form, Number & Authority:</td><td class="line"><span id="spanTipoIdentificacion">{{spanTipoIdentificacion}}</span></td></tr>
-  </table>
-
+  <h2>I. DATOS DE IDENTIFICACIÓN DEL CLIENTE</h2>
+  <div class="grid">
+    <div class="label">1. Nombre Completo</div><div class="field">{{spanNombreCompleto}}</div>
+    <div class="label">2. Fecha de Nacimiento</div><div class="field">{{spanFechaNacimiento}}</div>
+    <div class="label">3. Lugar de Nacimiento</div><div class="field">{{spanLugarNacimiento}}</div>
+    <div class="label">4. Nacionalidad</div><div class="field">{{spanNacionalidad}}</div>
+    <div class="label">5. Ocupación/Profesión</div><div class="field">{{spanOcupacion}}</div>
+    <div class="label">6. RFC</div><div class="field">{{spanIdentificacionFiscal}}</div>
+    <div class="label">6.1 Uso de la Factura</div><div class="field">{{spanFactura}}</div>
+    <div class="label">6.2 Régimen Fiscal en el SAT</div><div class="field">{{spanRegimen}}</div>
+    <div class="label">6.3 Código Postal registrado en el SAT</div><div class="field">{{spanCodigoPostalSAT}}</div>
+    <div class="label">7. CURP</div><div class="field">{{spanSeguridadSocial}}</div>
+    <div class="label">8. Domicilio</div><div class="field">{{spanDomicilio}}</div>
+    <div class="label">i. Calle/Avenida</div><div class="field">{{spanCalle}}</div>
+    <div class="label">ii. No. Exterior</div><div class="field">{{spanExterior}}</div>
+    <div class="label">iii. No. Interior (si aplica)</div><div class="field">{{spanInterior}}</div>
+    <div class="label">iv. Colonia</div><div class="field">{{spanColonia}}</div>
+    <div class="label">v. Código Postal</div><div class="field">{{spanCodigoPostal}}</div>
+    <div class="label">vi. Ciudad y Estado</div><div class="field">{{spanCiudadEstado}}</div>
+    <div class="label">9. No. de Teléfono</div><div class="field">{{spanTelefono}}</div>
+    <div class="label">10. Correo Electrónico</div><div class="field">{{spanEmail}}</div>
+    <div class="label">11. Tipo, No. Identificación y Autoridad emisora</div><div class="field">{{spanTipoIdentificacion}}</div>
   </div>
 
-  <div class="footer">
-    <div class="footer-left">FR-VEN-10 ID CE PF B</div>
-    <div class="footer-center">version 01</div>
-    <div class="footer-right">1</div>
-  </div>
-</div>
-
-<!-- PAGE 2 -->
-<div class="page">
-  <div class="content">
-
-    <div class="center bold" style="margin-bottom:6px;">
-       <span>{{desarrolladoraText}}</span>
-    </div>
-
-    <div class="section-title">12. Datos del Apoderado Legal (en su caso) / Legal Representative's Details (if Applicable)</div>
-    <table>
-    <tr><td class="label">i. Nombre Completo / Full Name:</td><td class="line"><span>{{spanApoderadoNombre}}</span>
-</td></tr>
-    <tr><td class="label">ii. Fecha de Nacimiento / Date of Birth:</td><td class="line"><span>{{spanApoderadoFecha}}</span>
-</td></tr>
-    <tr><td class="label">iii. Nacionalidad / Citizenship:</td><td class="line"><span>{{spanApoderadoNacionalidad}}</span>
-</td></tr>
-    </table>
-
-    <div class="small" style="margin-top:5px;">iii. Si no es mexicano, señalar su carácter migratorio en México / If not Mexican, indicate their migratory status in Mexico:</div>
-    <table class="small">
-        <tr><td>Residente Permanente / Permanent Resident <span class="cb {{cbPermanente}}"></span></td>
-<td>Residente Temporal / Temporary Resident <span class="cb {{cbTemporal}}"></span></td></tr>
-        <tr><td> Visitante Actividades Remuneradas / Remunerated Activities Visitor <span class="cb {{cbRemuneradas}}"></span></td>
-<td>Visitante de Negocios / Business Visitor <span class="cb {{cbNegocios}}"></span></td></tr>
-    </table>
-
-    <table>
-        <tr><td class="label">iv. Doc. de Identificación Fiscal / Federal Taxpayer Registry: </td><td><span class="line">{{spanApoderadoRFC}}</span></td></tr>
-        <tr><td class="label">v. No. de Seguridad Social / Social Security No.: </td><td><span class="line">{{spanApoderadoSSN}}</span></td></tr>
-        <tr><td class="label">vi. Datos del Poder / Power of Attorney Details: </td><td><span class="line">{{spanApoderadoPoder}}</span></td></tr>
-        <tr><td class="label">vii. Teléfono Móvil / Mobile:</td><td><span class="line">{{spanApoderadoTelefono}}</span></td></tr>
-        <tr><td class="label">viii. Correo Electrónico / Email: </td><td><span class="line">{{spanApoderadoEmail}}</span></td></tr>
-        <tr><td class="label">ix. Tipo y No. Identificación / ID Form & Number: </td><td><span class="line">{{spanApoderadoTipoID}}</span></td></tr>
-    </table>
-
-    <div class="section-title">II. PERSONA POLÍTICAMENTE EXPUESTA / POLITICALLY EXPOSED PERSON</div>
-    <div class="two-cols justify small">
-        <div class="col">El Cliente o cualquier familiar consanguíneo o por afinidad hasta el cuarto grado es o ha sido una "Persona Políticamente Expuesta” (“PPE”), es decir, ¿desempeñan o han desempeñado alguna función o cargo público destacado en territorio nacional o en país extranjero?</div>
-        <div class="col">The Client or any relative by blood or by affinity up to the fourth degree a "Politically Exposed Person" ("PEP"), that is to say, do they hold or have they held any outstanding public function or position in national territory or in a foreign country?</div>
-    </div>
-
-    <table style="margin-top:10px;">
-        <tr>
-            <td width="20%"><b> El Cliente / The Client </b></td>
-            <td width="15%">Sí/Yes <span class="circle {{pepClienteYes}}"></span></td>
-            <td width="15%">No <span class="circle {{pepClienteNo}}"></span></td>
-            <td width="50%">Si sí, señale el cargo o puesto / If so, indicate the function or position:<span class="line">{{pepClienteCargo}}</span></td>
-        </tr>
-        <tr>
-            <td><b>Familiar / Relative</b></td>
-            <td>Sí/Yes <span class="circle {{pepFamiliarYes}}"></span></td>
-            <td>No <span class="circle {{pepFamiliarNo}}"></span></td>
-            <td>Si sí, señale el cargo o puesto / If so, indicate the function or position:<span class="line">{{pepFamiliarCargo}}</span></td>
-        </tr>
-    </table>
-
-    <div class="section-title">III. DATOS DE LA PPE / PEP'S DETAILS</div>
-    <div class="two-cols justify small">
-        <div class="col">Además, si, efectivamente, algún familiar consanguíneo o por afinidad hasta el cuarto grado del Cliente es o ha sido una PPE, el Cliente en este acto manifiesta, bajo protesta de decir verdad, que los siguientes datos del familiar son ciertos y correctos:</div>
-        <div class="col">Furthermore, if, indeed, any relative of the Client by blood or affinity up to the fourth degree is or has been a PEP, the Client hereby state, under oath, that the following details of his/her relative are true and correct:</div>
-    </div>
-    <table>
-    <tr><td class="label">1. Nombre Completo / Full Name:</td><td class="line"><span>{{spanPPENombre}}</span>
-</td></tr>
-    <tr><td class="label">2. Fecha de Nacimiento / Date of Birth:</td><td class="line"><span>{{spanPPEFecha}}</span>
-</td></tr>
-    <tr><td class="label">3. Lugar de Nacimiento / Place of Birth:</td><td class="line"><span>{{spanPPELugarNacimiento}}</span>
-</td></tr>
-    <tr><td class="label">4. Nacionalidad / Citizenship:</td><td class="line"><span>{{spanPPENacionalidad}}</span>
-</td></tr>
-    <tr><td class="label">5. Ocupación/Profesión / Occupation/Profession:</td><td class="line"><span>{{spanPPEOcupacion}}</span>
-</td></tr>
-    <tr><td class="label">6. No. de Identificación Fiscal / Tax Identification Number:</td><td class="line"><span>{{spanPPERFC}}</span>
-</td></tr>
-    <tr><td class="label">7. Tarjeta de Seguridad Social / Social Security No.:</td><td class="line"><span>{{spanPPESSN}}</span>
-</td></tr>
-    <tr><td class="label">8. Domicilio / Address:</td><td class="line"><span>{{spanPPEDomicilio}}</span>
-</td></tr>
-  </table>
-
+  <div class="page-break"></div>
+  <h2>12. Datos del Apoderado Legal (en su caso)</h2>
+  <div class="grid">
+    <div class="label">i. Nombre Completo</div><div class="field">{{spanApoderadoNombre}}</div>
+    <div class="label">ii. Fecha de Nacimiento</div><div class="field">{{spanApoderadoFecha}}</div>
+    <div class="label">iii. Nacionalidad</div><div class="field">{{spanApoderadoNacionalidad}}</div>
+    <div class="label">iv. RFC</div><div class="field">{{spanApoderadoRFC}}</div>
+    <div class="label">v. CURP</div><div class="field">{{spanApoderadoSSN}}</div>
+    <div class="label">vi. Datos del Poder</div><div class="field">{{spanApoderadoPoder}}</div>
+    <div class="label">vii. Teléfono Móvil</div><div class="field">{{spanApoderadoTelefono}}</div>
+    <div class="label">viii. Correo Electrónico</div><div class="field">{{spanApoderadoEmail}}</div>
+    <div class="label">ix. Tipo y No. Identificación y Autoridad Emisora</div><div class="field">{{spanApoderadoTipoID}}</div>
   </div>
 
-  <div class="footer">
-    <div class="footer-left">FR-VEN-10 ID CE PF B</div>
-    <div class="footer-center">version 01</div>
-    <div class="footer-right">2</div>
-  </div>
-</div>
-
-<!-- PAGE 3 -->
-<div class="page">
-  <div class="content">
-
-    <div class="center bold" style="margin-bottom:6px;">
-       <span>{{desarrolladoraText}}</span>
-    </div>
-
-    <div class="small bold">8.1. Domicilio en México (si cuenta con residencia temporal o permanente para efectos fiscales) / Address in Mexico (if it's a permanent or temporary resident for fiscal purposes): </div>
-    <table>
-    <tr><td class="label">i. Calle/Avenida / Street/Avenue:</td><td class="line"><span>{{spanPPECalle}}</span>
-</td></tr>
-    <tr><td class="label">ii. No. Exterior / Property No.:</td><td class="line"><span>{{spanPPEExterior}}</span>
-</td></tr>
-    <tr><td class="label">iii. No. Interior (si aplica) / Suite No. (if applicable):</td><td class="line"><span>{{spanPPEInterior}}</span>
-</td></tr>
-    <tr><td class="label">iv. Colonia / Quarter:</td><td class="line"><span>{{spanPPEColonia}}</span>
-</td></tr>
-    <tr><td class="label">v. Código Postal / Zip Code:</td><td class="line"><span>{{spanPPECodigoPostal}}</span>
-</td></tr>
-    <tr><td class="label">vi. Ciudad y Estado / City and State:</td><td class="line"><span>{{spanPPECiudad}}</span>
-</td></tr>
-    <tr><td class="label">9. No. de Teléfono / Telephone Number:</td><td class="line"><span>{{spanPPETelefono}}</span>
-</td></tr>
-    <tr><td class="label">10. Correo Electrónico / Email:</td><td class="line"><span>{{spanPPEEmail}}</span></td></tr>
-  </table>
-
-    <div class="section-title">VI. DOCUMENTOS ADJUNTOS / ATTACHMENTS</div>
-    <div class="two-cols justify small">
-        <div class="col">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple (previamente cotejados por el asesor de ventas) los documentos marcados con una "x":</div>
-        <div class="col">To support the information herein provided by the Client, the marked with an "x" are attached hereto in simple copy (previously checked by the sales adviser):</div>
-    </div>
-
-    <table style="margin-top:10px;">
-        <tr><td colspan="2" class="bold">Del Cliente / Client's</td></tr>
-        <tr><td>Identificación Oficial / Official ID</td><td style="width:30px;"><span class="cb {{cbClienteID}}"></span></td></tr>
-        <tr><td>Pasaporte / Passport</td><td><span class="cb {{cbClientePasaporte}}"></span></td></tr>
-        <tr><td>Residente Temporal / Temporary Resident</td><td><span class="cb {{cbClienteResTemp}}"></span></td></tr>
-        <tr><td>Carta de Naturalización / Certificate of Citizenship</td><td><span class="cb {{cbClienteCartaNat}}"></span></td></tr>
-        <tr><td>Residencia / Residence Certificate</td><td><span class="cb {{cbClienteResidencia}}"></span></td></tr>
-        <tr><td>Doc. de Identificación Fiscal / Federal Taxpayer Registry</td><td><span class="cb {{cbClienteRFC}}"></span></td></tr>
-        <tr><td>Tarjeta de Seguridad Social / Social Security No.</td><td><span class="cb {{cbClienteSSN}}"></span></td></tr>
-        <tr><td>Comprobante Domicilio / Proof of Residency</td><td><span class="cb {{cbClienteDomicilio}}"></span></td></tr>
-        <tr><td>Identificación del Representante / ID of Representative</td><td><span class="cb {{cbClienteIDRep}}"></span></td></tr>
-        <tr><td>Poder del Representante / Power of Attorney</td><td><span class="cb {{cbClientePoder}}"></span></td></tr>
-        <tr><td>Otro, especifique / Other, specify: <span class="line" style="width:50%">{{spanOtro}}</span></td><td></td></tr>
-    </table>
-
-    <table style="margin-top:10px;">
-        <tr><td colspan="2" class="bold">De la PPE / PEP's</td></tr>
-        <tr><td>Identificación Oficial / Official ID</td><td style="width:30px;"><span class="cb {{cbPPEID}}"></span></td></tr>
-        <tr><td>Cédula Fiscal / Taxpayer Identification</td><td><span class="cb {{cbPPERFC_DOC}}"></span></td></tr>
-        <tr><td>Comprobante Domicilio / Proof of Residency</td><td><span class="cb {{cbPPEDomicilio_DOC}}"></span></td></tr>
-        <tr><td>Doc. de Seguridad Social del Representante / Representative's Social Security Card</td><td><span class="cb {{cbPPESSNRep}}"></span></td></tr>
-        <tr><td>Otro, especifique / Other, specify: <span class="line" style="width:50%">{{spanOtro1}}</span></td><td></td></tr>
-    </table>
-
-    <div class="spacer-2"></div>
-    <div class="center" style="margin-top:10px;">
-        <div class="bold">Atentamente / Sincerely,</div>
-        <div class="spacer-2"></div>
-        <div class="line" style="width:45%; margin: 0 auto;"></div>
-        <div class="bold">{{cbNombre1}}</div>
-        <div class="bold">Por mi propio derecho/In my own right</div>
-    </div>
-
+  <h2>II. PERSONA POLÍTICAMENTE EXPUESTA</h2>
+  <p>El Cliente o cualquier familiar consanguíneo o por afinidad hasta el cuarto grado es o ha sido una "Persona Políticamente Expuesta" ("PPE"), es decir, ¿desempeñan o han desempeñado alguna función o cargo público destacado en territorio nacional o en país extranjero?</p>
+  <div class="grid">
+    <div class="label">El Cliente (Sí/No) y cargo</div><div class="field">{{pepCliente}} {{pepClienteCargo}}</div>
+    <div class="label">Familiar (Sí/No) y cargo</div><div class="field">{{pepFamiliar}} {{pepFamiliarCargo}}</div>
   </div>
 
-  <div class="footer">
-    <div class="footer-left">FR-VEN-10 ID CE PF B</div>
-    <div class="footer-center">version 01</div>
-    <div class="footer-right">3</div>
+  <h2>III. DATOS DE LA PPE</h2>
+  <p>Además, si, efectivamente, algún familiar consanguíneo o por afinidad hasta el cuarto grado del Cliente es o ha sido una PPE, el Cliente en este acto manifiesta, bajo protesta de decir verdad, que los siguientes datos del familiar son ciertos y correctos:</p>
+  <div class="grid">
+    <div class="label">1. Nombre Completo</div><div class="field">{{spanPPENombre}}</div>
+    <div class="label">2. Fecha de Nacimiento</div><div class="field">{{spanPPEFecha}}</div>
+    <div class="label">3. Lugar de Nacimiento</div><div class="field">{{spanPPELugarNacimiento}}</div>
+    <div class="label">4. Nacionalidad</div><div class="field">{{spanPPENacionalidad}}</div>
+    <div class="label">5. Ocupación/Profesión</div><div class="field">{{spanPPEOcupacion}}</div>
+    <div class="label">6. RFC</div><div class="field">{{spanPPERFC}}</div>
+    <div class="label">7. CURP</div><div class="field">{{spanPPESSN}}</div>
+    <div class="label">8. Domicilio</div><div class="field">{{spanPPEDomicilio}}</div>
+    <div class="label">i. Calle/Avenida</div><div class="field">{{spanPPECalle}}</div>
+    <div class="label">ii. No. Exterior</div><div class="field">{{spanPPEExterior}}</div>
+    <div class="label">iii. No. Interior (si aplica)</div><div class="field">{{spanPPEInterior}}</div>
+    <div class="label">iv. Colonia</div><div class="field">{{spanPPEColonia}}</div>
+    <div class="label">v. Código Postal</div><div class="field">{{spanPPECodigoPostal}}</div>
+    <div class="label">vi. Ciudad y Estado</div><div class="field">{{spanPPECiudad}}</div>
+    <div class="label">9. No. de Teléfono</div><div class="field">{{spanPPETelefono}}</div>
+    <div class="label">10. Correo Electrónico</div><div class="field">{{spanPPEEmail}}</div>
   </div>
-</div>
 
+  <div class="footer">FR-VEN-10 ID CTE NAL PF</div>
 </body>
 </html>
