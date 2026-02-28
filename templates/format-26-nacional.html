@@ -82,8 +82,10 @@ body {
 }
 .circle.checked { background-color: #000; }
 
-.blocks .block { margin-bottom: 10px; break-inside: avoid; }
+.blocks .block { margin-bottom: 0; break-inside: avoid; }
 .blocks .block:last-child { margin-bottom: 0; }
+.para { margin-bottom: 14px; }
+.para-lg { margin-bottom: 20px; }
 
 .table { width: 100%; border-collapse: collapse; font-size: 10pt; }
 .table td { padding: 3px; vertical-align: top; }
@@ -123,15 +125,15 @@ body {
 
   <div class="block spacer-1"></div>
 
-  <div class="block justify small">
+  <div class="block justify small para-lg">
     Hago referencia a la adquisición de los derechos de propiedad (la "Operación") de la unidad no. <span class="bold">{{orUnidadBodyES}}</span> (la "Unidad") del desarrollo inmobiliario denominado "<span class="bold">{{orDesarrolloBodyES}}</span>" ubicado en la ciudad de <span class="bold">{{orCiudadES}}</span>, México, el cual es actualmente desarrollado y comercializado por su compañía.
   </div>
 
-  <div class="block justify small">
+  <div class="block justify small para-lg">
     Al respecto y derivado de su solicitud, para efectos de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, en este acto manifiesto, bajo protesta de decir verdad, que los recursos económicos o financieros con los que cumpliré con mis obligaciones de pago derivadas de la Operación (los "Recursos Económicos"), son:
   </div>
 
-  <div class="block">
+  <div class="block para-lg">
     <table class="table">
       <tr>
         <td width="20%">Propios</td>
@@ -143,11 +145,11 @@ body {
     </table>
   </div>
 
-  <div class="block justify small">
+  <div class="block justify small para-lg">
     Los Recursos Económicos son de procedencia lícita y de actos de buena fe; por lo tanto, no están relacionados o vinculados con hechos ilícitos o delitos, ni han sido instrumento, objeto o producto de hechos ilícitos o delitos, ni han sido utilizados o destinados a ocultar o mezclar bienes producto de hechos ilícitos o delitos, no están siendo utilizados en la comisión de hechos ilícitos o delitos por terceros, ni son producto de delitos patrimoniales o de delincuencia organizada. Así, el origen de los Recursos Económicos es el siguiente [marque todas las opciones aplicables]:
   </div>
 
-  <div class="block">
+  <div class="block para">
     <table class="table">
       <tr><td>Ahorros</td><td width="30"><span class="circle {{orAhorros}}"></span></td><td>Rentas</td><td width="30"><span class="circle {{orRentas}}"></span></td></tr>
       <tr><td>Ventas</td><td><span class="circle {{orVentas}}"></span></td><td>Comisiones</td><td><span class="circle {{orComisiones}}"></span></td></tr>
