@@ -1,73 +1,217 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FR-VEN-26 Origen de los Recursos - Español</title>
-  <style>
-    @page { size: Letter; margin: 14mm; }
-    body { font-family: "Times New Roman", serif; font-size: 11pt; line-height: 1.3; color: #111; }
-    h1 { text-align:center; margin:0 0 8px; font-size: 14pt; }
-    p { margin: 0 0 8px; text-align: justify; }
-    .field { border-bottom: 1px solid #111; min-height: 16px; padding: 2px 3px; }
-    .grid { display:grid; grid-template-columns: 42% 58%; gap: 6px 10px; margin-top: 8px; }
-    .label { font-weight:700; }
-    .checks { display:grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; margin: 8px 0; }
-    .check { display:flex; align-items:center; gap:8px; }
-    .box { width: 12px; height: 12px; border:1px solid #111; display:inline-flex; align-items:center; justify-content:center; }
-    .box.checked::after { content:"X"; font-size:10px; }
-    .sig { margin-top: 24px; }
-    .line { border-bottom:1px solid #111; height:24px; margin-top:10px; }
-  </style>
+<meta charset="UTF-8">
+<title>FR-VEN-26 Origen de los Recursos - Nacional</title>
+<style>
+@page { size: Letter; margin: 0; }
+body {
+  margin: 0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 10pt;
+  background: #fff;
+}
+#pages { width: 216mm; margin: 0 auto; }
+.page {
+  width: 216mm;
+  height: 279mm;
+  box-sizing: border-box;
+  padding: 16mm;
+  position: relative;
+  background: #fff;
+  page-break-after: always;
+}
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("{{watermarkUrl}}");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%;
+  opacity: 0.12;
+  pointer-events: none;
+}
+.page::after {
+  content: "";
+  position: absolute;
+  left: 8mm; right: 8mm; top: 8mm; bottom: 8mm;
+  border: 0.5pt solid #000;
+  pointer-events: none;
+}
+.content {
+  position: relative;
+  z-index: 1;
+  height: calc(279mm - 32mm - 22mm);
+  overflow: hidden;
+}
+.footer {
+  position: absolute;
+  left: 8mm;
+  right: 8mm;
+  bottom: 8mm;
+  font-size: 8pt;
+  display: flex;
+  align-items: center;
+}
+.footer .footer-left { width: 20%; }
+.footer .footer-center { width: 60%; text-align: center; }
+.footer .footer-right { width: 20%; text-align: right; font-size: 9pt; font-weight: bold; }
+
+.center { text-align: center; }
+.bold { font-weight: bold; }
+.justify { text-align: justify; }
+.small { font-size: 9pt; }
+.spacer-1 { height: 10px; }
+.spacer-2 { height: 16px; }
+
+.line {
+  width: 100%;
+  display: block;
+  min-height: 16px;
+  line-height: 16px;
+  padding-top: 1px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #000;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.circle {
+  display: inline-flex; width: 10px; height: 10px; border: 1px solid #000; border-radius: 50%;
+  align-items: center; justify-content: center; margin-left: 4px; vertical-align: middle; box-sizing: border-box;
+}
+.circle.checked { background-color: #000; }
+
+.blocks .block { margin-bottom: 10px; break-inside: avoid; }
+.blocks .block:last-child { margin-bottom: 0; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.table td { padding: 3px; vertical-align: top; }
+</style>
 </head>
-<body class="{{bodyClass}}">
-  {{controls}}
-  <h1>CARTA DE ORIGEN DE LOS RECURSOS ECONÓMICOS</h1>
+<body>
 
-  <p><strong>{{cbLugarES}}</strong>, a <strong>{{cbDiaES}}</strong> de <strong>{{cbMesES}}</strong> de <strong>20{{cbAnioES}}</strong></p>
-  <p><strong>{{desarrolladoraText}}</strong><br>{{cbEmpresaDomicilioES}}</p>
-  <p><strong>Asunto.-</strong> Manifestación sobre el origen de los recursos económicos para la operación relacionada con la Unidad <strong>{{cbDesarrolloES}}</strong> - <strong>{{cbUnidadES}}</strong>.</p>
+<div id="pages"></div>
 
-  <p><strong>A quien corresponda:</strong></p>
-  <p>Hago referencia a la adquisición de los derechos de propiedad (la "Operación") de la unidad no. <strong>{{cbUnidadES}}</strong> (la "Unidad") del desarrollo inmobiliario denominado "<strong>{{cbDesarrolloES}}</strong>" ubicado en la ciudad de <strong>{{txtCiudadES}}</strong>, México, el cual es actualmente desarrollado y comercializado por su compañía.</p>
-  <p>Al respecto y derivado de su solicitud, para efectos de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, en este acto manifiesto, bajo protesta de decir verdad, que los recursos económicos o financieros con los que cumpliré con mis obligaciones de pago derivadas de la Operación (los "Recursos Económicos"), son:</p>
-
-  <div class="checks">
-    <div class="check"><span class="box {{orPropios}}"></span>Propios</div>
-    <div class="check"><span class="box {{orTercero}}"></span>De Tercero</div>
-  </div>
-  <div class="grid">
-    <div class="label">[señale nombre/razón social]</div><div class="field">{{orTerceroNombre}}</div>
+<div class="blocks" id="blocks" style="display:none;">
+  <div class="block">
+    <div class="center bold">CARTA DE ORIGEN DE LOS RECURSOS ECONÓMICOS</div>
   </div>
 
-  <p>Los Recursos Económicos son de procedencia lícita y de actos de buena fe; por lo tanto, no están relacionados o vinculados con hechos ilícitos o delitos, ni han sido instrumento, objeto o producto de hechos ilícitos o delitos, ni han sido utilizados o destinados a ocultar o mezclar bienes producto de hechos ilícitos o delitos, no están siendo utilizados en la comisión de hechos ilícitos o delitos por terceros, ni son producto de delitos patrimoniales o de delincuencia organizada. Así, el origen de los Recursos Económicos es el siguiente [marque todas las opciones aplicables]:</p>
+  <div class="block spacer-1"></div>
 
-  <div class="checks">
-    <div class="check"><span class="box {{orAhorros}}"></span>Ahorros</div>
-    <div class="check"><span class="box {{orRentas}}"></span>Rentas</div>
-    <div class="check"><span class="box {{orVentas}}"></span>Ventas</div>
-    <div class="check"><span class="box {{orComisiones}}"></span>Comisiones</div>
-    <div class="check"><span class="box {{orBecas}}"></span>Becas</div>
-    <div class="check"><span class="box {{orSalario}}"></span>Salario</div>
-    <div class="check"><span class="box {{orBono}}"></span>Bono Laboral</div>
-    <div class="check"><span class="box {{orInversiones}}"></span>Inversiones</div>
-    <div class="check"><span class="box {{orVenta}}"></span>Venta de Inmueble</div>
-    <div class="check"><span class="box {{orRifas}}"></span>Rifas, Premios o Concursos</div>
-    <div class="check"><span class="box {{orHerencia}}"></span>Herencia o Legado</div>
-    <div class="check"><span class="box {{orEmpresarial}}"></span>Actividad Empresarial</div>
-    <div class="check"><span class="box {{orJubilacion}}"></span>Jubilación o Afore</div>
-    <div class="check"><span class="box {{orProfesional}}"></span>Actividad Profesional</div>
-    <div class="check"><span class="box {{orActivos}}"></span>Venta de Activos</div>
-    <div class="check"><span class="box {{orFiniquito}}"></span>Finiquito</div>
+  <div class="block small">
+    <span>{{orLugarES}}</span>, a <span>{{orDiaES}}</span> de <span>{{orMesES}}</span> de 20<span>{{orAnioES}}</span>
   </div>
 
-  <div class="grid">
-    <div class="label">Otro, especifique</div><div class="field">{{orOtro}}</div>
+  <div class="block spacer-1"></div>
+
+  <div class="block bold">
+    <span>{{desarrolladoraText}}</span><br>
+    <span>{{cbEmpresaDomicilioES}}</span>
   </div>
 
-  <p class="sig">Atentamente,</p>
-  <div class="line"></div>
-  <p>{{cbNombre1}}</p>
-  <p>Por mi propio derecho</p>
+  <div class="block spacer-1"></div>
+
+  <div class="block">
+    <b>Asunto.-</b> Manifestación sobre el origen de los recursos económicos para la operación relacionada con la Unidad <span class="bold">{{orDesarrolloES}}</span> - <span class="bold">{{orUnidadES}}</span>
+  </div>
+
+  <div class="block spacer-1"></div>
+
+  <div class="block">A quien corresponda:</div>
+
+  <div class="block spacer-1"></div>
+
+  <div class="block justify small">
+    Hago referencia a la adquisición de los derechos de propiedad (la "Operación") de la unidad no. <span class="bold">{{orUnidadBodyES}}</span> (la "Unidad") del desarrollo inmobiliario denominado "<span class="bold">{{orDesarrolloBodyES}}</span>" ubicado en la ciudad de <span class="bold">{{orCiudadES}}</span>, México, el cual es actualmente desarrollado y comercializado por su compañía.
+  </div>
+
+  <div class="block justify small">
+    Al respecto y derivado de su solicitud, para efectos de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, en este acto manifiesto, bajo protesta de decir verdad, que los recursos económicos o financieros con los que cumpliré con mis obligaciones de pago derivadas de la Operación (los "Recursos Económicos"), son:
+  </div>
+
+  <div class="block">
+    <table class="table">
+      <tr>
+        <td width="20%">Propios</td>
+        <td width="5%"><span class="circle {{orPropios}}"></span></td>
+        <td width="20%">De Tercero</td>
+        <td width="5%"><span class="circle {{orTercero}}"></span></td>
+        <td width="50%" style="vertical-align:bottom;"><span class="line">{{orTerceroNombre}}</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="block justify small">
+    Los Recursos Económicos son de procedencia lícita y de actos de buena fe; por lo tanto, no están relacionados o vinculados con hechos ilícitos o delitos, ni han sido instrumento, objeto o producto de hechos ilícitos o delitos, ni han sido utilizados o destinados a ocultar o mezclar bienes producto de hechos ilícitos o delitos, no están siendo utilizados en la comisión de hechos ilícitos o delitos por terceros, ni son producto de delitos patrimoniales o de delincuencia organizada. Así, el origen de los Recursos Económicos es el siguiente [marque todas las opciones aplicables]:
+  </div>
+
+  <div class="block">
+    <table class="table">
+      <tr><td>Ahorros</td><td width="30"><span class="circle {{orAhorros}}"></span></td><td>Rentas</td><td width="30"><span class="circle {{orRentas}}"></span></td></tr>
+      <tr><td>Ventas</td><td><span class="circle {{orVentas}}"></span></td><td>Comisiones</td><td><span class="circle {{orComisiones}}"></span></td></tr>
+      <tr><td>Becas</td><td><span class="circle {{orBecas}}"></span></td><td>Salario</td><td><span class="circle {{orSalario}}"></span></td></tr>
+      <tr><td>Bono Laboral</td><td><span class="circle {{orBono}}"></span></td><td>Inversiones</td><td><span class="circle {{orInversiones}}"></span></td></tr>
+      <tr><td>Venta de Inmueble</td><td><span class="circle {{orVenta}}"></span></td><td>Rifas, Premios o Concursos</td><td><span class="circle {{orRifas}}"></span></td></tr>
+      <tr><td>Herencia o Legado</td><td><span class="circle {{orHerencia}}"></span></td><td>Actividad Empresarial</td><td><span class="circle {{orEmpresarial}}"></span></td></tr>
+      <tr><td>Jubilación o Afore</td><td><span class="circle {{orJubilacion}}"></span></td><td>Actividad Profesional</td><td><span class="circle {{orProfesional}}"></span></td></tr>
+      <tr><td>Venta de Activos</td><td><span class="circle {{orActivos}}"></span></td><td>Finiquito</td><td><span class="circle {{orFiniquito}}"></span></td></tr>
+      <tr><td>Otro, especifique</td><td><span class="circle {{orOtroCheck}}"></span></td><td colspan="2"><span class="line">{{orOtro}}</span></td></tr>
+    </table>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block center">
+    Atentamente
+    <div class="spacer-2"></div>
+    <div class="line" style="width:60%; margin:auto;"></div>
+    <span class="bold">{{cbNombre1}}</span><br>
+    Por mi propio derecho
+  </div>
+</div>
+
+<script>
+(function paginate() {
+  const blocks = Array.from(document.querySelectorAll('#blocks .block'));
+  const pages = document.getElementById('pages');
+
+  function createPage() {
+    const page = document.createElement('div');
+    page.className = 'page';
+    const content = document.createElement('div');
+    content.className = 'content';
+    const footer = document.createElement('div');
+    footer.className = 'footer';
+    footer.innerHTML = `
+      <div class="footer-left">FR-VEN-26 OR N</div>
+      <div class="footer-center">version 01</div>
+      <div class="footer-right">0</div>
+    `;
+    page.appendChild(content);
+    page.appendChild(footer);
+    pages.appendChild(page);
+    return { page, content };
+  }
+
+  let current = createPage();
+  for (const block of blocks) {
+    current.content.appendChild(block);
+    if (current.content.scrollHeight > current.content.clientHeight) {
+      current.content.removeChild(block);
+      current = createPage();
+      current.content.appendChild(block);
+    }
+  }
+
+  const pageEls = pages.querySelectorAll('.page');
+  pageEls.forEach((p, i) => {
+    const num = p.querySelector('.footer-right');
+    if (num) num.textContent = String(i + 1);
+  });
+})();
+</script>
+
 </body>
 </html>

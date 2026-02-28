@@ -1,64 +1,234 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FR-VEN-19 Beneficiario Controlador PF - Español</title>
-  <style>
-    @page { size: Letter; margin: 14mm; }
-    body { font-family: "Times New Roman", serif; font-size: 11pt; line-height: 1.3; color: #111; }
-    h1,h2 { margin: 0 0 8px; }
-    h1 { text-align:center; font-size: 14pt; }
-    p { margin: 0 0 8px; text-align: justify; }
-    .field { border-bottom: 1px solid #111; min-height: 16px; padding: 2px 3px; }
-    .grid { display:grid; grid-template-columns: 42% 58%; gap: 6px 10px; margin-top: 8px; }
-    .label { font-weight:700; }
-    .yn { display:flex; gap: 24px; margin: 8px 0; }
-    .box { width: 12px; height: 12px; border: 1px solid #111; display:inline-flex; align-items:center; justify-content:center; margin-right:6px; }
-    .box.checked::after { content:"X"; font-size:10px; }
-    .sig { margin-top: 28px; }
-    .line { border-bottom: 1px solid #111; height: 24px; margin-top: 12px; }
-  </style>
+<meta charset="UTF-8">
+<title>FR-VEN-19 Beneficiario Controlador PF - Nacional</title>
+<style>
+@page { size: Letter; margin: 0; }
+body {
+  margin: 0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 10pt;
+  background: #fff;
+}
+#pages { width: 216mm; margin: 0 auto; }
+.page {
+  width: 216mm;
+  height: 279mm;
+  box-sizing: border-box;
+  padding: 16mm;
+  position: relative;
+  background: #fff;
+  page-break-after: always;
+}
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("{{watermarkUrl}}");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%;
+  opacity: 0.12;
+  pointer-events: none;
+}
+.page::after {
+  content: "";
+  position: absolute;
+  left: 8mm; right: 8mm; top: 8mm; bottom: 8mm;
+  border: 0.5pt solid #000;
+  pointer-events: none;
+}
+.content {
+  position: relative;
+  z-index: 1;
+  height: calc(279mm - 32mm - 22mm);
+  overflow: hidden;
+}
+.footer {
+  position: absolute;
+  left: 8mm;
+  right: 8mm;
+  bottom: 8mm;
+  font-size: 8pt;
+  display: flex;
+  align-items: center;
+}
+.footer .footer-left { width: 20%; }
+.footer .footer-center { width: 60%; text-align: center; }
+.footer .footer-right { width: 20%; text-align: right; font-size: 9pt; font-weight: bold; }
+
+.center { text-align: center; }
+.bold { font-weight: bold; }
+.justify { text-align: justify; }
+.small { font-size: 9pt; }
+.spacer-1 { height: 12px; }
+.spacer-2 { height: 20px; }
+
+.line {
+  width: 100%;
+  display: block;
+  min-height: 16px;
+  line-height: 16px;
+  padding-top: 1px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #000;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.circle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 10px; height: 10px; border: 1px solid #000; border-radius: 50%;
+  margin-left: 4px; vertical-align: middle; box-sizing: border-box;
+}
+.circle.checked { background-color: #000; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.table td { padding: 2px 3px; vertical-align: bottom; }
+.label { width: 42%; font-weight: bold; }
+
+.blocks .block { margin-bottom: 10px; break-inside: avoid; }
+.blocks .block:last-child { margin-bottom: 0; }
+</style>
 </head>
-<body class="{{bodyClass}}">
-  {{controls}}
-  <h1>CARTA DE BENEFICIARIO CONTROLADOR</h1>
-  <h1 style="font-size:12pt;">PERSONA FÍSICA</h1>
+<body>
 
-  <p><strong>{{cbLugarES}}</strong>, a <strong>{{cbDiaES}}</strong> de <strong>{{cbMesES}}</strong> de <strong>20{{cbAnioES}}</strong></p>
-  <p><strong>{{desarrolladoraText}}</strong><br>{{cbEmpresaDomicilioES}}</p>
-  <p><strong>Asunto.-</strong> Manifestación sobre la existencia de Beneficiario Controlador en la operación relacionada con la Unidad <strong>{{cbDesarrolloES}}</strong> - <strong>{{cbUnidadES}}</strong>.</p>
-  <p><strong>A quien corresponda:</strong></p>
-  <p>Al respecto y derivado de su solicitud, para efectos de la fracción III del artículo 18, así como lo estipulado en los artículos 19 y 21 de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita (la "Ley PLD"), en este acto manifiesto, bajo protesta de decir verdad, que declaro que la persona cuyos datos se señalan más adelante será quien se beneficie de la presente Operación y/o de la Unidad, teniendo este último, por lo tanto, el carácter de Beneficiario Controlador (según dicho término se define en la fracción III del artículo 3º de la Ley PLD), y que yo, el suscrito, actúo en la presente Operación y en los contratos relacionados con, o derivados de, la misma, en representación de los intereses y beneficios de dicho Beneficiario Controlador.</p>
-  <p><strong>Nota:</strong> El Beneficiario Controlador es la persona física o grupo de personas físicas que: a) Directa o por medio de alguna persona Cliente o Usuaria obtiene, en última instancia, el beneficio de goce, uso, disfrute, aprovechamiento o disposición del bien o servicio derivado de la realización de un acto u operación con quien realice una Actividad Vulnerable o b) Ejerce el control efectivo en última instancia de aquella persona moral que, en su carácter de Cliente o Usuaria, lleve a cabo actos u operaciones con quien realice una Actividad Vulnerable, así como las personas por cuenta de quienes celebra alguno de ellos.</p>
+<div id="pages"></div>
 
-  <p>En este acto manifiesto, bajo protesta de decir verdad y conociendo las penas en que incurren quienes declaran falsamente, que tengo conocimiento de que en la presente operación:</p>
-  <div class="yn">
-    <div><span class="box {{cbExisteyes}}"></span>Sí existe</div>
-    <div><span class="box {{cbExisteno}}"></span>No existe</div>
+<div class="blocks" id="blocks" style="display:none;">
+  <div class="block">
+    <div class="center bold">
+      CARTA DE BENEFICIARIO CONTROLADOR<br>
+      PERSONA FÍSICA
+    </div>
   </div>
 
-  <p>En caso de respuesta afirmativa, la persona cuyos datos se señalan más adelante será quien se beneficie de la presente Operación y/o de la Unidad, que yo, el(la) suscrito(a), actúo en la presente Operación y en los contratos relacionados con, o derivados de, la misma, en representación de los intereses y beneficios de dicho Beneficiario Controlador. Para tales efectos, adjunto a la presente la documentación oficial que identifica plenamente al Beneficiario Controlador.</p>
+  <div class="block spacer-2"></div>
 
-  <h2 style="font-size:12pt; margin-top:10px;">Datos del Beneficiario Controlador</h2>
-  <div class="grid">
-    <div class="label">Nombre Completo</div><div class="field">{{cbNombre}}</div>
-    <div class="label">Fecha de Nacimiento</div><div class="field">{{cbFechaNacimiento}}</div>
-    <div class="label">Nacionalidad</div><div class="field">{{cbNacionalidad}}</div>
-    <div class="label">RFC o CURP</div><div class="field">{{cbRFC}}</div>
-    <div class="label">Dirección</div><div class="field">{{cbDireccion}}</div>
-    <div class="label">Tipo, No. Identificación y Autoridad emisora</div><div class="field">{{cbID}}</div>
-    <div class="label">Estado Civil (si aplica)</div><div class="field">{{cbEstadoCivil}}</div>
-    <div class="label">No. de Teléfono</div><div class="field">{{cbTelefono}}</div>
-    <div class="label">Correo Electrónico</div><div class="field">{{cbEmail}}</div>
+  <div class="block small">
+    <span>{{cbLugarES}}</span>, a <span>{{cbDiaES}}</span> de <span>{{cbMesES}}</span> de 20<span>{{cbAnioES}}</span>
   </div>
 
-  <p style="margin-top:10px;">Asimismo, en este acto manifiesto que la empresa me ha informado de los alcances de la figura y concepto de Beneficiario Controlador, y que se me ha explicado y he entendido las disposiciones y requisitos de la Ley para con dicha figura.</p>
-  <p>Declaro, bajo protesta de decir verdad, que la información proporcionada es verídica y que he identificado correctamente al Beneficiario Controlador conforme a lo establecido por la legislación aplicable. Me comprometo a notificar por escrito cualquier cambio respecto de esta información.</p>
+  <div class="block spacer-1"></div>
 
-  <p class="sig">Atentamente,</p>
-  <div class="line"></div>
-  <p>{{cbNombre1}}</p>
-  <p>Por mi propio derecho</p>
+  <div class="block bold">
+    <span>{{desarrolladoraText}}</span><br>
+    <span>{{cbEmpresaDomicilioES}}</span>
+  </div>
+
+  <div class="block spacer-1"></div>
+
+  <div class="block">
+    <b>Asunto.-</b> Manifestación sobre la existencia de Beneficiario Controlador en la operación relacionada con la Unidad <span class="bold">{{cbDesarrolloES}}</span> - <span class="bold">{{cbUnidadES}}</span>
+  </div>
+
+  <div class="block spacer-1"></div>
+
+  <div class="block">A quien corresponda:</div>
+
+  <div class="block spacer-1"></div>
+
+  <div class="block justify small">
+    Al respecto y derivado de su solicitud, para efectos de la fracción III del artículo 18, así como lo estipulado en los artículos 19 y 21 de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita (la "Ley PLD"), en este acto manifiesto, bajo protesta de decir verdad, que declaro que la persona cuyos datos se señalan más adelante será quien se beneficie de la presente Operación y/o de la Unidad, teniendo este último, por lo tanto, el carácter de Beneficiario Controlador (según dicho término se define en la fracción III del artículo 3º de la Ley PLD), y que yo, el suscrito, actúo en la presente Operación y en los contratos relacionados con, o derivados de, la misma, en representación de los intereses y beneficios de dicho Beneficiario Controlador.
+  </div>
+
+  <div class="block justify small">
+    Nota: El Beneficiario Controlador es la persona física o grupo de personas físicas que: a) Directa o por medio de alguna persona Cliente o Usuaria obtiene, en última instancia, el beneficio de goce, uso, disfrute, aprovechamiento o disposición del bien o servicio derivado de la realización de un acto u operación con quien realice una Actividad Vulnerable o b) Ejerce el control efectivo en última instancia de aquella persona moral que, en su carácter de Cliente o Usuaria, lleve a cabo actos u operaciones con quien realice una Actividad Vulnerable, así como las personas por cuenta de quienes celebra alguno de ellos.
+  </div>
+
+  <div class="block small">
+    En este acto manifiesto, bajo protesta de decir verdad y conociendo las penas en que incurren quienes declaran falsamente, que tengo conocimiento de que en la presente operación:
+  </div>
+
+  <div class="block">
+    <table class="table">
+      <tr>
+        <td>Existe Beneficiario Controlador:</td>
+        <td>Sí <span class="circle {{cbExisteyes}}"></span></td>
+        <td>No <span class="circle {{cbExisteno}}"></span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="block justify small">
+    En caso de respuesta afirmativa, la persona cuyos datos se señalan más adelante será quien se beneficie de la presente Operación y/o de la Unidad, que yo, el(la) suscrito(a), actúo en la presente Operación y en los contratos relacionados con, o derivados de, la misma, en representación de los intereses y beneficios de dicho Beneficiario Controlador. Para tales efectos, adjunto a la presente la documentación oficial que identifica plenamente al Beneficiario Controlador.
+  </div>
+
+  <div class="block bold">Datos del Beneficiario Controlador:</div>
+
+  <div class="block">
+    <table class="table">
+      <tr><td class="label">Nombre Completo:</td><td><span class="line">{{cbNombre}}</span></td></tr>
+      <tr><td class="label">Fecha de Nacimiento:</td><td><span class="line">{{cbFechaNacimiento}}</span></td></tr>
+      <tr><td class="label">Nacionalidad:</td><td><span class="line">{{cbNacionalidad}}</span></td></tr>
+      <tr><td class="label">RFC o CURP:</td><td><span class="line">{{cbRFC}}</span></td></tr>
+      <tr><td class="label">Dirección:</td><td><span class="line">{{cbDireccion}}</span></td></tr>
+      <tr><td class="label">Tipo, No. Identificación y Autoridad emisora:</td><td><span class="line">{{cbID}}</span></td></tr>
+      <tr><td class="label">Estado Civil (si aplica):</td><td><span class="line">{{cbEstadoCivil}}</span></td></tr>
+      <tr><td class="label">No. de Teléfono:</td><td><span class="line">{{cbTelefono}}</span></td></tr>
+      <tr><td class="label">Correo Electrónico:</td><td><span class="line">{{cbEmail}}</span></td></tr>
+    </table>
+  </div>
+
+  <div class="block justify small">
+    Asimismo, en este acto manifiesto que la empresa me ha informado de los alcances de la figura y concepto de Beneficiario Controlador, y que se me ha explicado y he entendido las disposiciones y requisitos de la Ley para con dicha figura.
+  </div>
+
+  <div class="block justify small">
+    Declaro, bajo protesta de decir verdad, que la información proporcionada es verídica y que he identificado correctamente al Beneficiario Controlador conforme a lo establecido por la legislación aplicable. Me comprometo a notificar por escrito cualquier cambio respecto de esta información.
+  </div>
+
+  <div class="block spacer-1"></div>
+
+  <div class="block center">
+    <div class="bold">Atentamente,</div>
+    <div class="spacer-2"></div>
+    <div class="line" style="width:45%; margin: 0 auto;"></div>
+    <div class="bold">{{cbNombre1}}</div>
+    <div class="bold">Por mi propio derecho</div>
+  </div>
+</div>
+
+<script>
+(function paginate() {
+  const blocks = Array.from(document.querySelectorAll('#blocks .block'));
+  const pages = document.getElementById('pages');
+
+  function createPage() {
+    const page = document.createElement('div');
+    page.className = 'page';
+    const content = document.createElement('div');
+    content.className = 'content';
+    const footer = document.createElement('div');
+    footer.className = 'footer';
+    footer.innerHTML = `
+      <div class="footer-left">FR-VEN-19 BC PF N</div>
+      <div class="footer-center">version 01</div>
+      <div class="footer-right">0</div>
+    `;
+    page.appendChild(content);
+    page.appendChild(footer);
+    pages.appendChild(page);
+    return { page, content };
+  }
+
+  let current = createPage();
+  for (const block of blocks) {
+    current.content.appendChild(block);
+    if (current.content.scrollHeight > current.content.clientHeight) {
+      current.content.removeChild(block);
+      current = createPage();
+      current.content.appendChild(block);
+    }
+  }
+
+  const pageEls = pages.querySelectorAll('.page');
+  pageEls.forEach((p, i) => {
+    const num = p.querySelector('.footer-right');
+    if (num) num.textContent = String(i + 1);
+  });
+})();
+</script>
+
 </body>
 </html>

@@ -5,117 +5,318 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FR-VEN-35 Aviso de Privacidad - Español - Datos Biométricos</title>
   <style>
-    @page { size: Letter; margin: 12mm; }
-    body { font-family: "Times New Roman", serif; font-size: 10.5pt; line-height: 1.28; color: #111; }
-    h1 { text-align:center; font-size: 15pt; margin:0 0 8px; }
-    h2 { font-size: 11.5pt; margin: 10px 0 6px; }
-    h3 { font-size: 10.8pt; margin: 8px 0 4px; }
-    p { margin: 0 0 7px; text-align: justify; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-    th, td { border: 1px solid #111; padding: 4px 6px; vertical-align: top; }
-    .field { border-bottom: 1px solid #111; min-height: 16px; padding: 2px 3px; }
-    .grid { display:grid; grid-template-columns: 40% 60%; gap: 6px 10px; }
-    .label { font-weight:700; }
-    .check { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
-    .box { width: 11px; height: 11px; border:1px solid #111; display:inline-flex; align-items:center; justify-content:center; }
-    .box.checked::after { content:"X"; font-size:9px; }
-    .page-break { page-break-before: always; }
+    @page { size: Letter; margin: 0; }
+    :root {
+      --page-w: 216mm;
+      --page-h: 279mm;
+      --pad: 16mm;
+      --border-inset: 8mm;
+      --footer-space: 22mm;
+      --ink: #111;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: var(--ink);
+      font-family: "Times New Roman", Times, serif;
+      font-size: 10pt;
+      line-height: 1.24;
+    }
+
+    #pages { width: var(--page-w); margin: 0 auto; }
+    .page {
+      width: var(--page-w);
+      height: var(--page-h);
+      padding: var(--pad);
+      position: relative;
+      background: #fff;
+      page-break-after: always;
+      overflow: hidden;
+    }
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: url('{{watermarkUrl}}') center/60% no-repeat;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+    .page::after {
+      content: "";
+      position: absolute;
+      left: var(--border-inset);
+      right: var(--border-inset);
+      top: var(--border-inset);
+      bottom: var(--border-inset);
+      border: 0.5pt solid #000;
+      pointer-events: none;
+    }
+    .content {
+      position: relative;
+      z-index: 1;
+      height: calc(var(--page-h) - (var(--pad) * 2) - var(--footer-space));
+      overflow: hidden;
+    }
+    .footer {
+      position: absolute;
+      left: var(--border-inset);
+      right: var(--border-inset);
+      bottom: var(--border-inset);
+      display: flex;
+      align-items: center;
+      font-size: 8pt;
+      z-index: 1;
+    }
+    .footer .l { width: 28%; }
+    .footer .c { width: 44%; text-align: center; }
+    .footer .r { width: 28%; text-align: right; font-weight: 700; font-size: 9pt; }
+
+    .header-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      font-weight: 700;
+      text-align: center;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .small { font-size: 9pt; }
+    h2 {
+      font-size: 10.5pt;
+      margin: 8px 0 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    h3 {
+      font-size: 10pt;
+      margin: 7px 0 3px;
+      font-weight: 700;
+    }
+    p { margin: 0 0 5px; text-align: justify; }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin: 6px 0;
+    }
+    .table th, .table td {
+      border: 1px solid #000;
+      padding: 3px 4px;
+      vertical-align: top;
+    }
+    .table th { font-weight: 700; }
+
+    .checkbox {
+      width: 11px;
+      height: 11px;
+      border: 1px solid #000;
+      display: inline-block;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .checkbox.checked { background: #000; }
+
+    .fields { font-size: 9.5pt; margin-top: 8px; }
+    .field-line {
+      border-bottom: 1px solid #000;
+      min-height: 16px;
+      margin: 3px 0 8px;
+      padding-bottom: 1px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .signature {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 9pt;
+    }
+    .signature-line {
+      margin: 12px auto 6px;
+      border-bottom: 1px solid #000;
+      width: 60%;
+      height: 16px;
+    }
+
+    #blocks { display: none; }
+    .block { margin-bottom: 8px; break-inside: avoid; }
+    .block:last-child { margin-bottom: 0; }
   </style>
 </head>
-<body class="{{bodyClass}}">
-  {{controls}}
-  <h1>AVISO DE PRIVACIDAD</h1>
+<body>
+  <div id="pages"></div>
 
-  <h2>1. DATOS DE LA RESPONSABLE</h2>
-  <p>La sociedad <strong>{{desarrolladoraText}}</strong> y/o sus sociedades controladoras, subsidiarias o afiliadas bajo su control común (en conjunto denominadas como "GRUPO SIMCA"), con domicilio común en <strong>{{cbEmpresaDomicilioES}}</strong> y sitios web comunes www.simca.mx y www.desarrollossimca.com, son empresas dedicadas a la construcción, promoción, comercialización y/o venta de unidades habitacionales (las "Unidades") dentro de desarrollos inmobiliarios en los Estados Unidos Mexicanos (las "Actividades Empresariales"). Como consecuencia de sus Actividades Empresariales, GRUPO SIMCA recaba y/o tiene acceso a los datos personales que se señalan en el numeral 4 de este Aviso, propiedad de particulares que están interesados en adquirir, o bien, han iniciado el proceso de adquisición de una o varias Unidades (los "Datos Personales"). En el caso específico, GRUPO SIMCA ha recibido o recibirá los Datos Personales de la persona física o moral cuyo nombre/razón social y firma aparecen al calce del presente Aviso (el "Titular"), con quien GRUPO SIMCA ha iniciado o iniciará los trámites para la adquisición de una Unidad (la "Operación").</p>
+  <div id="blocks">
+    <div class="block">
+      <div class="header-row"><div>AVISO DE PRIVACIDAD</div></div>
+    </div>
 
-  <h2>2. RESPONSABLE DE LOS DATOS PERSONALES</h2>
-  <p>En cumplimiento de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (la "Ley de Datos Personales"), GRUPO SIMCA será el responsable de la obtención, acceso, uso, manejo, aprovechamiento, transferencia, disposición, divulgación o almacenamiento (acciones que, en conjunto, serán denominadas como "Tratamiento" para efectos de este Aviso) de los Datos Personales del Titular.</p>
+    <div class="block small">
+      <h2>1. DATOS DE LA RESPONSABLE</h2>
+      <p>La sociedad <span>{{desarrolladoraText}}</span> y/o sus sociedades controladoras, subsidiarias o afiliadas bajo su control común (en conjunto denominadas como "GRUPO SIMCA"), con domicilio común en <span>{{cbEmpresaDomicilioES}}</span> y sitios web comunes www.simca.mx y www.desarrollossimca.com, son empresas dedicadas a la construcción, promoción, comercialización y/o venta de unidades habitacionales (las "Unidades") dentro de desarrollos inmobiliarios en los Estados Unidos Mexicanos (las "Actividades Empresariales"). Como consecuencia de sus Actividades Empresariales, GRUPO SIMCA recaba y/o tiene acceso a los datos personales que se señalan en el numeral 4 de este Aviso, propiedad de particulares que están interesados en adquirir, o bien, han iniciado el proceso de adquisición de una o varias Unidades (los "Datos Personales"). En el caso específico, GRUPO SIMCA ha recibido o recibirá los Datos Personales de la persona física o moral cuyo nombre/razón social y firma aparecen al calce del presente Aviso (el "Titular"), con quien GRUPO SIMCA ha iniciado o iniciará los trámites para la adquisición de una Unidad (la "Operación").</p>
+    </div>
 
-  <h2>3. COMPROMISO DE CONFIDENCIALIDAD</h2>
-  <p>GRUPO SIMCA se compromete con el Titular a proteger sus Datos Personales en los términos de la Ley de Datos Personales y del presente Aviso y, por consiguiente, salvo las Transferencias Autorizadas (según se define en el numeral 7 del presente Aviso) a no transferir a ningún Tercero (según se define en la fracción XVII. del artículo 2º de la Ley de Datos Personales, en el entendido de que no se considerarán "terceros" los empleados, accionistas, directores, gerentes, apoderados, asesores y demás representantes de GRUPO SIMCA) los Datos Personales del Titular [incluidos los Datos Financieros y los Datos Sensibles (según dichos términos se definen respectivamente en los numerales 4.1.1 y 4.1.2 del presente Aviso)] sin el consentimiento previo del Titular. Además, GRUPO SIMCA se compromete a que en el Tratamiento de Datos Personales del Titular observará los principios de licitud, consentimiento, información, calidad, finalidad, lealtad, proporcionalidad y responsabilidad.</p>
+    <div class="block small">
+      <h2>2. RESPONSABLE DE LOS DATOS PERSONALES</h2>
+      <p>En cumplimiento de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (la "Ley de Datos Personales"), GRUPO SIMCA será el responsable de la obtención, acceso, uso, manejo, aprovechamiento, transferencia, disposición, divulgación o almacenamiento (acciones que, en conjunto, serán denominadas como "Tratamiento" para efectos de este Aviso) de los Datos Personales del Titular.</p>
+    </div>
 
-  <h2>4. DATOS PERSONALES Y LA FINALIDAD DE SU TRATAMIENTO</h2>
-  <h3>4.1. Datos Personales</h3>
-  <p>Los Datos Personales que el Titular ha proporcionado o proporcionará a GRUPO SIMCA con motivo de la Operación serán, enunciativa mas no limitativamente, los siguientes:</p>
+    <div class="block small">
+      <h2>3. COMPROMISO DE CONFIDENCIALIDAD</h2>
+      <p>GRUPO SIMCA se compromete con el Titular a proteger sus Datos Personales en los términos de la Ley de Datos Personales y del presente Aviso y, por consiguiente, salvo las Transferencias Autorizadas (según se define en el numeral 7 del presente Aviso) a no transferir a ningún Tercero (según se define en la fracción XVII. del artículo 2º de la Ley de Datos Personales, en el entendido de que no se considerarán "terceros" los empleados, accionistas, directores, gerentes, apoderados, asesores y demás representantes de GRUPO SIMCA) los Datos Personales del Titular [incluidos los Datos Financieros y los Datos Sensibles (según dichos términos se definen respectivamente en los numerales 4.1.1 y 4.1.2 del presente Aviso)] sin el consentimiento previo del Titular. Además, GRUPO SIMCA se compromete a que en el Tratamiento de Datos Personales del Titular observará los principios de licitud, consentimiento, información, calidad, finalidad, lealtad, proporcionalidad y responsabilidad.</p>
+    </div>
 
-  <table>
-    <tr><th>Persona Física</th><th>Persona Moral</th></tr>
-    <tr><td>i. Nombre completo</td><td>i. Razón social</td></tr>
-    <tr><td>ii. Edad</td><td>ii. Nombre de apoderado</td></tr>
-    <tr><td>iii. Estado civil (régimen patrimonial en caso de ser casado)</td><td>iii. Acta constitutiva y poder</td></tr>
-    <tr><td>iv. Dirección: calle, número exterior, número interior (en su caso), colonia, código postal, estado, municipio o alcaldía</td><td></td></tr>
-    <tr><td>v. Teléfono</td><td></td></tr>
-    <tr><td>vi. Correo electrónico</td><td></td></tr>
-    <tr><td>vii. Datos biométricos para la firma de contratos como huellas dactilares, reconocimiento facial, entre otros.</td><td></td></tr>
-  </table>
+    <div class="block small">
+      <h2>4. DATOS PERSONALES Y LA FINALIDAD DE SU TRATAMIENTO</h2>
+      <h3>4.1. Datos Personales</h3>
+      <p>Los Datos Personales que el Titular ha proporcionado o proporcionará a GRUPO SIMCA con motivo de la Operación serán, enunciativa mas no limitativamente, los siguientes:</p>
 
-  <h3>4.1.1. Datos Financieros</h3>
-  <p>Cuando el Titular realice el pago de la totalidad de la Operación o cualquier parte de la misma mediante tarjeta de crédito o débito (la "Tarjeta"), proporcionará a GRUPO SIMCA los datos que se señalan a continuación en relación con la Tarjeta (los "Datos Financieros"):</p>
-  <p>i. Número de tarjeta de crédito o débito<br>ii. Institución bancaria que emite la Tarjeta<br>iii. Nombre del titular de la Tarjeta<br>iv. Fecha de vencimiento de la Tarjeta<br>v. Código de seguridad de Tarjeta</p>
+      <table class="table">
+        <thead><tr><th>Persona Física</th><th>Persona Moral</th></tr></thead>
+        <tbody>
+          <tr><td>i. Nombre completo</td><td>i. Razón social</td></tr>
+          <tr><td>ii. Edad</td><td>ii. Nombre de apoderado</td></tr>
+          <tr><td>iii. Estado civil (régimen patrimonial en caso de ser casado)</td><td>iii. Acta constitutiva y poder</td></tr>
+          <tr><td>iv. Dirección: calle, número exterior, número interior (en su caso), colonia, código postal, estado, municipio o alcaldía</td><td></td></tr>
+          <tr><td>v. Teléfono</td><td></td></tr>
+          <tr><td>vi. Correo electrónico</td><td></td></tr>
+          <tr><td>vii. Datos biométricos para la firma de contratos como huellas dactilares, reconocimiento facial, entre otros.</td><td></td></tr>
+        </tbody>
+      </table>
 
-  <h3>4.1.2. Datos Personales Sensibles</h3>
-  <p>El Titular, persona física, reconoce y acepta que, como consecuencia de la Operación, es posible, pero poco probable, que GRUPO SIMCA le solicite información y/o documentos que puedan contener datos personales sensibles que puedan revelar aspectos como origen racial o étnico, estado de salud presente y futuro, información genética, creencias religiosas, filosóficas y/o morales, afiliación sindical, opiniones políticas y/o preferencia sexual (los "Datos Sensibles"). En tal caso, el Titular autoriza expresamente a GRUPO SIMCA al Tratamiento de los Datos Personales Sensibles únicamente para los fines que se señalan en el numeral 4.2 siguiente y, consecuentemente, cualquier transferencia de los Datos Sensibles, distinta de las Transferencias Autorizadas, deberá previamente autorizada por escrito por el Titular.</p>
+      <h3>4.1.1. Datos Financieros</h3>
+      <p>Cuando el Titular realice el pago de la totalidad de la Operación o cualquier parte de la misma mediante tarjeta de crédito o débito (la "Tarjeta"), proporcionará a GRUPO SIMCA los datos que se señalan a continuación en relación con la Tarjeta (los "Datos Financieros"):</p>
+      <p>i. Número de tarjeta de crédito o débito<br>ii. Institución bancaria que emite la Tarjeta<br>iii. Nombre del titular de la Tarjeta<br>iv. Fecha de vencimiento de la Tarjeta<br>v. Código de seguridad de Tarjeta</p>
 
-  <h3>4.2. Finalidad del Tratamiento de los Datos Personales</h3>
-  <p>En cumplimiento de la fracción II del artículo 15 de la Ley de Datos Personales, en este acto GRUPO SIMCA informa al Titular que la finalidad con la que realizará el Tratamiento de sus Datos Personales será primordialmente en relación con la Operación y/o la Unidad de conformidad con lo siguiente:</p>
-  <p><strong>4.2.1. Finalidades Primarias</strong><br>i. Dar seguimiento a las solicitudes de información del Titular.<br>ii. Realizar y enviar cotizaciones y propuestas al Titular.<br>iii. Dar cumplimiento a las obligaciones en materia de prevención de lavado de dinero.<br>iv. Elaborar todos los documentos administrativos y legales relacionados con, o derivados de, la Operación y/o la Unidad.<br>v. Dar atención a las solicitudes post venta que realice el Titular.<br>vi. La validación biométrica de identidad para firmar los documentos legales correspondientes a la adquisición de alguna Unidad.</p>
+      <h3>4.1.2. Datos Personales Sensibles</h3>
+      <p>El Titular, persona física, reconoce y acepta que, como consecuencia de la Operación, es posible, pero poco probable, que GRUPO SIMCA le solicite información y/o documentos que puedan contener datos personales sensibles que puedan revelar aspectos como origen racial o étnico, estado de salud presente y futuro, información genética, creencias religiosas, filosóficas y/o morales, afiliación sindical, opiniones políticas y/o preferencia sexual (los "Datos Sensibles"). En tal caso, el Titular autoriza expresamente a GRUPO SIMCA al Tratamiento de los Datos Personales Sensibles únicamente para los fines que se señalan en el numeral 4.2 siguiente y, consecuentemente, cualquier transferencia de los Datos Sensibles, distinta de las Transferencias Autorizadas, deberá previamente autorizada por escrito por el Titular.</p>
+    </div>
 
-  <div class="page-break"></div>
+    <div class="block small">
+      <h3>4.2. Finalidad del Tratamiento de los Datos Personales</h3>
+      <p>En cumplimiento de la fracción II del artículo 15 de la Ley de Datos Personales, en este acto GRUPO SIMCA informa al Titular que la finalidad con la que realizará el Tratamiento de sus Datos Personales será primordialmente en relación con la Operación y/o la Unidad de conformidad con lo siguiente:</p>
 
-  <p><strong>4.2.2. Finalidades Secundarias</strong><br>De manera adicional a las finalidades primarias arriba mencionadas, GRUPO SIMCA utilizará los Datos Personales del Titular para las finalidades secundarias señaladas más abajo, mismas que, si bien no son indispensables para la realización de la Operación, sí permitirán a GRUPO SIMCA, en general, mejorar sus servicios y, en particular, brindarle una mejor atención al Titular. En ese sentido, a continuación el Titular deberá marcar con una cruz si está de acuerdo en que GRUPO SIMCA trate sus Datos Personales para las siguientes finalidades secundarias:</p>
+      <p><b>4.2.1. Finalidades Primarias</b><br>i. Dar seguimiento a las solicitudes de información del Titular.<br>ii. Realizar y enviar cotizaciones y propuestas al Titular.<br>iii. Dar cumplimiento a las obligaciones en materia de prevención de lavado de dinero.<br>iv. Elaborar todos los documentos administrativos y legales relacionados con, o derivados de, la Operación y/o la Unidad.<br>v. Dar atención a las solicitudes post venta que realice el Titular.<br>vi. La validación biométrica de identidad para firmar los documentos legales correspondientes a la adquisición de alguna Unidad.</p>
 
-  <p>i. Solicitar al Titular su evaluación y retroalimentación sobre la Unidad, la Operación y, en general, sobre el servicio y los productos que ofrece GRUPO SIMCA.
-    <span class="check"><span class="box {{solicitarSi}}"></span>SÍ</span>
-    <span class="check"><span class="box {{solicitarNo}}"></span>NO</span>
-  </p>
-  <p>ii. Enviar al Titular promociones y publicidad de nuevos productos y servicios que pudieran ser de su interés.
-    <span class="check"><span class="box {{enviarSi}}"></span>SÍ</span>
-    <span class="check"><span class="box {{enviarNo}}"></span>NO</span>
-  </p>
+      <p><b>4.2.2. Finalidades Secundarias</b><br>De manera adicional a las finalidades primarias arriba mencionadas, GRUPO SIMCA utilizará los Datos Personales del Titular para las finalidades secundarias señaladas más abajo, mismas que, si bien no son indispensables para la realización de la Operación, sí permitirán a GRUPO SIMCA, en general, mejorar sus servicios y, en particular, brindarle una mejor atención al Titular. En ese sentido, a continuación el Titular deberá marcar con una cruz si está de acuerdo en que GRUPO SIMCA trate sus Datos Personales para las siguientes finalidades secundarias:</p>
 
-  <p>La negativa por parte del Titular para el Tratamiento de sus Datos Personales por parte de GRUPO SIMCA para las finalidades secundarias arriba mencionadas no podrá ser motivo para que GRUPO SIMCA se niegue a celebrar la Operación.</p>
+      <p>i. Solicitar al Titular su evaluación y retroalimentación sobre la Unidad, la Operación y, en general, sobre el servicio y los productos que ofrece GRUPO SIMCA.
+      <span class="checkbox {{solicitarSi}}"></span>SÍ
+      <span class="checkbox {{solicitarNo}}"></span>NO</p>
 
-  <h2>5. MEDIOS PARA LIMITAR EL USO O DIVULGACIÓN DE DATOS PERSONALES</h2>
-  <p>En cumplimiento de la fracción IV del artículo 15 de la Ley de Datos Personales, así como en términos de los artículos 18, 19 y 20 de dicho ordenamiento legal, GRUPO SIMCA, considerando para el caso particular el riesgo existente, las posibles consecuencias para el Titular, la sensibilidad de los Datos Personales y el desarrollo tecnológico, ha establecido las medidas de seguridad, administrativas, técnicas y físicas que permiten proteger los Datos Personales del Titular contra daño, pérdida, alteración, destrucción, o bien, contra el uso, acceso o Tratamiento no autorizado. GRUPO SIMCA manifiesta al Titular que dichas medidas de seguridad no son, de manera alguna, menores a las que GRUPO SIMCA ha implementado para el Tratamiento de su propia información. GRUPO SIMCA se compromete ante el Titular a que cualquier vulneración de seguridad ocurrida en cualquier fase del Tratamiento de los Datos Personales del Titular, serán informadas de manera inmediata a éste a efecto de que pueda tomar las medidas correspondientes en la defensa de sus derechos. Finalmente, GRUPO SIMCA garantiza al Titular que tanto GRUPO SIMCA como cualquier Tercero que intervenga en el tratamiento de los Datos Personales del Titular, guardarán la debida confidencialidad respecto de los mismos, aun después de finalizar su relación con el Titular.</p>
+      <p>ii. Enviar al Titular promociones y publicidad de nuevos productos y servicios que pudieran ser de su interés.
+      <span class="checkbox {{enviarSi}}"></span>SÍ
+      <span class="checkbox {{enviarNo}}"></span>NO</p>
 
-  <h2>6. DERECHOS ARCO Y MEDIOS PARA SU EJERCICIO</h2>
-  <p><strong>6.1. Derechos ARCO</strong><br>En cumplimiento de la fracción V del artículo 15 de la Ley de Datos Personales, GRUPO SIMCA hace del conocimiento del Titular que, con respecto al Tratamiento de sus Datos Personales, el Titular tiene los derechos que se señalan a continuación (en conjunto denominados "Derechos ARCO"):</p>
-  <p>i. Derecho de Acceso.<br>ii. Derecho de Rectificación.<br>iii. Derecho de Cancelación.<br>iv. Derecho de Oposición.<br>v. Derecho de Revocación.</p>
+      <p>La negativa por parte del Titular para el Tratamiento de sus Datos Personales por parte de GRUPO SIMCA para las finalidades secundarias arriba mencionadas no podrá ser motivo para que GRUPO SIMCA se niegue a celebrar la Operación.</p>
+    </div>
 
-  <p><strong>6.2. Medios para Ejercer los Derechos ARCO</strong><br>Para el ejercicio de cualesquiera de los Derechos ARCO, el Titular deberá elaborar y enviar a cualquiera de los domicilios de GRUPO SIMCA señalados más adelante, una solicitud por escrito que deberá contener, entre otras cosas, lo siguiente (la "Solicitud"):</p>
-  <p>i. El nombre del Titular, domicilio y correo electrónico para comunicarle la respuesta a su Solicitud.<br>ii. Los documentos que acrediten la identidad o, en su caso, la representación legal del Titular.<br>iii. La descripción clara y precisa de los Datos Personales respecto de los que se busca ejercer alguno de los Derechos ARCO.<br>iv. Cualquier otro elemento o documento que facilite la localización de los Datos Personales.</p>
+    <div class="block small">
+      <h2>5. MEDIOS PARA LIMITAR EL USO O DIVULGACIÓN DE DATOS PERSONALES</h2>
+      <p>En cumplimiento de la fracción IV del artículo 15 de la Ley de Datos Personales, así como en términos de los artículos 18, 19 y 20 de dicho ordenamiento legal, GRUPO SIMCA, considerando para el caso particular el riesgo existente, las posibles consecuencias para el Titular, la sensibilidad de los Datos Personales y el desarrollo tecnológico, ha establecido las medidas de seguridad, administrativas, técnicas y físicas que permiten proteger los Datos Personales del Titular contra daño, pérdida, alteración, destrucción, o bien, contra el uso, acceso o Tratamiento no autorizado. GRUPO SIMCA manifiesta al Titular que dichas medidas de seguridad no son, de manera alguna, menores a las que GRUPO SIMCA ha implementado para el Tratamiento de su propia información. GRUPO SIMCA se compromete ante el Titular a que cualquier vulneración de seguridad ocurrida en cualquier fase del Tratamiento de los Datos Personales del Titular, serán informadas de manera inmediata a éste a efecto de que pueda tomar las medidas correspondientes en la defensa de sus derechos. Finalmente, GRUPO SIMCA garantiza al Titular que tanto GRUPO SIMCA como cualquier Tercero que intervenga en el tratamiento de los Datos Personales del Titular, guardarán la debida confidencialidad respecto de los mismos, aun después de finalizar su relación con el Titular.</p>
+    </div>
 
-  <p><strong>6.3. Datos de Contacto</strong><br>i. Dirección en Mérida: Calle 40 Diagonal, Tablaje 41931, entre Avenida Temozón y Calle 71, Temozón Norte, Código Postal 97302, Mérida, Yucatán, México.<br>i.1. Dirección en Playa del Carmen: Avenida CTM entre 1a y Cozumel, Edificio "Studio One", local 5, Colonia Zazil Ha, Código Postal 77710, Playa del Carmen, Quintana Roo, México.<br>ii. Teléfono: + 52 (999) 926 0888 - Extensión 202.<br>iii. Correo Electrónico: datospersonales@simca.mx.</p>
+    <div class="block small">
+      <h2>6. DERECHOS ARCO Y MEDIOS PARA SU EJERCICIO</h2>
+      <h3>6.1. Derechos ARCO</h3>
+      <p>En cumplimiento de la fracción V del artículo 15 de la Ley de Datos Personales, GRUPO SIMCA hace del conocimiento del Titular que, con respecto al Tratamiento de sus Datos Personales, el Titular tiene los derechos que se señalan a continuación (en conjunto denominados "Derechos ARCO"):</p>
+      <p>i. Derecho de Acceso.<br>ii. Derecho de Rectificación.<br>iii. Derecho de Cancelación.<br>iv. Derecho de Oposición.<br>v. Derecho de Revocación.</p>
 
-  <h2>7. TRANSFERENCIAS AUTORIZADAS</h2>
-  <p>GRUPO SIMCA, sin necesidad de autorización previa por parte del Titular, podrá revelar, divulgar y/o transferir dentro y fuera del país a los Terceros señalados más adelante (únicamente para los fines ahí indicados) los Datos Personales del Titular (con excepción de los Datos Financieros y, en algunos casos, de los Datos Sensibles) (las "Transferencias Autorizadas"):</p>
-  <table>
-    <tr><th>Tercero</th><th>Finalidad</th></tr>
-    <tr><td>Fedatario Público</td><td>Protocolización de los instrumentos legales relacionados con, o derivados de, la Operación.</td></tr>
-    <tr><td>Instituciones Financieras e INFONAVIT</td><td>Trámite de crédito para la Operación.</td></tr>
-    <tr><td>Administrador del Condominio</td><td>Gestión de la administración y operación de la Unidad de acuerdo con el Reglamento del Condominio.</td></tr>
-    <tr><td>SAT</td><td>Cumplimiento de Obligaciones Fiscales.</td></tr>
-    <tr><td>Otras Empresas Inmobiliarias y Socios Comerciales</td><td>Envío de promociones y publicidad al Titular de productos o servicios que pudieran ser de utilidad.</td></tr>
-  </table>
+      <h3>6.2. Medios para Ejercer los Derechos ARCO</h3>
+      <p>Para el ejercicio de cualesquiera de los Derechos ARCO, el Titular deberá elaborar y enviar a cualquiera de los domicilios de GRUPO SIMCA señalados más adelante, una solicitud por escrito que deberá contener, entre otras cosas, lo siguiente (la "Solicitud"):</p>
+      <p>i. El nombre del Titular, domicilio y correo electrónico para comunicarle la respuesta a su Solicitud.<br>ii. Los documentos que acrediten la identidad o, en su caso, la representación legal del Titular.<br>iii. La descripción clara y precisa de los Datos Personales respecto de los que se busca ejercer alguno de los Derechos ARCO.<br>iv. Cualquier otro elemento o documento que facilite la localización de los Datos Personales.</p>
+      <p>Recibida la Solicitud por parte de GRUPO SIMCA, ésta dará respuesta a la misma en un plazo no mayor a 15 (quince) días hábiles a través del correo electrónico que haya sido proporcionado para tal efecto.</p>
 
-  <h2>8. CAMBIOS AL AVISO DE PRIVACIDAD</h2>
-  <p>GRUPO SIMCA se reserva el derecho de modificar en cualquier momento el contenido del presente Aviso de Privacidad. Para que surtan efectos las modificaciones en cuestión, bastará que GRUPO SIMCA envíe la nueva versión del Aviso de Privacidad a la dirección de correo electrónico proporcionada por el Titular.</p>
+      <h3>6.3. Datos de Contacto</h3>
+      <p>i. Dirección en Mérida: Calle 40 Diagonal, Tablaje 41931, entre Avenida Temozón y Calle 71, Temozón Norte, Código Postal 97302, Mérida, Yucatán, México.<br>i.1. Dirección en Playa del Carmen: Avenida CTM entre 1a y Cozumel, Edificio "Studio One", local 5, Colonia Zazil Ha, Código Postal 77710, Playa del Carmen, Quintana Roo, México.<br>ii. Teléfono: + 52 (999) 926 0888 - Extensión 202.<br>iii. Correo Electrónico: datospersonales@simca.mx.</p>
+    </div>
 
-  <h2>9. CONSENTIMIENTO</h2>
-  <p>La rúbrica en todas las páginas del presente Aviso de Privacidad y la firma en la última página del mismo por parte del Titular cuyos datos se asientan a continuación, implican el consentimiento pleno y sin reservas del Titular, a partir de la fecha de su firma, para el Tratamiento de sus Datos Personales de acuerdo con el presente Aviso de Privacidad.</p>
+    <div class="block small">
+      <h2>7. TRANSFERENCIAS AUTORIZADAS</h2>
+      <p>GRUPO SIMCA, sin necesidad de autorización previa por parte del Titular, podrá revelar, divulgar y/o transferir dentro y fuera del país a los Terceros señalados más adelante (únicamente para los fines ahí indicados) los Datos Personales del Titular (con excepción de los Datos Financieros y, en algunos casos, de los Datos Sensibles) (las "Transferencias Autorizadas"):</p>
 
-  <h2>10. DATOS DEL TITULAR</h2>
-  <div class="grid">
-    <div class="label">i. NOMBRE O RAZÓN SOCIAL</div><div class="field">{{spanNombreCompleto}}</div>
-    <div class="label">ii. DIRECCIÓN</div><div class="field">{{spanDomicilio}}</div>
-    <div class="label">iii. TELÉFONO</div><div class="field">{{spanTelefono}}</div>
-    <div class="label">iv. CORREO ELECTRÓNICO</div><div class="field">{{spanEmail}}</div>
-    <div class="label">v. FECHA</div><div class="field">{{spanFecha}}</div>
+      <table class="table">
+        <thead><tr><th>Tercero</th><th>Finalidad</th></tr></thead>
+        <tbody>
+          <tr><td>Fedatario Público</td><td>Protocolización de los instrumentos legales relacionados con, o derivados de, la Operación</td></tr>
+          <tr><td>Instituciones Financieras e INFONAVIT</td><td>Trámite de crédito para la Operación</td></tr>
+          <tr><td>Administrador del Condominio</td><td>Gestión de la administración y operación de la Unidad de acuerdo con el Reglamento del Condominio</td></tr>
+          <tr><td>SAT</td><td>Cumplimiento de Obligaciones Fiscales</td></tr>
+          <tr><td>Otras Empresas Inmobiliarias y Socios Comerciales</td><td>Envío de promociones y publicidad al Titular de productos o servicios que pudieran ser de utilidad</td></tr>
+        </tbody>
+      </table>
+
+      <p>Los Terceros que reciban la información relacionada con los Datos Personales del Titular están obligados a cumplir con lo previsto en este Aviso de Privacidad, así como con la legislación aplicable en México.</p>
+    </div>
+
+    <div class="block small">
+      <h2>8. CAMBIOS AL AVISO DE PRIVACIDAD</h2>
+      <p>GRUPO SIMCA se reserva el derecho de modificar en cualquier momento el contenido del presente Aviso de Privacidad. Para que surtan efectos las modificaciones en cuestión, bastará que GRUPO SIMCA envíe la nueva versión del Aviso de Privacidad a la dirección de correo electrónico proporcionada por el Titular.</p>
+
+      <h2>9. CONSENTIMIENTO</h2>
+      <p>La rúbrica en todas las páginas del presente Aviso de Privacidad y la firma en la última página del mismo por parte del Titular cuyos datos se asientan a continuación, implican el consentimiento pleno y sin reservas del Titular, a partir de la fecha de su firma, para el Tratamiento de sus Datos Personales de acuerdo con el presente Aviso de Privacidad.</p>
+    </div>
+
+    <div class="block">
+      <div class="small bold" style="text-align:center;">10. DATOS DEL TITULAR:</div>
+      <div class="fields">
+        <div>i. NOMBRE O RAZÓN SOCIAL:</div>
+        <div class="field-line">{{spanNombreCompleto}}</div>
+        <div>ii. DIRECCIÓN:</div>
+        <div class="field-line">{{spanDomicilio}}</div>
+        <div>iii. TELÉFONO:</div>
+        <div class="field-line">{{spanTelefono}}</div>
+        <div>iv. CORREO ELECTRÓNICO:</div>
+        <div class="field-line">{{spanEmail}}</div>
+        <div>v. FECHA:</div>
+        <div class="field-line">{{spanFecha}}</div>
+      </div>
+
+      <div class="signature">
+        <div class="bold">FIRMA DE CONFORMIDAD</div>
+        <div class="signature-line"></div>
+        <div>Por su Propio Derecho</div>
+      </div>
+    </div>
   </div>
 
-  <p style="margin-top:16px;"><strong>FIRMA DE CONFORMIDAD</strong></p>
-  <div class="field" style="min-height:26px;"></div>
-  <p style="font-size:10pt;">Por su Propio Derecho</p>
+  <script>
+    (function paginate() {
+      const sourceBlocks = Array.from(document.querySelectorAll('#blocks .block'));
+      const pages = document.getElementById('pages');
+
+      function createPage() {
+        const page = document.createElement('section');
+        page.className = 'page';
+        const content = document.createElement('div');
+        content.className = 'content';
+        const footer = document.createElement('div');
+        footer.className = 'footer';
+        footer.innerHTML = '<div class="l">FR-VEN-35 AP N</div><div class="c">version 01</div><div class="r">0</div>';
+        page.appendChild(content);
+        page.appendChild(footer);
+        pages.appendChild(page);
+        return { page, content };
+      }
+
+      let current = createPage();
+      for (const block of sourceBlocks) {
+        current.content.appendChild(block);
+        if (current.content.scrollHeight > current.content.clientHeight) {
+          current.content.removeChild(block);
+          current = createPage();
+          current.content.appendChild(block);
+        }
+      }
+
+      const finalPages = pages.querySelectorAll('.page');
+      finalPages.forEach((p, i) => {
+        const num = p.querySelector('.footer .r');
+        if (num) num.textContent = String(i + 1);
+      });
+    })();
+  </script>
 </body>
 </html>
