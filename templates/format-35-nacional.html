@@ -287,6 +287,34 @@
       const sourceBlocks = Array.from(document.querySelectorAll('#blocks .block'));
       const pages = document.getElementById('pages');
 
+      function isMeaningfulNode(node) {
+        if (!node) return false;
+        if (node.nodeType === Node.TEXT_NODE) {
+          return String(node.textContent || '').trim().length > 0;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE) return true;
+        return false;
+      }
+
+      function expandBlock(block) {
+        const kids = Array.from(block.childNodes || []).filter(isMeaningfulNode);
+        if (kids.length <= 1) return [block];
+
+        const parts = [];
+        for (const kid of kids) {
+          const wrap = block.cloneNode(false);
+          if (kid.nodeType === Node.TEXT_NODE) {
+            const p = document.createElement('p');
+            p.textContent = String(kid.textContent || '').trim();
+            wrap.appendChild(p);
+          } else {
+            wrap.appendChild(kid.cloneNode(true));
+          }
+          parts.push(wrap);
+        }
+        return parts.length ? parts : [block];
+      }
+
       function createPage() {
         const page = document.createElement('section');
         page.className = 'page';
@@ -301,8 +329,9 @@
         return { page, content };
       }
 
+      const queue = sourceBlocks.flatMap((b) => expandBlock(b));
       let current = createPage();
-      for (const block of sourceBlocks) {
+      for (const block of queue) {
         current.content.appendChild(block);
         if (current.content.scrollHeight > current.content.clientHeight) {
           current.content.removeChild(block);
