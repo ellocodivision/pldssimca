@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>FR-VEN-26 Origen de los Recursos -Bilingüe</title>
+<style>
+@page { size: Letter; margin: 0; }
+body {
+  margin: 0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 10pt;
+  background: #fff;
+}
+#pages { width: 216mm; margin: 0 auto; }
+.page {
+  width: 216mm;
+  height: 279mm;
+  box-sizing: border-box;
+  padding: 16mm;
+  position: relative;
+  background: #fff;
+  page-break-after: always;
+}
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("{{watermarkUrl}}");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%;
+  opacity: 0.12;
+  pointer-events: none;
+}
+.page::after {
+  content: "";
+  position: absolute;
+  left: 8mm; right: 8mm; top: 8mm; bottom: 8mm;
+  border: 0.5pt solid #000;
+  pointer-events: none;
+}
+.content {
+  position: relative;
+  z-index: 1;
+  height: calc(279mm - 32mm - 22mm);
+  overflow: hidden;
+}
+.footer {
+  position: absolute;
+  left: 8mm;
+  right: 8mm;
+  bottom: 8mm;
+  font-size: 8pt;
+  display: flex;
+  align-items: center;
+}
+.footer .footer-left { width: 20%; }
+.footer .footer-center { width: 60%; text-align: center; }
+.footer .footer-right { width: 20%; text-align: right; font-size: 9pt; font-weight: bold; }
+
+.center { text-align: center; }
+.bold { font-weight: bold; }
+.justify { text-align: justify; }
+.small { font-size: 9pt; }
+.spacer-1 { height: 10px; }
+.spacer-2 { height: 20px; }
+.two-cols { display: flex; gap: 16px; }
+.col { width: 50%; }
+
+.line {
+  width: 100%;
+  display: block;
+  min-height: 16px;
+  line-height: 16px;
+  padding-top: 1px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #000;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.circle {
+  display: inline-flex; width: 10px; height: 10px; border: 1px solid #000; border-radius: 50%;
+  align-items: center; justify-content: center; margin-left: 4px; vertical-align: middle; box-sizing: border-box;
+}
+.circle.checked { background-color: #000; }
+
+.blocks .block { margin-bottom: 10px; break-inside: avoid; }
+.blocks .block:last-child { margin-bottom: 0; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.table td { padding: 3px; vertical-align: top; }
+</style>
+</head>
+<body>
+
+<div id="pages"></div>
+
+<div class="blocks" id="blocks" style="display:none;">
+  <div class="block">
+    <div class="two-cols center bold">
+      <div class="col">CARTA DE ORIGEN DE LOS RECURSOS ECONÓMICOS</div>
+      <div class="col">ORIGIN OF ECONOMIC RESOURCES LETTER</div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="two-cols small">
+      <div class="col">
+        <span>{{orLugarES}}</span>, a <span>{{orDiaES}}</span> de <span>{{orMesES}}</span> de <span>{{orAnioES}}</span>
+      </div>
+      <div class="col">
+        <span>{{orLugarEN}}</span>, on <span>{{orMesEN}}</span> <span>{{orDiaEN}}</span>, <span>{{orAnioEN}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="two-cols bold">
+      <div class="col">
+        <span>{{orEmpresaES}}</span><br>
+        <span>{{orEmpresaDirES}}</span>
+      </div>
+      <div class="col">
+        <span>{{orEmpresaEN}}</span><br>
+        <span>{{orEmpresaDirEN}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="two-cols">
+      <div class="col">
+        <b>Asunto.-</b> Manifestación sobre el origen de los recursos económicos para la operación relacionada con la Unidad <span class="bold">{{orDesarrolloES}}</span> - <span class="bold">{{orUnidadES}}</span>
+      </div>
+      <div class="col">
+        <b>Ref.-</b> Statement regarding the origin of economic resources for the transaction related to Unit <span class="bold">{{orDesarrolloEN}}</span> - <span class="bold">{{orUnidadEN}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="two-cols">
+      <div class="col">A quien corresponda:</div>
+      <div class="col">To whom it may concern:</div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="two-cols justify small">
+      <div class="col">
+        Hago referencia a la adquisición de los derechos de uso y disfrute (la “Operación”) de la unidad no. <span class="bold">{{orUnidadBodyES}}</span> (la “Unidad”) del desarrollo inmobiliario denominado "<span class="bold">{{orDesarrolloBodyES}}</span>" ubicado en la ciudad de <span class="bold">{{orCiudadES}}</span>, México, el cual es actualmente desarrollado y comercializado por su compañía.
+      </div>
+      <div class="col">
+        Reference is hereby made to the acquisition of rights of use and enjoyment (the “Transaction”) of unit no. <span class="bold">{{orUnidadBodyEN}}</span> (the “Unit”) of the real-estate development known as "<span class="bold">{{orDesarrolloBodyEN}}</span>" located in <span class="bold">{{orCiudadEN}}</span>, Mexico, which is currently developed and marketed by your company.
+      </div>
+    </div>
+  </div>
+
+  <div class="block spacer-1"></div>
+
+  <div class="block">
+    <div class="two-cols justify small">
+      <div class="col">
+        Al respecto y derivado de su solicitud, para efectos de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, en este acto manifiesto, bajo protesta de decir verdad, que los recursos económicos o financieros con los que cumpliré con mis obligaciones de pago derivadas de la Operación (los "Recursos Económicos"), son:
+      </div>
+      <div class="col">
+        In this respect and in response to your request, for purposes of the Federal Law for Prevention and Identification of Transactions with Resources of Illegal Origin, hereby I state, under oath, that the economic or financial resources with which I will comply with my payment obligations arising from the Transaction (the "Economic Resources"), are:
+      </div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <table class="table">
+      <tr>
+        <td width="15%">Propios<br><span class="small">Own</span><br><span class="small">[indicate name/business name]</span></td>
+        <td width="5%"><span class="circle {{orPropios}}"></span></td>
+        <td width="20%">De Tercero<br><span class="small">Third Party's</span><br><span class="small">[señale nombre/razón social]</span></td>
+        <td width="5%"><span class="circle {{orTercero}}"></span></td>
+        <td width="55%" style="vertical-align:bottom;"><span class="line">{{orTerceroNombre}}</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="two-cols justify small">
+      <div class="col">
+        Los Recursos Económicos son de procedencia lícita y de actos de buena fe; por lo tanto, no están relacionados o vinculados con hechos ilícitos o delitos, ni han sido instrumento, objeto o producto de hechos ilícitos o delitos, ni han sido utilizados o destinados a ocultar o mezclar bienes producto de hechos ilícitos o delitos, no están siendo utilizados en la comisión de hechos ilícitos o delitos por terceros, ni son producto de delitos patrimoniales o de delincuencia organizada. Así, el origen de los Recursos Económicos es el siguiente [marque todas las opciones aplicables]:
+      </div>
+      <div class="col">
+        The Economic Resources are of a lawful origin and from acts of good faith; therefore, they are not related or linked to unlawful acts or crimes, nor have they been an instrument, object or product of unlawful acts or crimes, nor have they been used or intended to conceal or mix property that is the product of unlawful acts or crimes, nor are they being used in the commission of unlawful acts or crimes by third parties, nor are they the product of patrimonial crimes or organized crime. Thus, the origin of the Economic Resources is as follows [tick all applicable options]:
+      </div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="two-cols">
+      <div class="col">
+        <table class="table">
+          <tr><td>Ahorros<br><span class="small">Savings</span></td><td><span class="circle {{orAhorros}}"></span></td></tr>
+          <tr><td>Ventas<br><span class="small">Sales</span></td><td><span class="circle {{orVentas}}"></span></td></tr>
+          <tr><td>Becas<br><span class="small">Scholarships</span></td><td><span class="circle {{orBecas}}"></span></td></tr>
+          <tr><td>Bono Laboral<br><span class="small">Employment Bonus</span></td><td><span class="circle {{orBono}}"></span></td></tr>
+          <tr><td>Venta de Inmueble<br><span class="small">Sale of Property</span></td><td><span class="circle {{orVenta}}"></span></td></tr>
+          <tr><td>Herencia o Legado<br><span class="small">Inheritance or Legacy</span></td><td><span class="circle {{orHerencia}}"></span></td></tr>
+          <tr><td>Jubilación o Afore<br><span class="small">Retirement or Pension</span></td><td><span class="circle {{orJubilacion}}"></span></td></tr>
+          <tr><td>Venta de Activos<br><span class="small">Sale of Assets</span></td><td><span class="circle {{orActivos}}"></span></td></tr>
+          <tr>
+            <td>
+              Otro, especifique:<br><span class="small">Other, specify:</span><br>
+              <span class="line">{{orOtro}}</span>
+            </td>
+            <td><span class="circle {{orOtroCheck}}"></span></td>
+          </tr>
+        </table>
+      </div>
+      <div class="col">
+        <table class="table">
+          <tr><td>Rentas<br><span class="small">Rentals</span></td><td><span class="circle {{orRentas}}"></span></td></tr>
+          <tr><td>Comisiones<br><span class="small">Commissions</span></td><td><span class="circle {{orComisiones}}"></span></td></tr>
+          <tr><td>Salario<br><span class="small">Salary</span></td><td><span class="circle {{orSalario}}"></span></td></tr>
+          <tr><td>Inversiones<br><span class="small">Investments</span></td><td><span class="circle {{orInversiones}}"></span></td></tr>
+          <tr><td>Rifas, Premios o Concursos<br><span class="small">Raffles, Prizes or Contests</span></td><td><span class="circle {{orRifas}}"></span></td></tr>
+          <tr><td>Actividad Empresarial<br><span class="small">Business Activity</span></td><td><span class="circle {{orEmpresarial}}"></span></td></tr>
+          <tr><td>Actividad Profesional<br><span class="small">Professional Activity</span></td><td><span class="circle {{orProfesional}}"></span></td></tr>
+          <tr><td>Finiquito<br><span class="small">Severance Payment</span></td><td><span class="circle {{orFiniquito}}"></span></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="block spacer-2"></div>
+
+  <div class="block">
+    <div class="center">
+      Atentamente / Sincerely
+      <div class="spacer-2"></div>
+      <div class="line" style="width:60%; margin:auto;"></div>
+      <span class="bold">[Persona física/Natural Person: {{cbNombre1}}]</span><br>
+      Por mi propio derecho / In my own right
+    </div>
+  </div>
+</div>
+
+<script>
+(function paginate() {
+  const blocks = Array.from(document.querySelectorAll('#blocks .block'));
+  const pages = document.getElementById('pages');
+
+  function createPage() {
+    const page = document.createElement('div');
+    page.className = 'page';
+    const content = document.createElement('div');
+    content.className = 'content';
+    const footer = document.createElement('div');
+    footer.className = 'footer';
+    footer.innerHTML = `
+      <div class="footer-left">FR-VEN-26 OR B</div>
+      <div class="footer-center">VERSION 00</div>
+      <div class="footer-right">0</div>
+    `;
+    page.appendChild(content);
+    page.appendChild(footer);
+    pages.appendChild(page);
+    return { page, content, footer };
+  }
+
+  let current = createPage();
+  for (const block of blocks) {
+    current.content.appendChild(block);
+    if (current.content.scrollHeight > current.content.clientHeight) {
+      current.content.removeChild(block);
+      current = createPage();
+      current.content.appendChild(block);
+    }
+  }
+
+  const pageEls = pages.querySelectorAll('.page');
+  pageEls.forEach((p, i) => {
+    const num = p.querySelector('.footer-right');
+    if (num) num.textContent = String(i + 1);
+  });
+})();
+</script>
+
+</body>
+</html>

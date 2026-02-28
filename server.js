@@ -101,6 +101,13 @@ const formats = {
   '19': { name: 'FR-VEN-19 Beneficiario Controlador PF', file: 'format-19.html' },
   '10': { name: 'FR-VEN-10 Identificación del Cliente (Extranjera PF)', file: 'format-10.html' }
 };
+const nationalFormats = {
+  '35': { name: 'FR-VEN-35 Aviso de Privacidad (Nacional PF)', file: 'format-35-nacional.html' },
+  '21': { name: 'FR-VEN-21 Consulta de Listas de Personas Bloqueadas', file: 'format-21.html' },
+  '26': { name: 'FR-VEN-26 Origen de los Recursos (Nacional PF)', file: 'format-26-nacional.html' },
+  '19': { name: 'FR-VEN-19 Beneficiario Controlador PF (Nacional)', file: 'format-19-nacional.html' },
+  '10': { name: 'FR-VEN-10 Identificación del Cliente (Nacional PF)', file: 'format-10-nacional.html' }
+};
 const WHISPERLIST_CANALES = ['SIMCA', 'RELATED'];
 const WHISPERLIST_TIPOS_VENTA = ['EXTERNO', 'INTERNO', 'MERITO PROPIO'];
 const WHISPERLIST_RECAMARAS = ['1', '2', '3', '2PH', '3PH'];
@@ -2109,7 +2116,9 @@ app.use('/generador-faes', requireInternalUser);
 app.use('/plds', requireInternalUser);
 app.use('/generador-roi', requireInternalUser);
 app.use('/form', requireInternalUser);
+app.use('/form-nacional', requireInternalUser);
 app.use('/format', requireInternalUser);
+app.use('/format-nacional', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
@@ -2181,7 +2190,7 @@ app.get('/plds/cliente-extranjera-persona-moral', (req, res) => {
 });
 
 app.get('/plds/cliente-nacional-persona-fisica', (req, res) => {
-  renderPldsPlaceholder('Cliente Nacional Persona Física', res);
+  res.redirect('/form-nacional');
 });
 
 app.get('/plds/cliente-nacional-persona-moral', (req, res) => {
@@ -3270,6 +3279,10 @@ app.get('/form', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'form.html'));
 });
 
+app.get('/form-nacional', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'form-nacional.html'));
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({ ok: true, ts: new Date().toISOString() });
 });
@@ -3295,6 +3308,18 @@ app.get('/api/plds/formats', (req, res) => {
     htmlRoute: `/format/${id}`,
     pdfGetRoute: `/format/${id}/pdf`,
     pdfPostRoute: `/format/${id}/pdf`
+  }));
+  res.json({ items });
+});
+
+app.get('/api/plds/formats-nacional', (req, res) => {
+  const items = Object.entries(nationalFormats).map(([id, f]) => ({
+    id,
+    name: f.name,
+    template: f.file,
+    htmlRoute: `/format-nacional/${id}`,
+    pdfGetRoute: `/format-nacional/${id}/pdf`,
+    pdfPostRoute: `/format-nacional/${id}/pdf`
   }));
   res.json({ items });
 });
@@ -3587,6 +3612,97 @@ app.post('/format/:id/pdf', async (req, res) => {
     res.send(pdf);
   } catch (err) {
     log(`Error en POST /format/${id}/pdf: ${err && err.stack ? err.stack : err}`);
+    res.status(500).send('No se pudo generar el PDF');
+  }
+});
+
+app.get('/format-nacional/:id', (req, res) => {
+  const id = req.params.id;
+  const format = nationalFormats[id];
+  if (!format) return res.status(404).send('Formato no encontrado');
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
+  const html = renderTemplate(format.file, data, {
+    baseUrl,
+    showControls: !req.query.print,
+    downloadUrl: `/format-nacional/${id}/pdf`,
+    bodyClass: 'interactive'
+  });
+  res.send(html);
+});
+
+app.get('/format-nacional/:id/pdf', async (req, res) => {
+  const id = req.params.id;
+  const format = nationalFormats[id];
+  if (!format) return res.status(404).send('Formato no encontrado');
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
+  const html = renderTemplate(format.file, data, {
+    baseUrl,
+    showControls: false,
+    downloadUrl: `/format-nacional/${id}/pdf`,
+    bodyClass: 'print'
+  });
+
+  try {
+    const pdf = await generatePdfWithSharedBrowser(html, {
+      format: 'Letter',
+      printBackground: true,
+      margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' }
+    });
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=${format.file.replace('.html', '')}.pdf`
+    });
+    res.send(pdf);
+  } catch (err) {
+    log(`Error en GET /format-nacional/${id}/pdf: ${err && err.stack ? err.stack : err}`);
+    res.status(500).send('No se pudo generar el PDF');
+  }
+});
+
+app.post('/format-nacional/:id/pdf', async (req, res) => {
+  const id = req.params.id;
+  const format = nationalFormats[id];
+  if (!format) return res.status(404).send('Formato no encontrado');
+
+  const data = { ...(req.body || {}) };
+  if (id === '10' || id === '19' || id === '21' || id === '35') {
+    Object.keys(data).forEach((k) => {
+      const v = data[k];
+      if (typeof v === 'string' && v.trim() === '') data[k] = 'N/A';
+    });
+  }
+
+  const saved = persistSubmission(`N-${id}`, format.name, data);
+  log(`Submission guardado: ${saved.id} formato=N-${id}`);
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const html = renderTemplate(format.file, data, {
+    baseUrl,
+    showControls: false,
+    downloadUrl: `/format-nacional/${id}/pdf`,
+    bodyClass: 'print'
+  });
+
+  try {
+    const pdfOpts = {
+      format: 'letter',
+      printBackground: true,
+      margin: { top: '0in', right: '0in', bottom: '0.6in', left: '0in' }
+    };
+    const pdf = await generatePdfWithSharedBrowser(html, pdfOpts);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=${format.file.replace('.html', '')}.pdf`
+    });
+    res.send(pdf);
+  } catch (err) {
+    log(`Error en POST /format-nacional/${id}/pdf: ${err && err.stack ? err.stack : err}`);
     res.status(500).send('No se pudo generar el PDF');
   }
 });
