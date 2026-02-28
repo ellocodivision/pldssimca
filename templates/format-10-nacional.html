@@ -219,28 +219,17 @@ td { padding: 2px 3px; vertical-align: bottom; }
     </table>
 
     <div class="section-title">VI. DOCUMENTOS ADJUNTOS</div>
-    <div class="small">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple los documentos marcados con una "x":</div>
+    <div class="small">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple (previamente cotejados por el asesor de ventas) los documentos marcados con una "x":</div>
 
     <table style="margin-top:10px;">
-      <tr><td colspan="2" class="bold">Del Cliente</td></tr>
-      <tr><td>Identificación Oficial</td><td style="width:30px;"><span class="cb {{cbClienteID}}"></span></td></tr>
-      <tr><td>Pasaporte</td><td><span class="cb {{cbClientePasaporte}}"></span></td></tr>
-      <tr><td>Residencia</td><td><span class="cb {{cbClienteResidencia}}"></span></td></tr>
-      <tr><td>RFC</td><td><span class="cb {{cbClienteRFC}}"></span></td></tr>
-      <tr><td>CURP</td><td><span class="cb {{cbClienteSSN}}"></span></td></tr>
-      <tr><td>Comprobante Domicilio</td><td><span class="cb {{cbClienteDomicilio}}"></span></td></tr>
-      <tr><td>Identificación del Representante</td><td><span class="cb {{cbClienteIDRep}}"></span></td></tr>
-      <tr><td>Poder del Representante</td><td><span class="cb {{cbClientePoder}}"></span></td></tr>
-      <tr><td>Otro, especifique: <span class="line" style="width:50%">{{spanOtro}}</span></td><td></td></tr>
-    </table>
-
-    <table style="margin-top:10px;">
-      <tr><td colspan="2" class="bold">De la PPE</td></tr>
-      <tr><td>Identificación Oficial</td><td style="width:30px;"><span class="cb {{cbPPEID}}"></span></td></tr>
-      <tr><td>RFC</td><td><span class="cb {{cbPPERFC_DOC}}"></span></td></tr>
-      <tr><td>Comprobante Domicilio</td><td><span class="cb {{cbPPEDomicilio_DOC}}"></span></td></tr>
-      <tr><td>CURP del Representante</td><td><span class="cb {{cbPPESSNRep}}"></span></td></tr>
-      <tr><td>Otro, especifique: <span class="line" style="width:50%">{{spanOtro1}}</span></td><td></td></tr>
+      <tr><td class="bold">Identificación Oficial</td><td style="width:40px;"><span class="cb {{cbClienteID}}"></span></td></tr>
+      <tr><td class="bold">CURP</td><td><span class="cb {{cbClienteSSN}}"></span></td></tr>
+      <tr><td class="bold">Cédula Fiscal</td><td><span class="cb {{cbClienteRFC}}"></span></td></tr>
+      <tr><td class="bold">Comprobante de Domicilio</td><td><span class="cb {{cbClienteDomicilio}}"></span></td></tr>
+      <tr>
+        <td class="bold">Otro, especifique / <i>Other, specify:</i> <span class="line" style="display:inline-block; width:58%; vertical-align:bottom;">{{spanOtro}}</span></td>
+        <td></td>
+      </tr>
     </table>
 
     <div class="spacer-2"></div>
