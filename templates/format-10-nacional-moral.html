@@ -5,93 +5,23 @@
 <title>FR-VEN-10 Identificación del Cliente - Clte. Nacional - P. Moral</title>
 <style>
 @page { size: Letter; margin: 0; }
-body {
-  background-color: #ffffff;
-  margin: 0;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 10pt;
-}
-.page {
-  width: 216mm;
-  min-height: 279mm;
-  box-sizing: border-box;
-  padding: 16mm;
-  position: relative;
-  background: #fff;
-}
+body { background:#fff; margin:0; font-family:"Times New Roman", Times, serif; font-size:10pt; }
+.page { width:216mm; min-height:279mm; box-sizing:border-box; padding:16mm; position:relative; background:#fff; }
 .page + .page { page-break-before: always; }
-.page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("{{watermarkUrl}}");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 60%;
-  opacity: 0.12;
-  pointer-events: none;
-}
-.page::after {
-  content: "";
-  position: absolute;
-  left: 8mm; right: 8mm; top: 8mm; bottom: 8mm;
-  border: 0.5pt solid #000;
-  pointer-events: none;
-}
-.content { position: relative; z-index: 1; }
-.footer {
-  position: absolute;
-  left: 8mm;
-  right: 8mm;
-  bottom: 8mm;
-  font-size: 8pt;
-  display: flex;
-  align-items: center;
-}
-.footer .footer-left { width: 20%; }
-.footer .footer-center { width: 60%; text-align: center; }
-.footer .footer-right { width: 20%; text-align: right; font-size: 9pt; font-weight: bold; }
-
-.center { text-align: center; }
-.bold { font-weight: bold; }
-.justify { text-align: justify; }
-.small { font-size: 9pt; }
-.spacer-1 { height: 10px; }
-.spacer-2 { height: 16px; }
-.section-title { font-weight: bold; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; }
-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 9pt; }
-td { padding: 2px 3px; vertical-align: bottom; }
-.label { width: 45%; font-weight: bold; }
-.line {
-  width: 100%;
-  display: block;
-  min-height: 16px;
-  line-height: 16px;
-  padding-top: 1px;
-  padding-bottom: 2px;
-  border-bottom: 1px solid #000;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.cb {
-  width: 10px; height: 10px;
-  border: 1px solid #000;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 9px; margin-left: 4px;
-}
-.cb.checked { background: #000; color: #fff; }
-.cb.checked::after { content: "✔"; font-size: 8px; }
-.circle {
-  width: 10px; height: 10px; border: 1px solid #000; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  margin-left: 4px;
-}
-.circle.checked { background: #000; }
-
-@media print {
-  body { background: #fff; }
-  .page { page-break-after: always; }
-}
+.page::before { content:""; position:absolute; inset:0; background-image:url("{{watermarkUrl}}"); background-repeat:no-repeat; background-position:center; background-size:60%; opacity:.12; pointer-events:none; }
+.page::after { content:""; position:absolute; left:8mm; right:8mm; top:8mm; bottom:8mm; border:.5pt solid #000; pointer-events:none; }
+.content { position:relative; z-index:1; }
+.footer { position:absolute; left:8mm; right:8mm; bottom:8mm; font-size:8pt; display:flex; align-items:center; }
+.footer .footer-left { width:20%; }
+.footer .footer-center { width:60%; text-align:center; }
+.footer .footer-right { width:20%; text-align:right; font-size:9pt; font-weight:bold; }
+.center{text-align:center;} .bold{font-weight:bold;} .small{font-size:9pt;} .justify{text-align:justify;} .spacer-1{height:10px;} .spacer-2{height:16px;}
+.section-title{font-weight:bold; margin-top:12px; margin-bottom:4px; border-bottom:1px solid #000; padding-bottom:2px;}
+table{width:100%; border-collapse:collapse; margin-bottom:4px; font-size:9pt;} td{padding:2px 3px; vertical-align:bottom;} .label{width:45%; font-weight:bold;}
+.line{width:100%; display:block; min-height:16px; line-height:16px; padding-top:1px; padding-bottom:2px; border-bottom:1px solid #000; white-space:pre-wrap; word-break:break-word;}
+.cb{width:10px;height:10px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:9px;margin-left:4px;} .cb.checked{background:#000;color:#fff;} .cb.checked::after{content:"✔";font-size:8px;}
+.circle{width:10px;height:10px;border:1px solid #000;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;} .circle.checked{background:#000;}
+@media print { .page { page-break-after: always; } }
 </style>
 </head>
 <body>
@@ -105,25 +35,23 @@ td { padding: 2px 3px; vertical-align: bottom; }
     <div class="spacer-2"></div>
 
     <div class="justify small">
-      Se hace referencia a la operación para la adquisición de los derechos de uso y disfrute (la "Operación") por parte de la persona física cuyos datos se asientan en el apartado I de este documento (el "Cliente"), en su carácter de "adquiriente", respecto de la unidad no. <span>{{cbUnidadES}}</span> del desarrollo inmobiliario denominado "<span>{{cbDesarrolloES}}</span>", ubicado en la ciudad de <span>{{txtCiudadES}}</span>, México, el cual es actualmente desarrollado y comercializado por la compañía cuya denominación se señala al rubro.
+      Se hace referencia a la operación para la adquisición de los derechos de uso y disfrute (la "Operación") por parte de la persona moral cuyos datos se asientan en el apartado I de este documento (el "Cliente"), en su carácter de "adquiriente", respecto de la unidad no. <span>{{cbUnidadES}}</span> del desarrollo inmobiliario denominado "<span>{{cbDesarrolloES}}</span>", ubicado en la ciudad de <span>{{txtCiudadES}}</span>, México, el cual es actualmente desarrollado y comercializado por la compañía cuya denominación se señala al rubro.
       <br><br>
-      En relación con la Operación, en su carácter de adquirente de la Unidad y para efectos de la fracción I del artículo 18 de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, el Cliente en este acto manifiesta, bajo protesta de decir verdad, que los mismos son ciertos y correctos (los "Datos de Identificación").
+      En relación con la Operación y para efectos de la fracción I del artículo 18 de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita, el Cliente, en este acto, manifiesta por conducto de su representante legal, bajo protesta de decir verdad, que los datos señalados a continuación son ciertos y correctos (los "Datos de Identificación").
     </div>
 
     <div class="section-title">I. DATOS DE IDENTIFICACIÓN DEL CLIENTE</div>
-
     <table>
-      <tr><td class="label">1. Nombre Completo:</td><td class="line">{{spanNombreCompleto}}</td></tr>
-      <tr><td class="label">2. Fecha de Nacimiento:</td><td class="line">{{spanFechaNacimiento}}</td></tr>
-      <tr><td class="label">3. Lugar de Nacimiento:</td><td class="line">{{spanLugarNacimiento}}</td></tr>
+      <tr><td class="label">1. Denominación:</td><td class="line">{{spanNombreCompleto}}</td></tr>
+      <tr><td class="label">2. Fecha de Constitución:</td><td class="line">{{spanFechaNacimiento}}</td></tr>
+      <tr><td class="label">3. No. de Acta Constitutiva:</td><td class="line">{{pmActaConstitutiva}}</td></tr>
       <tr><td class="label">4. Nacionalidad:</td><td class="line">{{spanNacionalidad}}</td></tr>
-      <tr><td class="label">5. Ocupación/Profesión:</td><td class="line">{{spanOcupacion}}</td></tr>
+      <tr><td class="label">5. Objeto Social:</td><td class="line">{{spanOcupacion}}</td></tr>
       <tr><td class="label">6. RFC:</td><td class="line">{{spanIdentificacionFiscal}}</td></tr>
       <tr><td class="label">6.1 Uso de la Factura:</td><td class="line">{{spanFactura}}</td></tr>
       <tr><td class="label">6.2 Régimen Fiscal en el SAT:</td><td class="line">{{spanRegimen}}</td></tr>
       <tr><td class="label">6.3 Código Postal registrado en el SAT:</td><td class="line">{{spanCodigoPostalSAT}}</td></tr>
-      <tr><td class="label">7. CURP:</td><td class="line">{{spanSeguridadSocial}}</td></tr>
-      <tr><td class="label">8. Domicilio</td><td></td></tr>
+      <tr><td class="label">7. Domicilio:</td><td></td></tr>
     </table>
 
     <table>
@@ -133,24 +61,26 @@ td { padding: 2px 3px; vertical-align: bottom; }
       <tr><td class="label">iv. Colonia:</td><td class="line">{{spanColonia}}</td></tr>
       <tr><td class="label">v. Código Postal:</td><td class="line">{{spanCodigoPostal}}</td></tr>
       <tr><td class="label">vi. Ciudad y Estado:</td><td class="line">{{spanCiudadEstado}}</td></tr>
-      <tr><td class="label">9. No. de Teléfono:</td><td class="line">{{spanTelefono}}</td></tr>
-      <tr><td class="label">10. Correo Electrónico:</td><td class="line">{{spanEmail}}</td></tr>
-      <tr><td class="label">11. Tipo, No. Identificación y Autoridad Emisora:</td><td class="line">{{spanTipoIdentificacion}}</td></tr>
+      <tr><td class="label">8. No. de Teléfono:</td><td class="line">{{spanTelefono}}</td></tr>
+      <tr><td class="label">9. Correo Electrónico:</td><td class="line">{{spanEmail}}</td></tr>
     </table>
   </div>
-
-  <div class="footer">
-    <div class="footer-left">FR-VEN-10 ID CN PM</div>
-    <div class="footer-center">version 01</div>
-    <div class="footer-right">1</div>
-  </div>
+  <div class="footer"><div class="footer-left">FR-VEN-10 ID CN PM</div><div class="footer-center">version 01</div><div class="footer-right">1</div></div>
 </div>
 
 <div class="page">
   <div class="content">
     <div class="center bold" style="margin-bottom:6px;"><span>{{desarrolladoraText}}</span></div>
 
-    <div class="section-title">12. Datos del Apoderado Legal (en su caso)</div>
+    <div class="section-title">10. Accionistas</div>
+    <table>
+      <tr><td class="label">i. Nombre / %</td><td class="line">{{pmAcc1Nombre}} {{pmAcc1Pct}}</td></tr>
+      <tr><td class="label">ii. Nombre / %</td><td class="line">{{pmAcc2Nombre}} {{pmAcc2Pct}}</td></tr>
+      <tr><td class="label">iii. Nombre / %</td><td class="line">{{pmAcc3Nombre}} {{pmAcc3Pct}}</td></tr>
+      <tr><td class="label">iv. Nombre / %</td><td class="line">{{pmAcc4Nombre}} {{pmAcc4Pct}}</td></tr>
+    </table>
+
+    <div class="section-title">11. Datos del Representante Legal</div>
     <table>
       <tr><td class="label">i. Nombre Completo:</td><td class="line">{{spanApoderadoNombre}}</td></tr>
       <tr><td class="label">ii. Fecha de Nacimiento:</td><td class="line">{{spanApoderadoFecha}}</td></tr>
@@ -160,50 +90,32 @@ td { padding: 2px 3px; vertical-align: bottom; }
       <tr><td class="label">vi. Datos del Poder:</td><td class="line">{{spanApoderadoPoder}}</td></tr>
       <tr><td class="label">vii. Teléfono Móvil:</td><td class="line">{{spanApoderadoTelefono}}</td></tr>
       <tr><td class="label">viii. Correo Electrónico:</td><td class="line">{{spanApoderadoEmail}}</td></tr>
-      <tr><td class="label">ix. Tipo y No. Identificación y Autoridad Emisora:</td><td class="line">{{spanApoderadoTipoID}}</td></tr>
+      <tr><td class="label">ix. Tipo, No. Identificación y Autoridad emisora:</td><td class="line">{{spanApoderadoTipoID}}</td></tr>
     </table>
 
     <div class="section-title">II. PERSONA POLÍTICAMENTE EXPUESTA</div>
     <div class="justify small">El Cliente o cualquier familiar consanguíneo o por afinidad hasta el cuarto grado es o ha sido una "Persona Políticamente Expuesta" ("PPE"), es decir, ¿desempeñan o han desempeñado alguna función o cargo público destacado en territorio nacional o en país extranjero?</div>
-
     <table style="margin-top:10px;">
-      <tr>
-        <td width="20%"><b>El Cliente</b></td>
-        <td width="15%">Sí <span class="circle {{pepClienteYes}}"></span></td>
-        <td width="15%">No <span class="circle {{pepClienteNo}}"></span></td>
-        <td width="50%">Si sí, señale el cargo o puesto: <span class="line">{{pepClienteCargo}}</span></td>
-      </tr>
-      <tr>
-        <td><b>Familiar</b></td>
-        <td>Sí <span class="circle {{pepFamiliarYes}}"></span></td>
-        <td>No <span class="circle {{pepFamiliarNo}}"></span></td>
-        <td>Si sí, señale el cargo o puesto: <span class="line">{{pepFamiliarCargo}}</span></td>
-      </tr>
+      <tr><td width="20%"><b>El Cliente</b></td><td width="15%">Sí <span class="circle {{pepClienteYes}}"></span></td><td width="15%">No <span class="circle {{pepClienteNo}}"></span></td><td width="50%">Si sí, señale el cargo o puesto: <span class="line">{{pepClienteCargo}}</span></td></tr>
+      <tr><td><b>Familiar</b></td><td>Sí <span class="circle {{pepFamiliarYes}}"></span></td><td>No <span class="circle {{pepFamiliarNo}}"></span></td><td>Si sí, señale el cargo o puesto: <span class="line">{{pepFamiliarCargo}}</span></td></tr>
     </table>
 
     <div class="section-title">III. DATOS DE LA PPE</div>
-    <div class="justify small">Además, si, efectivamente, algún familiar consanguíneo o por afinidad hasta el cuarto grado del Cliente es o ha sido una PPE, el Cliente en este acto manifiesta, bajo protesta de decir verdad, que los siguientes datos del familiar son ciertos y correctos:</div>
-
     <table>
       <tr><td class="label">1. Nombre Completo:</td><td class="line">{{spanPPENombre}}</td></tr>
       <tr><td class="label">2. Fecha de Nacimiento:</td><td class="line">{{spanPPEFecha}}</td></tr>
       <tr><td class="label">3. Lugar de Nacimiento:</td><td class="line">{{spanPPELugarNacimiento}}</td></tr>
       <tr><td class="label">4. Nacionalidad:</td><td class="line">{{spanPPENacionalidad}}</td></tr>
       <tr><td class="label">5. Ocupación/Profesión:</td><td class="line">{{spanPPEOcupacion}}</td></tr>
-      <tr><td class="label">6. RFC:</td><td class="line">{{spanPPERFC}}</td></tr>
-      <tr><td class="label">7. CURP:</td><td class="line">{{spanPPESSN}}</td></tr>
+      <tr><td class="label">6. No. de Identificación Fiscal:</td><td class="line">{{spanPPERFC}}</td></tr>
+      <tr><td class="label">7. Tarjeta de Seguridad Social:</td><td class="line">{{spanPPESSN}}</td></tr>
       <tr><td class="label">8. Domicilio:</td><td class="line">{{spanPPEDomicilio}}</td></tr>
       <tr><td class="label">i. Calle/Avenida:</td><td class="line">{{spanPPECalle}}</td></tr>
       <tr><td class="label">ii. No. Exterior:</td><td class="line">{{spanPPEExterior}}</td></tr>
       <tr><td class="label">iii. No. Interior (si aplica):</td><td class="line">{{spanPPEInterior}}</td></tr>
     </table>
   </div>
-
-  <div class="footer">
-    <div class="footer-left">FR-VEN-10 ID CN PM</div>
-    <div class="footer-center">version 01</div>
-    <div class="footer-right">2</div>
-  </div>
+  <div class="footer"><div class="footer-left">FR-VEN-10 ID CN PM</div><div class="footer-center">version 01</div><div class="footer-right">2</div></div>
 </div>
 
 <div class="page">
@@ -222,14 +134,24 @@ td { padding: 2px 3px; vertical-align: bottom; }
     <div class="small">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple (previamente cotejados por el asesor de ventas) los documentos marcados con una "x":</div>
 
     <table style="margin-top:10px;">
-      <tr><td class="bold">Identificación Oficial</td><td style="width:40px;"><span class="cb {{cbClienteID}}"></span></td></tr>
-      <tr><td class="bold">CURP</td><td><span class="cb {{cbClienteSSN}}"></span></td></tr>
-      <tr><td class="bold">Cédula Fiscal</td><td><span class="cb {{cbClienteRFC}}"></span></td></tr>
-      <tr><td class="bold">Comprobante de Domicilio</td><td><span class="cb {{cbClienteDomicilio}}"></span></td></tr>
-      <tr>
-        <td class="bold">Otro, especifique / <i>Other, specify:</i> <span class="line" style="display:inline-block; width:58%; vertical-align:bottom;">{{spanOtro}}</span></td>
-        <td></td>
-      </tr>
+      <tr><td colspan="2" class="bold">Del Cliente</td></tr>
+      <tr><td>Acta Constitutiva</td><td style="width:30px;"><span class="cb {{pmDocActaConstitutiva}}"></span></td></tr>
+      <tr><td>Cédula Fiscal</td><td><span class="cb {{cbClienteRFC}}"></span></td></tr>
+      <tr><td>Comprobante de Domicilio</td><td><span class="cb {{cbClienteDomicilio}}"></span></td></tr>
+      <tr><td>Identificación del Representante</td><td><span class="cb {{pmDocIdRepresentante}}"></span></td></tr>
+      <tr><td>CURP del representante</td><td><span class="cb {{pmDocCurpRepresentante}}"></span></td></tr>
+      <tr><td>RFC del representante</td><td><span class="cb {{pmDocRfcRepresentante}}"></span></td></tr>
+      <tr><td>Poder del Representante</td><td><span class="cb {{pmDocPoderRepresentante}}"></span></td></tr>
+      <tr><td>Otro, especifique: <span class="line" style="width:50%">{{spanOtro}}</span></td><td></td></tr>
+    </table>
+
+    <table style="margin-top:10px;">
+      <tr><td colspan="2" class="bold">De la PPE</td></tr>
+      <tr><td>Identificación Oficial</td><td style="width:30px;"><span class="cb {{cbPPEID}}"></span></td></tr>
+      <tr><td>Cédula Fiscal</td><td><span class="cb {{cbPPERFC_DOC}}"></span></td></tr>
+      <tr><td>Comprobante de Domicilio</td><td><span class="cb {{cbPPEDomicilio_DOC}}"></span></td></tr>
+      <tr><td>CURP</td><td><span class="cb {{cbPPESSNRep}}"></span></td></tr>
+      <tr><td>Otro, especifique: <span class="line" style="width:50%">{{spanOtro1}}</span></td><td></td></tr>
     </table>
 
     <div class="spacer-2"></div>
@@ -237,16 +159,12 @@ td { padding: 2px 3px; vertical-align: bottom; }
       <div class="bold">Atentamente,</div>
       <div class="spacer-2"></div>
       <div class="line" style="width:45%; margin: 0 auto;"></div>
-      <div class="bold">{{cbNombre1}}</div>
-      <div class="bold">En representación de la sociedad</div>
+      <div class="bold">{{spanNombreCompleto}}</div>
+      <div class="bold">Representada por: {{spanApoderadoNombre}}</div>
+      <div class="bold">Cargo: {{pmCargoRepresentante}}</div>
     </div>
   </div>
-
-  <div class="footer">
-    <div class="footer-left">FR-VEN-10 ID CN PM</div>
-    <div class="footer-center">version 01</div>
-    <div class="footer-right">3</div>
-  </div>
+  <div class="footer"><div class="footer-left">FR-VEN-10 ID CN PM</div><div class="footer-center">version 01</div><div class="footer-right">3</div></div>
 </div>
 
 </body>

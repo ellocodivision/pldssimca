@@ -90,6 +90,7 @@
         <div><label>Fecha de constitución</label><input name="spanFechaNacimiento" /></div>
         <div><label>Lugar de constitución</label><input name="spanLugarNacimiento" /></div>
         <div><label>Actividad / giro</label><input name="spanOcupacion" /></div>
+        <div><label>No. de Acta Constitutiva</label><input name="pmActaConstitutiva" /></div>
         <div>
           <label>Uso de factura</label>
           <select name="spanFactura">
@@ -158,6 +159,18 @@
         <div><label>Tipo y No. Identificación</label><input name="spanTipoIdentificacion" /></div>
       </div>
 
+      <h2>Accionistas</h2>
+      <div class="grid">
+        <div><label>Accionista i Nombre</label><input name="pmAcc1Nombre" /></div>
+        <div><label>Accionista i %</label><input name="pmAcc1Pct" /></div>
+        <div><label>Accionista ii Nombre</label><input name="pmAcc2Nombre" /></div>
+        <div><label>Accionista ii %</label><input name="pmAcc2Pct" /></div>
+        <div><label>Accionista iii Nombre</label><input name="pmAcc3Nombre" /></div>
+        <div><label>Accionista iii %</label><input name="pmAcc3Pct" /></div>
+        <div><label>Accionista iv Nombre</label><input name="pmAcc4Nombre" /></div>
+        <div><label>Accionista iv %</label><input name="pmAcc4Pct" /></div>
+      </div>
+
       <h2>Apoderado</h2>
       <div class="grid">
         <div><label>Nombre</label><input name="spanApoderadoNombre" /></div>
@@ -169,6 +182,7 @@
         <div><label>Teléfono</label><input name="spanApoderadoTelefono" /></div>
         <div><label>Email</label><input name="spanApoderadoEmail" /></div>
         <div><label>Tipo ID</label><input name="spanApoderadoTipoID" /></div>
+        <div><label>Cargo del representante</label><input name="pmCargoRepresentante" /></div>
       </div>
       <div class="checks" style="margin-top:10px;">
         <label><input type="checkbox" name="cbPermanente" /> Residente permanente</label>
@@ -211,13 +225,26 @@
 
       <h2>Documentos adjuntos</h2>
       <div class="checks">
-        <label><input type="checkbox" name="cbClienteID" /> ID cliente</label>
+        <label><input type="checkbox" name="cbClienteID" /> Identificación Oficial</label>
         <label><input type="checkbox" name="cbClienteSSN" /> CURP</label>
-        <label><input type="checkbox" name="cbClienteRFC" /> RFC</label>
+        <label><input type="checkbox" name="pmDocActaConstitutiva" /> Acta Constitutiva</label>
+        <label><input type="checkbox" name="cbClienteRFC" /> Cédula Fiscal</label>
         <label><input type="checkbox" name="cbClienteDomicilio" /> Comprobante domicilio</label>
+        <label><input type="checkbox" name="pmDocIdRepresentante" /> ID representante</label>
+        <label><input type="checkbox" name="pmDocCurpRepresentante" /> CURP representante</label>
+        <label><input type="checkbox" name="pmDocRfcRepresentante" /> RFC representante</label>
+        <label><input type="checkbox" name="pmDocPoderRepresentante" /> Poder representante</label>
+      </div>
+      <h2>Documentos adjuntos — PPE</h2>
+      <div class="checks">
+        <label><input type="checkbox" name="cbPPEID" /> Identificación Oficial</label>
+        <label><input type="checkbox" name="cbPPERFC_DOC" /> Cédula Fiscal</label>
+        <label><input type="checkbox" name="cbPPEDomicilio_DOC" /> Comprobante domicilio</label>
+        <label><input type="checkbox" name="cbPPESSNRep" /> CURP</label>
       </div>
       <div class="grid" style="margin-top:10px;">
         <div><label>Otro, especifique</label><input name="spanOtro" /></div>
+        <div><label>Otro PPE, especifique</label><input name="spanOtro1" /></div>
       </div>
     </div>
 
@@ -226,6 +253,22 @@
       <div class="checks" style="margin-top:10px;">
         <label><input type="radio" name="cbExiste" value="yes" /> Existe beneficiario: Sí</label>
         <label><input type="radio" name="cbExiste" value="no" /> Existe beneficiario: No</label>
+      </div>
+      <h2>Medios del Beneficiario Controlador</h2>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="checkbox" name="pmBCDirecta" /> A) Participación directa</label>
+        <label><input type="checkbox" name="pmBCIndirecta" /> A) Participación indirecta</label>
+      </div>
+      <div class="grid">
+        <div><label>A) Indirecta, especifique</label><input name="pmBCIndirectaDetalle" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="radio" name="pmBCB" value="si" /> B) Sí</label>
+        <label><input type="radio" name="pmBCB" value="no" /> B) No</label>
+        <label><input type="radio" name="pmBCC" value="si" /> C) Sí</label>
+        <label><input type="radio" name="pmBCC" value="no" /> C) No</label>
+        <label><input type="radio" name="pmBCD" value="si" /> D) Sí</label>
+        <label><input type="radio" name="pmBCD" value="no" /> D) No</label>
       </div>
       <h2>Datos base</h2>
       <div class="grid">
@@ -258,6 +301,18 @@
         <div><label>Estado civil</label><input name="cbEstadoCivil" /></div>
         <div><label>Teléfono</label><input name="cbTelefono" /></div>
         <div><label>Email</label><input name="cbEmail" /></div>
+      </div>
+      <h2>Datos beneficiario controlador 2 (opcional)</h2>
+      <div class="grid">
+        <div><label>Nombre completo</label><input name="cbNombre2" /></div>
+        <div><label>Fecha de nacimiento</label><input name="cbFechaNacimiento2" /></div>
+        <div><label>Nacionalidad</label><input name="cbNacionalidad2" /></div>
+        <div><label>RFC o CURP</label><input name="cbRFC2" /></div>
+        <div><label>Dirección</label><input name="cbDireccion2" /></div>
+        <div><label>Tipo y No. Identificación</label><input name="cbID2" /></div>
+        <div><label>Estado civil</label><input name="cbEstadoCivil2" /></div>
+        <div><label>Teléfono</label><input name="cbTelefono2" /></div>
+        <div><label>Email</label><input name="cbEmail2" /></div>
       </div>
     </div>
 
@@ -479,6 +534,12 @@
 
     if (data.cbExiste === 'yes') data.cbExisteyes = 'checked';
     if (data.cbExiste === 'no') data.cbExisteno = 'checked';
+    if (data.pmBCB === 'si') data.pmBCBsi = 'checked';
+    if (data.pmBCB === 'no') data.pmBCBno = 'checked';
+    if (data.pmBCC === 'si') data.pmBCCsi = 'checked';
+    if (data.pmBCC === 'no') data.pmBCCno = 'checked';
+    if (data.pmBCD === 'si') data.pmBCDsi = 'checked';
+    if (data.pmBCD === 'no') data.pmBCDno = 'checked';
 
     // FR-VEN-26 shared mappings
     data.orLugarES = data.cbLugarES || '';
