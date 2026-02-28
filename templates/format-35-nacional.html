@@ -315,6 +315,14 @@
         return parts.length ? parts : [block];
       }
 
+      function isHeadingBlock(block) {
+        if (!block || block.nodeType !== Node.ELEMENT_NODE) return false;
+        const first = block.firstElementChild;
+        if (!first) return false;
+        const tag = String(first.tagName || '').toUpperCase();
+        return tag === 'H2' || tag === 'H3';
+      }
+
       function createPage() {
         const page = document.createElement('section');
         page.className = 'page';
@@ -331,7 +339,20 @@
 
       const queue = sourceBlocks.flatMap((b) => expandBlock(b));
       let current = createPage();
-      for (const block of queue) {
+      for (let i = 0; i < queue.length; i += 1) {
+        const block = queue[i];
+
+        // Keep headings with the next content block to avoid orphan titles.
+        if (isHeadingBlock(block) && queue[i + 1]) {
+          const nextBlock = queue[i + 1];
+          current.content.appendChild(block);
+          current.content.appendChild(nextBlock);
+          const overflowPair = current.content.scrollHeight > current.content.clientHeight;
+          current.content.removeChild(nextBlock);
+          current.content.removeChild(block);
+          if (overflowPair) current = createPage();
+        }
+
         current.content.appendChild(block);
         if (current.content.scrollHeight > current.content.clientHeight) {
           current.content.removeChild(block);
