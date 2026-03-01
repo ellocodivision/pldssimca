@@ -685,36 +685,79 @@
     renderHistory();
   }
 
-  async function download(format) {
-    const payload = getData();
-    const res = await fetch(`/format-nacional-moral/${format}/pdf`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const contentType = String(res.headers.get('content-type') || '').toLowerCase();
-    if (!res.ok || !contentType.includes('application/pdf')) {
-      let detail = '';
-      try { detail = await res.text(); } catch {}
-      const short = detail ? detail.slice(0, 200) : `HTTP ${res.status}`;
-      alert(`No se pudo generar el PDF (${short}).`);
-      return;
+  let downloadBusy = false;
+  function setDownloadStatus(active) {
+    const buttonIds = ['download21', 'download10', 'download19', 'download26', 'download35'];
+    let statusEl = document.getElementById('pdfDownloadStatus');
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.id = 'pdfDownloadStatus';
+      statusEl.style.position = 'fixed';
+      statusEl.style.right = '20px';
+      statusEl.style.bottom = '20px';
+      statusEl.style.zIndex = '9999';
+      statusEl.style.background = '#111827';
+      statusEl.style.color = '#fff';
+      statusEl.style.padding = '10px 14px';
+      statusEl.style.borderRadius = '10px';
+      statusEl.style.boxShadow = '0 10px 25px rgba(0,0,0,.25)';
+      statusEl.style.fontSize = '13px';
+      statusEl.style.display = 'none';
+      document.body.appendChild(statusEl);
     }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const rawName = (payload.spanNombreCompleto || '').trim();
-    const safeName = (rawName || 'SIN_NOMBRE')
-      .replace(/[\\/:*?"<>|]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    a.download = `FR-VEN-${format} ${safeName}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    saveHistoryRecord(`FR-VEN-${format}`);
+    if (active) {
+      statusEl.textContent = 'En un momento comenzara la descarga...';
+      statusEl.style.display = 'block';
+    } else {
+      statusEl.style.display = 'none';
+    }
+    buttonIds.forEach((id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = active;
+      btn.style.opacity = active ? '0.65' : '1';
+      btn.style.cursor = active ? 'wait' : 'pointer';
+    });
+  }
+
+  async function download(format) {
+    if (downloadBusy) return;
+    downloadBusy = true;
+    setDownloadStatus(true);
+    try {
+      const payload = getData();
+      const res = await fetch(`/format-nacional-moral/${format}/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+      if (!res.ok || !contentType.includes('application/pdf')) {
+        let detail = '';
+        try { detail = await res.text(); } catch {}
+        const short = detail ? detail.slice(0, 200) : `HTTP ${res.status}`;
+        alert(`No se pudo generar el PDF (${short}).`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const rawName = (payload.spanNombreCompleto || '').trim();
+      const safeName = (rawName || 'SIN_NOMBRE')
+        .replace(/[\\/:*?"<>|]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      a.download = `FR-VEN-${format} ${safeName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      saveHistoryRecord(`FR-VEN-${format}`);
+    } finally {
+      setDownloadStatus(false);
+      downloadBusy = false;
+    }
   }
 
   saveDraftBtn.addEventListener('click', () => {
