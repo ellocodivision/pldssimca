@@ -277,12 +277,12 @@
         <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
         <div><label>Ciudad</label><input name="txtCiudadES" /></div>
       </div>
-      <div class="grid">
-        <div><label>Nombre de tercero (si aplica)</label><input name="orTerceroNombre" /></div>
-      </div>
       <div class="checks" style="margin-top:10px;">
         <label><input type="radio" name="orTipo" value="propios" /> Recursos propios</label>
         <label><input type="radio" name="orTipo" value="tercero" /> Recursos de tercero</label>
+      </div>
+      <div class="grid" style="margin-top:10px;">
+        <div><label>Nombre de tercero (si aplica)</label><input name="orTerceroNombre" /></div>
       </div>
       <div class="checks" style="margin-top:10px;">
         <label><input type="checkbox" name="orAhorros" /> Ahorros</label>
@@ -299,12 +299,14 @@
         <label><input type="checkbox" name="orEmpresarial" /> Actividad empresarial</label>
         <label><input type="checkbox" name="orJubilacion" /> Jubilación o Afore</label>
         <label><input type="checkbox" name="orActivos" /> Venta de activos</label>
-        <label><input type="checkbox" name="orOtroCheck" /> Otro (marcar)</label>
         <label><input type="checkbox" name="orProfesional" /> Actividad profesional</label>
         <label><input type="checkbox" name="orFiniquito" /> Finiquito</label>
       </div>
       <div class="grid" style="margin-top:10px;">
-        <div><label>Otro (especifique)</label><input name="orOtro" /></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label style="display:flex; align-items:center; gap:10px; min-height:auto; margin:0;"><input type="checkbox" name="orOtroCheck" /> Otro (marcar)</label>
+          <input name="orOtro" placeholder="Otro (especifique)" />
+        </div>
       </div>
     </div>
 
