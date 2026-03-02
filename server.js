@@ -1846,6 +1846,14 @@ function renderTemplate(templateName, data, options = {}) {
   return html;
 }
 
+function withPldsFooterCode(data, scope, id) {
+  const merged = { ...(data || {}) };
+  if (id === '26' && !merged.orFooterCode) {
+    merged.orFooterCode = scope === 'NM' ? 'FR-VEN-26 OR PM N' : 'FR-VEN-26 OR PF N';
+  }
+  return merged;
+}
+
 app.get('/login', (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) return res.redirect('/');
   const googleReady = GOOGLE_AUTH_READY;
@@ -3648,7 +3656,8 @@ app.get('/format-nacional/:id', (req, res) => {
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
-  const html = renderTemplate(format.file, data, {
+  const renderData = withPldsFooterCode(data, 'N', id);
+  const html = renderTemplate(format.file, renderData, {
     baseUrl,
     showControls: !req.query.print,
     downloadUrl: `/format-nacional/${id}/pdf`,
@@ -3664,7 +3673,8 @@ app.get('/format-nacional/:id/pdf', async (req, res) => {
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
-  const html = renderTemplate(format.file, data, {
+  const renderData = withPldsFooterCode(data, 'N', id);
+  const html = renderTemplate(format.file, renderData, {
     baseUrl,
     showControls: false,
     downloadUrl: `/format-nacional/${id}/pdf`,
@@ -3706,7 +3716,8 @@ app.post('/format-nacional/:id/pdf', async (req, res) => {
   log(`Submission guardado: ${saved.id} formato=N-${id}`);
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const html = renderTemplate(format.file, data, {
+  const renderData = withPldsFooterCode(data, 'N', id);
+  const html = renderTemplate(format.file, renderData, {
     baseUrl,
     showControls: false,
     downloadUrl: `/format-nacional/${id}/pdf`,
@@ -3739,7 +3750,8 @@ app.get('/format-nacional-moral/:id', (req, res) => {
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
-  const html = renderTemplate(format.file, data, {
+  const renderData = withPldsFooterCode(data, 'NM', id);
+  const html = renderTemplate(format.file, renderData, {
     baseUrl,
     showControls: !req.query.print,
     downloadUrl: `/format-nacional-moral/${id}/pdf`,
@@ -3755,7 +3767,8 @@ app.get('/format-nacional-moral/:id/pdf', async (req, res) => {
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
-  const html = renderTemplate(format.file, data, {
+  const renderData = withPldsFooterCode(data, 'NM', id);
+  const html = renderTemplate(format.file, renderData, {
     baseUrl,
     showControls: false,
     downloadUrl: `/format-nacional-moral/${id}/pdf`,
@@ -3797,7 +3810,8 @@ app.post('/format-nacional-moral/:id/pdf', async (req, res) => {
   log(`Submission guardado: ${saved.id} formato=NM-${id}`);
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const html = renderTemplate(format.file, data, {
+  const renderData = withPldsFooterCode(data, 'NM', id);
+  const html = renderTemplate(format.file, renderData, {
     baseUrl,
     showControls: false,
     downloadUrl: `/format-nacional-moral/${id}/pdf`,
