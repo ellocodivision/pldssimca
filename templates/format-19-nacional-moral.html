@@ -17,6 +17,11 @@ body { margin:0; font-family: Arial, Helvetica, sans-serif; font-size:11pt; line
 .line{width:100%;display:block;min-height:16px;line-height:16px;padding-top:1px;padding-bottom:2px;border-bottom:1px solid #000;white-space:pre-wrap;word-break:break-word;}
 .circle{display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;border:1px solid #000;border-radius:50%;margin-left:4px;vertical-align:middle;box-sizing:border-box;}
 .circle.checked{background-color:#000;}
+.box{display:inline-block;width:20px;height:20px;border:1px solid #000;vertical-align:middle;margin-right:8px;}
+.box.checked{background:#000;}
+.yn{display:inline-flex;border:1px solid #000;line-height:1;}
+.yn-cell{display:inline-flex;align-items:center;justify-content:center;min-width:74px;height:24px;}
+.yn-cell + .yn-cell{border-left:1px solid #000;}
 .table{width:100%;border-collapse:collapse;font-size:11pt;} .table td,.table th{padding:3px 4px;vertical-align:top;border:1px solid #000;} .table th{text-align:left;}
 .no-border td,.no-border th{border:0;padding:2px 0;}
 </style>
@@ -45,13 +50,32 @@ body { margin:0; font-family: Arial, Helvetica, sans-serif; font-size:11pt; line
   <div class="block para bold">Identificación de los medios por los cuales ejerce el carácter de beneficiario controlador</div>
 
   <div class="block para">
-    <table class="table no-border">
-      <tr><td style="width:55%;"><b>A)</b> Participación del Propietario Real en el Cliente:</td><td></td></tr>
-      <tr><td style="padding-left:24px;">Directa <span class="circle {{pmBCDirecta}}"></span></td><td>Indirecta <span class="circle {{pmBCIndirecta}}"></span> especifique: <span class="line" style="display:inline-block;width:55%;">{{pmBCIndirectaDetalle}}</span></td></tr>
-      <tr><td colspan="2"><b>B)</b> Imponer, directa o indirectamente, decisiones en asambleas, o nombrar/destituir mayoría de consejeros: Sí <span class="circle {{pmBCBsi}}"></span> No <span class="circle {{pmBCBno}}"></span></td></tr>
-      <tr><td colspan="2"><b>C)</b> Titularidad de derechos para ejercer voto sobre más del 25% del capital social: Sí <span class="circle {{pmBCCsi}}"></span> No <span class="circle {{pmBCCno}}"></span></td></tr>
-      <tr><td colspan="2"><b>D)</b> Dirigir administración, estrategia o principales políticas de la persona moral: Sí <span class="circle {{pmBCDsi}}"></span> No <span class="circle {{pmBCDno}}"></span></td></tr>
-    </table>
+    <div><b>A) Participación del Propietario Real en el Cliente:</b></div>
+    <div style="padding-left:18px;margin-top:8px;">
+      <div style="margin-bottom:8px;"><span class="box {{pmBCDirecta}}"></span>Directa</div>
+      <div><span class="box {{pmBCIndirecta}}"></span>Indirecta. especifique: <span class="line" style="display:inline-block;width:58%;">{{pmBCIndirectaDetalle}}</span></div>
+    </div>
+  </div>
+
+  <div class="block para">
+    <div class="bold">B) Imponer, directa o indirectamente, decisiones en las asambleas generales de accionistas, socios u órganos equivalentes, o nombrar o destituir a la mayoría de los consejeros, administradores o sus equivalentes</div>
+    <div style="text-align:center;margin-top:8px;">
+      <span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCBsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCBno}}"></span></span></span>
+    </div>
+  </div>
+
+  <div class="block para">
+    <div class="bold">C) Mantener la titularidad de los derechos que permitan, directa o indirectamente, ejercer el voto respecto de más del 25% del capital social o bien:</div>
+    <div style="text-align:center;margin-top:8px;">
+      <span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCCsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCCno}}"></span></span></span>
+    </div>
+  </div>
+
+  <div class="block para">
+    <div class="bold">D) Dirigir, directa o indirectamente, la administración, la estrategia o las principales políticas de la persona moral, fideicomiso o cualquier otra figura jurídica.</div>
+    <div style="text-align:center;margin-top:8px;">
+      <span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCDsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCDno}}"></span></span></span>
+    </div>
   </div>
 
   <div class="block para bold">Datos del Beneficiario Controlador:</div>
@@ -104,9 +128,14 @@ body { margin:0; font-family: Arial, Helvetica, sans-serif; font-size:11pt; line
   <div class="block center">
     <div class="bold">Atentamente,</div>
     <div class="spacer-2"></div>
-    <div class="line" style="width:45%; margin: 0 auto;"></div>
-    <div class="bold">{{spanNombreCompleto}}</div>
-    <div class="bold">Representada por: {{spanApoderadoNombre}}</div>
+    <div style="width:70%; margin:0 auto 8px; text-align:left;">
+      <span class="bold">Persona Moral:</span>
+      <span class="line" style="display:inline-block; width:68%;">{{spanNombreCompleto}}</span>
+    </div>
+    <div style="width:70%; margin:0 auto; text-align:left;">
+      <span class="bold">Representada por:</span>
+      <span class="line" style="display:inline-block; width:62%;">{{spanApoderadoNombre}}</span>
+    </div>
   </div>
 </div>
 
