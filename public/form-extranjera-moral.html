@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Formularios AML</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; background: #e0ded6; }
+    .wrap { max-width: 1100px; margin: 0 auto; background: #fff; padding: 20px; border: 1px solid #e5e7eb; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    h2 { font-size: 16px; margin: 20px 0 8px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; row-gap: 12px; align-items: start; }
+    .grid > div { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+    .section .grid + .grid { margin-top: 12px; }
+    label { font-size: 12px; color: #374151; display: block; margin: 0; line-height: 1.2; min-height: 14px; }
+    input, select { width: 100%; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; height: 28px; box-sizing: border-box; margin: 0; }
+    .section { margin: 16px 0; padding-top: 12px; border-top: 1px solid #eee; }
+    .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .btn { background: #ffe816; color: #111; border: 1px solid #111; border-radius: 12px; padding: 10px 14px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.15); }
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; row-gap: 12px; }
+    .checks label { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .checks input[type="checkbox"], .checks input[type="radio"] {
+      width: 20px; height: 20px; margin: 0;
+      accent-color: #7c3aed;
+    }
+    .bar { display:flex; gap:10px; justify-content:flex-end; }
+    .history-panel { margin-top: 14px; padding: 12px; border: 1px solid #d1d5db; background: #fff; }
+    .history-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .history-title { margin: 0; font-size: 14px; }
+    .history-list { display: grid; gap: 8px; max-height: 230px; overflow: auto; }
+    .history-item { border: 1px solid #e5e7eb; padding: 8px; background: #fafafa; }
+    .history-meta { font-size: 11px; color: #4b5563; margin-bottom: 6px; }
+    .history-actions { display: flex; gap: 6px; }
+    .btn-sm { background: #111827; color: #fff; border: none; padding: 6px 8px; cursor: pointer; font-size: 11px; }
+    .btn-sm.light { background: #fff; color: #111827; border: 1px solid #d1d5db; }
+  </style>
+</head>
+<body>
+  <div style="max-width:1100px;margin:0 auto 12px;">
+    <button type="button" onclick="history.back()" style="padding:8px 12px;border:1px solid #333;border-radius:8px;background:#fff;cursor:pointer;">Regresar</button>
+  </div>
+  <div class="wrap">
+    <h1>PERSONA MORAL EXTRANJERA</h1>
+    <div class="history-panel">
+      <div class="history-head">
+        <h3 class="history-title">Historial (ultimos 10 documentos)</h3>
+        <button class="btn-sm" id="saveDraft">Guardar Borrador</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <div class="section">
+    <h2>FR-VEN-10 — CONOCE A TU CLIENTE (EXTRANJERA PM)</h2>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div>
+          <label>Desarrolladora</label>
+          <select name="desarrolladoraText">
+            <option value="">Selecciona...</option>
+            <option>DESARROLLOS SIMCA, S.A.P.I. DE C.V.</option>
+            <option>GRUPO KATNA, S.A. DE C.V.</option>
+            <option>INMOBILIARIA HABITACIONAL PENINSULAR, S.A. DE C.V.</option>
+            <option>COOPERATIVA INMOBILIARIA MONCA, S.C. DE R.L. DE C.V.</option>
+            <option>NORTEMERIDA LA CIUDAD QUE QUEREMOS, S.A. DE C.V.</option>
+            <option>DESARROLLADORA G7, S.A. DE C.V.</option>
+            <option>DESARROLLADORA TAMANCHE, S.A. DE C.V.</option>
+            <option>DESARROLLOS MONSI, S.A. DE C.V.</option>
+            <option>DOWN PAYMENT FC, S.A. DE C.V.</option>
+            <option>PRIMERA NACION, S.A. DE C.V.</option>
+            <option>BANCO INVEX, S.A. INSTITUCION DE BANCA MULTIPLE, FIDEICOMISO EMPRESARIAL 3798</option>
+            <option>PARQUE LOGISTICO ENDEMICO, S.A.P.I. DE C.V.</option>
+            <option>YUCALPETEN RESORT & MARINA, S.A.P.I. DE C.V.</option>
+            <option>ALSA INDUSTRIAS, S.A. DE C.V.</option>
+            <option>MUUK DESARROLLADORES, S.A. DE C.V.</option>
+            <option>GRAN PROVINCIA GOLF, S.A. DE C.V.</option>
+            <option>HABITACIONES DEL SURESTE, S.A. DE C.V.</option>
+          </select>
+        </div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+        <div><label>Ciudad</label><input name="txtCiudadES" /></div>
+        <div><label>Denominación</label><input name="spanNombreCompleto" /></div>
+        <div><label>Fecha de constitución</label><input name="spanFechaNacimiento" /></div>
+        <div><label>No. de Acta Constitutiva</label><input name="pmActaConstitutiva" /></div>
+        <div><label>Nacionalidad</label><input name="spanNacionalidad" /></div>
+        <div><label>Objeto Social</label><input name="spanOcupacion" /></div>
+        <div><label>RFC</label><input name="spanIdentificacionFiscal" /></div>
+        <div>
+          <label>Uso de factura</label>
+          <select name="spanFactura">
+            <option value="">Selecciona...</option>
+            <option>G01 - Adquisición de mercancías.</option>
+            <option>G02 - Devoluciones, descuentos o bonificaciones.</option>
+            <option>G03 - Gastos en general.</option>
+            <option>I01 - Construcciones.</option>
+            <option>I02 - Mobiliario y equipo de oficina por inversiones.</option>
+            <option>I03 - Equipo de transporte.</option>
+            <option>I04 - Equipo de computo y accesorios.</option>
+            <option>I05 - Dados, troqueles, moldes, matrices y herramental.</option>
+            <option>I06 - Comunicaciones telefónicas.</option>
+            <option>I07 - Comunicaciones satelitales.</option>
+            <option>I08 - Otra maquinaria y equipo.</option>
+            <option>D01 - Honorarios médicos, dentales y gastos hospitalarios.</option>
+            <option>D02 - Gastos médicos por incapacidad o discapacidad.</option>
+            <option>D03 - Gastos funerales.</option>
+            <option>D04 - Donativos.</option>
+            <option>D05 - Intereses reales efectivamente pagados por créditos hipotecarios (casa habitación).</option>
+            <option>D06 - Aportaciones voluntarias al SAR.</option>
+            <option>D07 - Primas por seguros de gastos médicos.</option>
+            <option>D08 - Gastos de transportación escolar obligatoria.</option>
+            <option>D09 - Depósitos en cuentas para el ahorro, primas que tengan como base planes de pensiones.</option>
+            <option>D10 - Pagos por servicios educativos (colegiaturas).</option>
+            <option>P01 - Por definir</option>
+            <option>S01 - Sin efectos fiscales.</option>
+            <option>CP01 - Pagos</option>
+            <option>CN01 - Nómina</option>
+            <option>N/A - No Aplica</option>
+          </select>
+        </div>
+        <div>
+          <label>Régimen SAT</label>
+          <select name="spanRegimen">
+            <option value="">Selecciona...</option>
+            <option>601 General de Ley Personas Morales</option>
+            <option>603 Personas Morales con Fines no Lucrativos</option>
+            <option>605 Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+            <option>606 Arrendamiento</option>
+            <option>607 Régimen de Enajenación o Adquisición de Bienes</option>
+            <option>608 Demás ingresos</option>
+            <option>610 Residentes en el Extranjero sin Establecimiento Permanente en México</option>
+            <option>611 Ingresos por Dividendos (socios y accionistas)</option>
+            <option>612 Personas Físicas con Actividades Empresariales y Profesionales</option>
+            <option>614 Ingresos por intereses</option>
+            <option>615 Régimen de los ingresos por obtención de premios</option>
+            <option>616 Sin obligaciones fiscales</option>
+            <option>620 Sociedades Cooperativas de Producción que optan por diferir sus ingresos</option>
+            <option>621 Incorporación Fiscal</option>
+            <option>622 Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras</option>
+            <option>623 Opcional para Grupos de Sociedades</option>
+            <option>624 Coordinados</option>
+            <option>625 Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas</option>
+            <option>626 Régimen Simplificado de Confianza</option>
+          </select>
+        </div>
+        <div><label>Código Postal registrado en el SAT</label><input name="spanCodigoPostalSAT" /></div>
+        <div><label>Calle/Avenida</label><input name="spanCalle" /></div>
+        <div><label>No. Exterior</label><input name="spanExterior" /></div>
+        <div><label>No. Interior (si aplica)</label><input name="spanInterior" /></div>
+        <div><label>Colonia</label><input name="spanColonia" /></div>
+        <div><label>Código Postal</label><input name="spanCodigoPostal" /></div>
+        <div><label>Ciudad y Estado</label><input name="spanCiudadEstado" /></div>
+        <div><label>Teléfono</label><input name="spanTelefono" /></div>
+        <div><label>Correo Electrónico</label><input name="spanEmail" /></div>
+      </div>
+
+      <h2>Accionistas</h2>
+      <div class="grid">
+        <div><label>Accionista i Nombre</label><input name="pmAcc1Nombre" /></div>
+        <div><label>Accionista i %</label><input name="pmAcc1Pct" /></div>
+        <div><label>Accionista ii Nombre</label><input name="pmAcc2Nombre" /></div>
+        <div><label>Accionista ii %</label><input name="pmAcc2Pct" /></div>
+        <div><label>Accionista iii Nombre</label><input name="pmAcc3Nombre" /></div>
+        <div><label>Accionista iii %</label><input name="pmAcc3Pct" /></div>
+        <div><label>Accionista iv Nombre</label><input name="pmAcc4Nombre" /></div>
+        <div><label>Accionista iv %</label><input name="pmAcc4Pct" /></div>
+      </div>
+
+      <h2>Apoderado</h2>
+      <div class="grid">
+        <div><label>Nombre Completo</label><input name="spanApoderadoNombre" /></div>
+        <div><label>Fecha de Nacimiento</label><input name="spanApoderadoFecha" /></div>
+        <div><label>Nacionalidad</label><input name="spanApoderadoNacionalidad" /></div>
+        <div><label>RFC</label><input name="spanApoderadoRFC" /></div>
+        <div><label>CURP</label><input name="spanApoderadoSSN" /></div>
+        <div><label>Datos del Poder</label><input name="spanApoderadoPoder" /></div>
+        <div><label>Teléfono</label><input name="spanApoderadoTelefono" /></div>
+        <div><label>Correo Electrónico</label><input name="spanApoderadoEmail" /></div>
+        <div><label>Tipo, No. Identificación y Autoridad Emisora</label><input name="spanApoderadoTipoID" /></div>
+        <div><label>Cargo del representante</label><input name="pmCargoRepresentante" /></div>
+      </div>
+
+      <h2>PEP</h2>
+      <div class="grid">
+        <div><label>Cargo Cliente</label><input name="pepClienteCargo" /></div>
+        <div><label>Cargo Familiar</label><input name="pepFamiliarCargo" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="radio" name="pepCliente" value="yes" /> Cliente Sí</label>
+        <label><input type="radio" name="pepCliente" value="no" /> Cliente No</label>
+        <label><input type="radio" name="pepFamiliar" value="yes" /> Familiar Sí</label>
+        <label><input type="radio" name="pepFamiliar" value="no" /> Familiar No</label>
+      </div>
+
+      <h2>Datos PPE</h2>
+      <div class="grid">
+        <div><label>Nombre Completo</label><input name="spanPPENombre" /></div>
+        <div><label>Fecha de Nacimiento</label><input name="spanPPEFecha" /></div>
+        <div><label>Lugar nacimiento</label><input name="spanPPELugarNacimiento" /></div>
+        <div><label>Nacionalidad</label><input name="spanPPENacionalidad" /></div>
+        <div><label>Ocupación</label><input name="spanPPEOcupacion" /></div>
+        <div><label>RFC</label><input name="spanPPERFC" /></div>
+        <div><label>Tarjeta de Seguridad Social</label><input name="spanPPESSN" /></div>
+        <div><label>Domicilio</label><input name="spanPPEDomicilio" /></div>
+        <div><label>Calle/Avenida</label><input name="spanPPECalle" /></div>
+        <div><label>No. Exterior</label><input name="spanPPEExterior" /></div>
+        <div><label>No. Interior (si aplica)</label><input name="spanPPEInterior" /></div>
+        <div><label>Colonia</label><input name="spanPPEColonia" /></div>
+        <div><label>CP</label><input name="spanPPECodigoPostal" /></div>
+        <div><label>Ciudad</label><input name="spanPPECiudad" /></div>
+        <div><label>Teléfono</label><input name="spanPPETelefono" /></div>
+        <div><label>Correo Electrónico</label><input name="spanPPEEmail" /></div>
+      </div>
+
+      <h2>Documentos adjuntos</h2>
+      <div class="checks">
+        <label><input type="checkbox" name="pmDocActaConstitutiva" /> Acta Constitutiva</label>
+        <label><input type="checkbox" name="cbClienteRFC" /> Cédula Fiscal</label>
+        <label><input type="checkbox" name="cbClienteDomicilio" /> Comprobante de Domicilio</label>
+        <label><input type="checkbox" name="pmDocIdRepresentante" /> ID representante</label>
+        <label><input type="checkbox" name="pmDocCurpRepresentante" /> CURP representante</label>
+        <label><input type="checkbox" name="pmDocRfcRepresentante" /> RFC representante</label>
+        <label><input type="checkbox" name="pmDocPoderRepresentante" /> Poder representante</label>
+      </div>
+      <h2>Documentos adjuntos — PPE</h2>
+      <div class="checks">
+        <label><input type="checkbox" name="cbPPEID" /> Identificación Oficial</label>
+        <label><input type="checkbox" name="cbPPERFC_DOC" /> Cédula Fiscal</label>
+        <label><input type="checkbox" name="cbPPEDomicilio_DOC" /> Comprobante de Domicilio</label>
+        <label><input type="checkbox" name="cbPPESSNRep" /> CURP</label>
+      </div>
+      <div class="grid" style="margin-top:10px;">
+        <div><label>Otro, especifique</label><input name="spanOtro" /></div>
+        <div><label>Otro, especifique</label><input name="spanOtro1" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>FR-VEN-19 — BENEFICIARIO CONTROLADOR (EXTRANJERA PM)</h2>
+      <h2>Medios del Beneficiario Controlador</h2>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="checkbox" name="pmBCDirecta" /> A) Participación directa</label>
+        <label><input type="checkbox" name="pmBCIndirecta" /> A) Participación indirecta</label>
+      </div>
+      <div class="grid">
+        <div><label>A) Indirecta, especifique</label><input name="pmBCIndirectaDetalle" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="radio" name="pmBCB" value="si" /> B) Sí</label>
+        <label><input type="radio" name="pmBCB" value="no" /> B) No</label>
+        <label><input type="radio" name="pmBCC" value="si" /> C) Sí</label>
+        <label><input type="radio" name="pmBCC" value="no" /> C) No</label>
+        <label><input type="radio" name="pmBCD" value="si" /> D) Sí</label>
+        <label><input type="radio" name="pmBCD" value="no" /> D) No</label>
+      </div>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div>
+          <label>Domicilio de la empresa</label>
+          <select name="cbEmpresaDomicilioES">
+            <option value="">Selecciona...</option>
+            <option>Calle 40 Diag x Av. Temozón y 71 Tabl 41931, Temozón Norte, Mérida, Yucatán, México CP 97302</option>
+            <option>Calle 68A Norte X Av Siaan Kaan y Carret Fed Cancún-Tulum, Playa del Carmen, Quintana Roo, México CP</option>
+            <option>Calle 4 X 15 y SC No. 170A Piso 8, Col Montecristo, Mérida, Yucatán, México CP 97133</option>
+            <option>Calle 17 No. 104E Col Itzimna, Mérida, Yucatán, México CP 97100</option>
+            <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
+          </select>
+        </div>
+        <div><label>Lugar</label><input name="cbLugarES" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+      </div>
+      <div class="grid">
+        <div><label>Nombre Completo</label><input name="cbNombre" /></div>
+        <div><label>Fecha de Nacimiento</label><input name="cbFechaNacimiento" /></div>
+        <div><label>Nacionalidad</label><input name="cbNacionalidad" /></div>
+        <div><label>RFC o CURP</label><input name="cbRFC" /></div>
+        <div><label>Dirección</label><input name="cbDireccion" /></div>
+        <div><label>Tipo, No. Identificación y Autoridad emisora</label><input name="cbID" /></div>
+        <div><label>Estado civil</label><input name="cbEstadoCivil" /></div>
+        <div><label>Teléfono</label><input name="cbTelefono" /></div>
+        <div><label>Correo Electrónico</label><input name="cbEmail" /></div>
+      </div>
+      <h2>Datos beneficiario controlador 2 (opcional)</h2>
+      <div class="grid">
+        <div><label>Nombre Completo</label><input name="cbNombre2" /></div>
+        <div><label>Fecha de Nacimiento</label><input name="cbFechaNacimiento2" /></div>
+        <div><label>Nacionalidad</label><input name="cbNacionalidad2" /></div>
+        <div><label>RFC o CURP</label><input name="cbRFC2" /></div>
+        <div><label>Dirección</label><input name="cbDireccion2" /></div>
+        <div><label>Tipo, No. Identificación y Autoridad emisora</label><input name="cbID2" /></div>
+        <div><label>Estado civil</label><input name="cbEstadoCivil2" /></div>
+        <div><label>Teléfono</label><input name="cbTelefono2" /></div>
+        <div><label>Correo Electrónico</label><input name="cbEmail2" /></div>
+      </div>
+      <h2>Documentos adjuntos (FR-VEN-19 PM / Bilingüe)</h2>
+      <div class="checks">
+        <label><input type="checkbox" name="cb19OfficialId" /> Identificación Oficial / Official ID</label>
+        <label><input type="checkbox" name="cb19Passport" /> Pasaporte / Passport</label>
+        <label><input type="checkbox" name="cb19TemporaryResident" /> Residente Temporal / Temporary Resident</label>
+        <label><input type="checkbox" name="cb19Naturalization" /> Carta de Naturalización / Certificate of Citizenship</label>
+        <label><input type="checkbox" name="cb19ResidenceCertificate" /> Residencia / Residence Certificate</label>
+        <label><input type="checkbox" name="cb19TaxId" /> Doc. de Identificación Fiscal / Federal Taxpayer Registry</label>
+        <label><input type="checkbox" name="cb19ProofResidency" /> Comprobante de Domicilio / Proof of Residency</label>
+      </div>
+      <div class="grid" style="margin-top:10px;">
+        <div><label>Otro, especifique / Other, specify</label><input name="spanOtroBC19" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>FR-VEN-26 — ORIGEN DE RECURSOS</h2>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div>
+          <label>Domicilio de la empresa</label>
+          <select name="cbEmpresaDomicilioES">
+            <option value="">Selecciona...</option>
+            <option>Calle 40 Diag x Av. Temozón y 71 Tabl 41931, Temozón Norte, Mérida, Yucatán, México CP 97302</option>
+            <option>Calle 68A Norte X Av Siaan Kaan y Carret Fed Cancún-Tulum, Playa del Carmen, Quintana Roo, México CP</option>
+            <option>Calle 4 X 15 y SC No. 170A Piso 8, Col Montecristo, Mérida, Yucatán, México CP 97133</option>
+            <option>Calle 17 No. 104E Col Itzimna, Mérida, Yucatán, México CP 97100</option>
+            <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
+          </select>
+        </div>
+        <div><label>Lugar</label><input name="cbLugarES" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+        <div><label>Ciudad</label><input name="txtCiudadES" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="radio" name="orTipo" value="propios" /> Recursos propios</label>
+        <label><input type="radio" name="orTipo" value="tercero" /> Recursos de tercero</label>
+      </div>
+      <div class="grid" style="margin-top:10px;">
+        <div><label>Nombre de tercero (si aplica)</label><input name="orTerceroNombre" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="checkbox" name="orAhorros" /> Ahorros</label>
+        <label><input type="checkbox" name="orRentas" /> Rentas</label>
+        <label><input type="checkbox" name="orVentas" /> Ventas</label>
+        <label><input type="checkbox" name="orComisiones" /> Comisiones</label>
+        <label><input type="checkbox" name="orBecas" /> Becas</label>
+        <label><input type="checkbox" name="orSalario" /> Salario</label>
+        <label><input type="checkbox" name="orBono" /> Bono laboral</label>
+        <label><input type="checkbox" name="orInversiones" /> Inversiones</label>
+        <label><input type="checkbox" name="orVenta" /> Venta de inmueble</label>
+        <label><input type="checkbox" name="orRifas" /> Rifas, premios o concursos</label>
+        <label><input type="checkbox" name="orHerencia" /> Herencia o legado</label>
+        <label><input type="checkbox" name="orEmpresarial" /> Actividad empresarial</label>
+        <label><input type="checkbox" name="orJubilacion" /> Jubilación o Afore</label>
+        <label><input type="checkbox" name="orActivos" /> Venta de activos</label>
+        <label><input type="checkbox" name="orProfesional" /> Actividad profesional</label>
+        <label><input type="checkbox" name="orFiniquito" /> Finiquito</label>
+      </div>
+      <div class="grid" style="margin-top:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label style="display:flex; align-items:center; gap:10px; min-height:auto; margin:0;"><input type="checkbox" name="orOtroCheck" /> Otro (marcar)</label>
+          <input name="orOtro" placeholder="Otro (especifique)" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>FR-VEN-35 — AVISO DE PRIVACIDAD</h2>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div>
+          <label>Domicilio de la empresa</label>
+          <select name="cbEmpresaDomicilioES">
+            <option value="">Selecciona...</option>
+            <option>Calle 40 Diag x Av. Temozón y 71 Tabl 41931, Temozón Norte, Mérida, Yucatán, México CP 97302</option>
+            <option>Calle 68A Norte X Av Siaan Kaan y Carret Fed Cancún-Tulum, Playa del Carmen, Quintana Roo, México CP</option>
+            <option>Calle 4 X 15 y SC No. 170A Piso 8, Col Montecristo, Mérida, Yucatán, México CP 97133</option>
+            <option>Calle 17 No. 104E Col Itzimna, Mérida, Yucatán, México CP 97100</option>
+            <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
+          </select>
+        </div>
+        <div><label>Nombre Completo</label><input name="spanNombreCompleto" /></div>
+        <div><label>Domicilio</label><input name="spanDomicilio" /></div>
+        <div><label>Teléfono</label><input name="spanTelefono" /></div>
+        <div><label>Correo Electrónico</label><input name="spanEmail" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+      </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="radio" name="pvSolicitar" value="si" /> Solicitar evaluación: Sí</label>
+        <label><input type="radio" name="pvSolicitar" value="no" /> Solicitar evaluación: No</label>
+        <label><input type="radio" name="pvEnviar" value="si" /> Enviar promociones: Sí</label>
+        <label><input type="radio" name="pvEnviar" value="no" /> Enviar promociones: No</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>FR-VEN-21 — CONSULTA DE LISTAS DE PERSONAS BLOQUEADAS</h2>
+      <h2>Datos base</h2>
+      <div class="grid">
+        <div><label>Desarrolladora</label><input name="desarrolladoraText" /></div>
+        <div><label>Lugar</label><input name="cbLugarES" /></div>
+        <div><label>Día</label><input name="cbDiaES" /></div>
+        <div><label>Mes</label><input name="cbMesES" /></div>
+        <div><label>Año</label><input name="cbAnioES" /></div>
+        <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
+        <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
+        <div><label>Ciudad</label><input name="txtCiudadES" /></div>
+        <div><label>Nombre Completo</label><input name="spanNombreCompleto" /></div>
+        <div><label>Nacionalidad</label><input name="spanNacionalidad" /></div>
+        <div><label>Domicilio</label><input name="spanDomicilio" /></div>
+        <div><label>RFC/TIN</label><input name="spanIdentificacionFiscal" /></div>
+      </div>
+      <div class="grid">
+        <div><label>Tipo y No. de Identificación</label><input name="v21_tipo_id" /></div>
+        <div><label>CURP/SSN</label><input name="v21_curp" /></div>
+        <div><label>Nombre y firma vendedor(a)</label><input name="v21_vendedor" /></div>
+      </div>
+      <h2>Listas de verificación</h2>
+      <div class="grid">
+        <div><label>Fecha verificación 1</label><input name="fecha_verificacion_1" /></div>
+        <div><label>Sitio web 1</label><input name="sitio_web_1" /></div>
+        <div><label>Fecha verificación 2</label><input name="fecha_verificacion_2" /></div>
+        <div><label>Sitio web 2</label><input name="sitio_web_2" /></div>
+        <div><label>Fecha verificación 3</label><input name="fecha_verificacion_3" /></div>
+        <div><label>Sitio web 3</label><input name="sitio_web_3" /></div>
+        <div><label>Fecha verificación 4</label><input name="fecha_verificacion_4" /></div>
+        <div><label>Sitio web 4</label><input name="sitio_web_4" /></div>
+        <div><label>Fecha verificación 5</label><input name="fecha_verificacion_5" /></div>
+        <div><label>Sitio web 5</label><input name="sitio_web_5" /></div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <button class="btn" id="download21">Descargar Consulta de Listas de Personas Bloqueadas</button>
+      <button class="btn" id="download10">Descargar Conoce a tu Cliente</button>
+      <button class="btn" id="download19">Descargar Beneficiario Controlador</button>
+      <button class="btn" id="download26">Descargar Origen de Recursos</button>
+      <button class="btn" id="download35">Descargar Aviso de Privacidad</button>
+    </div>
+  </div>
+
+<script>
+  const form = document.querySelector('.wrap');
+  const historyList = document.getElementById('historyList');
+  const saveDraftBtn = document.getElementById('saveDraft');
+  const HISTORY_KEY = 'plds_form_history_extranjera_moral_v1';
+  const HISTORY_LIMIT = 10;
+
+  function syncByName(source) {
+    if (!source.name) return;
+    const peers = form.querySelectorAll(`[name="${CSS.escape(source.name)}"]`);
+    peers.forEach((peer) => {
+      if (peer === source) return;
+      if (source.type === 'radio') {
+        peer.checked = source.checked && peer.value === source.value;
+      } else if (source.type === 'checkbox') {
+        peer.checked = source.checked;
+      } else {
+        peer.value = source.value;
+      }
+    });
+  }
+
+  function syncAliases(source) {
+    // FR-VEN-10 -> FR-VEN-21
+    if (source.name === 'spanTipoIdentificacion') {
+      form.querySelectorAll('input[name="v21_tipo_id"]').forEach((el) => {
+        if (el !== source) el.value = source.value;
+      });
+    }
+  }
+
+  form.querySelectorAll('input, select').forEach((el) => {
+    el.addEventListener('input', () => { syncByName(el); syncAliases(el); });
+    el.addEventListener('change', () => { syncByName(el); syncAliases(el); });
+  });
+
+  function getData() {
+    const data = {};
+    form.querySelectorAll('input, select').forEach((el) => {
+      if (el.type === 'checkbox') {
+        if (el.checked) data[el.name] = 'checked';
+      } else if (el.type === 'radio') {
+        if (el.checked) data[el.name] = el.value;
+      } else {
+        const value = (el.value || '').trim();
+        // Evita que inputs duplicados vacíos sobreescriban valores capturados.
+        if (!(el.name in data) || !data[el.name]) {
+          data[el.name] = value;
+        } else if (value) {
+          data[el.name] = value;
+        }
+      }
+    });
+
+    // Firma del cliente: usar nombre completo como fuente principal.
+    data.cbNombre1 = (data.spanNombreCompleto || data.cbNombre || data.cbNombre1 || '').trim();
+
+    // shared mappings
+    data.txtLoteES = data.cbUnidadES || '';
+    data.txtDesarrolloES = data.cbDesarrolloES || '';
+    data.txtCiudadES = data.txtCiudadES || '';
+    data.desarrolladoraText = data.desarrolladoraText || '';
+
+    // EN mirrored from ES for FR-VEN-10 and 19
+    data.txtLoteEN = data.txtLoteES || '';
+    data.txtDesarrolloEN = data.txtDesarrolloES || '';
+    data.txtCiudadEN = data.txtCiudadES || '';
+
+    data.cbLugarEN = data.cbLugarES || '';
+    data.cbDiaEN = data.cbDiaES || '';
+    data.cbMesEN = data.cbMesES || '';
+    data.cbAnioEN = data.cbAnioES || '';
+    data.cbEmpresaEN = data.desarrolladoraText || '';
+    data.cbEmpresaES = data.desarrolladoraText || '';
+    data.cbEmpresaDomicilioEN = data.cbEmpresaDomicilioES || '';
+    data.cbDesarrolloEN = data.cbDesarrolloES || '';
+    data.cbUnidadEN = data.cbUnidadES || '';
+
+    if (data.pepCliente === 'yes') data.pepClienteYes = 'checked';
+    if (data.pepCliente === 'no') data.pepClienteNo = 'checked';
+    if (data.pepFamiliar === 'yes') data.pepFamiliarYes = 'checked';
+    if (data.pepFamiliar === 'no') data.pepFamiliarNo = 'checked';
+
+    if (data.pmBCB === 'si') data.pmBCBsi = 'checked';
+    if (data.pmBCB === 'no') data.pmBCBno = 'checked';
+    if (data.pmBCC === 'si') data.pmBCCsi = 'checked';
+    if (data.pmBCC === 'no') data.pmBCCno = 'checked';
+    if (data.pmBCD === 'si') data.pmBCDsi = 'checked';
+    if (data.pmBCD === 'no') data.pmBCDno = 'checked';
+
+    // FR-VEN-26 shared mappings
+    data.orLugarES = data.cbLugarES || '';
+    data.orDiaES = data.cbDiaES || '';
+    data.orMesES = data.cbMesES || '';
+    data.orAnioES = data.cbAnioES || '';
+    data.orLugarEN = data.orLugarES || '';
+    data.orDiaEN = data.orDiaES || '';
+    data.orMesEN = data.orMesES || '';
+    data.orAnioEN = data.orAnioES || '';
+
+    data.orEmpresaES = data.desarrolladoraText || '';
+    data.orEmpresaEN = data.desarrolladoraText || '';
+    data.orEmpresaDirES = data.cbEmpresaDomicilioES || '';
+    data.orEmpresaDirEN = data.cbEmpresaDomicilioES || '';
+
+    data.orDesarrolloES = data.cbDesarrolloES || '';
+    data.orDesarrolloEN = data.cbDesarrolloES || '';
+    data.orUnidadES = data.cbUnidadES || '';
+    data.orUnidadEN = data.cbUnidadES || '';
+    data.orDesarrolloBodyES = data.cbDesarrolloES || '';
+    data.orDesarrolloBodyEN = data.cbDesarrolloES || '';
+    data.orUnidadBodyES = data.cbUnidadES || '';
+    data.orUnidadBodyEN = data.cbUnidadES || '';
+    data.orCiudadES = data.txtCiudadES || '';
+    data.orCiudadEN = data.txtCiudadES || '';
+
+    if (data.orTipo === 'propios') data.orPropios = 'checked';
+    if (data.orTipo === 'tercero') data.orTercero = 'checked';
+
+    // FR-VEN-35 mappings
+    data.spanFecha = (data.spanFecha && data.spanFecha.trim()) ? data.spanFecha : [data.cbDiaES || '', data.cbMesES || '', data.cbAnioES || ''].filter(Boolean).join(' / ');
+    data.solicitarSi = '';
+    data.solicitarNo = '';
+    data.solicitarSiEN = '';
+    data.solicitarNoEN = '';
+    data.enviarSi = '';
+    data.enviarNo = '';
+    data.enviarSiEN = '';
+    data.enviarNoEN = '';
+
+    if (data.pvSolicitar === 'si') {
+      data.solicitarSi = 'checked';
+      data.solicitarSiEN = 'checked';
+    } else if (data.pvSolicitar === 'no') {
+      data.solicitarNo = 'checked';
+      data.solicitarNoEN = 'checked';
+    }
+    if (data.pvEnviar === 'si') {
+      data.enviarSi = 'checked';
+      data.enviarSiEN = 'checked';
+    } else if (data.pvEnviar === 'no') {
+      data.enviarNo = 'checked';
+      data.enviarNoEN = 'checked';
+    }
+
+    // FR-VEN-21 mappings
+    data.lugar_emision = data.cbLugarES || '';
+    data.dia = data.cbDiaES || '';
+    data.mes = data.cbMesES || '';
+    data.anio = data.cbAnioES || '';
+    data.nombre_desarrollo = data.cbDesarrolloES || '';
+    data.numero_unidad = data.cbUnidadES || '';
+    data.empresa_grupo = data.desarrolladoraText || '';
+    data.nombre_desarrollo_2 = data.cbDesarrolloES || '';
+    data.numero_unidad_2 = data.cbUnidadES || '';
+    data.ciudad = data.txtCiudadES || '';
+    data.cliente_nombre = data.spanNombreCompleto || '';
+    data.cliente_identificacion = data.v21_tipo_id || data.spanTipoIdentificacion || '';
+    // Para PM usamos nacionalidad/country directamente.
+    data.cliente_nacionalidad = data.spanNacionalidad || data.spanLugarNacimiento || '';
+    data.cliente_domicilio = data.spanDomicilio || '';
+    data.cliente_rfc = data.spanIdentificacionFiscal || '';
+    data.cliente_curp = data.v21_curp || '';
+    data.vendedor_nombre = data.v21_vendedor || data.cbNombre1 || '';
+
+    return data;
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function persistHistory(items) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
+  }
+
+  function applyData(payload) {
+    form.querySelectorAll('input, select').forEach((el) => {
+      if (!el.name) return;
+      if (el.type === 'checkbox') {
+        el.checked = payload[el.name] === 'checked' || payload[el.name] === true;
+      } else if (el.type === 'radio') {
+        el.checked = payload[el.name] === el.value;
+      } else {
+        el.value = payload[el.name] || '';
+      }
+    });
+  }
+
+  function renderHistory() {
+    const items = loadHistory();
+    historyList.innerHTML = '';
+    if (!items.length) {
+      historyList.innerHTML = '<div class="history-item"><div class="history-meta">Sin historial todavia.</div></div>';
+      return;
+    }
+    items.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'history-item';
+      const dateTxt = new Date(item.createdAt).toLocaleString();
+      row.innerHTML = `
+        <div class="history-meta"><strong>${item.label}</strong> | ${dateTxt}</div>
+        <div class="history-meta">Cliente: ${item.client || 'N/A'} | Unidad: ${item.unit || 'N/A'}</div>
+        <div class="history-actions">
+          <button class="btn-sm" type="button" data-act="load" data-idx="${idx}">Cargar</button>
+          <button class="btn-sm light" type="button" data-act="delete" data-idx="${idx}">Eliminar</button>
+        </div>
+      `;
+      historyList.appendChild(row);
+    });
+  }
+
+  function saveHistoryRecord(label) {
+    const payload = getData();
+    const items = loadHistory();
+    const rec = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      label,
+      client: payload.spanNombreCompleto || payload.cbNombre || '',
+      unit: payload.cbUnidadES || payload.txtLoteES || '',
+      payload
+    };
+    items.unshift(rec);
+    persistHistory(items);
+    renderHistory();
+  }
+
+  let downloadBusy = false;
+  function setDownloadStatus(active) {
+    const buttonIds = ['download21', 'download10', 'download19', 'download26', 'download35'];
+    let statusEl = document.getElementById('pdfDownloadStatus');
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.id = 'pdfDownloadStatus';
+      statusEl.style.position = 'fixed';
+      statusEl.style.right = '20px';
+      statusEl.style.bottom = '20px';
+      statusEl.style.zIndex = '9999';
+      statusEl.style.background = '#111827';
+      statusEl.style.color = '#fff';
+      statusEl.style.padding = '10px 14px';
+      statusEl.style.borderRadius = '10px';
+      statusEl.style.boxShadow = '0 10px 25px rgba(0,0,0,.25)';
+      statusEl.style.fontSize = '13px';
+      statusEl.style.display = 'none';
+      document.body.appendChild(statusEl);
+    }
+    if (active) {
+      statusEl.textContent = 'En un momento comenzara la descarga...';
+      statusEl.style.display = 'block';
+    } else {
+      statusEl.style.display = 'none';
+    }
+    buttonIds.forEach((id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = active;
+      btn.style.opacity = active ? '0.65' : '1';
+      btn.style.cursor = active ? 'wait' : 'pointer';
+    });
+  }
+
+  async function download(format) {
+    if (downloadBusy) return;
+    downloadBusy = true;
+    setDownloadStatus(true);
+    try {
+      const payload = getData();
+      const res = await fetch(`/format-extranjera-moral/${format}/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+      if (!res.ok || !contentType.includes('application/pdf')) {
+        let detail = '';
+        try { detail = await res.text(); } catch {}
+        const short = detail ? detail.slice(0, 200) : `HTTP ${res.status}`;
+        alert(`No se pudo generar el PDF (${short}).`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const rawName = (payload.spanNombreCompleto || '').trim();
+      const safeName = (rawName || 'SIN_NOMBRE')
+        .replace(/[\\/:*?"<>|]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      a.download = `FR-VEN-${format} ${safeName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      saveHistoryRecord(`FR-VEN-${format}`);
+    } finally {
+      setDownloadStatus(false);
+      downloadBusy = false;
+    }
+  }
+
+  saveDraftBtn.addEventListener('click', () => {
+    saveHistoryRecord('BORRADOR');
+  });
+
+  historyList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const idx = Number(btn.dataset.idx);
+    const items = loadHistory();
+    if (!Number.isFinite(idx) || !items[idx]) return;
+    if (btn.dataset.act === 'load') {
+      applyData(items[idx].payload || {});
+      return;
+    }
+    if (btn.dataset.act === 'delete') {
+      items.splice(idx, 1);
+      persistHistory(items);
+      renderHistory();
+    }
+  });
+
+  document.getElementById('download21').addEventListener('click', () => download('21'));
+  document.getElementById('download10').addEventListener('click', () => download('10'));
+  document.getElementById('download19').addEventListener('click', () => download('19'));
+  document.getElementById('download26').addEventListener('click', () => download('26'));
+  document.getElementById('download35').addEventListener('click', () => download('35'));
+  renderHistory();
+</script>
+</body>
+</html>

@@ -115,6 +115,13 @@ const nationalMoralFormats = {
   '19': { name: 'FR-VEN-19 Beneficiario Controlador PM (Nacional)', file: 'format-19-nacional-moral.html' },
   '10': { name: 'FR-VEN-10 Identificación del Cliente (Nacional PM)', file: 'format-10-nacional-moral.html' }
 };
+const foreignMoralFormats = {
+  '35': { name: 'FR-VEN-35 Aviso de Privacidad (Extranjera PM)', file: 'format-35.html' },
+  '21': { name: 'FR-VEN-21 Consulta de Listas de Personas Bloqueadas', file: 'format-21.html' },
+  '26': { name: 'FR-VEN-26 Origen de los Recursos (Extranjera PM)', file: 'format-26.html' },
+  '19': { name: 'FR-VEN-19 Beneficiario Controlador PM (Extranjera)', file: 'format-19-extranjera-moral.html' },
+  '10': { name: 'FR-VEN-10 Identificación del Cliente (Extranjera PM)', file: 'format-10-extranjera-moral.html' }
+};
 const WHISPERLIST_CANALES = ['SIMCA', 'RELATED'];
 const WHISPERLIST_TIPOS_VENTA = ['EXTERNO', 'INTERNO', 'MERITO PROPIO'];
 const WHISPERLIST_RECAMARAS = ['1', '2', '3', '2PH', '3PH'];
@@ -2138,9 +2145,11 @@ app.use('/generador-roi', requireInternalUser);
 app.use('/form', requireInternalUser);
 app.use('/form-nacional', requireInternalUser);
 app.use('/form-nacional-moral', requireInternalUser);
+app.use('/form-extranjera-moral', requireInternalUser);
 app.use('/format', requireInternalUser);
 app.use('/format-nacional', requireInternalUser);
 app.use('/format-nacional-moral', requireInternalUser);
+app.use('/format-extranjera-moral', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
@@ -2208,7 +2217,7 @@ app.get('/plds/cliente-fideicomiso-empresarial-espanol', (req, res) => {
 });
 
 app.get('/plds/cliente-extranjera-persona-moral', (req, res) => {
-  renderPldsPlaceholder('Cliente Extranjera Persona Moral', res);
+  res.redirect('/form-extranjera-moral');
 });
 
 app.get('/plds/cliente-nacional-persona-fisica', (req, res) => {
@@ -3309,6 +3318,10 @@ app.get('/form-nacional-moral', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'form-nacional-moral.html'));
 });
 
+app.get('/form-extranjera-moral', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'form-extranjera-moral.html'));
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({ ok: true, ts: new Date().toISOString() });
 });
@@ -3358,6 +3371,18 @@ app.get('/api/plds/formats-nacional-moral', (req, res) => {
     htmlRoute: `/format-nacional-moral/${id}`,
     pdfGetRoute: `/format-nacional-moral/${id}/pdf`,
     pdfPostRoute: `/format-nacional-moral/${id}/pdf`
+  }));
+  res.json({ items });
+});
+
+app.get('/api/plds/formats-extranjera-moral', (req, res) => {
+  const items = Object.entries(foreignMoralFormats).map(([id, f]) => ({
+    id,
+    name: f.name,
+    template: f.file,
+    htmlRoute: `/format-extranjera-moral/${id}`,
+    pdfGetRoute: `/format-extranjera-moral/${id}/pdf`,
+    pdfPostRoute: `/format-extranjera-moral/${id}/pdf`
   }));
   res.json({ items });
 });
@@ -3838,6 +3863,97 @@ app.post('/format-nacional-moral/:id/pdf', async (req, res) => {
     res.send(pdf);
   } catch (err) {
     log(`Error en POST /format-nacional-moral/${id}/pdf: ${err && err.stack ? err.stack : err}`);
+    res.status(500).send('No se pudo generar el PDF');
+  }
+});
+
+app.get('/format-extranjera-moral/:id', (req, res) => {
+  const id = req.params.id;
+  const format = foreignMoralFormats[id];
+  if (!format) return res.status(404).send('Formato no encontrado');
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
+  const html = renderTemplate(format.file, data, {
+    baseUrl,
+    showControls: !req.query.print,
+    downloadUrl: `/format-extranjera-moral/${id}/pdf`,
+    bodyClass: 'interactive'
+  });
+  res.send(html);
+});
+
+app.get('/format-extranjera-moral/:id/pdf', async (req, res) => {
+  const id = req.params.id;
+  const format = foreignMoralFormats[id];
+  if (!format) return res.status(404).send('Formato no encontrado');
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const data = fs.existsSync(DATA_PATH) ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')) : {};
+  const html = renderTemplate(format.file, data, {
+    baseUrl,
+    showControls: false,
+    downloadUrl: `/format-extranjera-moral/${id}/pdf`,
+    bodyClass: 'print'
+  });
+
+  try {
+    const pdf = await generatePdfWithSharedBrowser(html, {
+      format: 'Letter',
+      printBackground: true,
+      margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' }
+    });
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=${format.file.replace('.html', '')}.pdf`
+    });
+    res.send(pdf);
+  } catch (err) {
+    log(`Error en GET /format-extranjera-moral/${id}/pdf: ${err && err.stack ? err.stack : err}`);
+    res.status(500).send('No se pudo generar el PDF');
+  }
+});
+
+app.post('/format-extranjera-moral/:id/pdf', async (req, res) => {
+  const id = req.params.id;
+  const format = foreignMoralFormats[id];
+  if (!format) return res.status(404).send('Formato no encontrado');
+
+  const data = { ...(req.body || {}) };
+  if (id === '10' || id === '19' || id === '21' || id === '35') {
+    Object.keys(data).forEach((k) => {
+      const v = data[k];
+      if (typeof v === 'string' && v.trim() === '') data[k] = 'N/A';
+    });
+  }
+
+  const saved = persistSubmission(`EM-${id}`, format.name, data);
+  log(`Submission guardado: ${saved.id} formato=EM-${id}`);
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const html = renderTemplate(format.file, data, {
+    baseUrl,
+    showControls: false,
+    downloadUrl: `/format-extranjera-moral/${id}/pdf`,
+    bodyClass: 'print'
+  });
+
+  try {
+    const pdfOpts = {
+      format: 'letter',
+      printBackground: true,
+      margin: { top: '0in', right: '0in', bottom: '0.6in', left: '0in' }
+    };
+    const pdf = await generatePdfWithSharedBrowser(html, pdfOpts);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=${format.file.replace('.html', '')}.pdf`
+    });
+    res.send(pdf);
+  } catch (err) {
+    log(`Error en POST /format-extranjera-moral/${id}/pdf: ${err && err.stack ? err.stack : err}`);
     res.status(500).send('No se pudo generar el PDF');
   }
 });

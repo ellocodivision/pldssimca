@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>FR-VEN-19 Beneficiario Controlador PM - Bilingüe</title>
+<style>
+@page { size: Letter; margin: 0; }
+body { margin:0; font-family: Arial, Helvetica, sans-serif; font-size:11pt; line-height:1.5; background:#fff; }
+#pages { width:216mm; margin:0 auto; }
+.page { width:216mm; height:279mm; box-sizing:border-box; padding:16mm; position:relative; background:#fff; page-break-after:always; }
+.page::before { content:""; position:absolute; inset:0; background-image:url("{{watermarkUrl}}"); background-repeat:no-repeat; background-position:center; background-size:60%; opacity:.12; pointer-events:none; }
+.page::after { content:""; position:absolute; left:8mm; right:8mm; top:8mm; bottom:8mm; border:.5pt solid #000; pointer-events:none; }
+.content { position:relative; z-index:1; height:calc(279mm - 32mm - 22mm); overflow:hidden; }
+.footer { position:absolute; left:8mm; right:8mm; bottom:8mm; font-size:8pt; display:flex; align-items:center; }
+.footer .footer-left{width:20%;}.footer .footer-center{width:60%;text-align:center;}.footer .footer-right{width:20%;text-align:right;font-size:9pt;font-weight:bold;}
+.bold{font-weight:bold;} .small{font-size:11pt; line-height:1.5;} .spacer-1{height:10px;} .spacer-2{height:18px;} .para{margin-bottom:14px;} .para-lg{margin-bottom:20px;}
+.line{width:100%;display:block;min-height:16px;line-height:16px;padding-top:1px;padding-bottom:2px;border-bottom:1px solid #000;white-space:pre-wrap;word-break:break-word;}
+.circle{display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;border:1px solid #000;border-radius:50%;margin-left:4px;vertical-align:middle;box-sizing:border-box;}
+.circle.checked{background-color:#000;}
+.box{display:inline-block;width:20px;height:20px;border:1px solid #000;vertical-align:middle;margin-right:8px;}
+.box.checked{background:#000;}
+.yn{display:inline-flex;border:1px solid #000;line-height:1;}
+.yn-cell{display:inline-flex;align-items:center;justify-content:center;min-width:74px;height:24px;}
+.yn-cell + .yn-cell{border-left:1px solid #000;}
+.table{width:100%;border-collapse:collapse;font-size:11pt;} .table td,.table th{padding:3px 4px;vertical-align:top;border:1px solid #000;} .table th{text-align:left;}
+.no-border td,.no-border th{border:0;padding:2px 0;}
+</style>
+</head>
+<body>
+
+<div id="pages"></div>
+
+<div class="blocks" id="blocks" style="display:none;">
+  <div class="block para">
+    <div class="bold" style="text-align:center;">CARTA DE BENEFICIARIO CONTROLADOR<br>PERSONA MORAL<br><br>CONTROLLING BENEFICIARY LETTER<br>LEGAL ENTITY</div>
+  </div>
+
+  <div class="block para"><span>{{cbLugarES}}</span>, a <span>{{cbDiaES}}</span> de <span>{{cbMesES}}</span> de <span>{{cbAnioES}}</span></div>
+
+  <div class="block para bold"><span>{{desarrolladoraText}}</span><br><span>{{cbEmpresaDomicilioES}}</span></div>
+
+  <div class="block para"><b>Asunto.-</b> Manifestación sobre la existencia de Beneficiario Controlador en la operación relacionada con la Unidad <span class="bold">{{cbDesarrolloES}}</span> - <span class="bold">{{cbUnidadES}}</span></div>
+
+  <div class="block para">A quien corresponda:</div>
+
+  <div class="block small para-lg">Al respecto y derivado de su solicitud, para efectos de la fracción III del artículo 18, así como lo estipulado en los artículos 19 y 21 de la Ley Federal para la Prevención e Identificación de Operaciones con Recursos de Procedencia Ilícita (la "Ley PLD"), en este acto manifiesto, bajo protesta de decir verdad, que declaro que la persona cuyos datos se señalan más adelante será quien se beneficie de la presente Operación y/o de la Unidad, teniendo este último, por lo tanto, el carácter de Beneficiario Controlador (según dicho término se define en la fracción III del artículo 3º de la Ley PLD), y que yo, el suscrito, actúo en la presente Operación y en los contratos relacionados con, o derivados de, la misma, en representación de los intereses y beneficios de dicho Beneficiario Controlador. Para tales efectos, adjunto a la presente la documentación oficial que identifica plenamente al Beneficiario Controlador.</div>
+
+  <div class="block small para-lg"><b><i>Nota:</i></b> <i>El Beneficiario Controlador es la persona física o grupo de personas físicas que: a) Directa o por medio de alguna persona Cliente o Usuaria obtiene, en última instancia, el beneficio de goce, uso, disfrute, aprovechamiento o disposición del bien o servicio derivado de la realización de un acto u operación con quien realice una Actividad Vulnerable o b) Ejerce el control efectivo en última instancia de aquella persona moral que, en su carácter de Cliente o Usuaria, lleve a cabo actos u operaciones con quien realice una Actividad Vulnerable, así como las personas por cuenta de quienes celebra alguno de ellos.</i></div>
+
+  <div class="block para bold">Identificación de los medios por los cuales ejerce el carácter de beneficiario controlador</div>
+
+  <div class="block para">
+    <div><b>A) Participación del Propietario Real en el Cliente:</b></div>
+    <div style="padding-left:18px;margin-top:8px;">
+      <div style="margin-bottom:8px;"><span class="box {{pmBCDirecta}}"></span>Directa</div>
+      <div><span class="box {{pmBCIndirecta}}"></span>Indirecta. especifique: <span class="line" style="display:inline-block;width:58%;">{{pmBCIndirectaDetalle}}</span></div>
+    </div>
+  </div>
+
+  <div class="block para">
+    <div class="bold">B) Imponer, directa o indirectamente, decisiones en las asambleas generales de accionistas, socios u órganos equivalentes, o nombrar o destituir a la mayoría de los consejeros, administradores o sus equivalentes</div>
+    <div style="text-align:center;margin-top:8px;">
+      <span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCBsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCBno}}"></span></span></span>
+    </div>
+  </div>
+
+  <div class="block para">
+    <div class="bold">C) Mantener la titularidad de los derechos que permitan, directa o indirectamente, ejercer el voto respecto de más del 25% del capital social o bien:</div>
+    <div style="text-align:center;margin-top:8px;">
+      <span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCCsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCCno}}"></span></span></span>
+    </div>
+  </div>
+
+  <div class="block para">
+    <div class="bold">D) Dirigir, directa o indirectamente, la administración, la estrategia o las principales políticas de la persona moral, fideicomiso o cualquier otra figura jurídica.</div>
+    <div style="text-align:center;margin-top:8px;">
+      <span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCDsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCDno}}"></span></span></span>
+    </div>
+  </div>
+
+  <div class="block para bold">Datos del Beneficiario Controlador:</div>
+
+  <div class="block para">
+    <table class="table no-border">
+      <tr><td style="width:42%;" class="bold">Nombre Completo:</td><td><span class="line">{{cbNombre}}</span></td></tr>
+      <tr><td class="bold">Fecha de Nacimiento:</td><td><span class="line">{{cbFechaNacimiento}}</span></td></tr>
+      <tr><td class="bold">Nacionalidad:</td><td><span class="line">{{cbNacionalidad}}</span></td></tr>
+      <tr><td class="bold">RFC o CURP:</td><td><span class="line">{{cbRFC}}</span></td></tr>
+      <tr><td class="bold">Dirección:</td><td><span class="line">{{cbDireccion}}</span></td></tr>
+      <tr><td class="bold">Tipo, No. Identificación y Autoridad emisora:</td><td><span class="line">{{cbID}}</span></td></tr>
+      <tr><td class="bold">Estado Civil (si aplica):</td><td><span class="line">{{cbEstadoCivil}}</span></td></tr>
+      <tr><td class="bold">No. de Teléfono:</td><td><span class="line">{{cbTelefono}}</span></td></tr>
+      <tr><td class="bold">Correo Electrónico:</td><td><span class="line">{{cbEmail}}</span></td></tr>
+    </table>
+  </div>
+
+  <div class="block para">
+    <table class="table no-border">
+      <tr><td style="width:42%;" class="bold">Nombre Completo:</td><td><span class="line">{{cbNombre2}}</span></td></tr>
+      <tr><td class="bold">Fecha de Nacimiento:</td><td><span class="line">{{cbFechaNacimiento2}}</span></td></tr>
+      <tr><td class="bold">Nacionalidad:</td><td><span class="line">{{cbNacionalidad2}}</span></td></tr>
+      <tr><td class="bold">RFC o CURP:</td><td><span class="line">{{cbRFC2}}</span></td></tr>
+      <tr><td class="bold">Dirección:</td><td><span class="line">{{cbDireccion2}}</span></td></tr>
+      <tr><td class="bold">Tipo, No. Identificación y Autoridad emisora:</td><td><span class="line">{{cbID2}}</span></td></tr>
+      <tr><td class="bold">Estado Civil (si aplica):</td><td><span class="line">{{cbEstadoCivil2}}</span></td></tr>
+      <tr><td class="bold">No. de Teléfono:</td><td><span class="line">{{cbTelefono2}}</span></td></tr>
+      <tr><td class="bold">Correo Electrónico:</td><td><span class="line">{{cbEmail2}}</span></td></tr>
+    </table>
+  </div>
+
+  <div class="block small para-lg">Asimismo, en este acto manifiesto que la empresa me ha informado de los alcances de la figura y concepto de Beneficiario Controlador, y que se me ha explicado y he entendido las disposiciones y requisitos de la Ley para con dicha figura.</div>
+
+  <div class="block small para-lg">Declaro, bajo protesta de decir verdad, que la información proporcionada es verídica y que he identificado correctamente al Beneficiario Controlador conforme a lo establecido por la legislación aplicable. Me comprometo a notificar por escrito cualquier cambio respecto de esta información.</div>
+
+  <div class="block para bold">Documentos adjuntos / Attachments</div>
+  <div class="block small para">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple (previamente cotejados por el asesor de ventas) los documentos marcados con una "x":<br>To support the information herein provided by the Client, the marked with an "x" are attached hereto in simple copy (previously checked by the sales adviser):</div>
+
+  <div class="block para">
+    <table class="table no-border">
+      <tr><td>Identificación Oficial / Official ID</td><td style="width:40px;"><span class="circle {{cb19OfficialId}}"></span></td></tr>
+      <tr><td>Pasaporte / Passport</td><td><span class="circle {{cb19Passport}}"></span></td></tr>
+      <tr><td>Residente Temporal / Temporary Resident</td><td><span class="circle {{cb19TemporaryResident}}"></span></td></tr>
+      <tr><td>Carta de Naturalización / Certificate of Citizenship</td><td><span class="circle {{cb19Naturalization}}"></span></td></tr>
+      <tr><td>Residencia / Residence Certificate</td><td><span class="circle {{cb19ResidenceCertificate}}"></span></td></tr>
+      <tr><td>Doc. de Identificación Fiscal / Federal Taxpayer Registry</td><td><span class="circle {{cb19TaxId}}"></span></td></tr>
+      <tr><td>Comprobante de Domicilio / Proof of Residency</td><td><span class="circle {{cb19ProofResidency}}"></span></td></tr>
+      <tr><td>Otro, especifique / Other, specify:</td><td><span class="line">{{spanOtroBC19}}</span></td></tr>
+    </table>
+  </div>
+
+  <div class="block" style="text-align:center;">
+    <div class="bold">Atentamente / Sincerely,</div>
+    <div class="spacer-2"></div>
+    <div class="line" style="width:45%; margin: 0 auto 8px;"></div>
+    <div class="bold" style="font-style:italic; text-align:center;">Persona Moral: "{{spanNombreCompleto}}"</div>
+    <div class="bold" style="font-style:italic; text-align:center;">Representada por: (señalar nombre del rep. legal) "{{spanApoderadoNombre}}"</div>
+  </div>
+</div>
+
+<script>
+(function paginate() {
+  const blocks = Array.from(document.querySelectorAll('#blocks .block'));
+  const pages = document.getElementById('pages');
+
+  function createPage() {
+    const page = document.createElement('div');
+    page.className = 'page';
+    const content = document.createElement('div');
+    content.className = 'content';
+    const footer = document.createElement('div');
+    footer.className = 'footer';
+    footer.innerHTML = `<div class="footer-left">FR-VEN-19 BC PM B</div><div class="footer-center">version 01</div><div class="footer-right">0</div>`;
+    page.appendChild(content);
+    page.appendChild(footer);
+    pages.appendChild(page);
+    return { page, content };
+  }
+
+  let current = createPage();
+  for (const block of blocks) {
+    current.content.appendChild(block);
+    if (current.content.scrollHeight > current.content.clientHeight) {
+      current.content.removeChild(block);
+      current = createPage();
+      current.content.appendChild(block);
+    }
+  }
+
+  const pageEls = pages.querySelectorAll('.page');
+  pageEls.forEach((p, i) => {
+    const num = p.querySelector('.footer-right');
+    if (num) num.textContent = String(i + 1);
+  });
+})();
+</script>
+
+</body>
+</html>
