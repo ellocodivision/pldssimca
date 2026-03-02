@@ -18,6 +18,10 @@ body { background:#fff; margin:0; font-family:"Times New Roman", Times, serif; f
 .center{text-align:center;} .bold{font-weight:bold;} .small{font-size:9pt;} .justify{text-align:justify;} .spacer-1{height:10px;} .spacer-2{height:16px;}
 .section-title{font-weight:bold; margin-top:12px; margin-bottom:4px; border-bottom:1px solid #000; padding-bottom:2px;}
 table{width:100%; border-collapse:collapse; margin-bottom:4px; font-size:9pt;} td{padding:2px 3px; vertical-align:bottom;} .label{width:45%; font-weight:bold;}
+.acc-table td{padding:3px 4px; vertical-align:middle;}
+.acc-head{font-weight:bold; text-align:center;}
+.acc-name{width:65%;}
+.acc-pct{width:11%;}
 .line{width:100%; display:block; min-height:16px; line-height:16px; padding-top:1px; padding-bottom:2px; border-bottom:1px solid #000; white-space:pre-wrap; word-break:break-word;}
 .cb{width:10px;height:10px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:9px;margin-left:4px;} .cb.checked{background:#000;color:#fff;} .cb.checked::after{content:"✔";font-size:8px;}
 .circle{width:10px;height:10px;border:1px solid #000;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;} .circle.checked{background:#000;}
@@ -73,11 +77,32 @@ table{width:100%; border-collapse:collapse; margin-bottom:4px; font-size:9pt;} t
     <div class="center bold" style="margin-bottom:6px;"><span>{{desarrolladoraText}}</span></div>
 
     <div class="section-title">10. Accionistas</div>
-    <table>
-      <tr><td class="label">i. Nombre / %</td><td class="line">{{pmAcc1Nombre}} {{pmAcc1Pct}}</td></tr>
-      <tr><td class="label">ii. Nombre / %</td><td class="line">{{pmAcc2Nombre}} {{pmAcc2Pct}}</td></tr>
-      <tr><td class="label">iii. Nombre / %</td><td class="line">{{pmAcc3Nombre}} {{pmAcc3Pct}}</td></tr>
-      <tr><td class="label">iv. Nombre / %</td><td class="line">{{pmAcc4Nombre}} {{pmAcc4Pct}}</td></tr>
+    <table class="acc-table">
+      <tr>
+        <td style="width:6%;"></td>
+        <td class="acc-head acc-name">Nombre</td>
+        <td class="acc-head acc-pct">%</td>
+      </tr>
+      <tr>
+        <td class="label">i.</td>
+        <td><span class="line">{{pmAcc1Nombre}}</span></td>
+        <td><span class="line">{{pmAcc1Pct}}</span></td>
+      </tr>
+      <tr>
+        <td class="label">ii.</td>
+        <td><span class="line">{{pmAcc2Nombre}}</span></td>
+        <td><span class="line">{{pmAcc2Pct}}</span></td>
+      </tr>
+      <tr>
+        <td class="label">iii.</td>
+        <td><span class="line">{{pmAcc3Nombre}}</span></td>
+        <td><span class="line">{{pmAcc3Pct}}</span></td>
+      </tr>
+      <tr>
+        <td class="label">iv.</td>
+        <td><span class="line">{{pmAcc4Nombre}}</span></td>
+        <td><span class="line">{{pmAcc4Pct}}</span></td>
+      </tr>
     </table>
 
     <div class="section-title">11. Datos del Representante Legal</div>
@@ -101,6 +126,7 @@ table{width:100%; border-collapse:collapse; margin-bottom:4px; font-size:9pt;} t
     </table>
 
     <div class="section-title">III. DATOS DE LA PPE</div>
+    <div class="justify small" style="margin-bottom:8px;">Además, si, efectivamente, algún familiar consanguíneo o por afinidad hasta el cuarto grado del Cliente es o ha sido una PPE, el Cliente en este acto manifiesta, bajo protesta de decir verdad, que los siguientes datos del familiar son ciertos y correctos:</div>
     <table>
       <tr><td class="label">1. Nombre Completo:</td><td class="line">{{spanPPENombre}}</td></tr>
       <tr><td class="label">2. Fecha de Nacimiento:</td><td class="line">{{spanPPEFecha}}</td></tr>
@@ -130,7 +156,7 @@ table{width:100%; border-collapse:collapse; margin-bottom:4px; font-size:9pt;} t
       <tr><td class="label">10. Correo Electrónico:</td><td class="line">{{spanPPEEmail}}</td></tr>
     </table>
 
-    <div class="section-title">VI. DOCUMENTOS ADJUNTOS</div>
+    <div class="section-title">II. DOCUMENTOS ADJUNTOS</div>
     <div class="small">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple (previamente cotejados por el asesor de ventas) los documentos marcados con una "x":</div>
 
     <table style="margin-top:10px;">
