@@ -118,6 +118,11 @@ body {
 .table td, .table th { padding: 3px 4px; vertical-align: top; border: 1px solid #000; }
 .table th { text-align: left; }
 .no-border td, .no-border th { border: 0; padding: 2px 0; }
+.bc-grid { width: 100%; border-collapse: collapse; font-size: 9pt; }
+.bc-grid td { border: 0; padding: 2px 6px; vertical-align: top; }
+.bc-es { width: 22%; font-weight: bold; }
+.bc-en { width: 28%; font-weight: bold; }
+.bc-val { width: 50%; }
 
 .blocks .block { margin-bottom: 10px; break-inside: avoid; }
 .blocks .block:last-child { margin-bottom: 0; }
@@ -219,141 +224,78 @@ body {
   <div class="block spacer-2"></div>
 
   <div class="block">
-    <div class="two-cols">
-      <div class="col bold">Identificación de los medios por los cuales ejerce el carácter de beneficiario controlador</div>
-      <div class="col bold">Identification of the means by which it exercises the character of controlling beneficiary</div>
-    </div>
+    <div class="bold">Identificación de los medios por los cuales ejerce el carácter de beneficiario controlador / Identification of the means by which it exercises the character of controlling beneficiary.</div>
   </div>
 
   <div class="block">
-    <div class="two-cols small">
-      <div class="col">
-        <div><b>A) Participación del Propietario Real en el Cliente:</b></div>
-        <div style="padding-left:18px; margin-top:8px;">
-          <div style="margin-bottom:8px;"><span class="box {{pmBCDirecta}}"></span>Directa</div>
-          <div><span class="box {{pmBCIndirecta}}"></span>Indirecta, especifique: <span class="line" style="display:inline-block; width:58%;">{{pmBCIndirectaDetalle}}</span></div>
-        </div>
-      </div>
-      <div class="col">
-        <div><b>A) Actual Owner's Involvement in Customer:</b></div>
-        <div style="padding-left:18px; margin-top:8px;">
-          <div style="margin-bottom:8px;"><span class="box {{pmBCDirecta}}"></span>Direct</div>
-          <div><span class="box {{pmBCIndirecta}}"></span>Indirect, specify: <span class="line" style="display:inline-block; width:58%;">{{pmBCIndirectaDetalle}}</span></div>
-        </div>
+    <div class="small">
+      <div><b>A) Participación del Propietario Real en el Cliente / Actual Owner's Involvement in Customer:</b></div>
+      <div style="padding-left:18px; margin-top:8px; border-left:1px solid #000;">
+        <div style="margin-bottom:8px;"><span class="box {{pmBCDirecta}}"></span>Directa / Direct</div>
+        <div><span class="box {{pmBCIndirecta}}"></span>Indirecta / Indirect, especifique / Specify: <span class="line" style="display:inline-block; width:58%;">{{pmBCIndirectaDetalle}}</span></div>
       </div>
     </div>
   </div>
 
   <div class="block">
-    <div class="two-cols small">
-      <div class="col">
-        <div class="bold">B) Imponer, directa o indirectamente, decisiones en las asambleas generales de accionistas, socios u órganos equivalentes, o nombrar o destituir a la mayoría de los consejeros, administradores o sus equivalentes.</div>
-        <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCBsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCBno}}"></span></span></span></div>
-      </div>
-      <div class="col">
-        <div class="bold">B) To impose, directly or indirectly, decisions at the general meetings of shareholders, partners or equivalent bodies, or to appoint or dismiss the majority of directors, administrators or their equivalents.</div>
-        <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Yes <span class="circle {{pmBCBsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCBno}}"></span></span></span></div>
-      </div>
+    <div class="small">
+      <div class="bold">B) Imponer, directa o indirectamente, decisiones en las asambleas generales de accionistas, socios u órganos equivalentes, o nombrar o destituir a la mayoría de los consejeros, administradores o sus equivalentes. / To impose, directly or indirectly, decisions at the general meetings of shareholders, partners or equivalent bodies, or to appoint or dismiss the majority of directors, administrators or their equivalents.</div>
+      <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Sí/yes <span class="circle {{pmBCBsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCBno}}"></span></span></span></div>
     </div>
   </div>
 
   <div class="block">
-    <div class="two-cols small">
-      <div class="col">
-        <div class="bold">C) Mantener la titularidad de los derechos que permitan, directa o indirectamente, ejercer el voto respecto de más del 25% del capital social o bien.</div>
-        <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCCsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCCno}}"></span></span></span></div>
-      </div>
-      <div class="col">
-        <div class="bold">C) Maintain ownership of the rights that allow, directly or indirectly, to exercise the vote with respect to more than 25% of the share capital or.</div>
-        <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Yes <span class="circle {{pmBCCsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCCno}}"></span></span></span></div>
-      </div>
+    <div class="small">
+      <div class="bold">C) Mantener la titularidad de los derechos que permitan, directa o indirectamente, ejercer el voto respecto de más del 25% del capital social o bien. / Maintain ownership of the rights that allow, directly or indirectly, to exercise the vote with respect to more than 25% of the share capital or.</div>
+      <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Sí/yes <span class="circle {{pmBCCsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCCno}}"></span></span></span></div>
     </div>
   </div>
 
   <div class="block">
-    <div class="two-cols small">
-      <div class="col">
-        <div class="bold">D) Dirigir, directa o indirectamente, la administración, la estrategia o las principales políticas de la persona moral, fideicomiso o cualquier otra figura jurídica.</div>
-        <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Sí <span class="circle {{pmBCDsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCDno}}"></span></span></span></div>
-      </div>
-      <div class="col">
-        <div class="bold">D) Direct, directly or indirectly, the administration, strategy or main policies of the legal entity, trust or any other legal entity.</div>
-        <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Yes <span class="circle {{pmBCDsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCDno}}"></span></span></span></div>
-      </div>
+    <div class="small">
+      <div class="bold">D) Dirigir, directa o indirectamente, la administración, la estrategia o las principales políticas de la persona moral, fideicomiso o cualquier otra figura jurídica. / Direct, directly or indirectly, the administration, strategy or main policies of the legal entity, trust or any other legal entity.</div>
+      <div style="text-align:center; margin-top:8px;"><span class="yn"><span class="yn-cell">Sí/yes <span class="circle {{pmBCDsi}}"></span></span><span class="yn-cell">No <span class="circle {{pmBCDno}}"></span></span></span></div>
     </div>
   </div>
 
   <div class="block spacer-2"></div>
 
   <div class="block">
-    <div class="two-cols">
-      <div class="col bold">Datos del Beneficiario Controlador:</div>
-      <div class="col bold">Controlling Beneficiary Data:</div>
-    </div>
+    <table class="bc-grid">
+      <tr>
+        <td class="bc-es">Datos del Beneficiario Controlador:</td>
+        <td class="bc-en">Controlling Beneficiary Data:</td>
+        <td class="bc-val"></td>
+      </tr>
+      <tr><td class="bc-es">Nombre Completo</td><td class="bc-en">Full Name:</td><td class="bc-val"><span class="line">{{cbNombre}}</span></td></tr>
+      <tr><td class="bc-es">Fecha de Nacimiento</td><td class="bc-en">Date of Birth:</td><td class="bc-val"><span class="line">{{cbFechaNacimiento}}</span></td></tr>
+      <tr><td class="bc-es">Nacionalidad</td><td class="bc-en">Nationality:</td><td class="bc-val"><span class="line">{{cbNacionalidad}}</span></td></tr>
+      <tr><td class="bc-es">RFC o CURP</td><td class="bc-en">Tax ID or SSN.:</td><td class="bc-val"><span class="line">{{cbRFC}}</span></td></tr>
+      <tr><td class="bc-es">Dirección</td><td class="bc-en">Address:</td><td class="bc-val"><span class="line">{{cbDireccion}}</span></td></tr>
+      <tr><td class="bc-es">Tipo, No. Identificación y Autoridad emisora:</td><td class="bc-en">ID Form, Number &amp; Authority:</td><td class="bc-val"><span class="line">{{cbID}}</span></td></tr>
+      <tr><td class="bc-es">Estado Civil (si aplica)</td><td class="bc-en">Marital Status (if applicable):</td><td class="bc-val"><span class="line">{{cbEstadoCivil}}</span></td></tr>
+      <tr><td class="bc-es">No. de Teléfono</td><td class="bc-en">Phone No.:</td><td class="bc-val"><span class="line">{{cbTelefono}}</span></td></tr>
+      <tr><td class="bc-es">Correo Electrónico</td><td class="bc-en">Email address:</td><td class="bc-val"><span class="line">{{cbEmail}}</span></td></tr>
+    </table>
   </div>
 
   <div class="block">
-    <div class="two-cols">
-      <div class="col">
-        <table class="table no-border">
-          <tr><td style="width:42%;" class="bold">Nombre Completo:</td><td><span class="line">{{cbNombre}}</span></td></tr>
-          <tr><td class="bold">Fecha de Nacimiento:</td><td><span class="line">{{cbFechaNacimiento}}</span></td></tr>
-          <tr><td class="bold">Nacionalidad:</td><td><span class="line">{{cbNacionalidad}}</span></td></tr>
-          <tr><td class="bold">RFC o CURP:</td><td><span class="line">{{cbRFC}}</span></td></tr>
-          <tr><td class="bold">Dirección:</td><td><span class="line">{{cbDireccion}}</span></td></tr>
-          <tr><td class="bold">Tipo, No. Identificación y Autoridad emisora:</td><td><span class="line">{{cbID}}</span></td></tr>
-          <tr><td class="bold">Estado Civil (si aplica):</td><td><span class="line">{{cbEstadoCivil}}</span></td></tr>
-          <tr><td class="bold">No. de Teléfono:</td><td><span class="line">{{cbTelefono}}</span></td></tr>
-          <tr><td class="bold">Correo Electrónico:</td><td><span class="line">{{cbEmail}}</span></td></tr>
-        </table>
-      </div>
-      <div class="col">
-        <table class="table no-border">
-          <tr><td style="width:42%;" class="bold">Full Name:</td><td><span class="line">{{cbNombre}}</span></td></tr>
-          <tr><td class="bold">Date of Birth:</td><td><span class="line">{{cbFechaNacimiento}}</span></td></tr>
-          <tr><td class="bold">Nationality:</td><td><span class="line">{{cbNacionalidad}}</span></td></tr>
-          <tr><td class="bold">Tax ID or SSN:</td><td><span class="line">{{cbRFC}}</span></td></tr>
-          <tr><td class="bold">Address:</td><td><span class="line">{{cbDireccion}}</span></td></tr>
-          <tr><td class="bold">ID Form, Number &amp; Authority:</td><td><span class="line">{{cbID}}</span></td></tr>
-          <tr><td class="bold">Marital Status (if applicable):</td><td><span class="line">{{cbEstadoCivil}}</span></td></tr>
-          <tr><td class="bold">Phone No.:</td><td><span class="line">{{cbTelefono}}</span></td></tr>
-          <tr><td class="bold">Email address:</td><td><span class="line">{{cbEmail}}</span></td></tr>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="block spacer-1"></div>
-
-  <div class="block">
-    <div class="two-cols">
-      <div class="col">
-        <table class="table no-border">
-          <tr><td style="width:42%;" class="bold">Nombre Completo:</td><td><span class="line">{{cbNombre2}}</span></td></tr>
-          <tr><td class="bold">Fecha de Nacimiento:</td><td><span class="line">{{cbFechaNacimiento2}}</span></td></tr>
-          <tr><td class="bold">Nacionalidad:</td><td><span class="line">{{cbNacionalidad2}}</span></td></tr>
-          <tr><td class="bold">RFC o CURP:</td><td><span class="line">{{cbRFC2}}</span></td></tr>
-          <tr><td class="bold">Dirección:</td><td><span class="line">{{cbDireccion2}}</span></td></tr>
-          <tr><td class="bold">Tipo, No. Identificación y Autoridad emisora:</td><td><span class="line">{{cbID2}}</span></td></tr>
-          <tr><td class="bold">Estado Civil (si aplica):</td><td><span class="line">{{cbEstadoCivil2}}</span></td></tr>
-          <tr><td class="bold">No. de Teléfono:</td><td><span class="line">{{cbTelefono2}}</span></td></tr>
-          <tr><td class="bold">Correo Electrónico:</td><td><span class="line">{{cbEmail2}}</span></td></tr>
-        </table>
-      </div>
-      <div class="col">
-        <table class="table no-border">
-          <tr><td style="width:42%;" class="bold">Full Name:</td><td><span class="line">{{cbNombre2}}</span></td></tr>
-          <tr><td class="bold">Date of Birth:</td><td><span class="line">{{cbFechaNacimiento2}}</span></td></tr>
-          <tr><td class="bold">Nationality:</td><td><span class="line">{{cbNacionalidad2}}</span></td></tr>
-          <tr><td class="bold">Tax ID or SSN:</td><td><span class="line">{{cbRFC2}}</span></td></tr>
-          <tr><td class="bold">Address:</td><td><span class="line">{{cbDireccion2}}</span></td></tr>
-          <tr><td class="bold">ID Form, Number &amp; Authority:</td><td><span class="line">{{cbID2}}</span></td></tr>
-          <tr><td class="bold">Marital Status (if applicable):</td><td><span class="line">{{cbEstadoCivil2}}</span></td></tr>
-          <tr><td class="bold">Phone No.:</td><td><span class="line">{{cbTelefono2}}</span></td></tr>
-          <tr><td class="bold">Email address:</td><td><span class="line">{{cbEmail2}}</span></td></tr>
-        </table>
-      </div>
-    </div>
+    <table class="bc-grid">
+      <tr>
+        <td class="bc-es">Datos del Beneficiario Controlador:</td>
+        <td class="bc-en">Controlling Beneficiary Data:</td>
+        <td class="bc-val"></td>
+      </tr>
+      <tr><td class="bc-es">Nombre Completo</td><td class="bc-en">Full Name:</td><td class="bc-val"><span class="line">{{cbNombre2}}</span></td></tr>
+      <tr><td class="bc-es">Fecha de Nacimiento</td><td class="bc-en">Date of Birth:</td><td class="bc-val"><span class="line">{{cbFechaNacimiento2}}</span></td></tr>
+      <tr><td class="bc-es">Nacionalidad</td><td class="bc-en">Nationality:</td><td class="bc-val"><span class="line">{{cbNacionalidad2}}</span></td></tr>
+      <tr><td class="bc-es">RFC o CURP</td><td class="bc-en">Tax ID or SSN.:</td><td class="bc-val"><span class="line">{{cbRFC2}}</span></td></tr>
+      <tr><td class="bc-es">Dirección</td><td class="bc-en">Address:</td><td class="bc-val"><span class="line">{{cbDireccion2}}</span></td></tr>
+      <tr><td class="bc-es">Tipo, No. Identificación y Autoridad emisora:</td><td class="bc-en">ID Form, Number &amp; Authority:</td><td class="bc-val"><span class="line">{{cbID2}}</span></td></tr>
+      <tr><td class="bc-es">Estado Civil (si aplica)</td><td class="bc-en">Marital Status (if applicable):</td><td class="bc-val"><span class="line">{{cbEstadoCivil2}}</span></td></tr>
+      <tr><td class="bc-es">No. de Teléfono</td><td class="bc-en">Phone No.:</td><td class="bc-val"><span class="line">{{cbTelefono2}}</span></td></tr>
+      <tr><td class="bc-es">Correo Electrónico</td><td class="bc-en">Email address:</td><td class="bc-val"><span class="line">{{cbEmail2}}</span></td></tr>
+    </table>
   </div>
 
   <div class="block spacer-1"></div>
