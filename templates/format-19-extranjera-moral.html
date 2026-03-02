@@ -92,14 +92,18 @@ body {
 }
 .circle.checked { background-color: #000; }
 .box {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 14px;
   height: 14px;
   border: 1px solid #000;
   vertical-align: middle;
   margin-right: 8px;
+  font-size: 10px;
+  line-height: 1;
 }
-.box.checked { background: #000; }
+.box.checked::after { content: "✔"; }
 .yn {
   display: inline-flex;
   border: 1px solid #000;
