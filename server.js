@@ -1851,6 +1851,11 @@ function withPldsFooterCode(data, scope, id) {
   if (id === '26' && !merged.orFooterCode) {
     merged.orFooterCode = scope === 'NM' ? 'FR-VEN-26 OR PM N' : 'FR-VEN-26 OR PF N';
   }
+  if (!merged.firmaConformidadLeyenda) {
+    merged.firmaConformidadLeyenda = scope === 'NM'
+      ? 'En representación del Titular'
+      : 'Por su Propio Derecho';
+  }
   return merged;
 }
 
