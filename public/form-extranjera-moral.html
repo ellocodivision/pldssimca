@@ -79,14 +79,14 @@
         <div><label>Nombre del desarrollo</label><input name="cbDesarrolloES" /></div>
         <div><label>Unidad / No. de lote</label><input name="cbUnidadES" /></div>
         <div><label>Ciudad</label><input name="txtCiudadES" /></div>
-        <div><label>Denominación</label><input name="spanNombreCompleto" /></div>
-        <div><label>Fecha de constitución</label><input name="spanFechaNacimiento" /></div>
-        <div><label>No. de Acta Constitutiva</label><input name="pmActaConstitutiva" /></div>
-        <div><label>Nacionalidad</label><input name="spanNacionalidad" /></div>
-        <div><label>Objeto Social</label><input name="spanOcupacion" /></div>
-        <div><label>RFC</label><input name="spanIdentificacionFiscal" /></div>
+        <div><label>1. Denominación / Business Name</label><input name="spanNombreCompleto" /></div>
+        <div><label>2. Fecha de Constitución / Date of Incorporation</label><input name="spanFechaNacimiento" /></div>
+        <div><label>3. No. de Acta Constitutiva / No. of Certificate of Incorporation</label><input name="pmActaConstitutiva" /></div>
+        <div><label>4. Nacionalidad / Citizenship</label><input name="spanNacionalidad" /></div>
+        <div><label>5. Objeto Social / Company Purpose</label><input name="spanOcupacion" /></div>
+        <div><label>6. No. de Identificación Fiscal / Tax Identification Number</label><input name="spanIdentificacionFiscal" /></div>
         <div>
-          <label>Uso de factura</label>
+          <label>6.1 Uso de la Factura / Invoice Usage</label>
           <select name="spanFactura">
             <option value="">Selecciona...</option>
             <option>G01 - Adquisición de mercancías.</option>
@@ -118,7 +118,7 @@
           </select>
         </div>
         <div>
-          <label>Régimen SAT</label>
+          <label>6.2 Régimen Fiscal SAT / Tax classification of MRS (if aplicable)</label>
           <select name="spanRegimen">
             <option value="">Selecciona...</option>
             <option>601 General de Ley Personas Morales</option>
@@ -142,15 +142,16 @@
             <option>626 Régimen Simplificado de Confianza</option>
           </select>
         </div>
-        <div><label>Código Postal registrado en el SAT</label><input name="spanCodigoPostalSAT" /></div>
-        <div><label>Calle/Avenida</label><input name="spanCalle" /></div>
-        <div><label>No. Exterior</label><input name="spanExterior" /></div>
-        <div><label>No. Interior (si aplica)</label><input name="spanInterior" /></div>
-        <div><label>Colonia</label><input name="spanColonia" /></div>
-        <div><label>Código Postal</label><input name="spanCodigoPostal" /></div>
-        <div><label>Ciudad y Estado</label><input name="spanCiudadEstado" /></div>
-        <div><label>Teléfono</label><input name="spanTelefono" /></div>
-        <div><label>Correo Electrónico</label><input name="spanEmail" /></div>
+        <div><label>6.3 Código Postal SAT (si aplica) / Zip Code registered in MRS (if aplicable)</label><input name="spanCodigoPostalSAT" /></div>
+        <div><label>7. Domicilio en el Extranjero / Address Abroad (referencia)</label><input name="spanDomicilioExtranjero" /></div>
+        <div><label>7.1 i. Calle/Avenida / Street/Avenue</label><input name="spanCalle" /></div>
+        <div><label>7.1 ii. No. Exterior / Property No.</label><input name="spanExterior" /></div>
+        <div><label>7.1 iii. No. Interior (si aplica) / Suite No. (if applicable)</label><input name="spanInterior" /></div>
+        <div><label>7.1 iv. Colonia / Quarter</label><input name="spanColonia" /></div>
+        <div><label>7.1 v. Código Postal / Zip Code</label><input name="spanCodigoPostal" /></div>
+        <div><label>7.1 vi. Ciudad y Estado / City and State</label><input name="spanCiudadEstado" /></div>
+        <div><label>8. No. de Teléfono / Telephone Number</label><input name="spanTelefono" /></div>
+        <div><label>9. Correo Electrónico / Email</label><input name="spanEmail" /></div>
       </div>
 
       <h2>Accionistas</h2>
@@ -165,21 +166,27 @@
         <div><label>Accionista iv %</label><input name="pmAcc4Pct" /></div>
       </div>
 
-      <h2>Apoderado</h2>
+      <h2>11. Datos del Representante Legal / Legal Representative's Details</h2>
       <div class="grid">
-        <div><label>Nombre Completo</label><input name="spanApoderadoNombre" /></div>
-        <div><label>Fecha de Nacimiento</label><input name="spanApoderadoFecha" /></div>
-        <div><label>Nacionalidad</label><input name="spanApoderadoNacionalidad" /></div>
-        <div><label>RFC</label><input name="spanApoderadoRFC" /></div>
-        <div><label>CURP</label><input name="spanApoderadoSSN" /></div>
-        <div><label>Datos del Poder</label><input name="spanApoderadoPoder" /></div>
-        <div><label>Teléfono</label><input name="spanApoderadoTelefono" /></div>
-        <div><label>Correo Electrónico</label><input name="spanApoderadoEmail" /></div>
-        <div><label>Tipo, No. Identificación y Autoridad Emisora</label><input name="spanApoderadoTipoID" /></div>
+        <div><label>i. Nombre Completo / Full Name</label><input name="spanApoderadoNombre" /></div>
+        <div><label>ii. Fecha de Nacimiento / Date of Birth</label><input name="spanApoderadoFecha" /></div>
+        <div><label>iii. Nacionalidad / Citizenship</label><input name="spanApoderadoNacionalidad" /></div>
+        <div><label>iv. Doc. de Identificación Fiscal / Federal Taxpayer Registry</label><input name="spanApoderadoRFC" /></div>
+        <div><label>v. No. de Seguridad Social / Social Security No.</label><input name="spanApoderadoSSN" /></div>
+        <div><label>vi. Datos del Poder / Power of Attorney Details</label><input name="spanApoderadoPoder" /></div>
+        <div><label>vii. Teléfono Móvil / Mobile</label><input name="spanApoderadoTelefono" /></div>
+        <div><label>viii. Correo Electrónico / Email</label><input name="spanApoderadoEmail" /></div>
+        <div><label>ix. Tipo, No. Identificación y Autoridad emisora / ID Form, Number & Authority</label><input name="spanApoderadoTipoID" /></div>
         <div><label>Cargo del representante</label><input name="pmCargoRepresentante" /></div>
       </div>
+      <div class="checks" style="margin-top:10px;">
+        <label><input type="checkbox" name="spanApoderadoResidenciaPermanente" /> Residente Permanente / Permanent Resident</label>
+        <label><input type="checkbox" name="spanApoderadoResidenciaTemporal" /> Residente Temporal / Temporary Resident</label>
+        <label><input type="checkbox" name="spanApoderadoVisitanteRemunerado" /> Visitante Actividades Remuneradas / Remunerated Activities Visitor</label>
+        <label><input type="checkbox" name="spanApoderadoVisitanteNegocios" /> Visitante de Negocios / Business Visitor</label>
+      </div>
 
-      <h2>PEP</h2>
+      <h2>II. PERSONA POLÍTICAMENTE EXPUESTA / POLITICALLY EXPOSED PERSON</h2>
       <div class="grid">
         <div><label>Cargo Cliente</label><input name="pepClienteCargo" /></div>
         <div><label>Cargo Familiar</label><input name="pepFamiliarCargo" /></div>
@@ -191,42 +198,42 @@
         <label><input type="radio" name="pepFamiliar" value="no" /> Familiar No</label>
       </div>
 
-      <h2>Datos PPE</h2>
+      <h2>III. DATOS DE LA PPE / PEP'S DETAILS</h2>
       <div class="grid">
         <div><label>Nombre Completo</label><input name="spanPPENombre" /></div>
         <div><label>Fecha de Nacimiento</label><input name="spanPPEFecha" /></div>
         <div><label>Lugar nacimiento</label><input name="spanPPELugarNacimiento" /></div>
-        <div><label>Nacionalidad</label><input name="spanPPENacionalidad" /></div>
-        <div><label>Ocupación</label><input name="spanPPEOcupacion" /></div>
-        <div><label>RFC</label><input name="spanPPERFC" /></div>
-        <div><label>Tarjeta de Seguridad Social</label><input name="spanPPESSN" /></div>
-        <div><label>Domicilio</label><input name="spanPPEDomicilio" /></div>
-        <div><label>Calle/Avenida</label><input name="spanPPECalle" /></div>
-        <div><label>No. Exterior</label><input name="spanPPEExterior" /></div>
-        <div><label>No. Interior (si aplica)</label><input name="spanPPEInterior" /></div>
-        <div><label>Colonia</label><input name="spanPPEColonia" /></div>
-        <div><label>CP</label><input name="spanPPECodigoPostal" /></div>
-        <div><label>Ciudad</label><input name="spanPPECiudad" /></div>
-        <div><label>Teléfono</label><input name="spanPPETelefono" /></div>
-        <div><label>Correo Electrónico</label><input name="spanPPEEmail" /></div>
+        <div><label>4. Nacionalidad / Citizenship</label><input name="spanPPENacionalidad" /></div>
+        <div><label>5. Ocupación/Profesión / Occupation/Profession</label><input name="spanPPEOcupacion" /></div>
+        <div><label>6. No. de Identificación Fiscal / Tax Identification Number</label><input name="spanPPERFC" /></div>
+        <div><label>7. Tarjeta de Seguridad Social / Social Security No.</label><input name="spanPPESSN" /></div>
+        <div><label>8. Domicilio / Address</label><input name="spanPPEDomicilio" /></div>
+        <div><label>8.1 i. Calle/Avenida / Street/Avenue</label><input name="spanPPECalle" /></div>
+        <div><label>8.1 ii. No. Exterior / Property No.</label><input name="spanPPEExterior" /></div>
+        <div><label>8.1 iii. No. Interior (si aplica) / Suite No. (if applicable)</label><input name="spanPPEInterior" /></div>
+        <div><label>8.1 iv. Colonia / Quarter</label><input name="spanPPEColonia" /></div>
+        <div><label>8.1 v. Código Postal / Zip Code</label><input name="spanPPECodigoPostal" /></div>
+        <div><label>8.1 vi. Ciudad y Estado / City and State</label><input name="spanPPECiudad" /></div>
+        <div><label>9. No. de Teléfono / Telephone Number</label><input name="spanPPETelefono" /></div>
+        <div><label>10. Correo Electrónico / Email</label><input name="spanPPEEmail" /></div>
       </div>
 
-      <h2>Documentos adjuntos</h2>
+      <h2>II. DOCUMENTOS ADJUNTOS / ATTACHMENTS</h2>
       <div class="checks">
-        <label><input type="checkbox" name="pmDocActaConstitutiva" /> Acta Constitutiva</label>
-        <label><input type="checkbox" name="cbClienteRFC" /> Cédula Fiscal</label>
-        <label><input type="checkbox" name="cbClienteDomicilio" /> Comprobante de Domicilio</label>
-        <label><input type="checkbox" name="pmDocIdRepresentante" /> ID representante</label>
-        <label><input type="checkbox" name="pmDocCurpRepresentante" /> CURP representante</label>
-        <label><input type="checkbox" name="pmDocRfcRepresentante" /> RFC representante</label>
-        <label><input type="checkbox" name="pmDocPoderRepresentante" /> Poder representante</label>
+        <label><input type="checkbox" name="pmDocActaConstitutiva" /> Acta Constitutiva / Certificate of Incorporation</label>
+        <label><input type="checkbox" name="cbClienteRFC" /> Cédula Fiscal / Taxpayer Identification</label>
+        <label><input type="checkbox" name="cbClienteDomicilio" /> Comprobante de Domicilio / Proof of Residency</label>
+        <label><input type="checkbox" name="pmDocIdRepresentante" /> Identificación del Representante / ID of Representative</label>
+        <label><input type="checkbox" name="pmDocCurpRepresentante" /> Doc. de Seguridad Social del Representante / Representative's Social Security Card</label>
+        <label><input type="checkbox" name="pmDocRfcRepresentante" /> Cédula Fiscal del Representante / Representative's Taxpayer Identification</label>
+        <label><input type="checkbox" name="pmDocPoderRepresentante" /> Poder del Representante / Power of Attorney</label>
       </div>
-      <h2>Documentos adjuntos — PPE</h2>
+      <h2>Documentos adjuntos — PPE / PEP'S</h2>
       <div class="checks">
-        <label><input type="checkbox" name="cbPPEID" /> Identificación Oficial</label>
-        <label><input type="checkbox" name="cbPPERFC_DOC" /> Cédula Fiscal</label>
-        <label><input type="checkbox" name="cbPPEDomicilio_DOC" /> Comprobante de Domicilio</label>
-        <label><input type="checkbox" name="cbPPESSNRep" /> CURP</label>
+        <label><input type="checkbox" name="cbPPEID" /> Identificación Oficial / Official ID</label>
+        <label><input type="checkbox" name="cbPPERFC_DOC" /> Cédula Fiscal / Taxpayer Identification</label>
+        <label><input type="checkbox" name="cbPPEDomicilio_DOC" /> Comprobante de Domicilio / Proof of Residency</label>
+        <label><input type="checkbox" name="cbPPESSNRep" /> Doc. de Seguridad Social del Representante / Representative's Social Security Card</label>
       </div>
       <div class="grid" style="margin-top:10px;">
         <div><label>Otro, especifique</label><input name="spanOtro" /></div>
@@ -236,20 +243,20 @@
 
     <div class="section">
       <h2>FR-VEN-19 — BENEFICIARIO CONTROLADOR (EXTRANJERA PM)</h2>
-      <h2>Medios del Beneficiario Controlador</h2>
+      <h2>Identificación de los medios por los cuales ejerce el carácter de beneficiario controlador / Identification of the means by which it exercises the character of controlling beneficiary</h2>
       <div class="checks" style="margin-top:10px;">
-        <label><input type="checkbox" name="pmBCDirecta" /> A) Participación directa</label>
-        <label><input type="checkbox" name="pmBCIndirecta" /> A) Participación indirecta</label>
+        <label><input type="checkbox" name="pmBCDirecta" /> A) Participación del Propietario Real en el Cliente - Directa / Actual Owner's Involvement in Customer - Direct</label>
+        <label><input type="checkbox" name="pmBCIndirecta" /> A) Indirecta / Innuendo</label>
       </div>
       <div class="grid">
-        <div><label>A) Indirecta, especifique</label><input name="pmBCIndirectaDetalle" /></div>
+        <div><label>A) Indirecta, especifique / Specify</label><input name="pmBCIndirectaDetalle" /></div>
       </div>
       <div class="checks" style="margin-top:10px;">
-        <label><input type="radio" name="pmBCB" value="si" /> B) Sí</label>
+        <label><input type="radio" name="pmBCB" value="si" /> B) Sí / yes</label>
         <label><input type="radio" name="pmBCB" value="no" /> B) No</label>
-        <label><input type="radio" name="pmBCC" value="si" /> C) Sí</label>
+        <label><input type="radio" name="pmBCC" value="si" /> C) Sí / yes</label>
         <label><input type="radio" name="pmBCC" value="no" /> C) No</label>
-        <label><input type="radio" name="pmBCD" value="si" /> D) Sí</label>
+        <label><input type="radio" name="pmBCD" value="si" /> D) Sí / yes</label>
         <label><input type="radio" name="pmBCD" value="no" /> D) No</label>
       </div>
       <h2>Datos base</h2>
