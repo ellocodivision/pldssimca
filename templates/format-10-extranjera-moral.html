@@ -62,6 +62,7 @@ body {
 .col { width: 50%; }
 .box-title { border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold; font-size: 10pt; }
 .section-title { font-weight: bold; margin-top: 12px; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+.section-title-plain { font-weight: bold; margin-top: 12px; margin-bottom: 6px; }
 table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 9pt; }
 td { padding: 2px 3px; vertical-align: bottom; }
 .label { width: 45%; font-weight: bold; }
@@ -182,10 +183,9 @@ td { padding: 2px 3px; vertical-align: bottom; }
       <span>{{desarrolladoraText}}</span>
     </div>
 
-    <div class="section-title">10. Accionistas / Shareholders</div>
     <table class="acc-table">
       <tr>
-        <td style="width:6%;"></td>
+        <td class="acc-head" style="text-align:left; width:54%;">10. Accionistas / Shareholders</td>
         <td class="acc-head acc-name">Nombre / Name</td>
         <td class="acc-head acc-pct">%</td>
       </tr>
@@ -211,7 +211,7 @@ td { padding: 2px 3px; vertical-align: bottom; }
       </tr>
     </table>
 
-    <div class="section-title">11. Datos del Representante Legal / Legal Representative's Details</div>
+    <div class="section-title-plain">11. Datos del Representante Legal / Legal Representative's Details</div>
     <table>
       <tr><td class="label">i. Nombre Completo / Full Name:</td><td class="line">{{spanApoderadoNombre}}</td></tr>
       <tr><td class="label">ii. Fecha de Nacimiento / Date of Birth:</td><td class="line">{{spanApoderadoFecha}}</td></tr>
