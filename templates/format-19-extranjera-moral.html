@@ -123,6 +123,17 @@ body {
 .bc-es { width: 22%; font-weight: bold; }
 .bc-en { width: 28%; font-weight: bold; }
 .bc-val { width: 50%; }
+.attach-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+.attach-table td { border: 0; padding: 4px 4px; vertical-align: middle; }
+.attach-label { width: 78%; font-weight: bold; }
+.attach-check { width: 22%; text-align: center; }
+.sq {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #000;
+  display: inline-block;
+}
+.sq.checked { background: #000; }
 
 .blocks .block { margin-bottom: 10px; break-inside: avoid; }
 .blocks .block:last-child { margin-bottom: 0; }
@@ -318,68 +329,32 @@ body {
 
   <div class="block spacer-2"></div>
 
-  <div class="block">
-    <div class="two-cols">
-      <div class="col bold">Documentos adjuntos</div>
-      <div class="col bold">Attachments</div>
-    </div>
-  </div>
+  <div class="block bold">Documentos adjuntos / Attachments</div>
+
+  <div class="block justify small">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple (previamente cotejados por el asesor de ventas) los documentos marcados con una "x": / To support the information herein provided by the Client, the marked with an "x" are attached hereto in simple copy (previously checked by the sales adviser):</div>
 
   <div class="block">
-    <div class="two-cols justify small">
-      <div class="col">Como soporte de la información proporcionada por el Cliente en este documento, se adjuntan al presente formato en copia simple (previamente cotejados por el asesor de ventas) los documentos marcados con una "x":</div>
-      <div class="col">To support the information herein provided by the Client, the marked with an "x" are attached hereto in simple copy (previously checked by the sales adviser):</div>
-    </div>
-  </div>
-
-  <div class="block">
-    <div class="two-cols">
-      <div class="col">
-        <table class="table no-border">
-          <tr><td>Identificación Oficial</td><td style="width:40px;"><span class="circle {{cb19OfficialId}}"></span></td></tr>
-          <tr><td>Pasaporte</td><td><span class="circle {{cb19Passport}}"></span></td></tr>
-          <tr><td>Residente Temporal</td><td><span class="circle {{cb19TemporaryResident}}"></span></td></tr>
-          <tr><td>Carta de Naturalización</td><td><span class="circle {{cb19Naturalization}}"></span></td></tr>
-          <tr><td>Residencia</td><td><span class="circle {{cb19ResidenceCertificate}}"></span></td></tr>
-          <tr><td>Doc. de Identificación Fiscal</td><td><span class="circle {{cb19TaxId}}"></span></td></tr>
-          <tr><td>Comprobante de Domicilio</td><td><span class="circle {{cb19ProofResidency}}"></span></td></tr>
-          <tr><td>Otro, especifique:</td><td><span class="line">{{spanOtroBC19}}</span></td></tr>
-        </table>
-      </div>
-      <div class="col">
-        <table class="table no-border">
-          <tr><td>Official ID</td><td style="width:40px;"><span class="circle {{cb19OfficialId}}"></span></td></tr>
-          <tr><td>Passport</td><td><span class="circle {{cb19Passport}}"></span></td></tr>
-          <tr><td>Temporary Resident</td><td><span class="circle {{cb19TemporaryResident}}"></span></td></tr>
-          <tr><td>Certificate of Citizenship</td><td><span class="circle {{cb19Naturalization}}"></span></td></tr>
-          <tr><td>Residence Certificate</td><td><span class="circle {{cb19ResidenceCertificate}}"></span></td></tr>
-          <tr><td>Federal Taxpayer Registry</td><td><span class="circle {{cb19TaxId}}"></span></td></tr>
-          <tr><td>Proof of Residency</td><td><span class="circle {{cb19ProofResidency}}"></span></td></tr>
-          <tr><td>Other, specify:</td><td><span class="line">{{spanOtroBC19}}</span></td></tr>
-        </table>
-      </div>
-    </div>
+    <table class="attach-table">
+      <tr><td class="attach-label">Identificación Oficial / Official ID</td><td class="attach-check"><span class="sq {{cb19OfficialId}}"></span></td></tr>
+      <tr><td class="attach-label">Pasaporte / Passport</td><td class="attach-check"><span class="sq {{cb19Passport}}"></span></td></tr>
+      <tr><td class="attach-label">Residente Temporal / Temporary Resident</td><td class="attach-check"><span class="sq {{cb19TemporaryResident}}"></span></td></tr>
+      <tr><td class="attach-label">Carta de Naturalización / Certificate of Citizenship</td><td class="attach-check"><span class="sq {{cb19Naturalization}}"></span></td></tr>
+      <tr><td class="attach-label">Residencia / Residence Certificate</td><td class="attach-check"><span class="sq {{cb19ResidenceCertificate}}"></span></td></tr>
+      <tr><td class="attach-label">Doc. de Identificación Fiscal / Federal Taxpayer Registry</td><td class="attach-check"><span class="sq {{cb19TaxId}}"></span></td></tr>
+      <tr><td class="attach-label">Comprobante de Domicilio / Proof of Residency</td><td class="attach-check"><span class="sq {{cb19ProofResidency}}"></span></td></tr>
+      <tr><td class="attach-label">Otro, especifique / Other, specify:</td><td class="attach-check"></td></tr>
+      <tr><td colspan="2"><span class="line">{{spanOtroBC19}}</span></td></tr>
+    </table>
   </div>
 
   <div class="block spacer-2"></div>
 
-  <div class="block">
-    <div class="two-cols center">
-      <div class="col">
-        <div class="bold">Atentamente,</div>
-        <div class="spacer-2"></div>
-        <div class="line" style="width:45%; margin: 0 auto 8px;"></div>
-        <div class="bold" style="font-style:italic;">Persona Moral: "{{spanNombreCompleto}}"</div>
-        <div class="bold" style="font-style:italic;">Representada por: "{{spanApoderadoNombre}}"</div>
-      </div>
-      <div class="col">
-        <div class="bold">Sincerely,</div>
-        <div class="spacer-2"></div>
-        <div class="line" style="width:45%; margin: 0 auto 8px;"></div>
-        <div class="bold" style="font-style:italic;">Body Corporate: "{{spanNombreCompleto}}"</div>
-        <div class="bold" style="font-style:italic;">Represented by: "{{spanApoderadoNombre}}"</div>
-      </div>
-    </div>
+  <div class="block center">
+    <div class="bold">Atentamente/Sincerely,</div>
+    <div class="spacer-2"></div>
+    <div class="line" style="width:55%; margin: 0 auto 8px;"></div>
+    <div class="bold" style="font-style:italic;">Persona Moral/Body Corporate: "{{spanNombreCompleto}}"</div>
+    <div class="bold" style="font-style:italic;">"Representada por"/"Represented by": "{{spanApoderadoNombre}}"</div>
   </div>
 </div>
 
