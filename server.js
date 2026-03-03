@@ -118,7 +118,7 @@ const nationalMoralFormats = {
 const foreignMoralFormats = {
   '35': { name: 'FR-VEN-35 Aviso de Privacidad (Extranjera PM)', file: 'format-35.html' },
   '21': { name: 'FR-VEN-21 Consulta de Listas de Personas Bloqueadas', file: 'format-21.html' },
-  '26': { name: 'FR-VEN-26 Origen de los Recursos (Extranjera PM)', file: 'format-26.html' },
+  '26': { name: 'FR-VEN-26 Origen de los Recursos (Extranjera PM)', file: 'format-26-extranjera-moral.html' },
   '19': { name: 'FR-VEN-19 Beneficiario Controlador PM (Extranjera)', file: 'format-19-extranjera-moral.html' },
   '10': { name: 'FR-VEN-10 Identificación del Cliente (Extranjera PM)', file: 'format-10-extranjera-moral.html' }
 };
