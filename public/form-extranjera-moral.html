@@ -144,6 +144,9 @@
         </div>
         <div><label>6.3 Código Postal SAT (si aplica) / Zip Code registered in MRS (if aplicable)</label><input name="spanCodigoPostalSAT" /></div>
         <div><label>7. Domicilio en el Extranjero / Address Abroad (referencia)</label><input name="spanDomicilioExtranjero" /></div>
+        <div style="grid-column: 1 / -1; margin-top: 4px;">
+          <label style="font-weight: 700;">Domicilio en México (si aplica) / Address in Mexico (if applicable)</label>
+        </div>
         <div><label>7.1 i. Calle/Avenida / Street/Avenue</label><input name="spanCalle" /></div>
         <div><label>7.1 ii. No. Exterior / Property No.</label><input name="spanExterior" /></div>
         <div><label>7.1 iii. No. Interior (si aplica) / Suite No. (if applicable)</label><input name="spanInterior" /></div>
@@ -208,6 +211,9 @@
         <div><label>6. No. de Identificación Fiscal / Tax Identification Number</label><input name="spanPPERFC" /></div>
         <div><label>7. Tarjeta de Seguridad Social / Social Security No.</label><input name="spanPPESSN" /></div>
         <div><label>8. Domicilio / Address</label><input name="spanPPEDomicilio" /></div>
+        <div style="grid-column: 1 / -1; margin-top: 4px;">
+          <label style="font-weight: 700;">Domicilio en México (si aplica) / Address in Mexico (if applicable)</label>
+        </div>
         <div><label>8.1 i. Calle/Avenida / Street/Avenue</label><input name="spanPPECalle" /></div>
         <div><label>8.1 ii. No. Exterior / Property No.</label><input name="spanPPEExterior" /></div>
         <div><label>8.1 iii. No. Interior (si aplica) / Suite No. (if applicable)</label><input name="spanPPEInterior" /></div>
@@ -228,6 +234,9 @@
         <label><input type="checkbox" name="pmDocRfcRepresentante" /> Cédula Fiscal del Representante / Representative's Taxpayer Identification</label>
         <label><input type="checkbox" name="pmDocPoderRepresentante" /> Poder del Representante / Power of Attorney</label>
       </div>
+      <div class="grid" style="margin-top:10px;">
+        <div><label>Otro, especifique</label><input name="spanOtro" /></div>
+      </div>
       <h2>Documentos adjuntos — PPE / PEP'S</h2>
       <div class="checks">
         <label><input type="checkbox" name="cbPPEID" /> Identificación Oficial / Official ID</label>
@@ -236,7 +245,6 @@
         <label><input type="checkbox" name="cbPPESSNRep" /> Doc. de Seguridad Social del Representante / Representative's Social Security Card</label>
       </div>
       <div class="grid" style="margin-top:10px;">
-        <div><label>Otro, especifique</label><input name="spanOtro" /></div>
         <div><label>Otro, especifique</label><input name="spanOtro1" /></div>
       </div>
     </div>
@@ -251,11 +259,24 @@
       <div class="grid">
         <div><label>A) Indirecta, especifique / Specify</label><input name="pmBCIndirectaDetalle" /></div>
       </div>
-      <div class="checks" style="margin-top:10px;">
+      <div style="margin-top:12px; font-size:13px; font-weight:600;">
+        B) Imponer, directa o indirectamente, decisiones en las asambleas generales de accionistas, socios u órganos equivalentes, o nombrar o destituir a la mayoría de los consejeros, administradores o sus equivalentes. / To impose, directly or indirectly, decisions at the general meetings of shareholders, partners or equivalent bodies, or to appoint or dismiss the majority of directors, administrators or their equivalents.
+      </div>
+      <div class="checks" style="margin-top:8px;">
         <label><input type="radio" name="pmBCB" value="si" /> B) Sí / yes</label>
         <label><input type="radio" name="pmBCB" value="no" /> B) No</label>
+      </div>
+      <div style="margin-top:12px; font-size:13px; font-weight:600;">
+        C) Mantener la titularidad de los derechos que permitan, directa o indirectamente, ejercer el voto respecto de más del 25% del capital social o bien: / Maintain ownership of the rights that allow, directly or indirectly, to exercise the vote with respect to more than 25% of the share capital or.
+      </div>
+      <div class="checks" style="margin-top:8px;">
         <label><input type="radio" name="pmBCC" value="si" /> C) Sí / yes</label>
         <label><input type="radio" name="pmBCC" value="no" /> C) No</label>
+      </div>
+      <div style="margin-top:12px; font-size:13px; font-weight:600;">
+        D) Dirigir, directa o indirectamente, la administración, la estrategia o las principales políticas de la persona moral, fideicomiso o cualquier otra figura jurídica. / Direct, directly or indirectly, the administration, strategy or main policies of the legal entity, trust or any other legal entity.
+      </div>
+      <div class="checks" style="margin-top:8px;">
         <label><input type="radio" name="pmBCD" value="si" /> D) Sí / yes</label>
         <label><input type="radio" name="pmBCD" value="no" /> D) No</label>
       </div>
