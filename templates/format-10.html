@@ -95,6 +95,14 @@ body {
  }
  .circle.checked { background: #000; }
 
+/* Compactacion puntual para evitar desborde en la pagina 2 */
+.page-2 table { font-size: 8.6pt; margin-bottom: 2px; }
+.page-2 td { padding: 1px 3px; }
+.page-2 .line { min-height: 13px; line-height: 13px; padding-top: 0; padding-bottom: 1px; }
+.page-2 .section-title { margin-top: 8px; margin-bottom: 3px; }
+.page-2 .small { font-size: 8.5pt; }
+.page-2 .two-cols { gap: 10px; }
+
 @media print {
   body { background: #fff; }
   .page { page-break-after: always; }
@@ -180,7 +188,7 @@ In connection with the Transaction, in its capacity as acquirer of the Unit and 
 </div>
 
 <!-- PAGE 2 -->
-<div class="page">
+<div class="page page-2">
   <div class="content">
 
     <div class="center bold" style="margin-bottom:6px;">
@@ -220,7 +228,7 @@ In connection with the Transaction, in its capacity as acquirer of the Unit and 
         <div class="col">The Client or any relative by blood or by affinity up to the fourth degree a "Politically Exposed Person" ("PEP"), that is to say, do they hold or have they held any outstanding public function or position in national territory or in a foreign country?</div>
     </div>
 
-    <table style="margin-top:10px;">
+    <table style="margin-top:6px;">
         <tr>
             <td width="20%"><b> El Cliente / The Client </b></td>
             <td width="15%">Sí/Yes <span class="circle {{pepClienteYes}}"></span></td>
