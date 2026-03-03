@@ -696,7 +696,7 @@ function launchPdfBrowser() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--no-zygote',
-      '--single-process',
+      '--disable-gpu',
       '--font-render-hinting=medium'
     ]
   };

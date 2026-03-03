@@ -1631,7 +1631,7 @@
 
       rows.forEach((row) => {
         metrics.forEach((metric) => {
-          const value = metric.key === "LINK" ? "📐" : String(displayCellValue(row, metric.key) || "");
+          const value = metric.key === "LINK" ? "PLANO" : String(displayCellValue(row, metric.key) || "");
           metric.weight = Math.max(metric.weight, Math.min(36, value.length || 1));
         });
         const statusValue = String((row.ESTADO || "").toUpperCase());
@@ -1713,7 +1713,7 @@
       const rowsHtml = rows.map((row) => {
         const cls = row.ESTADO === "disponible" ? "matched" : "";
         const linkCell = row.LINK
-          ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer" title="Abrir plano">📐</a>`
+          ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer" title="Abrir plano" class="plan-link-badge">PLANO</a>`
           : "-";
         return `<tr class="${cls}">
           <td>${linkCell}</td>
@@ -2642,7 +2642,9 @@
         const tableBody = exportRows.map(({ row }) => {
           const cells = REPORT_COLUMNS.map((col) => {
             if (col.key === "LINK") {
-              const icon = row.LINK ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer">📐</a>` : "-";
+              const icon = row.LINK
+                ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer" class="plan-link-badge">PLANO</a>`
+                : "-";
               return `<td>${icon}</td>`;
             }
             return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
@@ -2790,6 +2792,19 @@
     .notes { margin-top: auto; padding-top: 1.8mm; font-size: 6.8px; line-height: 1.35; color: #646b64; font-family: ${bodyFontStack}; }
     .notes p { margin: 0 0 1.2mm; }
     .table-wrap a, .table-wrap a:visited { color: #2f4e86; text-decoration: none; }
+    .plan-link-badge {
+      display: inline-block;
+      border: 1px solid #2f4e86;
+      border-radius: 999px;
+      padding: 1px 6px;
+      font-size: 8.2px;
+      font-weight: 700;
+      letter-spacing: 0.25px;
+      line-height: 1.25;
+      color: #2f4e86;
+      background: #f1f6ff;
+      text-transform: uppercase;
+    }
     .table-wrap a[href]::after { content: "" !important; }
   </style>
 </head>
@@ -3008,7 +3023,7 @@
               if (data.details) message += ` (${data.details})`;
             }
           } catch {}
-          if (response.status === 502 || response.status === 504 || response.status === 503) {
+          if (response.status >= 500) {
             downloadHtmlFallback(html, message);
             return;
           }
