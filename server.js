@@ -111,7 +111,7 @@ const nationalFormats = {
 const nationalMoralFormats = {
   '35': { name: 'FR-VEN-35 Aviso de Privacidad (Nacional PM)', file: 'format-35-nacional.html' },
   '21': { name: 'FR-VEN-21 Consulta de Listas de Personas Bloqueadas', file: 'format-21.html' },
-  '26': { name: 'FR-VEN-26 Origen de los Recursos (Nacional PM)', file: 'format-26-nacional.html' },
+  '26': { name: 'FR-VEN-26 Origen de los Recursos (Nacional PM)', file: 'format-26-nacional-pm.html' },
   '19': { name: 'FR-VEN-19 Beneficiario Controlador PM (Nacional)', file: 'format-19-nacional-moral.html' },
   '10': { name: 'FR-VEN-10 Identificación del Cliente (Nacional PM)', file: 'format-10-nacional-moral.html' }
 };
