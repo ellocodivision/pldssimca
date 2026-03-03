@@ -104,7 +104,7 @@ const formats = {
 const nationalFormats = {
   '35': { name: 'FR-VEN-35 Aviso de Privacidad (Nacional PF)', file: 'format-35-nacional.html' },
   '21': { name: 'FR-VEN-21 Consulta de Listas de Personas Bloqueadas', file: 'format-21.html' },
-  '26': { name: 'FR-VEN-26 Origen de los Recursos (Nacional PF)', file: 'format-26-nacional.html' },
+  '26': { name: 'FR-VEN-26 Origen de los Recursos (Nacional PF)', file: 'format-26-nacional-pf.html' },
   '19': { name: 'FR-VEN-19 Beneficiario Controlador PF (Nacional)', file: 'format-19-nacional.html' },
   '10': { name: 'FR-VEN-10 Identificación del Cliente (Nacional PF)', file: 'format-10-nacional.html' }
 };
