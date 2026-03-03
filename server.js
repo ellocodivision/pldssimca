@@ -729,12 +729,13 @@ async function buildPdfBufferWithBrowser(browser, html, pdfOptions = {}) {
     page.setDefaultTimeout(120000);
     page.setDefaultNavigationTimeout(120000);
     await page.setViewport({ width: 1600, height: 2200, deviceScaleFactor: 2 });
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 120000 });
+    // Avoid hanging on long-lived/in-flight asset requests; readiness is handled via __pdfReady.
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.emulateMediaType('print');
     try {
       const hasReadyMarker = await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, '__pdfReady'));
       if (hasReadyMarker) {
-        await page.waitForFunction(() => window.__pdfReady === true, { timeout: 8000 });
+        await page.waitForFunction(() => window.__pdfReady === true, { timeout: 90000 });
       }
     } catch {
       // If marker check fails, continue and generate PDF.

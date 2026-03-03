@@ -2854,7 +2854,7 @@
       }
     }
 
-    window.onload = function () {
+    function initPdfReadyFlow() {
       window.__pdfReady = false;
       var alreadyFitted = false;
       function runReady() {
@@ -2876,7 +2876,12 @@
       } else {
         setTimeout(runReady, 120);
       }
-    };
+    }
+    if (document.readyState === "loading") {
+      window.addEventListener("DOMContentLoaded", initPdfReadyFlow, { once: true });
+    } else {
+      initPdfReadyFlow();
+    }
   <\/script>
 </body>
 </html>`;
