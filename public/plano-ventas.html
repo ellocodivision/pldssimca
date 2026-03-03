@@ -267,6 +267,33 @@
       color: #fff;
       display: inline-block;
     }
+    .plan-link-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #2f4e86;
+      border-radius: 999px;
+      width: 22px;
+      height: 16px;
+      color: #2f4e86;
+      background: #f1f6ff;
+      text-decoration: none;
+      vertical-align: middle;
+    }
+    .plan-link-icon {
+      display: inline-flex;
+      width: 12px;
+      height: 12px;
+    }
+    .plan-link-icon svg {
+      width: 100%;
+      height: 100%;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     .summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .hidden-ui { display: none !important; }
     @media (max-width: 980px) {
@@ -1621,6 +1648,11 @@
       return row[key] || "";
     }
 
+    function buildPlanLinkCell(linkUrl) {
+      if (!linkUrl) return "-";
+      return `<a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener noreferrer" title="Abrir plano" aria-label="Abrir plano" class="plan-link-badge"><span class="plan-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="8" width="19" height="8" rx="1.5"></rect><path d="M6 8v3 M9 8v2 M12 8v3 M15 8v2 M18 8v3"></path></svg></span></a>`;
+    }
+
     function computeTableColWidths(rows) {
       const metrics = REPORT_COLUMNS.map((col) => {
         const bi = toBilingualHeader(col.label);
@@ -1712,9 +1744,7 @@
       const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
       const rowsHtml = rows.map((row) => {
         const cls = row.ESTADO === "disponible" ? "matched" : "";
-        const linkCell = row.LINK
-          ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer" title="Abrir plano" class="plan-link-badge">PLANO</a>`
-          : "-";
+        const linkCell = buildPlanLinkCell(row.LINK);
         return `<tr class="${cls}">
           <td>${linkCell}</td>
           <td>${escapeHtml(row.UNIDAD)}</td>
@@ -2642,9 +2672,7 @@
         const tableBody = exportRows.map(({ row }) => {
           const cells = REPORT_COLUMNS.map((col) => {
             if (col.key === "LINK") {
-              const icon = row.LINK
-                ? `<a href="${escapeAttr(row.LINK)}" target="_blank" rel="noopener noreferrer" class="plan-link-badge">PLANO</a>`
-                : "-";
+              const icon = buildPlanLinkCell(row.LINK);
               return `<td>${icon}</td>`;
             }
             return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
@@ -2793,17 +2821,31 @@
     .notes p { margin: 0 0 1.2mm; }
     .table-wrap a, .table-wrap a:visited { color: #2f4e86; text-decoration: none; }
     .plan-link-badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border: 1px solid #2f4e86;
       border-radius: 999px;
-      padding: 1px 6px;
-      font-size: 8.2px;
-      font-weight: 700;
-      letter-spacing: 0.25px;
-      line-height: 1.25;
+      width: 18px;
+      height: 14px;
       color: #2f4e86;
       background: #f1f6ff;
-      text-transform: uppercase;
+      text-decoration: none;
+      vertical-align: middle;
+    }
+    .plan-link-icon {
+      display: inline-flex;
+      width: 10px;
+      height: 10px;
+    }
+    .plan-link-icon svg {
+      width: 100%;
+      height: 100%;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .table-wrap a[href]::after { content: "" !important; }
   </style>
