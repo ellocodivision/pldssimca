@@ -20,8 +20,11 @@ body { background:#fff; margin:0; font-family:"Times New Roman", Times, serif; f
 table{width:100%; border-collapse:collapse; margin-bottom:4px; font-size:9pt;} td{padding:2px 3px; vertical-align:bottom;} .label{width:45%; font-weight:bold;}
 .acc-table td{padding:3px 4px; vertical-align:middle;}
 .acc-head{font-weight:bold; text-align:center;}
-.acc-name{width:65%;}
-.acc-pct{width:11%;}
+.acc-table .label{width:6%; font-weight:bold;}
+.acc-name{width:60%;}
+.acc-pct{width:20%;}
+.acc-table td:nth-child(2){width:60%;}
+.acc-table td:nth-child(3){width:34%;}
 .line{width:100%; display:block; min-height:16px; line-height:16px; padding-top:1px; padding-bottom:2px; border-bottom:1px solid #000; white-space:pre-wrap; word-break:break-word;}
 .cb{width:10px;height:10px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:9px;margin-left:4px;} .cb.checked{color:#000;} .cb.checked::after{content:"✔";font-size:8px;}
 .circle{width:10px;height:10px;border:1px solid #000;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;} .circle.checked{background:#000;}
@@ -187,7 +190,6 @@ table{width:100%; border-collapse:collapse; margin-bottom:4px; font-size:9pt;} t
       <div class="line" style="width:45%; margin: 0 auto;"></div>
       <div class="bold">{{spanNombreCompleto}}</div>
       <div class="bold">Representada por: {{spanApoderadoNombre}}</div>
-      <div class="bold">Cargo: {{pmCargoRepresentante}}</div>
     </div>
   </div>
   <div class="footer"><div class="footer-left">FR-VEN-10 ID CN PM</div><div class="footer-center">versión 01</div><div class="footer-right">3</div></div>

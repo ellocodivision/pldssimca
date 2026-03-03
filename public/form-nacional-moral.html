@@ -165,9 +165,10 @@
         <div><label>Accionista iv %</label><input name="pmAcc4Pct" /></div>
       </div>
 
-      <h2>Apoderado</h2>
+      <h2>Datos del Representante Legal</h2>
       <div class="grid">
         <div><label>Nombre Completo</label><input name="spanApoderadoNombre" /></div>
+        <div><label>Cargo del representante</label><input name="pmCargoRepresentante" /></div>
         <div><label>Fecha de Nacimiento</label><input name="spanApoderadoFecha" /></div>
         <div><label>Nacionalidad</label><input name="spanApoderadoNacionalidad" /></div>
         <div><label>RFC</label><input name="spanApoderadoRFC" /></div>
@@ -176,7 +177,6 @@
         <div><label>Teléfono</label><input name="spanApoderadoTelefono" /></div>
         <div><label>Correo Electrónico</label><input name="spanApoderadoEmail" /></div>
         <div><label>Tipo, No. Identificación y Autoridad Emisora</label><input name="spanApoderadoTipoID" /></div>
-        <div><label>Cargo del representante</label><input name="pmCargoRepresentante" /></div>
       </div>
 
       <h2>PEP</h2>
@@ -221,6 +221,9 @@
         <label><input type="checkbox" name="pmDocRfcRepresentante" /> RFC representante</label>
         <label><input type="checkbox" name="pmDocPoderRepresentante" /> Poder representante</label>
       </div>
+      <div class="grid" style="margin-top:10px;">
+        <div><label>Otro, especifique</label><input name="spanOtro" /></div>
+      </div>
       <h2>Documentos adjuntos — PPE</h2>
       <div class="checks">
         <label><input type="checkbox" name="cbPPEID" /> Identificación Oficial</label>
@@ -229,7 +232,6 @@
         <label><input type="checkbox" name="cbPPESSNRep" /> CURP</label>
       </div>
       <div class="grid" style="margin-top:10px;">
-        <div><label>Otro, especifique</label><input name="spanOtro" /></div>
         <div><label>Otro, especifique</label><input name="spanOtro1" /></div>
       </div>
     </div>
@@ -244,11 +246,24 @@
       <div class="grid">
         <div><label>A) Indirecta, especifique</label><input name="pmBCIndirectaDetalle" /></div>
       </div>
-      <div class="checks" style="margin-top:10px;">
+      <div style="margin-top:12px; font-size:13px; font-weight:600;">
+        B) Imponer, directa o indirectamente, decisiones en las asambleas generales de accionistas, socios u órganos equivalentes, o nombrar o destituir a la mayoría de los consejeros, administradores o sus equivalentes.
+      </div>
+      <div class="checks" style="margin-top:8px;">
         <label><input type="radio" name="pmBCB" value="si" /> B) Sí</label>
         <label><input type="radio" name="pmBCB" value="no" /> B) No</label>
+      </div>
+      <div style="margin-top:12px; font-size:13px; font-weight:600;">
+        C) Mantener la titularidad de los derechos que permitan, directa o indirectamente, ejercer el voto respecto de más del 25% del capital social o bien:
+      </div>
+      <div class="checks" style="margin-top:8px;">
         <label><input type="radio" name="pmBCC" value="si" /> C) Sí</label>
         <label><input type="radio" name="pmBCC" value="no" /> C) No</label>
+      </div>
+      <div style="margin-top:12px; font-size:13px; font-weight:600;">
+        D) Dirigir, directa o indirectamente, la administración, la estrategia o las principales políticas de la persona moral, fideicomiso o cualquier otra figura jurídica.
+      </div>
+      <div class="checks" style="margin-top:8px;">
         <label><input type="radio" name="pmBCD" value="si" /> D) Sí</label>
         <label><input type="radio" name="pmBCD" value="no" /> D) No</label>
       </div>
@@ -381,7 +396,7 @@
             <option>Calle 67 No. 118 X 18 y S/N Col. Montes de Ame, Mérida, Yucatán, México CP 97115</option>
           </select>
         </div>
-        <div><label>Nombre Completo</label><input name="spanNombreCompleto" /></div>
+        <div><label>Nombre completo o razón social</label><input name="spanNombreCompleto" /></div>
         <div><label>Domicilio</label><input name="spanDomicilio" /></div>
         <div><label>Teléfono</label><input name="spanTelefono" /></div>
         <div><label>Correo Electrónico</label><input name="spanEmail" /></div>
