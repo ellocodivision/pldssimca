@@ -102,8 +102,11 @@ td { padding: 2px 3px; vertical-align: bottom; }
 .circle.checked { background: #000; }
 .acc-table td { padding: 3px 4px; vertical-align: middle; }
 .acc-head { font-weight: bold; text-align: center; }
-.acc-name { width: 65%; }
-.acc-pct { width: 11%; }
+.acc-table .label { width: 6%; font-weight: bold; }
+.acc-name { width: 60%; }
+.acc-pct { width: 20%; }
+.acc-table td:nth-child(2) { width: 60%; }
+.acc-table td:nth-child(3) { width: 34%; }
 .page-3 table { font-size: 8.6pt; margin-bottom: 2px; }
 .page-3 .line { min-height: 13px; line-height: 13px; padding-top: 0; padding-bottom: 1px; }
 .page-3 .section-title { margin-top: 8px; margin-bottom: 3px; }
@@ -188,9 +191,10 @@ td { padding: 2px 3px; vertical-align: bottom; }
       <span>{{desarrolladoraText}}</span>
     </div>
 
+    <div class="section-title">10. Accionistas / Shareholders</div>
     <table class="acc-table">
       <tr>
-        <td class="acc-head" style="text-align:left; width:54%;">10. Accionistas / Shareholders</td>
+        <td style="width:6%;"></td>
         <td class="acc-head acc-name">Nombre / Name</td>
         <td class="acc-head acc-pct">%</td>
       </tr>
