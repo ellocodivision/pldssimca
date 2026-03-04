@@ -1462,7 +1462,9 @@
     async function exportJson() {
       const payloadObj = getPersistableState();
       const canonicalFileName = "unidades-marcadas-unificado-orden-adjuntos.json";
-      const mappedFileName = `imagen-mapeada-${safeNameToken(DEV)}-${stampNow()}.json`;
+      const mappedFileName = DEV === "viceroy-piloto"
+        ? `imagen-mapeada-${safeNameToken(DEV)}-${stampNow()}.json`
+        : `imagen-${safeNameToken(DEV)}-mapeada-${stampNow()}.json`;
       const savedCanonical = await persistProjectJsonToServer(payloadObj, canonicalFileName);
       const savedMapped = await persistProjectJsonToServer(payloadObj, mappedFileName);
       const blob = new Blob([JSON.stringify(payloadObj, null, 2)], { type: "application/json" });

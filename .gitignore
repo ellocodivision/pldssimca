@@ -2,3 +2,7 @@ node_modules/
 .DS_Store
 .env
 *.log
+.cache/
+backup-github.command
+scripts/backup_pldssimca.sh
+scripts/com.martinbarroso.pldssimca-backup.plist
