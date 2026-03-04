@@ -873,7 +873,8 @@
         minHeight: 24,
         minFill: 0.18,
         maxAspect: 7.5,
-        dilateIterations: 1
+        dilateIterations: 1,
+        edgeThreshold: 170
       };
     }
 
@@ -994,10 +995,33 @@
       const data = imageData.data;
       const pixelCount = width * height;
       const wallMask = new Uint8Array(pixelCount);
+      const grayMap = new Uint8Array(pixelCount);
+      const edgeThreshold = Math.max(30, Number(options.edgeThreshold) || 170);
 
       for (let i = 0, p = 0; i < pixelCount; i += 1, p += 4) {
-        const gray = (data[p] * 299 + data[p + 1] * 587 + data[p + 2] * 114) / 1000;
+        const gray = Math.round((data[p] * 299 + data[p + 1] * 587 + data[p + 2] * 114) / 1000);
+        grayMap[i] = gray;
         if (gray < options.threshold) wallMask[i] = 1;
+      }
+
+      // Add edge-based wall detection for soft/anti-aliased linework.
+      for (let y = 1; y < height - 1; y += 1) {
+        const row = y * width;
+        for (let x = 1; x < width - 1; x += 1) {
+          const idx = row + x;
+          const tl = grayMap[idx - width - 1];
+          const tc = grayMap[idx - width];
+          const tr = grayMap[idx - width + 1];
+          const ml = grayMap[idx - 1];
+          const mr = grayMap[idx + 1];
+          const bl = grayMap[idx + width - 1];
+          const bc = grayMap[idx + width];
+          const br = grayMap[idx + width + 1];
+          const gx = -tl - (2 * ml) - bl + tr + (2 * mr) + br;
+          const gy = -tl - (2 * tc) - tr + bl + (2 * bc) + br;
+          const edgeStrength = Math.abs(gx) + Math.abs(gy);
+          if (edgeStrength >= edgeThreshold) wallMask[idx] = 1;
+        }
       }
       const walls = dilateBinaryMask(wallMask, width, height, options.dilateIterations);
 
