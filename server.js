@@ -1813,11 +1813,26 @@ function readMergedFloorsByDevelopment(devSlug) {
 function persistSubmission(formatId, formatName, payload) {
   const current = readJson(SUBMISSIONS_PATH, []);
   const createdAt = new Date().toISOString();
+  const payloadHash = crypto
+    .createHash('sha1')
+    .update(JSON.stringify(payload || {}))
+    .digest('hex');
+  const last = Array.isArray(current) && current.length ? current[current.length - 1] : null;
+  if (last && last.formatId === formatId && last.payloadHash === payloadHash) {
+    const lastTs = Date.parse(last.createdAt || '');
+    const nowTs = Date.parse(createdAt);
+    if (Number.isFinite(lastTs) && Number.isFinite(nowTs) && nowTs - lastTs <= 120000) {
+      // Avoid duplicated writes when the same form is generated multiple times in short period.
+      writeJson(DATA_PATH, payload);
+      return last;
+    }
+  }
   const record = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     createdAt,
     formatId,
     formatName,
+    payloadHash,
     payload
   };
   current.push(record);
@@ -3641,7 +3656,7 @@ app.post('/format/:id/pdf', async (req, res) => {
   if (!format) return res.status(404).send('Formato no encontrado');
 
   const data = { ...(req.body || {}) };
-  if (id === '10' || id === '19' || id === '21' || id === '35') {
+  if (id === '10' || id === '19' || id === '21' || id === '26' || id === '35') {
     // Replace empty text fields with N/A
     Object.keys(data).forEach((k) => {
       const v = data[k];
@@ -3736,7 +3751,7 @@ app.post('/format-nacional/:id/pdf', async (req, res) => {
   if (!format) return res.status(404).send('Formato no encontrado');
 
   const data = { ...(req.body || {}) };
-  if (id === '10' || id === '19' || id === '21' || id === '35') {
+  if (id === '10' || id === '19' || id === '21' || id === '26' || id === '35') {
     Object.keys(data).forEach((k) => {
       const v = data[k];
       if (typeof v === 'string' && v.trim() === '') data[k] = 'N/A';
@@ -3830,7 +3845,7 @@ app.post('/format-nacional-moral/:id/pdf', async (req, res) => {
   if (!format) return res.status(404).send('Formato no encontrado');
 
   const data = { ...(req.body || {}) };
-  if (id === '10' || id === '19' || id === '21' || id === '35') {
+  if (id === '10' || id === '19' || id === '21' || id === '26' || id === '35') {
     Object.keys(data).forEach((k) => {
       const v = data[k];
       if (typeof v === 'string' && v.trim() === '') data[k] = 'N/A';
@@ -3922,7 +3937,7 @@ app.post('/format-extranjera-moral/:id/pdf', async (req, res) => {
   if (!format) return res.status(404).send('Formato no encontrado');
 
   const data = { ...(req.body || {}) };
-  if (id === '10' || id === '19' || id === '21' || id === '35') {
+  if (id === '10' || id === '19' || id === '21' || id === '26' || id === '35') {
     Object.keys(data).forEach((k) => {
       const v = data[k];
       if (typeof v === 'string' && v.trim() === '') data[k] = 'N/A';

@@ -679,12 +679,21 @@
   function saveHistoryRecord(label) {
     const payload = getData();
     const items = loadHistory();
+    const signature = JSON.stringify({ label, payload });
+    const latest = items[0];
+    if (latest && latest.signature === signature) {
+      const latestTs = Date.parse(latest.createdAt || '');
+      if (Number.isFinite(latestTs) && Date.now() - latestTs <= 120000) {
+        return;
+      }
+    }
     const rec = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       createdAt: new Date().toISOString(),
       label,
       client: payload.spanNombreCompleto || payload.cbNombre || '',
       unit: payload.cbUnidadES || payload.txtLoteES || '',
+      signature,
       payload
     };
     items.unshift(rec);
