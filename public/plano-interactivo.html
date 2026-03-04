@@ -1364,8 +1364,10 @@
         canvas.height = img.naturalHeight || floor.imageHeight || 1;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let appliedEditLayer = false;
         if (paintMaskCanvas && paintMaskCanvas.width === canvas.width && paintMaskCanvas.height === canvas.height) {
           // Apply manual edits (erase/draw) into a temporary raster before auto-detection.
+          appliedEditLayer = Boolean(String(floor.paintMaskDataUrl || "").trim());
           ctx.drawImage(paintMaskCanvas, 0, 0, canvas.width, canvas.height);
         }
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -1409,6 +1411,15 @@
           labelOffset: { x: 0, y: 0 },
           points
         }));
+        if (appliedEditLayer) {
+          // Persist edited raster as the new base image so edits remain visible after auto-map.
+          floor.imageDataUrl = canvas.toDataURL("image/png");
+          floor.paintMaskDataUrl = "";
+          if (paintMaskCtx && paintMaskCanvas) {
+            paintMaskCtx.clearRect(0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
+          }
+          baseImage.src = floor.imageDataUrl;
+        }
 
         state.selectedZoneId = floor.zones[0] ? floor.zones[0].id : null;
         if (unitLabel) unitLabel.value = state.selectedZoneId ? floor.zones[0].label : "";
