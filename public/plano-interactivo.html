@@ -211,21 +211,16 @@
         </div>
         <div id="autoMapWrap" style="display:none;">
           <div class="btn-row three" style="margin-top:8px;">
-            <button id="autoMapBtn" type="button">Auto-mapear (semi)</button>
-            <button id="autoMapPresetBtn" type="button">Preset plano claro</button>
-            <button id="autoMapResetBtn" type="button">Reset parámetros</button>
+            <button id="autoMapBtn" type="button">Auto-mapear</button>
+            <button id="imageEditToggleBtn" type="button">Editar imagen</button>
+            <button id="imageEditClearBtn" type="button">Limpiar edición</button>
           </div>
           <div class="btn-row three" style="margin-top:8px;">
-            <button id="paintMaskToggleBtn" type="button">Pintar sombreado</button>
-            <button id="paintMaskClearBtn" type="button">Borrar sombra</button>
-            <input id="paintMaskBrushSize" type="text" value="28" title="Brocha (px)" aria-label="Brocha">
+            <button id="imageEditEraseBtn" type="button">Borrador cuadrado</button>
+            <button id="imageEditDrawBtn" type="button">Pintar líneas</button>
+            <span class="hint" style="display:flex;align-items:center;justify-content:center;margin:0;">Brocha fija</span>
           </div>
-          <div class="btn-row three" style="margin-top:8px;">
-            <input id="autoMapThreshold" type="text" value="145" title="Umbral paredes (0-255)" aria-label="Umbral">
-            <input id="autoMapMinArea" type="text" value="1400" title="Área mínima sugerida" aria-label="Área mínima">
-            <input id="autoMapMaxArea" type="text" value="75000" title="Área máxima sugerida" aria-label="Área máxima">
-          </div>
-          <p class="hint">Beta: genera zonas sugeridas desde la imagen. Luego corrige manualmente.</p>
+          <p class="hint">Auto-map usa parámetros fijos. Edita imagen si necesitas borrar/agregar líneas antes de mapear.</p>
         </div>
         <label style="margin-top:8px;">
           <input id="snapParallelInput" type="checkbox" checked>
@@ -288,7 +283,7 @@
       <div id="stage" class="stage">
         <img id="baseImage" alt="Plano base">
         <svg id="overlay" aria-label="Editor de zonas"></svg>
-        <canvas id="paintMaskCanvas" aria-label="Sombreado asistido"></canvas>
+        <canvas id="paintMaskCanvas" aria-label="Edición previa de imagen"></canvas>
       </div>
       <p class="hint">Tip: puedes mover el número de unidad arrastrándolo.</p>
     </main>
@@ -325,6 +320,7 @@
       paintingMask: false,
       paintingMaskStroke: false,
       paintingMaskLastPoint: null,
+      paintTool: "erase",
       nextZoneId: 1,
       zoom: 1,
       autoMapping: false
@@ -347,14 +343,10 @@
     const deleteZoneBtn = document.getElementById("deleteZoneBtn");
     const autoMapWrap = document.getElementById("autoMapWrap");
     const autoMapBtn = document.getElementById("autoMapBtn");
-    const autoMapPresetBtn = document.getElementById("autoMapPresetBtn");
-    const autoMapResetBtn = document.getElementById("autoMapResetBtn");
-    const autoMapThreshold = document.getElementById("autoMapThreshold");
-    const autoMapMinArea = document.getElementById("autoMapMinArea");
-    const autoMapMaxArea = document.getElementById("autoMapMaxArea");
-    const paintMaskToggleBtn = document.getElementById("paintMaskToggleBtn");
-    const paintMaskClearBtn = document.getElementById("paintMaskClearBtn");
-    const paintMaskBrushSize = document.getElementById("paintMaskBrushSize");
+    const imageEditToggleBtn = document.getElementById("imageEditToggleBtn");
+    const imageEditEraseBtn = document.getElementById("imageEditEraseBtn");
+    const imageEditDrawBtn = document.getElementById("imageEditDrawBtn");
+    const imageEditClearBtn = document.getElementById("imageEditClearBtn");
     const snapParallelInput = document.getElementById("snapParallelInput");
     const showLabelsInput = document.getElementById("showLabelsInput");
     const drawHint = document.getElementById("drawHint");
@@ -587,9 +579,10 @@
       moveFloorUpBtn.disabled = !hasFloor || idx <= 0;
       moveFloorDownBtn.disabled = !hasFloor || idx < 0 || idx >= state.floors.length - 1;
       if (autoMapBtn) autoMapBtn.disabled = !hasFloor || state.drawing || state.autoMapping;
-      if (autoMapResetBtn) autoMapResetBtn.disabled = state.autoMapping;
-      if (paintMaskToggleBtn) paintMaskToggleBtn.disabled = !hasFloor || state.autoMapping;
-      if (paintMaskClearBtn) paintMaskClearBtn.disabled = !hasFloor || state.autoMapping;
+      if (imageEditToggleBtn) imageEditToggleBtn.disabled = !hasFloor || state.autoMapping;
+      if (imageEditClearBtn) imageEditClearBtn.disabled = !hasFloor || state.autoMapping;
+      if (imageEditEraseBtn) imageEditEraseBtn.disabled = !hasFloor || state.autoMapping;
+      if (imageEditDrawBtn) imageEditDrawBtn.disabled = !hasFloor || state.autoMapping;
     }
 
     function setSelectedZone(zoneId) {
@@ -706,21 +699,27 @@
       if (paintMaskCanvas) {
         paintMaskCanvas.style.pointerEvents = state.paintingMask ? "auto" : "none";
       }
-      if (paintMaskToggleBtn) {
-        paintMaskToggleBtn.textContent = state.paintingMask ? "Salir de sombreado" : "Pintar sombreado";
-        paintMaskToggleBtn.classList.toggle("primary", state.paintingMask);
+      if (imageEditToggleBtn) {
+        imageEditToggleBtn.textContent = state.paintingMask ? "Salir edición" : "Editar imagen";
+        imageEditToggleBtn.classList.toggle("primary", state.paintingMask);
       }
+      if (imageEditEraseBtn) imageEditEraseBtn.classList.toggle("primary", state.paintTool === "erase");
+      if (imageEditDrawBtn) imageEditDrawBtn.classList.toggle("primary", state.paintTool === "draw");
       if (state.paintingMask) {
-        drawHint.textContent = "Modo sombreado activo: pinta áreas objetivo y luego usa Auto-mapear.";
+        drawHint.textContent = "Edición activa: usa borrador cuadrado o pintar líneas y luego Auto-mapear.";
       } else {
         updateHint();
       }
     }
 
     function getBrushSize() {
-      const n = Math.max(4, Math.min(200, Number(paintMaskBrushSize && paintMaskBrushSize.value) || 28));
-      if (paintMaskBrushSize) paintMaskBrushSize.value = String(Math.round(n));
-      return n;
+      return 24;
+    }
+
+    function setPaintTool(tool) {
+      state.paintTool = tool === "draw" ? "draw" : "erase";
+      if (imageEditEraseBtn) imageEditEraseBtn.classList.toggle("primary", state.paintTool === "erase");
+      if (imageEditDrawBtn) imageEditDrawBtn.classList.toggle("primary", state.paintTool === "draw");
     }
 
     function persistPaintMaskForFloor() {
@@ -739,43 +738,26 @@
     function paintAt(point, previousPoint) {
       if (!paintMaskCtx || !paintMaskCanvas || !point) return;
       const size = getBrushSize();
-      paintMaskCtx.save();
-      paintMaskCtx.globalCompositeOperation = "source-over";
-      paintMaskCtx.strokeStyle = "rgba(255,0,90,0.35)";
-      paintMaskCtx.fillStyle = "rgba(255,0,90,0.35)";
-      paintMaskCtx.lineCap = "round";
-      paintMaskCtx.lineJoin = "round";
-      paintMaskCtx.lineWidth = size;
+      const color = state.paintTool === "draw" ? "rgba(15,15,15,1)" : "rgba(255,255,255,1)";
+      const stampSquare = (x, y) => {
+        const left = Math.round(x - size / 2);
+        const top = Math.round(y - size / 2);
+        paintMaskCtx.fillStyle = color;
+        paintMaskCtx.fillRect(left, top, size, size);
+      };
       if (previousPoint) {
-        paintMaskCtx.beginPath();
-        paintMaskCtx.moveTo(previousPoint[0], previousPoint[1]);
-        paintMaskCtx.lineTo(point[0], point[1]);
-        paintMaskCtx.stroke();
-      } else {
-        paintMaskCtx.beginPath();
-        paintMaskCtx.arc(point[0], point[1], size / 2, 0, Math.PI * 2);
-        paintMaskCtx.fill();
-      }
-      paintMaskCtx.restore();
-    }
-
-    function getAssistMaskFromCanvas(width, height) {
-      if (!paintMaskCtx || !paintMaskCanvas) return null;
-      if (paintMaskCanvas.width !== width || paintMaskCanvas.height !== height) return null;
-      const data = paintMaskCtx.getImageData(0, 0, width, height).data;
-      const out = new Uint8Array(width * height);
-      let hits = 0;
-      for (let i = 0, p = 0; i < out.length; i += 1, p += 4) {
-        const alpha = data[p + 3];
-        if (alpha > 15) {
-          out[i] = 1;
-          hits += 1;
+        const dx = point[0] - previousPoint[0];
+        const dy = point[1] - previousPoint[1];
+        const dist = Math.hypot(dx, dy);
+        const step = Math.max(1, Math.round(size * 0.45));
+        const steps = Math.max(1, Math.ceil(dist / step));
+        for (let i = 0; i <= steps; i += 1) {
+          const t = i / steps;
+          stampSquare(previousPoint[0] + dx * t, previousPoint[1] + dy * t);
         }
+      } else {
+        stampSquare(point[0], point[1]);
       }
-      // Ignore accidental tiny brush traces; otherwise they can block all detections.
-      const minMaskHits = Math.max(200, Math.round(width * height * 0.0008));
-      if (hits < minMaskHits) return null;
-      return hits ? out : null;
     }
 
     function getRawPointFromEvent(evt) {
@@ -862,21 +844,15 @@
     }
 
     function readAutoMapOptions() {
-      const threshold = Math.max(40, Math.min(240, Number(autoMapThreshold && autoMapThreshold.value) || 145));
-      const minArea = Math.max(100, Number(autoMapMinArea && autoMapMinArea.value) || 1400);
-      const maxArea = Math.max(minArea + 1, Number(autoMapMaxArea && autoMapMaxArea.value) || 75000);
-      if (autoMapThreshold) autoMapThreshold.value = String(Math.round(threshold));
-      if (autoMapMinArea) autoMapMinArea.value = String(Math.round(minArea));
-      if (autoMapMaxArea) autoMapMaxArea.value = String(Math.round(maxArea));
       return {
-        threshold,
-        minArea,
-        maxArea,
+        threshold: 170,
+        minArea: 1000,
+        maxArea: 180000,
         minWidth: 24,
         minHeight: 24,
-        minFill: 0.18,
-        maxAspect: 7.5,
-        dilateIterations: 1,
+        minFill: 0.12,
+        maxAspect: 9.5,
+        dilateIterations: 2,
         edgeThreshold: 170
       };
     }
@@ -1180,12 +1156,11 @@
         canvas.height = img.naturalHeight || floor.imageHeight || 1;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const assistMask = getAssistMaskFromCanvas(canvas.width, canvas.height);
-        if (assistMask) {
-          options.assistMask = assistMask;
-          options.assistMinHits = Math.max(8, Math.round((Number(getBrushSize()) || 28) * 0.4));
+        if (paintMaskCanvas && paintMaskCanvas.width === canvas.width && paintMaskCanvas.height === canvas.height) {
+          // Apply manual edits (erase/draw) into a temporary raster before auto-detection.
+          ctx.drawImage(paintMaskCanvas, 0, 0, canvas.width, canvas.height);
         }
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         let polygons = buildAutoZonesFromImageData(imageData, options);
         // Fallbacks for low-contrast or thin-wall plans where default threshold leaks to outside.
         if (!polygons.length) {
@@ -1235,7 +1210,7 @@
         alert(`Auto-mapeo terminado. Zonas sugeridas: ${floor.zones.length}. Revisa y corrige manualmente.`);
       } catch (err) {
         console.error(err);
-        alert("No se pudo auto-mapear esta imagen. Prueba con otra o ajusta parámetros.");
+        alert("No se pudo auto-mapear esta imagen. Prueba editando líneas (borrar/pintar) e intenta de nuevo.");
       } finally {
         state.autoMapping = false;
         updateHint();
@@ -1578,6 +1553,7 @@
               imageDataUrl: reader.result,
               imageWidth: 0,
               imageHeight: 0,
+              paintMaskDataUrl: "",
               zones: []
             });
           };
@@ -1650,30 +1626,27 @@
     if (autoMapBtn) {
       autoMapBtn.addEventListener("click", runAutoMap);
     }
-    if (autoMapResetBtn) {
-      autoMapResetBtn.addEventListener("click", () => {
-        if (autoMapThreshold) autoMapThreshold.value = "145";
-        if (autoMapMinArea) autoMapMinArea.value = "1400";
-        if (autoMapMaxArea) autoMapMaxArea.value = "75000";
-      });
-    }
-    if (autoMapPresetBtn) {
-      autoMapPresetBtn.addEventListener("click", () => {
-        if (autoMapThreshold) autoMapThreshold.value = "210";
-        if (autoMapMinArea) autoMapMinArea.value = "12000";
-        if (autoMapMaxArea) autoMapMaxArea.value = "300000";
-        drawHint.textContent = "Preset aplicado: plano claro. Puedes ajustar y luego correr Auto-mapear.";
-      });
-    }
-    if (paintMaskToggleBtn) {
-      paintMaskToggleBtn.addEventListener("click", () => {
+    if (imageEditToggleBtn) {
+      imageEditToggleBtn.addEventListener("click", () => {
         setPaintMaskMode(!state.paintingMask);
       });
     }
-    if (paintMaskClearBtn) {
-      paintMaskClearBtn.addEventListener("click", () => {
+    if (imageEditClearBtn) {
+      imageEditClearBtn.addEventListener("click", () => {
         clearPaintMask();
-        drawHint.textContent = "Sombreado borrado. Puedes pintar de nuevo y auto-mapear.";
+        drawHint.textContent = "Edición limpiada. Puedes dibujar/borrar líneas y auto-mapear.";
+      });
+    }
+    if (imageEditEraseBtn) {
+      imageEditEraseBtn.addEventListener("click", () => {
+        if (!state.paintingMask) setPaintMaskMode(true);
+        setPaintTool("erase");
+      });
+    }
+    if (imageEditDrawBtn) {
+      imageEditDrawBtn.addEventListener("click", () => {
+        if (!state.paintingMask) setPaintMaskMode(true);
+        setPaintTool("draw");
       });
     }
     if (paintMaskCanvas) {
