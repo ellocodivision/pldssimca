@@ -228,10 +228,15 @@
           <div class="btn-row three" style="margin-top:8px;">
             <button id="imageEditEraseBtn" type="button">Borrador cuadrado</button>
             <button id="imageEditDrawBtn" type="button">Pintar líneas</button>
-            <input id="brushSizeInput" type="range" min="6" max="40" step="1" value="12" aria-label="Grosor brocha">
+            <input id="brushSizeInput" type="range" min="1" max="40" step="1" value="8" aria-label="Grosor brocha">
           </div>
           <div class="btn-row" style="margin-top:6px;">
-            <span id="brushSizeValue" class="hint" style="margin:0;">Grosor: 12 px</span>
+            <button id="drawStraightBtn" type="button">Línea recta: ON</button>
+            <input id="drawColorInput" type="color" value="#111111" aria-label="Color línea">
+            <button id="drawEyedropperBtn" type="button">Tomar color</button>
+          </div>
+          <div class="btn-row" style="margin-top:6px;">
+            <span id="brushSizeValue" class="hint" style="margin:0;">Grosor: 8 px</span>
           </div>
           <p class="hint">Auto-map usa parámetros fijos. Edita imagen si necesitas borrar/agregar líneas antes de mapear.</p>
         </div>
@@ -335,6 +340,9 @@
       paintingMaskStroke: false,
       paintingMaskLastPoint: null,
       paintTool: "erase",
+      drawStraight: true,
+      drawLineStart: null,
+      drawColor: "#111111",
       nextZoneId: 1,
       zoom: 1,
       autoMapping: false
@@ -363,6 +371,9 @@
     const imageEditClearBtn = document.getElementById("imageEditClearBtn");
     const brushSizeInput = document.getElementById("brushSizeInput");
     const brushSizeValue = document.getElementById("brushSizeValue");
+    const drawStraightBtn = document.getElementById("drawStraightBtn");
+    const drawColorInput = document.getElementById("drawColorInput");
+    const drawEyedropperBtn = document.getElementById("drawEyedropperBtn");
     const brushCursor = document.getElementById("brushCursor");
     const snapParallelInput = document.getElementById("snapParallelInput");
     const showLabelsInput = document.getElementById("showLabelsInput");
@@ -713,6 +724,7 @@
     function setPaintMaskMode(enabled) {
       state.paintingMask = Boolean(enabled);
       state.paintingMaskStroke = false;
+      state.drawLineStart = null;
       if (paintMaskCanvas) {
         paintMaskCanvas.style.pointerEvents = state.paintingMask ? "auto" : "none";
       }
@@ -732,25 +744,46 @@
 
     function getBrushSize() {
       const value = Number(brushSizeInput && brushSizeInput.value);
-      const size = Math.max(6, Math.min(40, Number.isFinite(value) ? value : 12));
+      const size = Math.max(1, Math.min(40, Number.isFinite(value) ? value : 8));
       if (brushSizeInput) brushSizeInput.value = String(Math.round(size));
       if (brushSizeValue) brushSizeValue.textContent = `Grosor: ${Math.round(size)} px`;
       return size;
     }
 
+    function setDrawStraight(enabled) {
+      state.drawStraight = Boolean(enabled);
+      state.drawLineStart = null;
+      if (drawStraightBtn) {
+        drawStraightBtn.textContent = `Línea recta: ${state.drawStraight ? "ON" : "OFF"}`;
+        drawStraightBtn.classList.toggle("primary", state.drawStraight);
+      }
+    }
+
+    function setDrawColor(color) {
+      const value = String(color || "").trim();
+      if (!/^#[0-9a-f]{6}$/i.test(value)) return;
+      state.drawColor = value.toLowerCase();
+      if (drawColorInput) drawColorInput.value = state.drawColor;
+      if (brushCursor && state.paintTool === "draw") {
+        brushCursor.style.borderColor = state.drawColor;
+      }
+    }
+
     function setPaintTool(tool) {
       state.paintTool = tool === "draw" ? "draw" : "erase";
+      state.drawLineStart = null;
       if (imageEditEraseBtn) imageEditEraseBtn.classList.toggle("primary", state.paintTool === "erase");
       if (imageEditDrawBtn) imageEditDrawBtn.classList.toggle("primary", state.paintTool === "draw");
       if (brushCursor) {
         brushCursor.style.borderStyle = state.paintTool === "erase" ? "dashed" : "solid";
+        brushCursor.style.borderColor = state.paintTool === "erase" ? "#1d5a3f" : state.drawColor;
       }
     }
 
     function showBrushCursor(point) {
       if (!brushCursor || !state.paintingMask || !point) return;
       const size = getBrushSize();
-      const drawSize = Math.max(2, Math.round(size * 0.45));
+      const drawSize = Math.max(1, Math.round(size));
       const previewSize = state.paintTool === "draw" ? drawSize : size;
       brushCursor.style.width = `${previewSize}px`;
       brushCursor.style.height = `${previewSize}px`;
@@ -786,11 +819,11 @@
         paintMaskCtx.fillRect(left, top, size, size);
       };
       if (state.paintTool === "draw") {
-        const drawSize = Math.max(2, Math.round(size * 0.45));
+        const drawSize = Math.max(1, Math.round(size));
         paintMaskCtx.save();
         paintMaskCtx.globalCompositeOperation = "source-over";
-        paintMaskCtx.strokeStyle = "rgba(15,15,15,1)";
-        paintMaskCtx.fillStyle = "rgba(15,15,15,1)";
+        paintMaskCtx.strokeStyle = state.drawColor;
+        paintMaskCtx.fillStyle = state.drawColor;
         paintMaskCtx.lineCap = "round";
         paintMaskCtx.lineJoin = "round";
         paintMaskCtx.lineWidth = drawSize;
@@ -820,6 +853,22 @@
       } else {
         stampSquare(point[0], point[1]);
       }
+    }
+
+    function paintStraightSegment(startPoint, endPoint) {
+      if (!paintMaskCtx || !startPoint || !endPoint || state.paintTool !== "draw") return;
+      const width = Math.max(1, Math.round(getBrushSize()));
+      paintMaskCtx.save();
+      paintMaskCtx.globalCompositeOperation = "source-over";
+      paintMaskCtx.strokeStyle = state.drawColor;
+      paintMaskCtx.lineWidth = width;
+      paintMaskCtx.lineCap = "round";
+      paintMaskCtx.lineJoin = "round";
+      paintMaskCtx.beginPath();
+      paintMaskCtx.moveTo(startPoint[0], startPoint[1]);
+      paintMaskCtx.lineTo(endPoint[0], endPoint[1]);
+      paintMaskCtx.stroke();
+      paintMaskCtx.restore();
     }
 
     function getRawPointFromEvent(evt) {
@@ -1696,6 +1745,7 @@
     if (imageEditClearBtn) {
       imageEditClearBtn.addEventListener("click", () => {
         clearPaintMask();
+        state.drawLineStart = null;
         drawHint.textContent = "Edición limpiada. Puedes dibujar/borrar líneas y auto-mapear.";
       });
     }
@@ -1711,6 +1761,29 @@
         setPaintTool("draw");
       });
     }
+    if (drawStraightBtn) {
+      drawStraightBtn.addEventListener("click", () => {
+        setDrawStraight(!state.drawStraight);
+      });
+    }
+    if (drawColorInput) {
+      drawColorInput.addEventListener("input", () => {
+        setDrawColor(drawColorInput.value);
+      });
+    }
+    if (drawEyedropperBtn) {
+      drawEyedropperBtn.addEventListener("click", async () => {
+        if (!window.EyeDropper) {
+          alert("Tu navegador no soporta cuentagotas. Usa el selector de color.");
+          return;
+        }
+        try {
+          const eye = new window.EyeDropper();
+          const picked = await eye.open();
+          if (picked && picked.sRGBHex) setDrawColor(picked.sRGBHex);
+        } catch {}
+      });
+    }
     if (paintMaskCanvas) {
       paintMaskCanvas.addEventListener("pointerdown", (evt) => {
         if (!state.paintingMask) return;
@@ -1718,6 +1791,18 @@
         const point = getRawPointFromEvent(evt);
         if (!point) return;
         showBrushCursor(point);
+        if (state.paintTool === "draw" && state.drawStraight) {
+          if (!state.drawLineStart) {
+            state.drawLineStart = point;
+            drawHint.textContent = "Línea recta: marca punto final.";
+          } else {
+            paintStraightSegment(state.drawLineStart, point);
+            state.drawLineStart = point;
+            persistPaintMaskForFloor();
+            drawHint.textContent = "Línea recta: punto aplicado. Puedes seguir trazando.";
+          }
+          return;
+        }
         state.paintingMaskStroke = true;
         state.paintingMaskLastPoint = point;
         paintAt(point, null);
@@ -1785,10 +1870,15 @@
 
     document.addEventListener("keydown", (evt) => {
       if (evt.key === "Escape" && state.drawing) cancelDrawing();
+      if (evt.key === "Escape" && state.paintingMask) {
+        state.drawLineStart = null;
+      }
     });
 
     syncZoomUi();
     getBrushSize();
+    setDrawStraight(state.drawStraight);
+    setDrawColor(state.drawColor);
     setPaintTool(state.paintTool);
     updateHint();
     render();
