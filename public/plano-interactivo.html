@@ -523,6 +523,46 @@
       return [sx / points.length, sy / points.length];
     }
 
+    function polygonBounds(points) {
+      if (!Array.isArray(points) || !points.length) return null;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      points.forEach(([x, y]) => {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      });
+      return { minX, minY, maxX, maxY };
+    }
+
+    function boundsOverlapRatio(a, b) {
+      if (!a || !b) return 0;
+      const ix = Math.max(0, Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX));
+      const iy = Math.max(0, Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY));
+      const inter = ix * iy;
+      if (!inter) return 0;
+      const areaA = Math.max(1, (a.maxX - a.minX) * (a.maxY - a.minY));
+      const areaB = Math.max(1, (b.maxX - b.minX) * (b.maxY - b.minY));
+      return inter / Math.min(areaA, areaB);
+    }
+
+    function isPointInPolygon(point, polygon) {
+      if (!point || !Array.isArray(polygon) || polygon.length < 3) return false;
+      const [px, py] = point;
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i];
+        const [xj, yj] = polygon[j];
+        const intersects = ((yi > py) !== (yj > py))
+          && (px < ((xj - xi) * (py - yi)) / ((yj - yi) || 1e-9) + xi);
+        if (intersects) inside = !inside;
+      }
+      return inside;
+    }
+
     function normalizePoint(raw) {
       if (Array.isArray(raw) && raw.length >= 2) {
         const x = Number(raw[0]);
@@ -1341,10 +1381,6 @@
       if (state.paintingMask) setPaintMaskMode(false);
 
       const options = readAutoMapOptions();
-      if (Array.isArray(floor.zones) && floor.zones.length) {
-        const ok = window.confirm(`Se reemplazarán ${floor.zones.length} zonas del piso actual por sugerencias automáticas. ¿Continuar?`);
-        if (!ok) return;
-      }
 
       state.autoMapping = true;
       drawHint.textContent = "Auto-mapeando... esto puede tardar unos segundos.";
@@ -1404,13 +1440,41 @@
           }
         }
 
-        floor.zones = polygons.map((points, idx) => ({
-          id: `zone-${state.nextZoneId++}`,
-          label: String(idx + 1),
-          tipologia: "",
-          labelOffset: { x: 0, y: 0 },
-          points
+        const existingZones = Array.isArray(floor.zones) ? [...floor.zones] : [];
+        const existingBounds = existingZones.map((z) => ({
+          points: z.points,
+          bounds: polygonBounds(z.points)
         }));
+        let maxNumericLabel = existingZones.reduce((max, z) => {
+          const n = Number.parseInt(String(z.label || "").trim(), 10);
+          return Number.isFinite(n) ? Math.max(max, n) : max;
+        }, 0);
+        const addedZones = [];
+        polygons.forEach((points) => {
+          const center = polygonCenter(points);
+          const bounds = polygonBounds(points);
+          const duplicatesExisting = existingBounds.some((entry) => {
+            if (isPointInPolygon(center, entry.points)) return true;
+            const overlap = boundsOverlapRatio(bounds, entry.bounds);
+            return overlap >= 0.75;
+          });
+          if (duplicatesExisting) return;
+          const duplicatesNew = addedZones.some((entry) => {
+            if (isPointInPolygon(center, entry.points)) return true;
+            const overlap = boundsOverlapRatio(bounds, polygonBounds(entry.points));
+            return overlap >= 0.75;
+          });
+          if (duplicatesNew) return;
+          maxNumericLabel += 1;
+          addedZones.push({
+            id: `zone-${state.nextZoneId++}`,
+            label: String(maxNumericLabel),
+            tipologia: "",
+            labelOffset: { x: 0, y: 0 },
+            points
+          });
+        });
+        floor.zones = existingZones.concat(addedZones);
         if (appliedEditLayer) {
           // Persist edited raster as the new base image so edits remain visible after auto-map.
           floor.imageDataUrl = canvas.toDataURL("image/png");
@@ -1421,12 +1485,13 @@
           baseImage.src = floor.imageDataUrl;
         }
 
-        state.selectedZoneId = floor.zones[0] ? floor.zones[0].id : null;
-        if (unitLabel) unitLabel.value = state.selectedZoneId ? floor.zones[0].label : "";
-        if (unitTipologia) unitTipologia.value = "";
+        const selected = floor.zones[floor.zones.length - 1] || floor.zones[0] || null;
+        state.selectedZoneId = selected ? selected.id : null;
+        if (unitLabel) unitLabel.value = selected ? selected.label : "";
+        if (unitTipologia) unitTipologia.value = selected ? String(selected.tipologia || "") : "";
         updateHint();
         render();
-        alert(`Auto-mapeo terminado. Zonas sugeridas: ${floor.zones.length}. Revisa y corrige manualmente.`);
+        alert(`Auto-mapeo incremental terminado. Nuevas zonas: ${addedZones.length}. Zonas totales: ${floor.zones.length}.`);
       } catch (err) {
         console.error(err);
         alert("No se pudo auto-mapear esta imagen. Prueba editando líneas (borrar/pintar) e intenta de nuevo.");
