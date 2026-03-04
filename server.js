@@ -902,7 +902,12 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
   });
 
   const asesor = normalizeWhisperlistAsesor(normalized.asesor);
-  const correo = String(normalized.correo || '').trim().toLowerCase();
+  const correo = String(
+    normalized.correo
+    || normalized.correo_asesor
+    || normalized.email_asesor
+    || ''
+  ).trim().toLowerCase();
   if (!asesor || !correo) return null;
 
   const generatedId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 6)}`;
