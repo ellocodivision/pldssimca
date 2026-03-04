@@ -1146,7 +1146,29 @@
           options.assistMask = assistMask;
           options.assistMinHits = Math.max(8, Math.round((Number(getBrushSize()) || 28) * 0.4));
         }
-        const polygons = buildAutoZonesFromImageData(imageData, options);
+        let polygons = buildAutoZonesFromImageData(imageData, options);
+        // Fallbacks for low-contrast or thin-wall plans where default threshold leaks to outside.
+        if (!polygons.length) {
+          const fallbackAttempts = [
+            {
+              ...options,
+              threshold: Math.min(240, options.threshold + 25),
+              minArea: Math.max(100, Math.round(options.minArea * 0.65)),
+              dilateIterations: 2
+            },
+            {
+              ...options,
+              threshold: Math.min(240, options.threshold + 45),
+              minArea: Math.max(100, Math.round(options.minArea * 0.5)),
+              maxArea: Math.max(options.maxArea, Math.round(options.maxArea * 1.3)),
+              dilateIterations: 3
+            }
+          ];
+          for (const attempt of fallbackAttempts) {
+            polygons = buildAutoZonesFromImageData(imageData, attempt);
+            if (polygons.length) break;
+          }
+        }
 
         floor.zones = polygons.map((points, idx) => ({
           id: `zone-${state.nextZoneId++}`,
