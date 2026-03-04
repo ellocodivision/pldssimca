@@ -1337,6 +1337,9 @@
       const floor = activeFloor();
       if (!floor || !floor.imageDataUrl) return;
 
+      // Keep edits applied, but hide edit layer so result is not visually covered.
+      if (state.paintingMask) setPaintMaskMode(false);
+
       const options = readAutoMapOptions();
       if (Array.isArray(floor.zones) && floor.zones.length) {
         const ok = window.confirm(`Se reemplazarán ${floor.zones.length} zonas del piso actual por sugerencias automáticas. ¿Continuar?`);
