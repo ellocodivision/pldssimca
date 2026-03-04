@@ -138,10 +138,10 @@
       font-size: 9pt;
     }
     .signature-line {
-      margin: 12px auto 6px;
+      margin: 18px auto 8px;
       border-bottom: 1px solid #000;
       width: 60%;
-      height: 16px;
+      height: 24px;
     }
 
     #blocks { display: none; }
@@ -370,6 +370,12 @@
       finalPages.forEach((p, i) => {
         const num = p.querySelector('.footer .r');
         if (num) num.textContent = String(i + 1);
+        const content = p.querySelector('.content');
+        const sig = content && content.querySelector('.signature');
+        if (content && sig) {
+          const extra = content.clientHeight - content.scrollHeight;
+          if (extra > 0) sig.style.marginTop = `${extra + 14}px`;
+        }
       });
     })();
   </script>

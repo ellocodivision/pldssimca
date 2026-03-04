@@ -129,6 +129,8 @@ body {
 .bc-val { width: 50%; }
 .attach-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
 .attach-table td { border: 0; padding: 4px 4px; vertical-align: middle; }
+.signature-final{margin-top:10px;text-align:center;}
+.signature-final .line{width:60% !important;margin:16px auto 8px !important;min-height:22px;line-height:22px;}
 .attach-label { width: 78%; font-weight: bold; }
 .attach-check { width: 22%; text-align: center; }
 .sq {
@@ -357,10 +359,9 @@ body {
 
   <div class="block spacer-2"></div>
 
-  <div class="block center">
+  <div class="block center signature-final">
     <div class="bold">Atentamente/Sincerely,</div>
-    <div class="spacer-2"></div>
-    <div class="line" style="width:55%; margin: 0 auto 8px;"></div>
+    <div class="line"></div>
     <div class="bold" style="font-style:italic;">Persona Moral/Body Corporate: "{{spanNombreCompleto}}"</div>
     <div class="bold" style="font-style:italic;">"Representada por"/"Represented by": "{{spanApoderadoNombre}}"</div>
   </div>
@@ -399,6 +400,12 @@ body {
   pageEls.forEach((p, i) => {
     const num = p.querySelector('.footer-right');
     if (num) num.textContent = String(i + 1);
+    const content = p.querySelector('.content');
+    const sig = content && content.querySelector('.signature-final');
+    if (content && sig) {
+      const extra = content.clientHeight - content.scrollHeight;
+      if (extra > 0) sig.style.marginTop = `${extra + 10}px`;
+    }
   });
 })();
 </script>

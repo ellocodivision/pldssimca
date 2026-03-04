@@ -93,6 +93,8 @@ body {
 
 .blocks .block { margin-bottom: 0; break-inside: avoid; }
 .blocks .block:last-child { margin-bottom: 0; }
+.signature-final{margin-top:10px;text-align:center;}
+.signature-final .line{width:55% !important;margin:16px auto 8px !important;min-height:22px;line-height:22px;}
 .para { margin-bottom: 16px; }
 .para-lg { margin-bottom: 22px; }
 .para-top { margin-top: 18px; }
@@ -183,10 +185,9 @@ body {
 
   <div class="block spacer-1"></div>
 
-  <div class="block center">
+  <div class="block center signature-final">
     <div class="bold">Atentamente,</div>
-    <div class="spacer-2"></div>
-    <div class="line" style="width:45%; margin: 0 auto;"></div>
+    <div class="line"></div>
     <div class="bold">Persona física: {{cbNombre1}}</div>
     <div class="bold">Por mi propio derecho</div>
   </div>
@@ -229,6 +230,12 @@ body {
   pageEls.forEach((p, i) => {
     const num = p.querySelector('.footer-right');
     if (num) num.textContent = String(i + 1);
+    const content = p.querySelector('.content');
+    const sig = content && content.querySelector('.signature-final');
+    if (content && sig) {
+      const extra = content.clientHeight - content.scrollHeight;
+      if (extra > 0) sig.style.marginTop = `${extra + 10}px`;
+    }
   });
 })();
 </script>

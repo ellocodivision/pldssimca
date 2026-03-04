@@ -94,6 +94,19 @@ body {
   margin-left: 4px;
  }
  .circle.checked { background: #000; }
+ .signature-final{
+  position:absolute;
+  left:16mm;
+  right:16mm;
+  bottom:20mm;
+  text-align:center;
+ }
+ .signature-final .line{
+  width:55% !important;
+  margin:16px auto 8px !important;
+  min-height:22px;
+  line-height:22px;
+ }
 
 /* Compactacion puntual para evitar desborde en la pagina 2 */
 .page-2 table { font-size: 8.6pt; margin-bottom: 2px; }
@@ -334,10 +347,9 @@ In connection with the Transaction, in its capacity as acquirer of the Unit and 
     </table>
 
     <div class="spacer-2"></div>
-    <div class="center" style="margin-top:10px;">
+    <div class="center signature-final">
         <div class="bold">Atentamente / Sincerely,</div>
-        <div class="spacer-2"></div>
-        <div class="line" style="width:45%; margin: 0 auto;"></div>
+        <div class="line"></div>
         <div class="bold">{{cbNombre1}}</div>
         <div class="bold">Por mi propio derecho/In my own right</div>
     </div>
