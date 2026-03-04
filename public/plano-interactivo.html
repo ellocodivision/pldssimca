@@ -1000,12 +1000,22 @@
       const wallMask = new Uint8Array(pixelCount);
       const grayMap = new Uint8Array(pixelCount);
       const edgeThreshold = Math.max(30, Number(options.edgeThreshold) || 170);
+      let darkHits = 0;
 
       for (let i = 0, p = 0; i < pixelCount; i += 1, p += 4) {
         const gray = Math.round((data[p] * 299 + data[p + 1] * 587 + data[p + 2] * 114) / 1000);
         grayMap[i] = gray;
-        if (gray < options.threshold) wallMask[i] = 1;
+        if (gray < options.threshold) {
+          wallMask[i] = 1;
+          darkHits += 1;
+        }
       }
+
+      // Dark-theme plans (black background) can mark almost the whole image as "wall".
+      // In that case, switch to edge-driven detection.
+      const darkCoverage = darkHits / Math.max(1, pixelCount);
+      const useEdgeOnly = darkCoverage > 0.72;
+      if (useEdgeOnly) wallMask.fill(0);
 
       // Add edge-based wall detection for soft/anti-aliased linework.
       for (let y = 1; y < height - 1; y += 1) {
@@ -1026,7 +1036,10 @@
           if (edgeStrength >= edgeThreshold) wallMask[idx] = 1;
         }
       }
-      const walls = dilateBinaryMask(wallMask, width, height, options.dilateIterations);
+      const effectiveDilate = useEdgeOnly
+        ? Math.max(2, Number(options.dilateIterations) + 1)
+        : options.dilateIterations;
+      const walls = dilateBinaryMask(wallMask, width, height, effectiveDilate);
 
       const outside = new Uint8Array(pixelCount);
       const queue = new Int32Array(pixelCount);
