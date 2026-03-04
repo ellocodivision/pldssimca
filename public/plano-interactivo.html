@@ -164,13 +164,21 @@
       z-index: 3;
       cursor: crosshair;
     }
+    #editGuideOverlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 4;
+    }
     #brushCursor {
       position: absolute;
       display: none;
       pointer-events: none;
-      z-index: 4;
-      border: 2px dashed #1d5a3f;
-      background: rgba(29, 90, 63, 0.08);
+      z-index: 5;
+      border: 2px dashed #ff3b30;
+      background: rgba(255, 59, 48, 0.12);
       transform: translate(-50%, -50%);
       box-sizing: border-box;
     }
@@ -223,7 +231,7 @@
           <div class="btn-row three" style="margin-top:8px;">
             <button id="autoMapBtn" type="button">Auto-mapear</button>
             <button id="imageEditToggleBtn" type="button">Editar imagen</button>
-            <button id="imageEditClearBtn" type="button">Limpiar edición</button>
+            <button id="imageEditUndoBtn" type="button">Deshacer</button>
           </div>
           <div class="btn-row three" style="margin-top:8px;">
             <button id="imageEditEraseBtn" type="button">Borrador cuadrado</button>
@@ -302,6 +310,7 @@
         <img id="baseImage" alt="Plano base">
         <svg id="overlay" aria-label="Editor de zonas"></svg>
         <canvas id="paintMaskCanvas" aria-label="Edición previa de imagen"></canvas>
+        <svg id="editGuideOverlay" aria-hidden="true"></svg>
         <div id="brushCursor" aria-hidden="true"></div>
       </div>
       <p class="hint">Tip: puedes mover el número de unidad arrastrándolo.</p>
@@ -343,6 +352,7 @@
       drawStraight: true,
       drawLineStart: null,
       drawColor: "#111111",
+      editHistoryByFloor: {},
       nextZoneId: 1,
       zoom: 1,
       autoMapping: false
@@ -359,6 +369,7 @@
     const overlay = document.getElementById("overlay");
     const paintMaskCanvas = document.getElementById("paintMaskCanvas");
     const paintMaskCtx = paintMaskCanvas ? paintMaskCanvas.getContext("2d") : null;
+    const editGuideOverlay = document.getElementById("editGuideOverlay");
     const startZoneBtn = document.getElementById("startZoneBtn");
     const finishZoneBtn = document.getElementById("finishZoneBtn");
     const cancelZoneBtn = document.getElementById("cancelZoneBtn");
@@ -368,7 +379,7 @@
     const imageEditToggleBtn = document.getElementById("imageEditToggleBtn");
     const imageEditEraseBtn = document.getElementById("imageEditEraseBtn");
     const imageEditDrawBtn = document.getElementById("imageEditDrawBtn");
-    const imageEditClearBtn = document.getElementById("imageEditClearBtn");
+    const imageEditUndoBtn = document.getElementById("imageEditUndoBtn");
     const brushSizeInput = document.getElementById("brushSizeInput");
     const brushSizeValue = document.getElementById("brushSizeValue");
     const drawStraightBtn = document.getElementById("drawStraightBtn");
@@ -608,7 +619,11 @@
       moveFloorDownBtn.disabled = !hasFloor || idx < 0 || idx >= state.floors.length - 1;
       if (autoMapBtn) autoMapBtn.disabled = !hasFloor || state.drawing || state.autoMapping;
       if (imageEditToggleBtn) imageEditToggleBtn.disabled = !hasFloor || state.autoMapping;
-      if (imageEditClearBtn) imageEditClearBtn.disabled = !hasFloor || state.autoMapping;
+      if (imageEditUndoBtn) {
+        const floor = activeFloor();
+        const hist = floor ? (state.editHistoryByFloor[floor.id] || []) : [];
+        imageEditUndoBtn.disabled = !hasFloor || state.autoMapping || !hist.length;
+      }
       if (imageEditEraseBtn) imageEditEraseBtn.disabled = !hasFloor || state.autoMapping;
       if (imageEditDrawBtn) imageEditDrawBtn.disabled = !hasFloor || state.autoMapping;
     }
@@ -636,6 +651,7 @@
       if (!floor) {
         baseImage.removeAttribute("src");
         overlay.innerHTML = "";
+        if (editGuideOverlay) editGuideOverlay.innerHTML = "";
         if (paintMaskCtx && paintMaskCanvas) {
           paintMaskCtx.clearRect(0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
         }
@@ -699,6 +715,12 @@
         overlay.setAttribute("viewBox", `0 0 ${floor.imageWidth} ${floor.imageHeight}`);
         overlay.setAttribute("width", floor.imageWidth);
         overlay.setAttribute("height", floor.imageHeight);
+        if (editGuideOverlay) {
+          editGuideOverlay.setAttribute("viewBox", `0 0 ${floor.imageWidth} ${floor.imageHeight}`);
+          editGuideOverlay.setAttribute("width", floor.imageWidth);
+          editGuideOverlay.setAttribute("height", floor.imageHeight);
+          editGuideOverlay.innerHTML = "";
+        }
         if (paintMaskCanvas) {
           paintMaskCanvas.width = floor.imageWidth;
           paintMaskCanvas.height = floor.imageHeight;
@@ -717,6 +739,7 @@
         }
         applyZoomToStage();
         render();
+        enableButtons();
       };
       baseImage.src = floor.imageDataUrl;
     }
@@ -725,6 +748,7 @@
       state.paintingMask = Boolean(enabled);
       state.paintingMaskStroke = false;
       state.drawLineStart = null;
+      if (editGuideOverlay) editGuideOverlay.innerHTML = "";
       if (paintMaskCanvas) {
         paintMaskCanvas.style.pointerEvents = state.paintingMask ? "auto" : "none";
       }
@@ -753,6 +777,7 @@
     function setDrawStraight(enabled) {
       state.drawStraight = Boolean(enabled);
       state.drawLineStart = null;
+      if (editGuideOverlay) editGuideOverlay.innerHTML = "";
       if (drawStraightBtn) {
         drawStraightBtn.textContent = `Línea recta: ${state.drawStraight ? "ON" : "OFF"}`;
         drawStraightBtn.classList.toggle("primary", state.drawStraight);
@@ -772,11 +797,12 @@
     function setPaintTool(tool) {
       state.paintTool = tool === "draw" ? "draw" : "erase";
       state.drawLineStart = null;
+      if (editGuideOverlay) editGuideOverlay.innerHTML = "";
       if (imageEditEraseBtn) imageEditEraseBtn.classList.toggle("primary", state.paintTool === "erase");
       if (imageEditDrawBtn) imageEditDrawBtn.classList.toggle("primary", state.paintTool === "draw");
       if (brushCursor) {
         brushCursor.style.borderStyle = state.paintTool === "erase" ? "dashed" : "solid";
-        brushCursor.style.borderColor = state.paintTool === "erase" ? "#1d5a3f" : state.drawColor;
+        brushCursor.style.borderColor = state.paintTool === "erase" ? "#ff3b30" : state.drawColor;
       }
     }
 
@@ -802,11 +828,75 @@
       floor.paintMaskDataUrl = paintMaskCanvas.toDataURL("image/png");
     }
 
+    function pushUndoSnapshot() {
+      const floor = activeFloor();
+      if (!floor || !paintMaskCanvas) return;
+      const key = floor.id;
+      if (!state.editHistoryByFloor[key]) state.editHistoryByFloor[key] = [];
+      const snapshot = floor.paintMaskDataUrl || "";
+      const hist = state.editHistoryByFloor[key];
+      hist.push(snapshot);
+      if (hist.length > 40) hist.shift();
+      enableButtons();
+    }
+
+    function applyPaintMaskDataUrl(dataUrl) {
+      const floor = activeFloor();
+      if (!floor || !paintMaskCtx || !paintMaskCanvas) return;
+      paintMaskCtx.clearRect(0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
+      floor.paintMaskDataUrl = String(dataUrl || "");
+      if (!floor.paintMaskDataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        paintMaskCtx.clearRect(0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
+        paintMaskCtx.drawImage(img, 0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
+      };
+      img.src = floor.paintMaskDataUrl;
+    }
+
+    function undoPaintMask() {
+      const floor = activeFloor();
+      if (!floor) return;
+      const hist = state.editHistoryByFloor[floor.id] || [];
+      if (!hist.length) return;
+      const previous = hist.pop();
+      applyPaintMaskDataUrl(previous || "");
+      enableButtons();
+    }
+
     function clearPaintMask() {
       const floor = activeFloor();
       if (!floor || !paintMaskCtx || !paintMaskCanvas) return;
       paintMaskCtx.clearRect(0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
       floor.paintMaskDataUrl = "";
+      if (editGuideOverlay) editGuideOverlay.innerHTML = "";
+      state.drawLineStart = null;
+      enableButtons();
+    }
+
+    function snapEditLineEnd(startPoint, point) {
+      if (!startPoint || !point) return point;
+      if (!state.snapParallel) return point;
+      const dx = point[0] - startPoint[0];
+      const dy = point[1] - startPoint[1];
+      if (Math.abs(dx) >= Math.abs(dy)) return [point[0], startPoint[1]];
+      return [startPoint[0], point[1]];
+    }
+
+    function renderEditLineGuide(currentPoint) {
+      if (!editGuideOverlay) return;
+      if (!state.paintingMask || state.paintTool !== "draw" || !state.drawStraight || !state.drawLineStart || !currentPoint) {
+        editGuideOverlay.innerHTML = "";
+        return;
+      }
+      const endPoint = snapEditLineEnd(state.drawLineStart, currentPoint);
+      const [sx, sy] = state.drawLineStart;
+      const [ex, ey] = endPoint;
+      editGuideOverlay.innerHTML = `
+        <line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${state.drawColor}" stroke-width="2" stroke-dasharray="7 5" />
+        <circle cx="${sx}" cy="${sy}" r="4" fill="${state.drawColor}" />
+        <circle cx="${ex}" cy="${ey}" r="4" fill="${state.drawColor}" />
+      `;
     }
 
     function paintAt(point, previousPoint) {
@@ -1742,11 +1832,10 @@
         setPaintMaskMode(!state.paintingMask);
       });
     }
-    if (imageEditClearBtn) {
-      imageEditClearBtn.addEventListener("click", () => {
-        clearPaintMask();
-        state.drawLineStart = null;
-        drawHint.textContent = "Edición limpiada. Puedes dibujar/borrar líneas y auto-mapear.";
+    if (imageEditUndoBtn) {
+      imageEditUndoBtn.addEventListener("click", () => {
+        undoPaintMask();
+        drawHint.textContent = "Se deshizo el último trazo/edición.";
       });
     }
     if (imageEditEraseBtn) {
@@ -1794,15 +1883,21 @@
         if (state.paintTool === "draw" && state.drawStraight) {
           if (!state.drawLineStart) {
             state.drawLineStart = point;
+            renderEditLineGuide(point);
             drawHint.textContent = "Línea recta: marca punto final.";
           } else {
-            paintStraightSegment(state.drawLineStart, point);
-            state.drawLineStart = point;
+            const endPoint = snapEditLineEnd(state.drawLineStart, point);
+            pushUndoSnapshot();
+            paintStraightSegment(state.drawLineStart, endPoint);
+            state.drawLineStart = endPoint;
             persistPaintMaskForFloor();
+            renderEditLineGuide(endPoint);
+            enableButtons();
             drawHint.textContent = "Línea recta: punto aplicado. Puedes seguir trazando.";
           }
           return;
         }
+        pushUndoSnapshot();
         state.paintingMaskStroke = true;
         state.paintingMaskLastPoint = point;
         paintAt(point, null);
@@ -1813,6 +1908,7 @@
         const point = getRawPointFromEvent(evt);
         if (!point) return;
         showBrushCursor(point);
+        renderEditLineGuide(point);
         if (!state.paintingMaskStroke) return;
         paintAt(point, state.paintingMaskLastPoint);
         state.paintingMaskLastPoint = point;
@@ -1827,6 +1923,7 @@
       paintMaskCanvas.addEventListener("pointerup", stopPaint);
       paintMaskCanvas.addEventListener("pointerleave", () => {
         stopPaint();
+        renderEditLineGuide(null);
         hideBrushCursor();
       });
       paintMaskCanvas.addEventListener("pointercancel", stopPaint);
@@ -1840,6 +1937,7 @@
       state.snapParallel = snapParallelInput.checked;
       updateHint();
       renderOverlay();
+      renderEditLineGuide(null);
     });
     showLabelsInput.addEventListener("change", () => {
       state.showUnitLabels = showLabelsInput.checked;
@@ -1872,6 +1970,7 @@
       if (evt.key === "Escape" && state.drawing) cancelDrawing();
       if (evt.key === "Escape" && state.paintingMask) {
         state.drawLineStart = null;
+        renderEditLineGuide(null);
       }
     });
 
