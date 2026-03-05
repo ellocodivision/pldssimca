@@ -1759,6 +1759,7 @@ function readMergedFloorsByDevelopment(devSlug) {
   const floorDirs = getDevelopmentFloorSearchDirs(devSlug);
   const entries = [];
   floorDirs.forEach((dir) => {
+    const sourcePriority = floorDirs.indexOf(dir);
     try {
       fs.readdirSync(dir)
         .filter((name) => {
@@ -1772,29 +1773,64 @@ function readMergedFloorsByDevelopment(devSlug) {
           const fullPath = path.join(dir, name);
           let mtimeMs = 0;
           try { mtimeMs = fs.statSync(fullPath).mtimeMs || 0; } catch {}
-          entries.push({ name, fullPath, mtimeMs });
+          entries.push({ name, fullPath, mtimeMs, sourcePriority });
         });
     } catch {}
   });
 
-  const unique = [];
-  const seen = new Set();
-  entries
-    .sort((a, b) => b.mtimeMs - a.mtimeMs || a.name.localeCompare(b.name))
-    .forEach((entry) => {
-      const key = String(entry.name || '').toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      unique.push(entry);
+  const uniqueByName = new Map();
+  entries.forEach((entry) => {
+    const key = String(entry.name || '').toLowerCase();
+    const current = uniqueByName.get(key);
+    if (!current) {
+      uniqueByName.set(key, entry);
+      return;
+    }
+    const currentPriority = Number.isFinite(current.sourcePriority) ? current.sourcePriority : 999;
+    const nextPriority = Number.isFinite(entry.sourcePriority) ? entry.sourcePriority : 999;
+    if (nextPriority < currentPriority) {
+      uniqueByName.set(key, entry);
+      return;
+    }
+    if (nextPriority === currentPriority && entry.mtimeMs > current.mtimeMs) {
+      uniqueByName.set(key, entry);
+    }
+  });
+  const unique = Array.from(uniqueByName.values())
+    .sort((a, b) => {
+      const aPriority = Number.isFinite(a.sourcePriority) ? a.sourcePriority : 999;
+      const bPriority = Number.isFinite(b.sourcePriority) ? b.sourcePriority : 999;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      if (a.mtimeMs !== b.mtimeMs) return b.mtimeMs - a.mtimeMs;
+      return a.name.localeCompare(b.name);
     });
+
+  function mappedNameStamp(name) {
+    const match = String(name || '').match(/(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/i);
+    if (!match) return 0;
+    const iso = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}.${match[7]}Z`;
+    const stamp = Date.parse(iso);
+    return Number.isFinite(stamp) ? stamp : 0;
+  }
 
   const floors = [];
   const loadedFiles = [];
   let filesToLoad = [];
   if (devSlug === 'viceroy-piloto') {
-    const mapped = unique.filter((entry) => FLOOR_MAPPED_JSON_FILE_RE.test(entry.name));
-    const canonical = unique.filter((entry) => FLOOR_JSON_FILE_RE.test(entry.name));
-    const rest = unique.filter((entry) => !FLOOR_MAPPED_JSON_FILE_RE.test(entry.name) && !FLOOR_JSON_FILE_RE.test(entry.name));
+    const mapped = unique
+      .filter((entry) => FLOOR_MAPPED_JSON_FILE_RE.test(entry.name))
+      .sort((a, b) => {
+        const aStamp = mappedNameStamp(a.name);
+        const bStamp = mappedNameStamp(b.name);
+        if (aStamp !== bStamp) return bStamp - aStamp;
+        return b.mtimeMs - a.mtimeMs;
+      });
+    const canonical = unique
+      .filter((entry) => FLOOR_JSON_FILE_RE.test(entry.name))
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+    const rest = unique
+      .filter((entry) => !FLOOR_MAPPED_JSON_FILE_RE.test(entry.name) && !FLOOR_JSON_FILE_RE.test(entry.name))
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
     filesToLoad = [...mapped, ...canonical, ...rest];
   } else {
     filesToLoad = [...unique];
