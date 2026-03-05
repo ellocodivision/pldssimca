@@ -823,9 +823,12 @@
           els.floorTabs.innerHTML = '<span class="chip">Sin pisos cargados</span>';
           return;
         }
-        els.floorTabs.innerHTML = state.floors.map(function (floor, idx) {
+        els.floorTabs.innerHTML = state.floors.map(function (floor) {
           const active = floor.id === state.activeFloorId ? ' active' : '';
-          return '<button class="floor-tab' + active + '" data-floor="' + esc(floor.id) + '">Piso ' + (idx + 1) + ': ' + esc(floor.floorDisplay || floor.name || floor.id) + '</button>';
+          const rawLabel = String(floor.floorDisplay || floor.name || floor.id || '');
+          const parts = rawLabel.split(':');
+          const tabLabel = (parts.length > 1 ? parts.slice(1).join(':') : rawLabel).trim() || rawLabel;
+          return '<button class="floor-tab' + active + '" data-floor="' + esc(floor.id) + '">' + esc(tabLabel) + '</button>';
         }).join('');
       }
 
