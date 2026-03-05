@@ -1795,6 +1795,8 @@
 
     function getPersistableState() {
       return {
+        developmentSlug: DEV,
+        developmentName: DEV_LABEL,
         floors: state.floors,
         nextZoneId: state.nextZoneId,
         showUnitLabels: state.showUnitLabels,
@@ -2350,6 +2352,11 @@
     }
 
     function applyPersistedState(payload, options = {}) {
+      const payloadDev = String(payload && payload.developmentSlug || "").trim().toLowerCase();
+      if (payloadDev && payloadDev !== String(DEV || "").trim().toLowerCase()) {
+        alert(`Este JSON pertenece a otro desarrollo (${payloadDev}). Estás en ${DEV}.`);
+        return;
+      }
       const floors = normalizeFloorPayload(payload);
       if (!floors.length) {
         alert("JSON inválido o vacío.");

@@ -1872,10 +1872,19 @@ function readMergedFloorsByDevelopment(devSlug) {
   for (const entry of filesToLoad) {
     try {
       const raw = JSON.parse(fs.readFileSync(entry.fullPath, 'utf-8'));
+      const rawDevSlug = String(raw && raw.developmentSlug || '').trim().toLowerCase();
+      if (rawDevSlug && rawDevSlug !== devSlug) {
+        continue;
+      }
       const payloadFloors = Array.isArray(raw)
         ? raw
         : (raw && Array.isArray(raw.floors) ? raw.floors : (raw && raw.imageDataUrl ? [raw] : []));
       if (!payloadFloors.length) continue;
+      // Guardrail: ignore clearly cross-loaded CEIBA payloads saved as "version-<other-dev>-...".
+      if (devSlug !== DEFAULT_DEVELOPMENT_SLUG && /^version-.*\.json$/i.test(entry.name)) {
+        const hasCeibaFloorNames = payloadFloors.some((floor) => String(floor && floor.name || '').toUpperCase().includes('CEIBA'));
+        if (hasCeibaFloorNames) continue;
+      }
       floors.push(...payloadFloors);
       loadedFiles.push(path.basename(entry.fullPath));
       if (devSlug === 'viceroy-piloto' && floors.length) break;
@@ -3040,6 +3049,7 @@ app.post('/api/plano-ventas/save-excel', (req, res) => {
 app.get('/api/plano-ventas/default-json', (req, res) => {
   const dev = getRequestedDevelopment(req);
   const downloadsDir = path.join(os.homedir(), 'Downloads');
+  const allowDownloadsFallback = dev.slug === DEFAULT_DEVELOPMENT_SLUG;
   const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
   let filePath = '';
 
@@ -3054,7 +3064,7 @@ app.get('/api/plano-ventas/default-json', (req, res) => {
       }
       return false;
     });
-    if (!filePath) {
+    if (!filePath && allowDownloadsFallback) {
       const candidate = path.join(downloadsDir, safeName);
       if (fs.existsSync(candidate)) filePath = candidate;
     }
@@ -3097,7 +3107,7 @@ app.get('/api/plano-ventas/default-json', (req, res) => {
     });
   }
 
-  if (!filePath && safeName) {
+  if (!filePath && safeName && allowDownloadsFallback) {
     try {
       const files = fs.readdirSync(downloadsDir);
       const preferred = files.find((name) => name.toLowerCase() === safeName.toLowerCase());
@@ -3105,7 +3115,7 @@ app.get('/api/plano-ventas/default-json', (req, res) => {
     } catch {}
   }
 
-  if (!filePath && !safeName) {
+  if (!filePath && !safeName && allowDownloadsFallback) {
     try {
       const files = fs.readdirSync(downloadsDir)
         .filter((name) => FLOOR_JSON_FILE_RE.test(name))
@@ -3130,6 +3140,7 @@ app.get('/api/plano-ventas/default-json', (req, res) => {
 app.get('/api/plano-ventas/default-json-files', (req, res) => {
   const dev = getRequestedDevelopment(req);
   const downloadsDir = path.join(os.homedir(), 'Downloads');
+  const allowDownloadsFallback = dev.slug === DEFAULT_DEVELOPMENT_SLUG;
   const floorDirs = getDevelopmentFloorSearchDirs(dev.slug);
   try {
     for (const dir of floorDirs) {
@@ -3139,6 +3150,9 @@ app.get('/api/plano-ventas/default-json-files', (req, res) => {
       }
     }
 
+    if (!allowDownloadsFallback) {
+      return res.json({ files: [], sourceDir: floorDirs.join(', '), dev: dev.slug });
+    }
     const files = fs.readdirSync(downloadsDir)
       .filter((name) => FLOOR_JSON_FILE_RE.test(name))
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
@@ -3347,7 +3361,11 @@ app.post('/api/plano-ventas/save-json', (req, res) => {
     const floorDir = getDevelopmentFloorDir(dev.slug);
     if (!fs.existsSync(floorDir)) fs.mkdirSync(floorDir, { recursive: true });
     const filePath = path.join(floorDir, fileName);
-    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+    const safePayload = {
+      ...payload,
+      developmentSlug: dev.slug
+    };
+    fs.writeFileSync(filePath, JSON.stringify(safePayload, null, 2), 'utf-8');
     return res.json({
       ok: true,
       dev: dev.slug,
