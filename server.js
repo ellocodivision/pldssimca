@@ -125,7 +125,7 @@ const foreignMoralFormats = {
 const WHISPERLIST_CANALES = ['SIMCA', 'RELATED'];
 const WHISPERLIST_TIPOS_VENTA = ['EXTERNO', 'INTERNO', 'MERITO PROPIO'];
 const WHISPERLIST_RECAMARAS = ['1', '2', '3', '2PH', '3PH'];
-const WHISPERLIST_PAISES = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'RESTO CONTINENTES'];
+const WHISPERLIST_PAISES = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'ASIA', 'AFRICA', 'OCEANIA'];
 
 const whisperlistPool = USE_WHISPERLIST_DB
   ? new Pool({
@@ -841,7 +841,7 @@ function normalizeWhisperlistCountry(raw) {
   if (value === 'CANADA' || value === 'CANADÁ') return 'CANADA';
   if (value === 'EUROPA') return 'EUROPA';
   if (value === 'RESTO AMERICA' || value === 'RESTO DE AMERICA' || value === 'RESTO DE AMÉRICA') return 'RESTO AMERICA';
-  if (value === 'RESTO CONTINENTES' || value === 'RESTO DE CONTINENTES' || value === 'RESTO DE LOS CONTINENTES') return 'RESTO CONTINENTES';
+  if (value === 'RESTO CONTINENTES' || value === 'RESTO DE CONTINENTES' || value === 'RESTO DE LOS CONTINENTES') return '';
   return WHISPERLIST_PAISES.includes(value) ? value : '';
 }
 

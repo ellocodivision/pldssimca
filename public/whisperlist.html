@@ -107,7 +107,9 @@
           <option value="USA">USA</option>
           <option value="RESTO AMERICA">RESTO AMERICA</option>
           <option value="EUROPA">EUROPA</option>
-          <option value="RESTO CONTINENTES">RESTO CONTINENTES</option>
+          <option value="ASIA">ASIA</option>
+          <option value="AFRICA">AFRICA</option>
+          <option value="OCEANIA">OCEANIA</option>
         </select>
         <input id="newCiudad" class="cell-input" placeholder="CIUDAD" />
         <button id="addBtn" class="btn primary" type="button">Agregar</button>
@@ -254,7 +256,7 @@
         addBtn: document.getElementById('addBtn'),
         addStatus: document.getElementById('addStatus')
       };
-      const COUNTRY_OPTIONS = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'RESTO CONTINENTES'];
+      const COUNTRY_OPTIONS = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'ASIA', 'AFRICA', 'OCEANIA'];
       const duplicateNameSet = new Set();
 
       function setStatus(el, text, level) {
