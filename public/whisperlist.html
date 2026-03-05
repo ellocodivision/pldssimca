@@ -31,7 +31,7 @@
     .status.ok{color:var(--ok)}
     .status.error{color:var(--warn)}
     .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
-    table{width:100%;border-collapse:collapse;min-width:900px}
+    table{width:100%;border-collapse:collapse;min-width:1200px}
     th,td{padding:10px;border-bottom:1px solid #ebe4d6;text-align:left;font-size:13px;vertical-align:top}
     th{background:#faf7f0;position:sticky;top:0;z-index:1}
     .cell-input{width:100%;padding:7px 8px;border:1px solid #cec7b8;border-radius:8px;background:#fff}
@@ -100,6 +100,16 @@
           <option value="2PH">2PH</option>
           <option value="3PH">3PH</option>
         </select>
+        <select id="newPais" class="cell-input">
+          <option value="">PAIS</option>
+          <option value="MEXICO">MEXICO</option>
+          <option value="CANADA">CANADA</option>
+          <option value="USA">USA</option>
+          <option value="RESTO AMERICA">RESTO AMERICA</option>
+          <option value="EUROPA">EUROPA</option>
+          <option value="RESTO CONTINENTES">RESTO CONTINENTES</option>
+        </select>
+        <input id="newCiudad" class="cell-input" placeholder="CIUDAD" />
         <button id="addBtn" class="btn primary" type="button">Agregar</button>
       </div>
       <p class="hint">El nuevo cliente se asigna automáticamente a tu correo.</p>
@@ -177,6 +187,8 @@
             <th>TIPO DE VENTA</th>
             <th>NOMBRE CLIENTE</th>
             <th>RECAMARAS</th>
+            <th>PAIS</th>
+            <th>CIUDAD</th>
             <th>ACCION</th>
           </tr>
         </thead>
@@ -237,9 +249,12 @@
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
         newRecamaras: document.getElementById('newRecamaras'),
+        newPais: document.getElementById('newPais'),
+        newCiudad: document.getElementById('newCiudad'),
         addBtn: document.getElementById('addBtn'),
         addStatus: document.getElementById('addStatus')
       };
+      const COUNTRY_OPTIONS = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'RESTO CONTINENTES'];
       const duplicateNameSet = new Set();
 
       function setStatus(el, text, level) {
@@ -266,6 +281,7 @@
         const canalSelect = selectHtml('canal', row.canal || '', ['SIMCA', 'RELATED'], disabled);
         const tipoSelect = selectHtml('tipoVenta', row.tipoVenta || '', ['EXTERNO', 'INTERNO', 'MERITO PROPIO'], disabled);
         const recamarasSelect = selectHtml('recamaras', row.recamaras || '', ['1', '2', '3', '2PH', '3PH'], disabled);
+        const paisSelect = selectHtml('pais', row.pais || '', COUNTRY_OPTIONS, disabled);
         const isDuplicateName = duplicateNameSet.has(String(row.nombreCliente || '').trim().toUpperCase());
         const duplicateClass = isDuplicateName ? 'dup-row' : '';
         return `
@@ -275,6 +291,8 @@
             <td>${tipoSelect}</td>
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
             <td>${recamarasSelect}</td>
+            <td>${paisSelect}</td>
+            <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
               ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
@@ -414,7 +432,9 @@
             row.canal,
             row.tipoVenta,
             row.nombreCliente,
-            row.recamaras
+            row.recamaras,
+            row.pais,
+            row.ciudad
           ].join(' ').toLowerCase();
           return haystack.includes(text);
         });
@@ -512,7 +532,9 @@
           canal: tr.querySelector('[data-field="canal"]').value,
           tipoVenta: tr.querySelector('[data-field="tipoVenta"]').value,
           nombreCliente: tr.querySelector('[data-field="nombreCliente"]').value,
-          recamaras: tr.querySelector('[data-field="recamaras"]').value
+          recamaras: tr.querySelector('[data-field="recamaras"]').value,
+          pais: tr.querySelector('[data-field="pais"]').value,
+          ciudad: tr.querySelector('[data-field="ciudad"]').value
         };
         const btn = tr.querySelector('.save-btn');
         if (btn) btn.disabled = true;
@@ -539,7 +561,9 @@
           canal: els.newCanal.value,
           tipoVenta: els.newTipoVenta.value,
           nombreCliente: els.newNombreCliente.value,
-          recamaras: els.newRecamaras.value
+          recamaras: els.newRecamaras.value,
+          pais: els.newPais.value,
+          ciudad: els.newCiudad.value
         };
         if (!String(payload.nombreCliente || '').trim()) {
           setStatus(els.addStatus, 'Nombre cliente es obligatorio.', 'error');
@@ -561,6 +585,8 @@
           els.newTipoVenta.value = '';
           els.newNombreCliente.value = '';
           els.newRecamaras.value = '';
+          els.newPais.value = '';
+          els.newCiudad.value = '';
           await fetchData();
         } catch (err) {
           setStatus(els.addStatus, err.message || 'Error al agregar', 'error');

@@ -125,6 +125,7 @@ const foreignMoralFormats = {
 const WHISPERLIST_CANALES = ['SIMCA', 'RELATED'];
 const WHISPERLIST_TIPOS_VENTA = ['EXTERNO', 'INTERNO', 'MERITO PROPIO'];
 const WHISPERLIST_RECAMARAS = ['1', '2', '3', '2PH', '3PH'];
+const WHISPERLIST_PAISES = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'RESTO CONTINENTES'];
 
 const whisperlistPool = USE_WHISPERLIST_DB
   ? new Pool({
@@ -832,6 +833,24 @@ function normalizeWhisperlistPersonText(raw) {
     .toUpperCase();
 }
 
+function normalizeWhisperlistCountry(raw) {
+  const value = String(raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  if (!value) return '';
+  if (value === 'MEXICO' || value === 'MÉXICO') return 'MEXICO';
+  if (value === 'USA' || value === 'US' || value === 'ESTADOS UNIDOS' || value === 'EEUU' || value === 'EUA') return 'USA';
+  if (value === 'CANADA' || value === 'CANADÁ') return 'CANADA';
+  if (value === 'EUROPA') return 'EUROPA';
+  if (value === 'RESTO AMERICA' || value === 'RESTO DE AMERICA' || value === 'RESTO DE AMÉRICA') return 'RESTO AMERICA';
+  if (value === 'RESTO CONTINENTES' || value === 'RESTO DE CONTINENTES' || value === 'RESTO DE LOS CONTINENTES') return 'RESTO CONTINENTES';
+  return WHISPERLIST_PAISES.includes(value) ? value : '';
+}
+
+function normalizeWhisperlistCity(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
 function normalizeWhisperlistAsesor(raw) {
   const normalized = normalizeWhisperlistPersonText(raw);
   const key = normalized
@@ -920,6 +939,8 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
     tipoVenta: normalizeWhisperlistTipoVenta(normalized.tipo_de_venta || normalized.tipodeventa),
     nombreCliente: normalizeWhisperlistPersonText(normalized.nombre_cliente || normalized.nombrecliente),
     recamaras: normalizeWhisperlistRecamaras(normalized.recamaras || normalized.recamara),
+    pais: normalizeWhisperlistCountry(normalized.pais || normalized.country || normalized.pais_cliente),
+    ciudad: normalizeWhisperlistCity(normalized.ciudad || normalized.city || normalized.ciudad_cliente),
     clientEmail: normalizeClientEmail(normalized.correo_cliente || normalized.email_cliente || normalized.client_email),
     clientPhone: normalizeClientPhone(normalized.telefono_cliente || normalized.telefono || normalized.client_phone),
     updatedAt: new Date().toISOString()
@@ -957,12 +978,16 @@ async function ensureWhisperlistDbSchema() {
       tipo_venta TEXT NOT NULL DEFAULT '',
       nombre_cliente TEXT NOT NULL DEFAULT '',
       recamaras TEXT NOT NULL DEFAULT '',
+      pais TEXT NOT NULL DEFAULT '',
+      ciudad TEXT NOT NULL DEFAULT '',
       client_email TEXT NOT NULL DEFAULT '',
       client_phone TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS recamaras TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS pais TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS client_email TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS client_phone TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`
@@ -987,7 +1012,7 @@ async function readWhisperlistData() {
 
   const [rowsRes, metaRes] = await Promise.all([
     whisperlistPool.query(`
-      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, client_email, client_phone, updated_at
+      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at
       FROM whisperlist_rows
       ORDER BY updated_at DESC, id ASC
     `),
@@ -1012,6 +1037,8 @@ async function readWhisperlistData() {
       tipoVenta: String(row.tipo_venta || ''),
       nombreCliente: String(row.nombre_cliente || ''),
       recamaras: String(row.recamaras || ''),
+      pais: String(row.pais || ''),
+      ciudad: String(row.ciudad || ''),
       clientEmail: String(row.client_email || ''),
       clientPhone: String(row.client_phone || ''),
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
@@ -1031,6 +1058,8 @@ async function saveWhisperlistRows(rows, sourceFile) {
     clientEmail: normalizeClientEmail(row.clientEmail),
     clientPhone: normalizeClientPhone(row.clientPhone),
     recamaras: normalizeWhisperlistRecamaras(row.recamaras),
+    pais: normalizeWhisperlistCountry(row.pais),
+    ciudad: normalizeWhisperlistCity(row.ciudad),
     canal: normalizeWhisperlistCanal(row.canal),
     tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta)
   }));
@@ -1050,8 +1079,8 @@ async function saveWhisperlistRows(rows, sourceFile) {
     await client.query('DELETE FROM whisperlist_rows');
     for (const row of normalizedRows) {
       await client.query(
-        `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, client_email, client_phone, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
           normalizeWhisperlistAsesor(row.asesor),
@@ -1060,6 +1089,8 @@ async function saveWhisperlistRows(rows, sourceFile) {
           String(row.tipoVenta || '').trim(),
           normalizeWhisperlistPersonText(row.nombreCliente),
           normalizeWhisperlistRecamaras(row.recamaras),
+          normalizeWhisperlistCountry(row.pais),
+          normalizeWhisperlistCity(row.ciudad),
           normalizeClientEmail(row.clientEmail),
           normalizeClientPhone(row.clientPhone),
           String(row.updatedAt || updatedAt)
@@ -1158,6 +1189,8 @@ function whisperlistExportRows(rows) {
     TIPO_DE_VENTA: normalizeWhisperlistTipoVenta(row.tipoVenta),
     NOMBRE_CLIENTE: normalizeWhisperlistPersonText(row.nombreCliente),
     RECAMARAS: normalizeWhisperlistRecamaras(row.recamaras),
+    PAIS: normalizeWhisperlistCountry(row.pais),
+    CIUDAD: normalizeWhisperlistCity(row.ciudad),
     CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
     TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
     UPDATED_AT: String(row.updatedAt || '')
@@ -2429,6 +2462,8 @@ app.patch('/api/whisperlist/rows/:id', async (req, res) => {
       tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta),
       nombreCliente: normalizeWhisperlistPersonText(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente),
       recamaras: normalizeWhisperlistRecamaras(body.recamaras !== undefined ? body.recamaras : target.recamaras),
+      pais: normalizeWhisperlistCountry(body.pais !== undefined ? body.pais : target.pais),
+      ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail !== undefined ? body.clientEmail : target.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone !== undefined ? body.clientPhone : target.clientPhone),
       updatedAt: new Date().toISOString()
@@ -2461,6 +2496,8 @@ app.post('/api/whisperlist/rows', async (req, res) => {
       tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta),
       nombreCliente,
       recamaras: normalizeWhisperlistRecamaras(body.recamaras),
+      pais: normalizeWhisperlistCountry(body.pais),
+      ciudad: normalizeWhisperlistCity(body.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone),
       updatedAt: new Date().toISOString()
@@ -2521,6 +2558,8 @@ app.post('/api/lead/submit', async (req, res) => {
       tipoVenta: '',
       nombreCliente,
       recamaras: normalizeWhisperlistRecamaras(req.body && req.body.recamaras),
+      pais: normalizeWhisperlistCountry(req.body && req.body.pais),
+      ciudad: normalizeWhisperlistCity(req.body && req.body.ciudad),
       clientEmail,
       clientPhone,
       updatedAt: new Date().toISOString()
