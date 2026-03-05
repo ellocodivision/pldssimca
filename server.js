@@ -1977,8 +1977,8 @@ app.get('/', requireAuth, (req, res) => {
   const viceroyPilotoCard = showViceroyPilotoCard ? `
         <a class="card" href="/viceroy-piloto">
           <span class="tag">Módulo</span>
-          <h2 class="name">VICEROY PILOTO</h2>
-          <p class="desc">Flujo visual de recámaras, tipologías y plano por piso.</p>
+          <h2 class="name">Edición Viceroy Inventario</h2>
+          <p class="desc">Flujo visual de recámaras, tipologías e inventario por piso.</p>
         </a>` : '';
   const gerenteCard = isGerente ? `
         <a class="card" href="/gerente-ventas">
