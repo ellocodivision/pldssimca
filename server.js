@@ -871,6 +871,25 @@ function normalizeClientPhone(raw) {
   return String(raw || '').trim().replace(/\s+/g, ' ');
 }
 
+function normalizeYesNo(raw) {
+  const value = String(raw || '').trim().toUpperCase();
+  if (['SI', 'YES', 'Y', 'TRUE', '1'].includes(value)) return 'SI';
+  if (['NO', 'N', 'FALSE', '0'].includes(value)) return 'NO';
+  return '';
+}
+
+function normalizeWhisperlistKpi(raw) {
+  const item = raw && typeof raw === 'object' ? raw : {};
+  return {
+    apartadoPldComprobante: normalizeYesNo(item.apartadoPldComprobante),
+    fechaFirma: normalizeDateString(item.fechaFirma),
+    acuerdoFirmado: normalizeYesNo(item.acuerdoFirmado),
+    fechaEnganche: normalizeDateString(item.fechaEnganche),
+    enganchePagado: normalizeYesNo(item.enganchePagado),
+    cartaEnviada: normalizeYesNo(item.cartaEnviada)
+  };
+}
+
 function encodeBase64Url(raw) {
   return Buffer.from(String(raw || ''), 'utf-8')
     .toString('base64')
@@ -985,6 +1004,7 @@ async function ensureWhisperlistDbSchema() {
       ciudad TEXT NOT NULL DEFAULT '',
       client_email TEXT NOT NULL DEFAULT '',
       client_phone TEXT NOT NULL DEFAULT '',
+      kpi_json TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -993,6 +1013,7 @@ async function ensureWhisperlistDbSchema() {
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS client_email TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS client_phone TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE whisperlist_rows ADD COLUMN IF NOT EXISTS kpi_json TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`
     CREATE TABLE IF NOT EXISTS whisperlist_meta (
       key TEXT PRIMARY KEY,
@@ -1015,7 +1036,7 @@ async function readWhisperlistData() {
 
   const [rowsRes, metaRes] = await Promise.all([
     whisperlistPool.query(`
-      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at
+      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, kpi_json, updated_at
       FROM whisperlist_rows
       ORDER BY updated_at DESC, id ASC
     `),
@@ -1044,6 +1065,13 @@ async function readWhisperlistData() {
       ciudad: String(row.ciudad || ''),
       clientEmail: String(row.client_email || ''),
       clientPhone: String(row.client_phone || ''),
+      kpi: (() => {
+        try {
+          return normalizeWhisperlistKpi(row.kpi_json ? JSON.parse(String(row.kpi_json)) : {});
+        } catch {
+          return normalizeWhisperlistKpi({});
+        }
+      })(),
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
     }))),
     updatedAt: meta.updatedAt || null,
@@ -1064,7 +1092,8 @@ async function saveWhisperlistRows(rows, sourceFile) {
     pais: normalizeWhisperlistCountry(row.pais),
     ciudad: normalizeWhisperlistCity(row.ciudad),
     canal: normalizeWhisperlistCanal(row.canal),
-    tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta)
+    tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta),
+    kpi: normalizeWhisperlistKpi(row.kpi)
   }));
   const updatedAt = new Date().toISOString();
   if (!whisperlistPool) {
@@ -1082,8 +1111,8 @@ async function saveWhisperlistRows(rows, sourceFile) {
     await client.query('DELETE FROM whisperlist_rows');
     for (const row of normalizedRows) {
       await client.query(
-        `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        `INSERT INTO whisperlist_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, kpi_json, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
           normalizeWhisperlistAsesor(row.asesor),
@@ -1096,6 +1125,7 @@ async function saveWhisperlistRows(rows, sourceFile) {
           normalizeWhisperlistCity(row.ciudad),
           normalizeClientEmail(row.clientEmail),
           normalizeClientPhone(row.clientPhone),
+          JSON.stringify(normalizeWhisperlistKpi(row.kpi)),
           String(row.updatedAt || updatedAt)
         ]
       );
@@ -1197,6 +1227,12 @@ function whisperlistExportRows(rows) {
     CIUDAD: normalizeWhisperlistCity(row.ciudad),
     CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
     TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
+    KPI_APARTADO_PLD_COMPROBANTE: normalizeYesNo(row && row.kpi && row.kpi.apartadoPldComprobante),
+    KPI_FECHA_FIRMA: normalizeDateString(row && row.kpi && row.kpi.fechaFirma),
+    KPI_ACUERDO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.acuerdoFirmado),
+    KPI_FECHA_ENGANCHE: normalizeDateString(row && row.kpi && row.kpi.fechaEnganche),
+    KPI_ENGANCHE_PAGADO: normalizeYesNo(row && row.kpi && row.kpi.enganchePagado),
+    KPI_CARTA_ENVIADA: normalizeYesNo(row && row.kpi && row.kpi.cartaEnviada),
     UPDATED_AT: String(row.updatedAt || '')
   }));
 }
@@ -2808,6 +2844,7 @@ app.post('/api/viceroy/registros/rows', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone),
+      kpi: normalizeWhisperlistKpi(body.kpi),
       updatedAt: new Date().toISOString()
     };
     data.rows.push(newRow);
@@ -2861,13 +2898,22 @@ app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res)
       return res.status(403).json({ error: 'Solo puedes mover filas asignadas a tu correo' });
     }
 
+    const body = req.body || {};
+    const candidate = {
+      canal: body.canal !== undefined ? body.canal : source.canal,
+      tipoVenta: body.tipoVenta !== undefined ? body.tipoVenta : source.tipoVenta,
+      nombreCliente: body.nombreCliente !== undefined ? body.nombreCliente : source.nombreCliente,
+      recamaras: body.recamaras !== undefined ? body.recamaras : source.recamaras,
+      pais: body.pais !== undefined ? body.pais : source.pais,
+      ciudad: body.ciudad !== undefined ? body.ciudad : source.ciudad
+    };
     const required = {
-      canal: normalizeWhisperlistCanal(source.canal),
-      tipoVenta: normalizeWhisperlistTipoVenta(source.tipoVenta),
-      nombreCliente: normalizeWhisperlistPersonText(source.nombreCliente),
-      recamaras: normalizeWhisperlistRecamaras(source.recamaras),
-      pais: normalizeWhisperlistCountry(source.pais),
-      ciudad: normalizeWhisperlistCity(source.ciudad)
+      canal: normalizeWhisperlistCanal(candidate.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(candidate.tipoVenta),
+      nombreCliente: normalizeWhisperlistPersonText(candidate.nombreCliente),
+      recamaras: normalizeWhisperlistRecamaras(candidate.recamaras),
+      pais: normalizeWhisperlistCountry(candidate.pais),
+      ciudad: normalizeWhisperlistCity(candidate.ciudad)
     };
     const missing = Object.entries(required).filter(([, value]) => !String(value || '').trim()).map(([key]) => key);
     if (missing.length) {
@@ -2877,26 +2923,6 @@ app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res)
     }
 
     const whisperData = await readWhisperlistData();
-    const duplicateKey = [
-      String(source.correo || '').trim().toLowerCase(),
-      String(source.asesor || '').trim().toUpperCase(),
-      String(source.nombreCliente || '').trim().toUpperCase(),
-      String(source.canal || '').trim().toUpperCase(),
-      String(source.tipoVenta || '').trim().toUpperCase()
-    ].join('|');
-    const alreadyExists = whisperData.rows.some((row) => {
-      const key = [
-        String(row.correo || '').trim().toLowerCase(),
-        String(row.asesor || '').trim().toUpperCase(),
-        String(row.nombreCliente || '').trim().toUpperCase(),
-        String(row.canal || '').trim().toUpperCase(),
-        String(row.tipoVenta || '').trim().toUpperCase()
-      ].join('|');
-      return key === duplicateKey;
-    });
-    if (alreadyExists) {
-      return res.status(409).json({ error: 'Ese contacto ya existe en Whisperlist' });
-    }
 
     const movedRow = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -2910,6 +2936,7 @@ app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res)
       ciudad: required.ciudad,
       clientEmail: normalizeClientEmail(source.clientEmail),
       clientPhone: normalizeClientPhone(source.clientPhone),
+      kpi: normalizeWhisperlistKpi(source.kpi),
       updatedAt: new Date().toISOString()
     };
 
@@ -3114,6 +3141,36 @@ app.patch('/api/whisperlist/rows/:id', async (req, res) => {
   }
 });
 
+app.post('/api/whisperlist/rows/:id/kpi', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readWhisperlistData();
+    const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const target = data.rows[index];
+    const ownerEmail = String(target.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes editar KPI de filas asignadas a tu correo' });
+    }
+
+    const nextRow = {
+      ...target,
+      kpi: normalizeWhisperlistKpi(req.body || {}),
+      updatedAt: new Date().toISOString()
+    };
+    data.rows[index] = nextRow;
+    await saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.json({ ok: true, row: nextRow });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo guardar KPI' });
+  }
+});
+
 app.post('/api/whisperlist/rows', async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
@@ -3200,6 +3257,7 @@ app.post('/api/lead/submit', async (req, res) => {
       ciudad: normalizeWhisperlistCity(req.body && req.body.ciudad),
       clientEmail,
       clientPhone,
+      kpi: normalizeWhisperlistKpi({}),
       updatedAt: new Date().toISOString()
     };
 

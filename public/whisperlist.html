@@ -47,6 +47,10 @@
     .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
     .stats-box{border:1px solid var(--line);border-radius:10px;padding:10px}
     .stats-box h3{margin:0 0 8px;font-size:13px}
+    .stats-box summary{list-style:none;cursor:pointer;font-weight:700;font-size:13px;margin:0;padding:0}
+    .stats-box summary::-webkit-details-marker{display:none}
+    .stats-content{margin-top:8px}
+    .stats-box .summary-btn{display:inline-block;padding:6px 10px;border:1px solid #cfc7b7;border-radius:8px;background:#fff}
     .stats-table{width:100%;border-collapse:collapse;min-width:0}
     .stats-table th,.stats-table td{padding:6px 4px;border-bottom:1px solid #eee7d9;font-size:12px}
     .stats-table th{position:static;background:transparent}
@@ -58,6 +62,8 @@
     .modal-grid{display:grid;grid-template-columns:1fr;gap:8px}
     .modal-field{font-size:13px}
     .modal-label{font-size:11px;color:var(--muted);display:block}
+    .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .kpi-actions{margin-top:12px;display:flex;justify-content:flex-end;gap:8px}
     @media (max-width:700px){
       .title{font-size:26px}
       .stats-grid{grid-template-columns:1fr}
@@ -156,41 +162,60 @@
 
     <div class="card">
       <div class="stats-grid">
-        <section class="stats-box">
-          <h3>Clientes por canal</h3>
-          <table class="stats-table">
-            <thead><tr><th>Canal</th><th>Cant.</th></tr></thead>
-            <tbody id="statsByCanal"></tbody>
-          </table>
-        </section>
-        <section class="stats-box">
-          <h3>Clientes por tipo de venta</h3>
-          <table class="stats-table">
-            <thead><tr><th>Tipo</th><th>Cant.</th></tr></thead>
-            <tbody id="statsByTipo"></tbody>
-          </table>
-        </section>
-        <section class="stats-box">
-          <h3>Clientes por país</h3>
-          <table class="stats-table">
-            <thead><tr><th>País</th><th>Cant.</th></tr></thead>
-            <tbody id="statsByPais"></tbody>
-          </table>
-        </section>
-        <section class="stats-box">
-          <h3>Clientes por ciudad</h3>
-          <table class="stats-table">
-            <thead><tr><th>Ciudad</th><th>Cant.</th></tr></thead>
-            <tbody id="statsByCiudad"></tbody>
-          </table>
-        </section>
-        <section class="stats-box">
-          <h3>Clientes por vendedor y recámaras</h3>
-          <table class="stats-table">
-            <thead><tr><th>Vendedor</th><th>1</th><th>2</th><th>3</th><th>2PH</th><th>3PH</th><th>Total</th><th>Faltan</th></tr></thead>
-            <tbody id="statsByAsesorRecamaras"></tbody>
-          </table>
-        </section>
+        <details class="stats-box">
+          <summary><span class="summary-btn">Clientes por canal</span></summary>
+          <div class="stats-content">
+            <table class="stats-table">
+              <thead><tr><th>Canal</th><th>Cant.</th></tr></thead>
+              <tbody id="statsByCanal"></tbody>
+            </table>
+          </div>
+        </details>
+        <details class="stats-box">
+          <summary><span class="summary-btn">Clientes por tipo de venta</span></summary>
+          <div class="stats-content">
+            <table class="stats-table">
+              <thead><tr><th>Tipo</th><th>Cant.</th></tr></thead>
+              <tbody id="statsByTipo"></tbody>
+            </table>
+          </div>
+        </details>
+        <details class="stats-box">
+          <summary><span class="summary-btn">Clientes por país</span></summary>
+          <div class="stats-content">
+            <table class="stats-table">
+              <thead><tr><th>País</th><th>Cant.</th></tr></thead>
+              <tbody id="statsByPais"></tbody>
+            </table>
+          </div>
+        </details>
+        <details class="stats-box">
+          <summary><span class="summary-btn">Clientes por ciudad</span></summary>
+          <div class="stats-content">
+            <table class="stats-table">
+              <thead><tr><th>Ciudad</th><th>Cant.</th></tr></thead>
+              <tbody id="statsByCiudad"></tbody>
+            </table>
+          </div>
+        </details>
+        <details class="stats-box">
+          <summary><span class="summary-btn">KPI resumen</span></summary>
+          <div class="stats-content">
+            <table class="stats-table">
+              <thead><tr><th>KPI</th><th>Cant.</th></tr></thead>
+              <tbody id="statsKpi"></tbody>
+            </table>
+          </div>
+        </details>
+        <details class="stats-box">
+          <summary><span class="summary-btn">Clientes por vendedor y recámaras</span></summary>
+          <div class="stats-content">
+            <table class="stats-table">
+              <thead><tr><th>Vendedor</th><th>1</th><th>2</th><th>3</th><th>2PH</th><th>3PH</th><th>Total</th><th>Faltan</th></tr></thead>
+              <tbody id="statsByAsesorRecamaras"></tbody>
+            </table>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -227,13 +252,45 @@
     </section>
   </div>
 
+  <div id="kpiModal" class="modal" aria-hidden="true">
+    <section class="modal-card">
+      <h3 style="margin:0 0 10px">KPI de contacto</h3>
+      <div class="kpi-grid">
+        <label class="modal-field"><span class="modal-label">Registro 1: Apartado (PLD y comprobante recibido)</span>
+          <select id="kpiApartado" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">Registro 2: Fecha de firma</span>
+          <input id="kpiFechaFirma" type="date" class="cell-input" />
+        </label>
+        <label class="modal-field"><span class="modal-label">Registro 3: Acuerdo firmado</span>
+          <select id="kpiAcuerdo" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">Registro 4: Fecha de enganche</span>
+          <input id="kpiFechaEnganche" type="date" class="cell-input" />
+        </label>
+        <label class="modal-field"><span class="modal-label">Registro 5: Enganche pagado</span>
+          <select id="kpiEnganchePagado" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">Registro 6: Carta enviada</span>
+          <select id="kpiCartaEnviada" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        </label>
+      </div>
+      <div class="kpi-actions">
+        <button id="kpiCloseBtn" class="btn" type="button">Cerrar</button>
+        <button id="kpiSaveBtn" class="btn primary" type="button">Guardar KPI</button>
+      </div>
+      <p id="kpiStatus" class="status"></p>
+    </section>
+  </div>
+
   <script>
     (function () {
       const state = {
         rows: [],
         currentEmail: '',
         isGerente: false,
-        appBuildId: ''
+        appBuildId: '',
+        kpiRowId: ''
       };
 
       const els = {
@@ -257,12 +314,23 @@
         statsByTipo: document.getElementById('statsByTipo'),
         statsByPais: document.getElementById('statsByPais'),
         statsByCiudad: document.getElementById('statsByCiudad'),
+        statsKpi: document.getElementById('statsKpi'),
         statsByAsesorRecamaras: document.getElementById('statsByAsesorRecamaras'),
         clientModal: document.getElementById('clientModal'),
         closeModalBtn: document.getElementById('closeModalBtn'),
         modalNombre: document.getElementById('modalNombre'),
         modalCorreo: document.getElementById('modalCorreo'),
         modalTelefono: document.getElementById('modalTelefono'),
+        kpiModal: document.getElementById('kpiModal'),
+        kpiCloseBtn: document.getElementById('kpiCloseBtn'),
+        kpiSaveBtn: document.getElementById('kpiSaveBtn'),
+        kpiStatus: document.getElementById('kpiStatus'),
+        kpiApartado: document.getElementById('kpiApartado'),
+        kpiFechaFirma: document.getElementById('kpiFechaFirma'),
+        kpiAcuerdo: document.getElementById('kpiAcuerdo'),
+        kpiFechaEnganche: document.getElementById('kpiFechaEnganche'),
+        kpiEnganchePagado: document.getElementById('kpiEnganchePagado'),
+        kpiCartaEnviada: document.getElementById('kpiCartaEnviada'),
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
@@ -312,7 +380,7 @@
             <td>${paisSelect}</td>
             <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
-              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
+              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn kpi-btn" type="button">KPI</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
             </td>
           </tr>
@@ -348,6 +416,58 @@
         els.clientModal.classList.remove('open');
       }
 
+      function openKpiModal(tr) {
+        const id = tr.getAttribute('data-id');
+        const row = state.rows.find(function (item) { return String(item.id) === String(id); });
+        if (!row) return;
+        const kpi = row.kpi || {};
+        state.kpiRowId = String(id || '');
+        els.kpiApartado.value = String(kpi.apartadoPldComprobante || '');
+        els.kpiFechaFirma.value = String(kpi.fechaFirma || '');
+        els.kpiAcuerdo.value = String(kpi.acuerdoFirmado || '');
+        els.kpiFechaEnganche.value = String(kpi.fechaEnganche || '');
+        els.kpiEnganchePagado.value = String(kpi.enganchePagado || '');
+        els.kpiCartaEnviada.value = String(kpi.cartaEnviada || '');
+        setStatus(els.kpiStatus, '', null);
+        els.kpiModal.classList.add('open');
+      }
+
+      function closeKpiModal() {
+        state.kpiRowId = '';
+        els.kpiModal.classList.remove('open');
+      }
+
+      async function saveKpi() {
+        if (!state.kpiRowId) return;
+        const payload = {
+          apartadoPldComprobante: els.kpiApartado.value,
+          fechaFirma: els.kpiFechaFirma.value,
+          acuerdoFirmado: els.kpiAcuerdo.value,
+          fechaEnganche: els.kpiFechaEnganche.value,
+          enganchePagado: els.kpiEnganchePagado.value,
+          cartaEnviada: els.kpiCartaEnviada.value
+        };
+        els.kpiSaveBtn.disabled = true;
+        setStatus(els.kpiStatus, 'Guardando KPI...', null);
+        try {
+          const res = await fetch('/api/whisperlist/rows/' + encodeURIComponent(state.kpiRowId) + '/kpi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo guardar KPI');
+          setStatus(els.kpiStatus, 'KPI guardado.', 'ok');
+          await fetchData();
+          closeKpiModal();
+        } catch (err) {
+          setStatus(els.kpiStatus, err.message || 'Error al guardar KPI', 'error');
+        } finally {
+          els.kpiSaveBtn.disabled = false;
+        }
+      }
+
       function mapCounts(rows, getKey) {
         const counts = new Map();
         rows.forEach(function (row) {
@@ -362,6 +482,27 @@
 
       function renderCountTable(tbody, entries) {
         tbody.innerHTML = entries.map(function (entry) {
+          return '<tr><td>' + escapeHtml(entry[0]) + '</td><td>' + String(entry[1]) + '</td></tr>';
+        }).join('');
+      }
+
+      function renderKpiStats(tbody, rows) {
+        const totals = {
+          apartado: 0,
+          contrato: 0,
+          enganche: 0
+        };
+        rows.forEach(function (row) {
+          const k = row && row.kpi ? row.kpi : {};
+          if (String(k.apartadoPldComprobante || '').toUpperCase() === 'SI') totals.apartado += 1;
+          if (String(k.acuerdoFirmado || '').toUpperCase() === 'SI') totals.contrato += 1;
+          if (String(k.enganchePagado || '').toUpperCase() === 'SI') totals.enganche += 1;
+        });
+        tbody.innerHTML = [
+          ['Apartados pagados', totals.apartado],
+          ['Contratos firmados', totals.contrato],
+          ['Enganches pagados', totals.enganche]
+        ].map(function (entry) {
           return '<tr><td>' + escapeHtml(entry[0]) + '</td><td>' + String(entry[1]) + '</td></tr>';
         }).join('');
       }
@@ -464,6 +605,7 @@
         renderCountTable(els.statsByTipo, mapCounts(filtered, function (r) { return r.tipoVenta; }));
         renderCountTable(els.statsByPais, mapCounts(filtered, function (r) { return r.pais; }));
         renderCountTable(els.statsByCiudad, mapCounts(filtered, function (r) { return r.ciudad; }));
+        renderKpiStats(els.statsKpi, filtered);
         renderSellerBedroomsTable(els.statsByAsesorRecamaras, filtered);
         els.filterSummary.textContent = 'Mostrando ' + filtered.length + ' de ' + state.rows.length + ' filas.';
       }
@@ -715,16 +857,21 @@
       els.tbody.addEventListener('click', function (ev) {
         const btn = ev.target.closest('.save-btn');
         const deleteBtn = ev.target.closest('.delete-btn');
+        const kpiBtn = ev.target.closest('.kpi-btn');
         const clientDataBtn = ev.target.closest('.client-data-btn');
-        if (!btn && !deleteBtn && !clientDataBtn) return;
+        if (!btn && !deleteBtn && !kpiBtn && !clientDataBtn) return;
         if (clientDataBtn) {
           const trForData = clientDataBtn.closest('tr');
           if (trForData) showClientData(trForData);
           return;
         }
-        const sourceBtn = deleteBtn || btn;
+        const sourceBtn = kpiBtn || deleteBtn || btn;
         const tr = sourceBtn.closest('tr');
         if (!tr) return;
+        if (kpiBtn) {
+          openKpiModal(tr);
+          return;
+        }
         if (deleteBtn) {
           deleteRow(tr);
           return;
@@ -738,6 +885,18 @@
 
       els.clientModal.addEventListener('click', function (ev) {
         if (ev.target === els.clientModal) closeClientData();
+      });
+
+      els.kpiCloseBtn.addEventListener('click', function () {
+        closeKpiModal();
+      });
+
+      els.kpiSaveBtn.addEventListener('click', function () {
+        saveKpi();
+      });
+
+      els.kpiModal.addEventListener('click', function (ev) {
+        if (ev.target === els.kpiModal) closeKpiModal();
       });
 
       fetchData().catch(function (err) {

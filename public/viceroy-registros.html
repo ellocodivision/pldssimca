@@ -620,20 +620,42 @@
       async function moveToWhisperlist(tr) {
         const id = tr.getAttribute('data-id');
         if (!id) return;
+        const payload = {
+          canal: String(tr.querySelector('[data-field="canal"]').value || '').trim(),
+          tipoVenta: String(tr.querySelector('[data-field="tipoVenta"]').value || '').trim(),
+          nombreCliente: String(tr.querySelector('[data-field="nombreCliente"]').value || '').trim(),
+          recamaras: String(tr.querySelector('[data-field="recamaras"]').value || '').trim(),
+          pais: String(tr.querySelector('[data-field="pais"]').value || '').trim(),
+          ciudad: String(tr.querySelector('[data-field="ciudad"]').value || '').trim()
+        };
+        const missing = Object.entries(payload).filter(function (entry) {
+          return !String(entry[1] || '').trim();
+        }).map(function (entry) { return entry[0]; });
+        if (missing.length) {
+          const msg = 'Completa todos los campos antes de mover: canal, tipoVenta, nombreCliente, recamaras, pais, ciudad.';
+          setStatus(els.globalStatus, msg, 'error');
+          window.alert(msg);
+          return;
+        }
         const ok = window.confirm('Se moverá este contacto a Whisperlist y se quitará de Registros. ¿Continuar?');
         if (!ok) return;
         setStatus(els.globalStatus, 'Moviendo a Whisperlist...', null);
         try {
           const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(id) + '/move-to-whisperlist', {
             method: 'POST',
-            credentials: 'same-origin'
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) throw new Error(data.error || 'No se pudo mover');
+          state.rows = state.rows.filter(function (row) { return String(row.id) !== String(id); });
+          renderListAndStats();
           setStatus(els.globalStatus, 'Contacto movido a Whisperlist.', 'ok');
-          await fetchData();
+          window.alert('Contacto movido a Whisperlist.');
         } catch (err) {
           setStatus(els.globalStatus, err.message || 'Error al mover', 'error');
+          window.alert(err.message || 'Error al mover');
         }
       }
 
