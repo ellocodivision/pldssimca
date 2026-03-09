@@ -1249,7 +1249,9 @@ function normalizeViceroyRegistrosRow(rawRow, fallbackId) {
     asesor,
     correo,
     canal: normalizeWhisperlistCanal(normalized.canal),
+    tipoVenta: normalizeWhisperlistTipoVenta(normalized.tipo_de_venta || normalized.tipodeventa),
     nombreCliente: normalizeWhisperlistPersonText(normalized.nombre_cliente || normalized.nombrecliente),
+    recamaras: normalizeWhisperlistRecamaras(normalized.recamaras || normalized.recamara),
     pais: normalizeWhisperlistCountry(normalized.pais || normalized.country || normalized.pais_cliente),
     ciudad: normalizeWhisperlistCity(normalized.ciudad || normalized.city || normalized.ciudad_cliente),
     clientEmail: normalizeClientEmail(normalized.correo_cliente || normalized.email_cliente || normalized.client_email),
@@ -1279,7 +1281,9 @@ async function ensureViceroyRegistrosDbSchema() {
       asesor TEXT NOT NULL,
       correo TEXT NOT NULL,
       canal TEXT NOT NULL DEFAULT '',
+      tipo_venta TEXT NOT NULL DEFAULT '',
       nombre_cliente TEXT NOT NULL DEFAULT '',
+      recamaras TEXT NOT NULL DEFAULT '',
       pais TEXT NOT NULL DEFAULT '',
       ciudad TEXT NOT NULL DEFAULT '',
       client_email TEXT NOT NULL DEFAULT '',
@@ -1287,6 +1291,8 @@ async function ensureViceroyRegistrosDbSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS tipo_venta TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS recamaras TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS pais TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS client_email TEXT NOT NULL DEFAULT ''`);
@@ -1312,7 +1318,7 @@ async function readViceroyRegistrosData() {
 
   const [rowsRes, metaRes] = await Promise.all([
     whisperlistPool.query(`
-      SELECT id, asesor, correo, canal, nombre_cliente, pais, ciudad, client_email, client_phone, updated_at
+      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at
       FROM viceroy_registros_rows
       ORDER BY updated_at DESC, id ASC
     `),
@@ -1334,7 +1340,9 @@ async function readViceroyRegistrosData() {
       asesor: String(row.asesor || ''),
       correo: String(row.correo || '').toLowerCase(),
       canal: String(row.canal || ''),
+      tipoVenta: String(row.tipo_venta || ''),
       nombreCliente: String(row.nombre_cliente || ''),
+      recamaras: String(row.recamaras || ''),
       pais: String(row.pais || ''),
       ciudad: String(row.ciudad || ''),
       clientEmail: String(row.client_email || ''),
@@ -1355,9 +1363,11 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
     correo: String(row.correo || '').trim().toLowerCase(),
     clientEmail: normalizeClientEmail(row.clientEmail),
     clientPhone: normalizeClientPhone(row.clientPhone),
+    recamaras: normalizeWhisperlistRecamaras(row.recamaras),
     pais: normalizeWhisperlistCountry(row.pais),
     ciudad: normalizeWhisperlistCity(row.ciudad),
-    canal: normalizeWhisperlistCanal(row.canal)
+    canal: normalizeWhisperlistCanal(row.canal),
+    tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta)
   }));
   const updatedAt = new Date().toISOString();
   if (!whisperlistPool) {
@@ -1375,14 +1385,16 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
     await client.query('DELETE FROM viceroy_registros_rows');
     for (const row of normalizedRows) {
       await client.query(
-        `INSERT INTO viceroy_registros_rows (id, asesor, correo, canal, nombre_cliente, pais, ciudad, client_email, client_phone, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        `INSERT INTO viceroy_registros_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
           normalizeWhisperlistAsesor(row.asesor),
           String(row.correo || '').trim().toLowerCase(),
           String(row.canal || '').trim(),
+          String(row.tipoVenta || '').trim(),
           normalizeWhisperlistPersonText(row.nombreCliente),
+          normalizeWhisperlistRecamaras(row.recamaras),
           normalizeWhisperlistCountry(row.pais),
           normalizeWhisperlistCity(row.ciudad),
           normalizeClientEmail(row.clientEmail),
@@ -1418,7 +1430,9 @@ function viceroyRegistrosExportRows(rows) {
     ASESOR: normalizeWhisperlistAsesor(row.asesor),
     CORREO_ASESOR: String(row.correo || '').trim().toLowerCase(),
     CANAL: normalizeWhisperlistCanal(row.canal),
+    TIPO_DE_VENTA: normalizeWhisperlistTipoVenta(row.tipoVenta),
     NOMBRE_CLIENTE: normalizeWhisperlistPersonText(row.nombreCliente),
+    RECAMARAS: normalizeWhisperlistRecamaras(row.recamaras),
     PAIS: normalizeWhisperlistCountry(row.pais),
     CIUDAD: normalizeWhisperlistCity(row.ciudad),
     CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
@@ -2296,7 +2310,7 @@ app.get('/', requireAuth, (req, res) => {
         <a class="card" href="/viceroy">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy</h2>
-          <p class="desc">Acceso a Viceroy Registros y Edición Viceroy Inventario.</p>
+          <p class="desc">Acceso a Viceroy Whisperlist, Viceroy Registros y Edición Viceroy Inventario.</p>
         </a>` : '';
   const gerenteCard = isGerente ? `
         <a class="card" href="/gerente-ventas">
@@ -2617,7 +2631,7 @@ app.get('/viceroy', (req, res) => {
     .back{display:inline-block;padding:8px 10px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;}
     h1{margin:0;font-size:30px}
     .sub{margin:6px 0 0;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:14px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px}
     .card{display:block;background:#fff;border:1px solid #dcd7cb;border-radius:14px;padding:18px;text-decoration:none;color:inherit}
     .card:hover{border-color:#b9b39f}
     .tag{display:inline-block;font-size:12px;font-weight:700;background:var(--accent);padding:4px 8px;border-radius:999px;margin-bottom:10px}
@@ -2634,10 +2648,15 @@ app.get('/viceroy', (req, res) => {
         <a class="back" href="/">Volver al backend</a>
       </div>
       <div class="grid">
+        <a class="card" href="/whisperlist">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Whisperlist</h2>
+          <p class="desc">Módulo original de Whisperlist.</p>
+        </a>
         <a class="card" href="/viceroy/registros">
           <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Whisperlist (Registros)</h2>
-          <p class="desc">Similar a Whisperlist, sin tipo de venta ni recámaras.</p>
+          <h2 class="name">Viceroy Registros</h2>
+          <p class="desc">Duplicado de Whisperlist para operación separada.</p>
         </a>
         <a class="card" href="/viceroy-piloto">
           <span class="tag">Módulo</span>
@@ -2653,6 +2672,10 @@ app.get('/viceroy/registros', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-registros.html'));
 });
 
+app.get('/viceroy/registros/qr', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-registros-qr.html'));
+});
+
 app.get('/api/viceroy/registros', async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
@@ -2662,6 +2685,7 @@ app.get('/api/viceroy/registros', async (req, res) => {
       ...row,
       asesor: normalizeWhisperlistAsesor(row.asesor),
       nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+      recamaras: normalizeWhisperlistRecamaras(row.recamaras),
       clientEmail: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
         ? normalizeClientEmail(row.clientEmail)
         : '',
@@ -2681,6 +2705,26 @@ app.get('/api/viceroy/registros', async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo leer Viceroy Registros' });
+  }
+});
+
+app.get('/api/viceroy/registros/qr-codes', requireGerente, async (req, res) => {
+  try {
+    const data = await readViceroyRegistrosData();
+    const sellers = getWhisperlistSellers(data.rows);
+    const items = await Promise.all(sellers.map(async (seller) => {
+      const token = createLeadToken({ asesor: seller.asesor, correo: seller.correo });
+      const leadUrl = `${APP_BASE_URL_NORMALIZED}/lead?t=${encodeURIComponent(token)}`;
+      const qrDataUrl = await QRCode.toDataURL(leadUrl, { margin: 1, width: 280 });
+      return {
+        ...seller,
+        leadUrl,
+        qrDataUrl
+      };
+    }));
+    return res.json({ ok: true, items });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudieron generar QR' });
   }
 });
 
@@ -2723,7 +2767,9 @@ app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
     const nextRow = {
       ...target,
       canal: normalizeWhisperlistCanal(body.canal !== undefined ? body.canal : target.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta !== undefined ? body.tipoVenta : target.tipoVenta),
       nombreCliente: normalizeWhisperlistPersonText(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente),
+      recamaras: normalizeWhisperlistRecamaras(body.recamaras !== undefined ? body.recamaras : target.recamaras),
       pais: normalizeWhisperlistCountry(body.pais !== undefined ? body.pais : target.pais),
       ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail !== undefined ? body.clientEmail : target.clientEmail),
@@ -2755,7 +2801,9 @@ app.post('/api/viceroy/registros/rows', async (req, res) => {
       asesor,
       correo: currentEmail,
       canal: normalizeWhisperlistCanal(body.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta),
       nombreCliente,
+      recamaras: normalizeWhisperlistRecamaras(body.recamaras),
       pais: normalizeWhisperlistCountry(body.pais),
       ciudad: normalizeWhisperlistCity(body.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail),
@@ -2827,6 +2875,8 @@ app.post('/api/viceroy/registros/import-excel', requireGerente, async (req, res)
       String(row.asesor || '').trim().toUpperCase(),
       String(row.nombreCliente || '').trim().toUpperCase(),
       String(row.canal || '').trim().toUpperCase()
+      ,
+      String(row.tipoVenta || '').trim().toUpperCase()
     ].join('|'))
   );
   parsed.rows.forEach((row) => {
@@ -2835,6 +2885,8 @@ app.post('/api/viceroy/registros/import-excel', requireGerente, async (req, res)
       String(row.asesor || '').trim().toUpperCase(),
       String(row.nombreCliente || '').trim().toUpperCase(),
       String(row.canal || '').trim().toUpperCase()
+      ,
+      String(row.tipoVenta || '').trim().toUpperCase()
     ].join('|');
     if (seen.has(key)) {
       skipped += 1;

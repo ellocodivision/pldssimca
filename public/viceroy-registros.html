@@ -85,7 +85,21 @@
           <option value="SIMCA">SIMCA</option>
           <option value="RELATED">RELATED</option>
         </select>
+        <select id="newTipoVenta" class="cell-input">
+          <option value="">TIPO DE VENTA</option>
+          <option value="EXTERNO">EXTERNO</option>
+          <option value="INTERNO">INTERNO</option>
+          <option value="MERITO PROPIO">MERITO PROPIO</option>
+        </select>
         <input id="newNombreCliente" class="cell-input" placeholder="NOMBRE CLIENTE" />
+        <select id="newRecamaras" class="cell-input">
+          <option value="">RECAMARAS</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="2PH">2PH</option>
+          <option value="3PH">3PH</option>
+        </select>
         <select id="newPais" class="cell-input">
           <option value="">PAIS</option>
           <option value="MEXICO">MEXICO</option>
@@ -107,6 +121,7 @@
     <div id="managerCard" class="card" hidden>
       <div class="row">
         <span class="badge">Importar Excel</span>
+        <a class="btn" href="/viceroy/registros/qr" target="_blank" rel="noopener">Ver QR por vendedor</a>
         <a class="btn" href="/api/viceroy/registros/export.xlsx">Exportar Excel backup</a>
         <input id="excelInput" type="file" accept=".xlsx,.xls" />
         <label class="check">
@@ -149,10 +164,17 @@
           </table>
         </section>
         <section class="stats-box">
-          <h3>Clientes por vendedor</h3>
+          <h3>Clientes por tipo de venta</h3>
           <table class="stats-table">
-            <thead><tr><th>Vendedor</th><th>Cant.</th></tr></thead>
-            <tbody id="statsByAsesor"></tbody>
+            <thead><tr><th>Tipo</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByTipo"></tbody>
+          </table>
+        </section>
+        <section class="stats-box">
+          <h3>Clientes por vendedor y recámaras</h3>
+          <table class="stats-table">
+            <thead><tr><th>Vendedor</th><th>1</th><th>2</th><th>3</th><th>2PH</th><th>3PH</th><th>Total</th><th>Faltan</th></tr></thead>
+            <tbody id="statsByAsesorRecamaras"></tbody>
           </table>
         </section>
       </div>
@@ -164,7 +186,9 @@
           <tr>
             <th>ASESOR</th>
             <th>CANAL</th>
+            <th>TIPO DE VENTA</th>
             <th>NOMBRE CLIENTE</th>
+            <th>RECAMARAS</th>
             <th>PAIS</th>
             <th>CIUDAD</th>
             <th>ACCION</th>
@@ -216,14 +240,17 @@
         onlyDuplicates: document.getElementById('onlyDuplicates'),
         filterSummary: document.getElementById('filterSummary'),
         statsByCanal: document.getElementById('statsByCanal'),
-        statsByAsesor: document.getElementById('statsByAsesor'),
+        statsByTipo: document.getElementById('statsByTipo'),
+        statsByAsesorRecamaras: document.getElementById('statsByAsesorRecamaras'),
         clientModal: document.getElementById('clientModal'),
         closeModalBtn: document.getElementById('closeModalBtn'),
         modalNombre: document.getElementById('modalNombre'),
         modalCorreo: document.getElementById('modalCorreo'),
         modalTelefono: document.getElementById('modalTelefono'),
         newCanal: document.getElementById('newCanal'),
+        newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
+        newRecamaras: document.getElementById('newRecamaras'),
         newPais: document.getElementById('newPais'),
         newCiudad: document.getElementById('newCiudad'),
         addBtn: document.getElementById('addBtn'),
@@ -254,6 +281,8 @@
         const lockText = canEdit ? '' : '<div class="lock">Solo lectura</div>';
         const disabled = canEdit ? '' : 'disabled';
         const canalSelect = selectHtml('canal', row.canal || '', ['SIMCA', 'RELATED'], disabled);
+        const tipoSelect = selectHtml('tipoVenta', row.tipoVenta || '', ['EXTERNO', 'INTERNO', 'MERITO PROPIO'], disabled);
+        const recamarasSelect = selectHtml('recamaras', row.recamaras || '', ['1', '2', '3', '2PH', '3PH'], disabled);
         const paisSelect = selectHtml('pais', row.pais || '', COUNTRY_OPTIONS, disabled);
         const isDuplicateName = duplicateNameSet.has(String(row.nombreCliente || '').trim().toUpperCase());
         const duplicateClass = isDuplicateName ? 'dup-row' : '';
@@ -261,7 +290,9 @@
           <tr data-id="${String(row.id)}" class="${duplicateClass}">
             <td>${escapeHtml(row.asesor || '')}</td>
             <td>${canalSelect}</td>
+            <td>${tipoSelect}</td>
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
+            <td>${recamarasSelect}</td>
             <td>${paisSelect}</td>
             <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
@@ -319,6 +350,60 @@
         }).join('');
       }
 
+      function normalizeRecamarasKey(value) {
+        const key = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (key === '1' || key === '1B') return '1';
+        if (key === '2' || key === '2B') return '2';
+        if (key === '3' || key === '3B') return '3';
+        if (key === '2PH' || key === 'PH2') return '2PH';
+        if (key === '3PH' || key === 'PH3') return '3PH';
+        return '';
+      }
+
+      function renderSellerBedroomsTable(tbody, rows) {
+        const bedroomOrder = ['1', '2', '3', '2PH', '3PH'];
+        const bySeller = new Map();
+        rows.forEach(function (row) {
+          const seller = String(row.asesor || '').trim() || '(VACIO)';
+          if (!bySeller.has(seller)) {
+            bySeller.set(seller, { '1': 0, '2': 0, '3': 0, '2PH': 0, '3PH': 0, filled: 0, total: 0 });
+          }
+          const bucket = bySeller.get(seller);
+          const recKey = normalizeRecamarasKey(row.recamaras);
+          if (recKey) {
+            bucket[recKey] += 1;
+            bucket.filled += 1;
+          }
+          bucket.total += 1;
+        });
+        const sorted = Array.from(bySeller.entries()).sort(function (a, b) {
+          if (b[1].total !== a[1].total) return b[1].total - a[1].total;
+          return String(a[0]).localeCompare(String(b[0]));
+        });
+        const totals = { '1': 0, '2': 0, '3': 0, '2PH': 0, '3PH': 0, total: 0, missing: 0 };
+        const bodyRows = sorted.map(function (entry) {
+          const seller = entry[0];
+          const bucket = entry[1];
+          const missing = Math.max(0, Number(bucket.total || 0) - Number(bucket.filled || 0));
+          bedroomOrder.forEach(function (k) { totals[k] += Number(bucket[k] || 0); });
+          totals.total += Number(bucket.total || 0);
+          totals.missing += missing;
+          return '<tr>' +
+            '<td>' + escapeHtml(seller) + '</td>' +
+            bedroomOrder.map(function (k) { return '<td>' + String(bucket[k] || 0) + '</td>'; }).join('') +
+            '<td>' + String(bucket.total || 0) + '</td>' +
+            '<td class="missing-num">' + String(missing) + '</td>' +
+          '</tr>';
+        }).join('');
+        const totalsRow = '<tr class="totals-row">' +
+          '<td>TOTAL</td>' +
+          bedroomOrder.map(function (k) { return '<td>' + String(totals[k] || 0) + '</td>'; }).join('') +
+          '<td>' + String(totals.total || 0) + '</td>' +
+          '<td class="missing-num">' + String(totals.missing || 0) + '</td>' +
+        '</tr>';
+        tbody.innerHTML = bodyRows + totalsRow;
+      }
+
       function buildSellerFilter() {
         const sellers = Array.from(new Set(state.rows.map(function (r) {
           return String(r.asesor || '').trim();
@@ -347,7 +432,9 @@
             row.asesor,
             row.correo,
             row.canal,
+            row.tipoVenta,
             row.nombreCliente,
+            row.recamaras,
             row.pais,
             row.ciudad
           ].join(' ').toLowerCase();
@@ -358,7 +445,8 @@
       function renderStats() {
         const filtered = getFilteredRows();
         renderCountTable(els.statsByCanal, mapCounts(filtered, function (r) { return r.canal; }));
-        renderCountTable(els.statsByAsesor, mapCounts(filtered, function (r) { return r.asesor; }));
+        renderCountTable(els.statsByTipo, mapCounts(filtered, function (r) { return r.tipoVenta; }));
+        renderSellerBedroomsTable(els.statsByAsesorRecamaras, filtered);
         els.filterSummary.textContent = 'Mostrando ' + filtered.length + ' de ' + state.rows.length + ' filas.';
       }
 
@@ -444,7 +532,9 @@
         const id = tr.getAttribute('data-id');
         const payload = {
           canal: tr.querySelector('[data-field="canal"]').value,
+          tipoVenta: tr.querySelector('[data-field="tipoVenta"]').value,
           nombreCliente: tr.querySelector('[data-field="nombreCliente"]').value,
+          recamaras: tr.querySelector('[data-field="recamaras"]').value,
           pais: tr.querySelector('[data-field="pais"]').value,
           ciudad: tr.querySelector('[data-field="ciudad"]').value
         };
@@ -471,7 +561,9 @@
       async function addRow() {
         const payload = {
           canal: els.newCanal.value,
+          tipoVenta: els.newTipoVenta.value,
           nombreCliente: els.newNombreCliente.value,
+          recamaras: els.newRecamaras.value,
           pais: els.newPais.value,
           ciudad: els.newCiudad.value
         };
@@ -492,7 +584,9 @@
           if (!res.ok) throw new Error(data.error || 'No se pudo agregar');
           setStatus(els.addStatus, 'Cliente agregado.', 'ok');
           els.newCanal.value = '';
+          els.newTipoVenta.value = '';
           els.newNombreCliente.value = '';
+          els.newRecamaras.value = '';
           els.newPais.value = '';
           els.newCiudad.value = '';
           await fetchData();
