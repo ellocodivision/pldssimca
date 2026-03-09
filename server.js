@@ -2537,10 +2537,7 @@ app.use('/format-extranjera-moral', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
-app.use('/viceroy', (req, res, next) => {
-  if (req.path === '/registros' || req.path.startsWith('/registros/')) return next();
-  return requireInternalUser(req, res, next);
-});
+app.use('/viceroy', requireAuth);
 app.use('/viceroy-piloto', requireInternalUser);
 app.use('/api/viceroy-piloto', (req, res, next) => {
   if (req.path === '/public-data') return next();
@@ -2654,6 +2651,14 @@ app.post('/api/roi/master-csv', requireGerente, (req, res) => {
 });
 
 app.get('/viceroy', (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const showInventoryCard = currentEmail === 'martin@simca.mx';
+  const inventoryCard = showInventoryCard ? `
+        <a class="card" href="/viceroy-piloto">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Edición Viceroy Inventario</h2>
+          <p class="desc">Flujo visual de tipologías e inventario por piso.</p>
+        </a>` : '';
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -2694,11 +2699,7 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Viceroy Registros</h2>
           <p class="desc">Duplicado de Whisperlist para operación separada.</p>
         </a>
-        <a class="card" href="/viceroy-piloto">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Edición Viceroy Inventario</h2>
-          <p class="desc">Flujo visual de tipologías e inventario por piso.</p>
-        </a>
+        ${inventoryCard}
       </div>
     </div>
   </body></html>`);
