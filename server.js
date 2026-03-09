@@ -3196,6 +3196,7 @@ app.post('/api/whisperlist/rows', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone),
+      kpi: normalizeWhisperlistKpi(body.kpi),
       updatedAt: new Date().toISOString()
     };
     data.rows.push(newRow);
@@ -3228,6 +3229,50 @@ app.delete('/api/whisperlist/rows/:id', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo eliminar fila' });
+  }
+});
+
+app.post('/api/whisperlist/rows/:id/send-to-registros', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const whisperData = await readWhisperlistData();
+    const index = whisperData.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const source = whisperData.rows[index];
+    const ownerEmail = String(source.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes enviar filas asignadas a tu correo' });
+    }
+
+    const registrosData = await readViceroyRegistrosData();
+    const newRow = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor: normalizeWhisperlistAsesor(source.asesor),
+      correo: String(source.correo || '').trim().toLowerCase(),
+      canal: normalizeWhisperlistCanal(source.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(source.tipoVenta),
+      nombreCliente: normalizeWhisperlistPersonText(source.nombreCliente),
+      recamaras: normalizeWhisperlistRecamaras(source.recamaras),
+      pais: normalizeWhisperlistCountry(source.pais),
+      ciudad: normalizeWhisperlistCity(source.ciudad),
+      clientEmail: normalizeClientEmail(source.clientEmail),
+      clientPhone: normalizeClientPhone(source.clientPhone),
+      updatedAt: new Date().toISOString()
+    };
+
+    registrosData.rows.push(newRow);
+    whisperData.rows.splice(index, 1);
+
+    await saveViceroyRegistrosRows(registrosData.rows, registrosData.sourceFile || path.basename(VICEROY_REGISTROS_EXCEL_PATH));
+    await saveWhisperlistRows(whisperData.rows, whisperData.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.json({ ok: true, row: newRow });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo enviar a Registros' });
   }
 });
 

@@ -380,7 +380,7 @@
             <td>${paisSelect}</td>
             <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
-              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn kpi-btn" type="button">KPI</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
+              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn send-reg-btn" type="button">Enviar a Registros</button> <button class="btn save-btn kpi-btn" type="button">KPI</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
             </td>
           </tr>
@@ -777,6 +777,29 @@
         }
       }
 
+      async function sendToRegistros(tr) {
+        const id = tr.getAttribute('data-id');
+        if (!id) return;
+        const ok = window.confirm('Se enviará este contacto a Registros y se quitará de Whisperlist. ¿Continuar?');
+        if (!ok) return;
+        setStatus(els.globalStatus, 'Enviando a Registros...', null);
+        try {
+          const res = await fetch('/api/whisperlist/rows/' + encodeURIComponent(id) + '/send-to-registros', {
+            method: 'POST',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo enviar');
+          state.rows = state.rows.filter(function (row) { return String(row.id) !== String(id); });
+          renderListAndStats();
+          setStatus(els.globalStatus, 'Contacto enviado a Registros.', 'ok');
+          window.alert('Contacto enviado a Registros.');
+        } catch (err) {
+          setStatus(els.globalStatus, err.message || 'Error al enviar', 'error');
+          window.alert(err.message || 'Error al enviar');
+        }
+      }
+
       async function importExcel() {
         const file = els.excelInput.files && els.excelInput.files[0];
         if (!file) {
@@ -857,17 +880,22 @@
       els.tbody.addEventListener('click', function (ev) {
         const btn = ev.target.closest('.save-btn');
         const deleteBtn = ev.target.closest('.delete-btn');
+        const sendRegBtn = ev.target.closest('.send-reg-btn');
         const kpiBtn = ev.target.closest('.kpi-btn');
         const clientDataBtn = ev.target.closest('.client-data-btn');
-        if (!btn && !deleteBtn && !kpiBtn && !clientDataBtn) return;
+        if (!btn && !deleteBtn && !sendRegBtn && !kpiBtn && !clientDataBtn) return;
         if (clientDataBtn) {
           const trForData = clientDataBtn.closest('tr');
           if (trForData) showClientData(trForData);
           return;
         }
-        const sourceBtn = kpiBtn || deleteBtn || btn;
+        const sourceBtn = sendRegBtn || kpiBtn || deleteBtn || btn;
         const tr = sourceBtn.closest('tr');
         if (!tr) return;
+        if (sendRegBtn) {
+          sendToRegistros(tr);
+          return;
+        }
         if (kpiBtn) {
           openKpiModal(tr);
           return;
