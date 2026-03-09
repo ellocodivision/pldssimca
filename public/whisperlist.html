@@ -171,6 +171,20 @@
           </table>
         </section>
         <section class="stats-box">
+          <h3>Clientes por país</h3>
+          <table class="stats-table">
+            <thead><tr><th>País</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByPais"></tbody>
+          </table>
+        </section>
+        <section class="stats-box">
+          <h3>Clientes por ciudad</h3>
+          <table class="stats-table">
+            <thead><tr><th>Ciudad</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByCiudad"></tbody>
+          </table>
+        </section>
+        <section class="stats-box">
           <h3>Clientes por vendedor y recámaras</h3>
           <table class="stats-table">
             <thead><tr><th>Vendedor</th><th>1</th><th>2</th><th>3</th><th>2PH</th><th>3PH</th><th>Total</th><th>Faltan</th></tr></thead>
@@ -241,6 +255,8 @@
         filterSummary: document.getElementById('filterSummary'),
         statsByCanal: document.getElementById('statsByCanal'),
         statsByTipo: document.getElementById('statsByTipo'),
+        statsByPais: document.getElementById('statsByPais'),
+        statsByCiudad: document.getElementById('statsByCiudad'),
         statsByAsesorRecamaras: document.getElementById('statsByAsesorRecamaras'),
         clientModal: document.getElementById('clientModal'),
         closeModalBtn: document.getElementById('closeModalBtn'),
@@ -446,6 +462,8 @@
         const filtered = getFilteredRows();
         renderCountTable(els.statsByCanal, mapCounts(filtered, function (r) { return r.canal; }));
         renderCountTable(els.statsByTipo, mapCounts(filtered, function (r) { return r.tipoVenta; }));
+        renderCountTable(els.statsByPais, mapCounts(filtered, function (r) { return r.pais; }));
+        renderCountTable(els.statsByCiudad, mapCounts(filtered, function (r) { return r.ciudad; }));
         renderSellerBedroomsTable(els.statsByAsesorRecamaras, filtered);
         els.filterSummary.textContent = 'Mostrando ' + filtered.length + ' de ' + state.rows.length + ' filas.';
       }

@@ -2843,6 +2843,87 @@ app.delete('/api/viceroy/registros/rows/:id', async (req, res) => {
   }
 });
 
+app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+
+    const registrosData = await readViceroyRegistrosData();
+    const index = registrosData.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const source = registrosData.rows[index];
+    const ownerEmail = String(source.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes mover filas asignadas a tu correo' });
+    }
+
+    const required = {
+      canal: normalizeWhisperlistCanal(source.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(source.tipoVenta),
+      nombreCliente: normalizeWhisperlistPersonText(source.nombreCliente),
+      recamaras: normalizeWhisperlistRecamaras(source.recamaras),
+      pais: normalizeWhisperlistCountry(source.pais),
+      ciudad: normalizeWhisperlistCity(source.ciudad)
+    };
+    const missing = Object.entries(required).filter(([, value]) => !String(value || '').trim()).map(([key]) => key);
+    if (missing.length) {
+      return res.status(400).json({
+        error: 'Completa todos los campos requeridos antes de mover: canal, tipoVenta, nombreCliente, recamaras, pais, ciudad'
+      });
+    }
+
+    const whisperData = await readWhisperlistData();
+    const duplicateKey = [
+      String(source.correo || '').trim().toLowerCase(),
+      String(source.asesor || '').trim().toUpperCase(),
+      String(source.nombreCliente || '').trim().toUpperCase(),
+      String(source.canal || '').trim().toUpperCase(),
+      String(source.tipoVenta || '').trim().toUpperCase()
+    ].join('|');
+    const alreadyExists = whisperData.rows.some((row) => {
+      const key = [
+        String(row.correo || '').trim().toLowerCase(),
+        String(row.asesor || '').trim().toUpperCase(),
+        String(row.nombreCliente || '').trim().toUpperCase(),
+        String(row.canal || '').trim().toUpperCase(),
+        String(row.tipoVenta || '').trim().toUpperCase()
+      ].join('|');
+      return key === duplicateKey;
+    });
+    if (alreadyExists) {
+      return res.status(409).json({ error: 'Ese contacto ya existe en Whisperlist' });
+    }
+
+    const movedRow = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor: normalizeWhisperlistAsesor(source.asesor),
+      correo: String(source.correo || '').trim().toLowerCase(),
+      canal: required.canal,
+      tipoVenta: required.tipoVenta,
+      nombreCliente: required.nombreCliente,
+      recamaras: required.recamaras,
+      pais: required.pais,
+      ciudad: required.ciudad,
+      clientEmail: normalizeClientEmail(source.clientEmail),
+      clientPhone: normalizeClientPhone(source.clientPhone),
+      updatedAt: new Date().toISOString()
+    };
+
+    whisperData.rows.push(movedRow);
+    registrosData.rows.splice(index, 1);
+
+    await saveWhisperlistRows(whisperData.rows, whisperData.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    await saveViceroyRegistrosRows(registrosData.rows, registrosData.sourceFile || path.basename(VICEROY_REGISTROS_EXCEL_PATH));
+    return res.json({ ok: true, row: movedRow });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo mover a Whisperlist' });
+  }
+});
+
 app.post('/api/viceroy/registros/import-excel', requireGerente, async (req, res) => {
   const { fileName, base64, sheetName, replaceExisting } = req.body || {};
   if (!base64) {
