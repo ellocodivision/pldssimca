@@ -65,6 +65,8 @@ const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
 const WHISPERLIST_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY WHISPERLIST.xlsx');
+const VICEROY_REGISTROS_JSON_PATH = path.join(DATA_DIR, 'viceroy-registros.json');
+const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
@@ -134,6 +136,7 @@ const whisperlistPool = USE_WHISPERLIST_DB
   })
   : null;
 let whisperlistStorageReady = false;
+let viceroyRegistrosStorageReady = false;
 
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
@@ -1135,6 +1138,7 @@ async function isAllowedLoginEmail(email) {
   if (normalized.endsWith(`@${ALLOWED_DOMAIN}`)) return true;
   if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
   if ((await whisperlistAllowedEmails()).has(normalized)) return true;
+  if ((await viceroyRegistrosAllowedEmails()).has(normalized)) return true;
   return false;
 }
 
@@ -1221,6 +1225,242 @@ async function ensureWhisperlistStorageReady() {
   if (whisperlistPool) await ensureWhisperlistDbSchema();
   await seedWhisperlistFromExcelIfNeeded();
   whisperlistStorageReady = true;
+}
+
+function normalizeViceroyRegistrosRow(rawRow, fallbackId) {
+  const normalized = {};
+  Object.entries(rawRow || {}).forEach(([key, value]) => {
+    normalized[normalizeWhisperlistKey(key)] = value;
+  });
+
+  const asesor = normalizeWhisperlistAsesor(normalized.asesor);
+  const correo = String(
+    normalized.correo
+    || normalized.correo_asesor
+    || normalized.email_asesor
+    || ''
+  ).trim().toLowerCase();
+  if (!asesor || !correo) return null;
+
+  const generatedId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 6)}`;
+  const providedId = String(normalized.id || '').trim();
+  return {
+    id: providedId || String(fallbackId || generatedId),
+    asesor,
+    correo,
+    canal: normalizeWhisperlistCanal(normalized.canal),
+    nombreCliente: normalizeWhisperlistPersonText(normalized.nombre_cliente || normalized.nombrecliente),
+    pais: normalizeWhisperlistCountry(normalized.pais || normalized.country || normalized.pais_cliente),
+    ciudad: normalizeWhisperlistCity(normalized.ciudad || normalized.city || normalized.ciudad_cliente),
+    clientEmail: normalizeClientEmail(normalized.correo_cliente || normalized.email_cliente || normalized.client_email),
+    clientPhone: normalizeClientPhone(normalized.telefono_cliente || normalized.telefono || normalized.client_phone),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function parseViceroyRegistrosWorkbook(workbook, requestedSheetName) {
+  const fallbackSheet = workbook.SheetNames.includes('Hoja1')
+    ? 'Hoja1'
+    : (workbook.SheetNames[0] || '');
+  const sheetName = String(requestedSheetName || fallbackSheet || '').trim();
+  if (!sheetName) return { sheetName: '', rows: [] };
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) return { sheetName: '', rows: [] };
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  const rows = rawRows.map((item) => normalizeViceroyRegistrosRow(item)).filter(Boolean);
+  return { sheetName, rows };
+}
+
+async function ensureViceroyRegistrosDbSchema() {
+  if (!whisperlistPool) return;
+  await whisperlistPool.query(`
+    CREATE TABLE IF NOT EXISTS viceroy_registros_rows (
+      id TEXT PRIMARY KEY,
+      asesor TEXT NOT NULL,
+      correo TEXT NOT NULL,
+      canal TEXT NOT NULL DEFAULT '',
+      nombre_cliente TEXT NOT NULL DEFAULT '',
+      pais TEXT NOT NULL DEFAULT '',
+      ciudad TEXT NOT NULL DEFAULT '',
+      client_email TEXT NOT NULL DEFAULT '',
+      client_phone TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS pais TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS client_email TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS client_phone TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`
+    CREATE TABLE IF NOT EXISTS viceroy_registros_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+}
+
+async function readViceroyRegistrosData() {
+  if (!viceroyRegistrosStorageReady) await ensureViceroyRegistrosStorageReady();
+  if (!whisperlistPool) {
+    const raw = readJson(VICEROY_REGISTROS_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
+    return {
+      rows: sortWhisperlistRows(Array.isArray(raw.rows) ? raw.rows : []),
+      updatedAt: raw.updatedAt || null,
+      sourceFile: String(raw.sourceFile || '')
+    };
+  }
+
+  const [rowsRes, metaRes] = await Promise.all([
+    whisperlistPool.query(`
+      SELECT id, asesor, correo, canal, nombre_cliente, pais, ciudad, client_email, client_phone, updated_at
+      FROM viceroy_registros_rows
+      ORDER BY updated_at DESC, id ASC
+    `),
+    whisperlistPool.query(`
+      SELECT key, value
+      FROM viceroy_registros_meta
+      WHERE key IN ('sourceFile', 'updatedAt')
+    `)
+  ]);
+
+  const meta = {};
+  metaRes.rows.forEach((item) => {
+    meta[String(item.key || '')] = String(item.value || '');
+  });
+
+  return {
+    rows: sortWhisperlistRows(rowsRes.rows.map((row) => ({
+      id: String(row.id || ''),
+      asesor: String(row.asesor || ''),
+      correo: String(row.correo || '').toLowerCase(),
+      canal: String(row.canal || ''),
+      nombreCliente: String(row.nombre_cliente || ''),
+      pais: String(row.pais || ''),
+      ciudad: String(row.ciudad || ''),
+      clientEmail: String(row.client_email || ''),
+      clientPhone: String(row.client_phone || ''),
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
+    }))),
+    updatedAt: meta.updatedAt || null,
+    sourceFile: meta.sourceFile || ''
+  };
+}
+
+async function saveViceroyRegistrosRows(rows, sourceFile) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const normalizedRows = safeRows.map((row) => ({
+    ...row,
+    asesor: normalizeWhisperlistAsesor(row.asesor),
+    nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+    correo: String(row.correo || '').trim().toLowerCase(),
+    clientEmail: normalizeClientEmail(row.clientEmail),
+    clientPhone: normalizeClientPhone(row.clientPhone),
+    pais: normalizeWhisperlistCountry(row.pais),
+    ciudad: normalizeWhisperlistCity(row.ciudad),
+    canal: normalizeWhisperlistCanal(row.canal)
+  }));
+  const updatedAt = new Date().toISOString();
+  if (!whisperlistPool) {
+    writeJson(VICEROY_REGISTROS_JSON_PATH, {
+      rows: normalizedRows,
+      updatedAt,
+      sourceFile: String(sourceFile || '')
+    });
+    return;
+  }
+
+  const client = await whisperlistPool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM viceroy_registros_rows');
+    for (const row of normalizedRows) {
+      await client.query(
+        `INSERT INTO viceroy_registros_rows (id, asesor, correo, canal, nombre_cliente, pais, ciudad, client_email, client_phone, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+          normalizeWhisperlistAsesor(row.asesor),
+          String(row.correo || '').trim().toLowerCase(),
+          String(row.canal || '').trim(),
+          normalizeWhisperlistPersonText(row.nombreCliente),
+          normalizeWhisperlistCountry(row.pais),
+          normalizeWhisperlistCity(row.ciudad),
+          normalizeClientEmail(row.clientEmail),
+          normalizeClientPhone(row.clientPhone),
+          String(row.updatedAt || updatedAt)
+        ]
+      );
+    }
+    await client.query(
+      `INSERT INTO viceroy_registros_meta (key, value)
+       VALUES ('sourceFile', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [String(sourceFile || '')]
+    );
+    await client.query(
+      `INSERT INTO viceroy_registros_meta (key, value)
+       VALUES ('updatedAt', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [updatedAt]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+function viceroyRegistrosExportRows(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  return items.map((row) => ({
+    ASESOR: normalizeWhisperlistAsesor(row.asesor),
+    CORREO_ASESOR: String(row.correo || '').trim().toLowerCase(),
+    CANAL: normalizeWhisperlistCanal(row.canal),
+    NOMBRE_CLIENTE: normalizeWhisperlistPersonText(row.nombreCliente),
+    PAIS: normalizeWhisperlistCountry(row.pais),
+    CIUDAD: normalizeWhisperlistCity(row.ciudad),
+    CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
+    TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
+    UPDATED_AT: String(row.updatedAt || '')
+  }));
+}
+
+async function viceroyRegistrosAllowedEmails() {
+  const data = await readViceroyRegistrosData();
+  const emails = new Set();
+  data.rows.forEach((row) => {
+    const email = String(row && row.correo || '').trim().toLowerCase();
+    if (email) emails.add(email);
+  });
+  return emails;
+}
+
+async function seedViceroyRegistrosFromExcelIfNeeded() {
+  if (!fs.existsSync(VICEROY_REGISTROS_EXCEL_PATH)) return;
+  if (!whisperlistPool && fs.existsSync(VICEROY_REGISTROS_JSON_PATH)) return;
+  try {
+    if (whisperlistPool) {
+      const countRes = await whisperlistPool.query('SELECT COUNT(*)::int AS total FROM viceroy_registros_rows');
+      const count = Number(countRes.rows[0] && countRes.rows[0].total || 0);
+      if (count > 0) return;
+    }
+    const workbook = XLSX.readFile(VICEROY_REGISTROS_EXCEL_PATH, { cellDates: true });
+    const parsed = parseViceroyRegistrosWorkbook(workbook);
+    await saveViceroyRegistrosRows(parsed.rows, path.basename(VICEROY_REGISTROS_EXCEL_PATH));
+    log(`Viceroy Registros inicializado con ${parsed.rows.length} filas`);
+  } catch (err) {
+    log(`No se pudo inicializar Viceroy Registros: ${err && err.message ? err.message : err}`);
+  }
+}
+
+async function ensureViceroyRegistrosStorageReady() {
+  if (viceroyRegistrosStorageReady) return;
+  log(`Viceroy Registros storage: ${whisperlistPool ? 'postgres' : 'json-file'}`);
+  if (whisperlistPool) await ensureViceroyRegistrosDbSchema();
+  await seedViceroyRegistrosFromExcelIfNeeded();
+  viceroyRegistrosStorageReady = true;
 }
 
 function ownerServicesDefaultData() {
@@ -2045,18 +2285,18 @@ app.get('/', requireAuth, (req, res) => {
     return res.redirect('/whisperlist');
   }
   const isGerente = currentEmail === GERENTE_EMAIL;
-  const showViceroyPilotoCard = currentEmail === 'martin@simca.mx';
+  const showViceroyModuleCard = currentEmail === 'martin@simca.mx';
   const ownerServicesCard = isGerente ? `
         <a class="card" href="/owner-services">
           <span class="tag">Módulo</span>
           <h2 class="name">Owner Services</h2>
           <p class="desc">Prioriza entregas y coordina obra, jurídico y finanzas.</p>
         </a>` : '';
-  const viceroyPilotoCard = showViceroyPilotoCard ? `
-        <a class="card" href="/viceroy-piloto">
+  const viceroyModuleCard = showViceroyModuleCard ? `
+        <a class="card" href="/viceroy">
           <span class="tag">Módulo</span>
-          <h2 class="name">Edición Viceroy Inventario</h2>
-          <p class="desc">Flujo visual de recámaras, tipologías e inventario por piso.</p>
+          <h2 class="name">Viceroy</h2>
+          <p class="desc">Acceso a Viceroy Registros y Edición Viceroy Inventario.</p>
         </a>` : '';
   const gerenteCard = isGerente ? `
         <a class="card" href="/gerente-ventas">
@@ -2178,12 +2418,7 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
-        ${viceroyPilotoCard}
-        <a class="card" href="/whisperlist">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Whisperlist</h2>
-          <p class="desc">Todos ven la tabla, cada asesor edita solo sus filas.</p>
-        </a>
+        ${viceroyModuleCard}
         ${ownerServicesCard}
         ${gerenteCard}
       </div>
@@ -2252,11 +2487,17 @@ app.use('/format-extranjera-moral', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
+app.use('/viceroy', (req, res, next) => {
+  if (req.path === '/registros' || req.path.startsWith('/registros/')) return next();
+  return requireInternalUser(req, res, next);
+});
 app.use('/viceroy-piloto', requireInternalUser);
 app.use('/api/viceroy-piloto', (req, res, next) => {
   if (req.path === '/public-data') return next();
   return requireInternalUser(req, res, next);
 });
+app.use('/viceroy/registros', requireAuth);
+app.use('/api/viceroy/registros', requireAuth);
 app.use('/whisperlist/qr', requireGerente);
 app.use('/whisperlist', requireAuth);
 app.use('/api/whisperlist', requireAuth);
@@ -2360,6 +2601,261 @@ app.post('/api/roi/master-csv', requireGerente, (req, res) => {
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
+});
+
+app.get('/viceroy', (req, res) => {
+  res.send(`<!doctype html>
+  <html lang="es"><head><meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Viceroy</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#ffffff;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;--line:#d8d1c1;}
+    *{box-sizing:border-box}
+    body{font-family: Arial, sans-serif; margin:0; background:var(--bg); color:var(--ink);}
+    .wrap{max-width:900px; margin:0 auto; padding:28px 18px 48px;}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+    .back{display:inline-block;padding:8px 10px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;}
+    h1{margin:0;font-size:30px}
+    .sub{margin:6px 0 0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:14px}
+    .card{display:block;background:#fff;border:1px solid #dcd7cb;border-radius:14px;padding:18px;text-decoration:none;color:inherit}
+    .card:hover{border-color:#b9b39f}
+    .tag{display:inline-block;font-size:12px;font-weight:700;background:var(--accent);padding:4px 8px;border-radius:999px;margin-bottom:10px}
+    .name{font-size:20px;margin:0 0 8px}
+    .desc{margin:0;color:var(--muted)}
+    @media (max-width:760px){.grid{grid-template-columns:1fr} h1{font-size:24px}}
+  </style></head><body>
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <h1>Viceroy</h1>
+          <p class="sub">Módulos internos de Viceroy.</p>
+        </div>
+        <a class="back" href="/">Volver al backend</a>
+      </div>
+      <div class="grid">
+        <a class="card" href="/viceroy/registros">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Whisperlist (Registros)</h2>
+          <p class="desc">Similar a Whisperlist, sin tipo de venta ni recámaras.</p>
+        </a>
+        <a class="card" href="/viceroy-piloto">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Edición Viceroy Inventario</h2>
+          <p class="desc">Flujo visual de tipologías e inventario por piso.</p>
+        </a>
+      </div>
+    </div>
+  </body></html>`);
+});
+
+app.get('/viceroy/registros', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-registros.html'));
+});
+
+app.get('/api/viceroy/registros', async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readViceroyRegistrosData();
+    const rows = data.rows.map((row) => ({
+      ...row,
+      asesor: normalizeWhisperlistAsesor(row.asesor),
+      nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+      clientEmail: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
+        ? normalizeClientEmail(row.clientEmail)
+        : '',
+      clientPhone: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
+        ? normalizeClientPhone(row.clientPhone)
+        : '',
+      canEdit: isGerente || String(row.correo || '').toLowerCase() === currentEmail,
+      canViewClientData: isGerente || String(row.correo || '').toLowerCase() === currentEmail
+    }));
+    return res.json({
+      ok: true,
+      currentEmail,
+      isGerente,
+      updatedAt: data.updatedAt,
+      sourceFile: data.sourceFile,
+      rows
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo leer Viceroy Registros' });
+  }
+});
+
+app.get('/api/viceroy/registros/export.xlsx', requireGerente, async (req, res) => {
+  try {
+    const data = await readViceroyRegistrosData();
+    const rows = viceroyRegistrosExportRows(data.rows);
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'ViceroyRegistros');
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const dateTag = new Date().toISOString().slice(0, 10);
+    const fileName = `viceroy-registros-backup-${dateTag}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(buffer);
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo exportar Viceroy Registros' });
+  }
+});
+
+app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readViceroyRegistrosData();
+    const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const target = data.rows[index];
+    const ownerEmail = String(target.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+    }
+
+    const body = req.body || {};
+    const nextRow = {
+      ...target,
+      canal: normalizeWhisperlistCanal(body.canal !== undefined ? body.canal : target.canal),
+      nombreCliente: normalizeWhisperlistPersonText(body.nombreCliente !== undefined ? body.nombreCliente : target.nombreCliente),
+      pais: normalizeWhisperlistCountry(body.pais !== undefined ? body.pais : target.pais),
+      ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
+      clientEmail: normalizeClientEmail(body.clientEmail !== undefined ? body.clientEmail : target.clientEmail),
+      clientPhone: normalizeClientPhone(body.clientPhone !== undefined ? body.clientPhone : target.clientPhone),
+      updatedAt: new Date().toISOString()
+    };
+    data.rows[index] = nextRow;
+    await saveViceroyRegistrosRows(data.rows, data.sourceFile || path.basename(VICEROY_REGISTROS_EXCEL_PATH));
+    return res.json({ ok: true, row: nextRow });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo guardar fila' });
+  }
+});
+
+app.post('/api/viceroy/registros/rows', async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const fallbackName = String(req.user && req.user.name || '').trim();
+    const data = await readViceroyRegistrosData();
+    const existing = data.rows.find((row) => String(row.correo || '').trim().toLowerCase() === currentEmail);
+    const asesor = normalizeWhisperlistAsesor(existing && existing.asesor || fallbackName || currentEmail.split('@')[0] || '');
+
+    const body = req.body || {};
+    const nombreCliente = normalizeWhisperlistPersonText(body.nombreCliente);
+    if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
+
+    const newRow = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor,
+      correo: currentEmail,
+      canal: normalizeWhisperlistCanal(body.canal),
+      nombreCliente,
+      pais: normalizeWhisperlistCountry(body.pais),
+      ciudad: normalizeWhisperlistCity(body.ciudad),
+      clientEmail: normalizeClientEmail(body.clientEmail),
+      clientPhone: normalizeClientPhone(body.clientPhone),
+      updatedAt: new Date().toISOString()
+    };
+    data.rows.push(newRow);
+    await saveViceroyRegistrosRows(data.rows, data.sourceFile || path.basename(VICEROY_REGISTROS_EXCEL_PATH));
+    return res.status(201).json({ ok: true, row: newRow });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo agregar fila' });
+  }
+});
+
+app.delete('/api/viceroy/registros/rows/:id', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readViceroyRegistrosData();
+    const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const target = data.rows[index];
+    const ownerEmail = String(target.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes eliminar filas asignadas a tu correo' });
+    }
+
+    data.rows.splice(index, 1);
+    await saveViceroyRegistrosRows(data.rows, data.sourceFile || path.basename(VICEROY_REGISTROS_EXCEL_PATH));
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo eliminar fila' });
+  }
+});
+
+app.post('/api/viceroy/registros/import-excel', requireGerente, async (req, res) => {
+  const { fileName, base64, sheetName, replaceExisting } = req.body || {};
+  if (!base64) {
+    return res.status(400).json({ error: 'Archivo inválido: falta contenido base64' });
+  }
+
+  let workbook;
+  try {
+    const payload = String(base64).includes(',') ? String(base64).split(',').pop() : String(base64);
+    const buffer = Buffer.from(payload || '', 'base64');
+    workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  } catch (err) {
+    return res.status(400).json({ error: 'No se pudo leer el archivo Excel (.xlsx)' });
+  }
+
+  const parsed = parseViceroyRegistrosWorkbook(workbook, sheetName);
+  if (!parsed.sheetName) {
+    return res.status(400).json({ error: 'No se encontró una hoja válida en el Excel' });
+  }
+
+  const safeName = sanitizeExcelFileName(fileName) || 'viceroy-registros.xlsx';
+  const current = await readViceroyRegistrosData();
+  const shouldReplace = Boolean(replaceExisting);
+  let created = 0;
+  let skipped = 0;
+  const nextRows = shouldReplace ? [] : [...current.rows];
+  const seen = new Set(
+    nextRows.map((row) => [
+      String(row.correo || '').trim().toLowerCase(),
+      String(row.asesor || '').trim().toUpperCase(),
+      String(row.nombreCliente || '').trim().toUpperCase(),
+      String(row.canal || '').trim().toUpperCase()
+    ].join('|'))
+  );
+  parsed.rows.forEach((row) => {
+    const key = [
+      String(row.correo || '').trim().toLowerCase(),
+      String(row.asesor || '').trim().toUpperCase(),
+      String(row.nombreCliente || '').trim().toUpperCase(),
+      String(row.canal || '').trim().toUpperCase()
+    ].join('|');
+    if (seen.has(key)) {
+      skipped += 1;
+      return;
+    }
+    nextRows.push(row);
+    seen.add(key);
+    created += 1;
+  });
+
+  await saveViceroyRegistrosRows(nextRows, safeName);
+  return res.json({
+    ok: true,
+    fileName: safeName,
+    sheetName: parsed.sheetName,
+    importedRows: parsed.rows.length,
+    mode: shouldReplace ? 'replace' : 'append',
+    created,
+    skipped,
+    totalRows: nextRows.length
+  });
 });
 
 app.get('/whisperlist', (req, res) => {

@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viceroy Registros</title>
+  <style>
+    :root{
+      --bg:#f4f1e8;
+      --card:#ffffff;
+      --ink:#101010;
+      --muted:#67645c;
+      --line:#d8d1c1;
+      --accent:#f3df2b;
+      --ok:#1f8d3c;
+      --warn:#c23a2b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px 16px 40px;}
+    .top{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;}
+    .title{margin:0;font-size:32px;line-height:1}
+    .sub{margin:8px 0 0;color:var(--muted)}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{border:1px solid #bdb8a9;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--accent);border-color:#111}
+    .btn.danger{background:#fff2f0;border-color:#d25b4e;color:#8b1f16}
+    .card{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .status{margin-top:8px;color:var(--muted);font-size:13px;min-height:18px}
+    .status.ok{color:var(--ok)}
+    .status.error{color:var(--warn)}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:1200px}
+    th,td{padding:10px;border-bottom:1px solid #ebe4d6;text-align:left;font-size:13px;vertical-align:top}
+    th{background:#faf7f0;position:sticky;top:0;z-index:1}
+    .cell-input{width:100%;padding:7px 8px;border:1px solid #cec7b8;border-radius:8px;background:#fff}
+    .cell-input[disabled]{background:#f4f2ed;color:#6f6b62}
+    .email{font-family:monospace;font-size:12px}
+    .lock{font-size:12px;color:#6f6b62}
+    .save-btn{padding:7px 9px;font-size:12px}
+    .hint{margin-top:8px;color:var(--muted);font-size:12px}
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#ece7da;font-size:12px;font-weight:700}
+    .check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+    .kpi{font-size:13px;color:var(--muted)}
+    .dup-row{background:#fff4c4}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
+    .stats-box{border:1px solid var(--line);border-radius:10px;padding:10px}
+    .stats-box h3{margin:0 0 8px;font-size:13px}
+    .stats-table{width:100%;border-collapse:collapse;min-width:0}
+    .stats-table th,.stats-table td{padding:6px 4px;border-bottom:1px solid #eee7d9;font-size:12px}
+    .stats-table th{position:static;background:transparent}
+    .missing-num{color:#c23a2b;font-weight:700}
+    .totals-row td{font-weight:700;border-top:2px solid #d8d1c1}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:30}
+    .modal.open{display:flex}
+    .modal-card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+    .modal-grid{display:grid;grid-template-columns:1fr;gap:8px}
+    .modal-field{font-size:13px}
+    .modal-label{font-size:11px;color:var(--muted);display:block}
+    @media (max-width:700px){
+      .title{font-size:26px}
+      .stats-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">Viceroy Registros</h1>
+        <p class="sub"></p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy">Volver</a>
+        <button id="reloadBtn" class="btn" type="button">Recargar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <span class="badge">Nuevo cliente</span>
+        <select id="newCanal" class="cell-input">
+          <option value="">CANAL</option>
+          <option value="SIMCA">SIMCA</option>
+          <option value="RELATED">RELATED</option>
+        </select>
+        <input id="newNombreCliente" class="cell-input" placeholder="NOMBRE CLIENTE" />
+        <select id="newPais" class="cell-input">
+          <option value="">PAIS</option>
+          <option value="MEXICO">MEXICO</option>
+          <option value="CANADA">CANADA</option>
+          <option value="USA">USA</option>
+          <option value="RESTO AMERICA">RESTO AMERICA</option>
+          <option value="EUROPA">EUROPA</option>
+          <option value="ASIA">ASIA</option>
+          <option value="AFRICA">AFRICA</option>
+          <option value="OCEANIA">OCEANIA</option>
+        </select>
+        <input id="newCiudad" class="cell-input" placeholder="CIUDAD" />
+        <button id="addBtn" class="btn primary" type="button">Agregar</button>
+      </div>
+      <p class="hint">El nuevo cliente se asigna automáticamente a tu correo.</p>
+      <p id="addStatus" class="status"></p>
+    </div>
+
+    <div id="managerCard" class="card" hidden>
+      <div class="row">
+        <span class="badge">Importar Excel</span>
+        <a class="btn" href="/api/viceroy/registros/export.xlsx">Exportar Excel backup</a>
+        <input id="excelInput" type="file" accept=".xlsx,.xls" />
+        <label class="check">
+          <input id="replaceExisting" type="checkbox" />
+          Reemplazar lista actual
+        </label>
+        <button id="importBtn" class="btn primary" type="button">Importar</button>
+      </div>
+      <p class="hint">Solo gerente. Si no marcas reemplazar, el Excel se adiciona sin borrar lo existente.</p>
+      <p id="importStatus" class="status"></p>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <span id="metaUser" class="badge">Usuario: -</span>
+        <span id="metaRows" class="badge">Filas: 0</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="badge">Filtro</span>
+        <select id="filterAsesor" class="cell-input"></select>
+        <input id="searchText" class="cell-input" placeholder="Buscar cliente/correo" />
+        <button id="findDuplicatesBtn" class="btn" type="button">Buscar duplicados</button>
+        <label class="check">
+          <input id="onlyDuplicates" type="checkbox" />
+          Solo duplicados
+        </label>
+        <button id="clearFiltersBtn" class="btn" type="button">Limpiar filtros</button>
+      </div>
+      <p id="globalStatus" class="status"></p>
+      <p id="filterSummary" class="kpi"></p>
+    </div>
+
+    <div class="card">
+      <div class="stats-grid">
+        <section class="stats-box">
+          <h3>Clientes por canal</h3>
+          <table class="stats-table">
+            <thead><tr><th>Canal</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByCanal"></tbody>
+          </table>
+        </section>
+        <section class="stats-box">
+          <h3>Clientes por vendedor</h3>
+          <table class="stats-table">
+            <thead><tr><th>Vendedor</th><th>Cant.</th></tr></thead>
+            <tbody id="statsByAsesor"></tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+
+    <div class="card table-wrap">
+      <table id="rowsTable">
+        <thead>
+          <tr>
+            <th>ASESOR</th>
+            <th>CANAL</th>
+            <th>NOMBRE CLIENTE</th>
+            <th>PAIS</th>
+            <th>CIUDAD</th>
+            <th>ACCION</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="clientModal" class="modal" aria-hidden="true">
+    <section class="modal-card">
+      <h3 style="margin:0 0 10px">Datos de cliente</h3>
+      <div class="modal-grid">
+        <div class="modal-field"><span class="modal-label">NOMBRE CLIENTE</span><strong id="modalNombre">-</strong></div>
+        <div class="modal-field"><span class="modal-label">CORREO CLIENTE</span><strong id="modalCorreo">-</strong></div>
+        <div class="modal-field"><span class="modal-label">TELÉFONO CLIENTE</span><strong id="modalTelefono">-</strong></div>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+        <button id="closeModalBtn" class="btn" type="button">Cerrar</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const state = {
+        rows: [],
+        currentEmail: '',
+        isGerente: false,
+        appBuildId: ''
+      };
+
+      const els = {
+        tbody: document.querySelector('#rowsTable tbody'),
+        reloadBtn: document.getElementById('reloadBtn'),
+        globalStatus: document.getElementById('globalStatus'),
+        metaUser: document.getElementById('metaUser'),
+        metaRows: document.getElementById('metaRows'),
+        managerCard: document.getElementById('managerCard'),
+        excelInput: document.getElementById('excelInput'),
+        replaceExisting: document.getElementById('replaceExisting'),
+        importBtn: document.getElementById('importBtn'),
+        importStatus: document.getElementById('importStatus'),
+        filterAsesor: document.getElementById('filterAsesor'),
+        searchText: document.getElementById('searchText'),
+        clearFiltersBtn: document.getElementById('clearFiltersBtn'),
+        findDuplicatesBtn: document.getElementById('findDuplicatesBtn'),
+        onlyDuplicates: document.getElementById('onlyDuplicates'),
+        filterSummary: document.getElementById('filterSummary'),
+        statsByCanal: document.getElementById('statsByCanal'),
+        statsByAsesor: document.getElementById('statsByAsesor'),
+        clientModal: document.getElementById('clientModal'),
+        closeModalBtn: document.getElementById('closeModalBtn'),
+        modalNombre: document.getElementById('modalNombre'),
+        modalCorreo: document.getElementById('modalCorreo'),
+        modalTelefono: document.getElementById('modalTelefono'),
+        newCanal: document.getElementById('newCanal'),
+        newNombreCliente: document.getElementById('newNombreCliente'),
+        newPais: document.getElementById('newPais'),
+        newCiudad: document.getElementById('newCiudad'),
+        addBtn: document.getElementById('addBtn'),
+        addStatus: document.getElementById('addStatus')
+      };
+      const COUNTRY_OPTIONS = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'ASIA', 'AFRICA', 'OCEANIA'];
+      const duplicateNameSet = new Set();
+
+      function setStatus(el, text, level) {
+        el.textContent = text || '';
+        el.classList.remove('ok', 'error');
+        if (level) el.classList.add(level);
+      }
+
+      function selectHtml(field, value, options, disabled) {
+        const safeCurrent = String(value || '');
+        const optionSet = new Set(options);
+        const list = optionSet.has(safeCurrent) || !safeCurrent ? options : options.concat([safeCurrent]);
+        const optionHtml = ['<option value=""></option>'].concat(list.map(function (opt) {
+          const selected = opt === safeCurrent ? ' selected' : '';
+          return '<option value="' + escapeHtml(opt) + '"' + selected + '>' + escapeHtml(opt) + '</option>';
+        })).join('');
+        return '<select class="cell-input" data-field="' + field + '" ' + disabled + '>' + optionHtml + '</select>';
+      }
+
+      function rowHtml(row) {
+        const canEdit = Boolean(row.canEdit);
+        const lockText = canEdit ? '' : '<div class="lock">Solo lectura</div>';
+        const disabled = canEdit ? '' : 'disabled';
+        const canalSelect = selectHtml('canal', row.canal || '', ['SIMCA', 'RELATED'], disabled);
+        const paisSelect = selectHtml('pais', row.pais || '', COUNTRY_OPTIONS, disabled);
+        const isDuplicateName = duplicateNameSet.has(String(row.nombreCliente || '').trim().toUpperCase());
+        const duplicateClass = isDuplicateName ? 'dup-row' : '';
+        return `
+          <tr data-id="${String(row.id)}" class="${duplicateClass}">
+            <td>${escapeHtml(row.asesor || '')}</td>
+            <td>${canalSelect}</td>
+            <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
+            <td>${paisSelect}</td>
+            <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
+            <td>
+              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
+              ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
+            </td>
+          </tr>
+        `;
+      }
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderRows() {
+        const filtered = getFilteredRows();
+        els.tbody.innerHTML = filtered.map(rowHtml).join('');
+        els.metaRows.textContent = 'Filas: ' + filtered.length + ' / ' + state.rows.length;
+      }
+
+      function showClientData(tr) {
+        const id = tr.getAttribute('data-id');
+        const row = state.rows.find(function (item) { return String(item.id) === String(id); });
+        if (!row) return;
+        els.modalNombre.textContent = row.nombreCliente || '-';
+        els.modalCorreo.textContent = row.clientEmail || '-';
+        els.modalTelefono.textContent = row.clientPhone || '-';
+        els.clientModal.classList.add('open');
+      }
+
+      function closeClientData() {
+        els.clientModal.classList.remove('open');
+      }
+
+      function mapCounts(rows, getKey) {
+        const counts = new Map();
+        rows.forEach(function (row) {
+          const key = String(getKey(row) || '').trim() || '(VACIO)';
+          counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        return Array.from(counts.entries()).sort(function (a, b) {
+          if (b[1] !== a[1]) return b[1] - a[1];
+          return String(a[0]).localeCompare(String(b[0]));
+        });
+      }
+
+      function renderCountTable(tbody, entries) {
+        tbody.innerHTML = entries.map(function (entry) {
+          return '<tr><td>' + escapeHtml(entry[0]) + '</td><td>' + String(entry[1]) + '</td></tr>';
+        }).join('');
+      }
+
+      function buildSellerFilter() {
+        const sellers = Array.from(new Set(state.rows.map(function (r) {
+          return String(r.asesor || '').trim();
+        }).filter(Boolean))).sort(function (a, b) { return a.localeCompare(b); });
+        const current = String(els.filterAsesor.value || '');
+        const options = ['<option value="">Todos los vendedores</option>'].concat(
+          sellers.map(function (seller) {
+            const selected = seller === current ? ' selected' : '';
+            return '<option value="' + escapeHtml(seller) + '"' + selected + '>' + escapeHtml(seller) + '</option>';
+          })
+        );
+        els.filterAsesor.innerHTML = options.join('');
+      }
+
+      function getFilteredRows() {
+        const seller = String(els.filterAsesor.value || '').trim();
+        const text = String(els.searchText.value || '').trim().toLowerCase();
+        return state.rows.filter(function (row) {
+          if (seller && String(row.asesor || '').trim() !== seller) return false;
+          if (els.onlyDuplicates.checked) {
+            const key = String(row.nombreCliente || '').trim().toUpperCase();
+            if (!duplicateNameSet.has(key)) return false;
+          }
+          if (!text) return true;
+          const haystack = [
+            row.asesor,
+            row.correo,
+            row.canal,
+            row.nombreCliente,
+            row.pais,
+            row.ciudad
+          ].join(' ').toLowerCase();
+          return haystack.includes(text);
+        });
+      }
+
+      function renderStats() {
+        const filtered = getFilteredRows();
+        renderCountTable(els.statsByCanal, mapCounts(filtered, function (r) { return r.canal; }));
+        renderCountTable(els.statsByAsesor, mapCounts(filtered, function (r) { return r.asesor; }));
+        els.filterSummary.textContent = 'Mostrando ' + filtered.length + ' de ' + state.rows.length + ' filas.';
+      }
+
+      function findDuplicateNames() {
+        duplicateNameSet.clear();
+        const counts = new Map();
+        state.rows.forEach(function (row) {
+          const key = String(row.nombreCliente || '').trim().toUpperCase();
+          if (!key) return;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        let dupCount = 0;
+        counts.forEach(function (count, key) {
+          if (count > 1) {
+            duplicateNameSet.add(key);
+            dupCount += count;
+          }
+        });
+        if (duplicateNameSet.size) {
+          setStatus(els.globalStatus, 'Duplicados detectados: ' + duplicateNameSet.size + ' nombres (' + dupCount + ' filas).', 'ok');
+        } else {
+          setStatus(els.globalStatus, 'No se encontraron nombres duplicados.', 'ok');
+        }
+        renderListAndStats();
+      }
+
+      function renderListAndStats() {
+        renderRows();
+        renderStats();
+      }
+
+      async function fetchAppVersion() {
+        const res = await fetch('/api/app-version', {
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || 'No se pudo validar versión');
+        return String(data.buildId || '');
+      }
+
+      async function checkForNewDeployment() {
+        try {
+          const latestBuildId = await fetchAppVersion();
+          if (!latestBuildId) return;
+          if (!state.appBuildId) {
+            state.appBuildId = latestBuildId;
+            return;
+          }
+          if (state.appBuildId !== latestBuildId) {
+            setStatus(els.globalStatus, 'Nueva versión detectada. Recargando...', 'ok');
+            window.location.reload();
+          }
+        } catch (_) {}
+      }
+
+      function setupAutoRefreshOnDeploy() {
+        checkForNewDeployment();
+        setInterval(checkForNewDeployment, 30000);
+        window.addEventListener('focus', checkForNewDeployment);
+        window.addEventListener('online', checkForNewDeployment);
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) checkForNewDeployment();
+        });
+      }
+
+      async function fetchData() {
+        setStatus(els.globalStatus, 'Cargando...', null);
+        const res = await fetch('/api/viceroy/registros', { credentials: 'same-origin' });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar la tabla');
+        state.rows = Array.isArray(data.rows) ? data.rows : [];
+        state.currentEmail = String(data.currentEmail || '');
+        state.isGerente = Boolean(data.isGerente);
+        els.metaUser.textContent = 'Usuario: ' + state.currentEmail;
+        els.managerCard.hidden = !state.isGerente;
+        buildSellerFilter();
+        setStatus(els.globalStatus, 'Tabla cargada.', 'ok');
+        renderListAndStats();
+      }
+
+      async function saveRow(tr) {
+        const id = tr.getAttribute('data-id');
+        const payload = {
+          canal: tr.querySelector('[data-field="canal"]').value,
+          nombreCliente: tr.querySelector('[data-field="nombreCliente"]').value,
+          pais: tr.querySelector('[data-field="pais"]').value,
+          ciudad: tr.querySelector('[data-field="ciudad"]').value
+        };
+        const btn = tr.querySelector('.save-btn');
+        if (btn) btn.disabled = true;
+        setStatus(els.globalStatus, 'Guardando fila...', null);
+        try {
+          const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo guardar');
+          setStatus(els.globalStatus, 'Fila guardada.', 'ok');
+        } catch (err) {
+          setStatus(els.globalStatus, err.message || 'Error al guardar', 'error');
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      async function addRow() {
+        const payload = {
+          canal: els.newCanal.value,
+          nombreCliente: els.newNombreCliente.value,
+          pais: els.newPais.value,
+          ciudad: els.newCiudad.value
+        };
+        if (!String(payload.nombreCliente || '').trim()) {
+          setStatus(els.addStatus, 'Nombre cliente es obligatorio.', 'error');
+          return;
+        }
+        els.addBtn.disabled = true;
+        setStatus(els.addStatus, 'Agregando...', null);
+        try {
+          const res = await fetch('/api/viceroy/registros/rows', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo agregar');
+          setStatus(els.addStatus, 'Cliente agregado.', 'ok');
+          els.newCanal.value = '';
+          els.newNombreCliente.value = '';
+          els.newPais.value = '';
+          els.newCiudad.value = '';
+          await fetchData();
+        } catch (err) {
+          setStatus(els.addStatus, err.message || 'Error al agregar', 'error');
+        } finally {
+          els.addBtn.disabled = false;
+        }
+      }
+
+      async function deleteRow(tr) {
+        const id = tr.getAttribute('data-id');
+        if (!id) return;
+        const ok = window.confirm('Se eliminará esta fila. ¿Deseas continuar?');
+        if (!ok) return;
+        setStatus(els.globalStatus, 'Eliminando fila...', null);
+        try {
+          const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(id), {
+            method: 'DELETE',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo eliminar');
+          setStatus(els.globalStatus, 'Fila eliminada.', 'ok');
+          await fetchData();
+        } catch (err) {
+          setStatus(els.globalStatus, err.message || 'Error al eliminar', 'error');
+        }
+      }
+
+      async function importExcel() {
+        const file = els.excelInput.files && els.excelInput.files[0];
+        if (!file) {
+          setStatus(els.importStatus, 'Selecciona un archivo .xlsx', 'error');
+          return;
+        }
+        els.importBtn.disabled = true;
+        setStatus(els.importStatus, 'Importando...', null);
+        try {
+          const base64 = await new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function () { resolve(reader.result); };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const res = await fetch('/api/viceroy/registros/import-excel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              fileName: file.name,
+              base64: base64,
+              replaceExisting: Boolean(els.replaceExisting.checked)
+            })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo importar');
+          setStatus(
+            els.importStatus,
+            'Importado. Nuevas: ' + String(data.created || 0) + ', omitidas: ' + String(data.skipped || 0) + ', total: ' + String(data.totalRows || 0),
+            'ok'
+          );
+          await fetchData();
+        } catch (err) {
+          setStatus(els.importStatus, err.message || 'Error al importar', 'error');
+        } finally {
+          els.importBtn.disabled = false;
+        }
+      }
+
+      els.reloadBtn.addEventListener('click', function () {
+        fetchData().catch(function (err) {
+          setStatus(els.globalStatus, err.message || 'Error de carga', 'error');
+        });
+      });
+
+      els.addBtn.addEventListener('click', function () {
+        addRow();
+      });
+
+      els.importBtn.addEventListener('click', function () {
+        importExcel();
+      });
+
+      els.filterAsesor.addEventListener('change', function () {
+        renderListAndStats();
+      });
+
+      els.searchText.addEventListener('input', function () {
+        renderListAndStats();
+      });
+
+      els.clearFiltersBtn.addEventListener('click', function () {
+        els.filterAsesor.value = '';
+        els.searchText.value = '';
+        els.onlyDuplicates.checked = false;
+        renderListAndStats();
+      });
+
+      els.findDuplicatesBtn.addEventListener('click', function () {
+        findDuplicateNames();
+      });
+
+      els.onlyDuplicates.addEventListener('change', function () {
+        renderListAndStats();
+      });
+
+      els.tbody.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('.save-btn');
+        const deleteBtn = ev.target.closest('.delete-btn');
+        const clientDataBtn = ev.target.closest('.client-data-btn');
+        if (!btn && !deleteBtn && !clientDataBtn) return;
+        if (clientDataBtn) {
+          const trForData = clientDataBtn.closest('tr');
+          if (trForData) showClientData(trForData);
+          return;
+        }
+        const sourceBtn = deleteBtn || btn;
+        const tr = sourceBtn.closest('tr');
+        if (!tr) return;
+        if (deleteBtn) {
+          deleteRow(tr);
+          return;
+        }
+        saveRow(tr);
+      });
+
+      els.closeModalBtn.addEventListener('click', function () {
+        closeClientData();
+      });
+
+      els.clientModal.addEventListener('click', function (ev) {
+        if (ev.target === els.clientModal) closeClientData();
+      });
+
+      fetchData().catch(function (err) {
+        setStatus(els.globalStatus, err.message || 'Error de carga', 'error');
+      });
+      setupAutoRefreshOnDeploy();
+    })();
+  </script>
+</body>
+</html>
