@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Presentaciones · Solar Midtown</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1280px;margin:0 auto;padding:24px 16px 40px;}
+    .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+    h1{margin:0;font-size:30px;}
+    .sub{margin:6px 0 0;color:var(--muted);}
+    .btn{display:inline-block;padding:9px 12px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer;}
+    .btn.primary{background:var(--accent);border-color:#cdbb0b;}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;}
+    .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .search{flex:1;min-width:220px;padding:10px 12px;border:1px solid #c7c0b1;border-radius:10px;background:#fff;}
+    .status{font-size:13px;color:var(--muted);margin:8px 0 0;}
+    .table-wrap{overflow:auto;border:1px solid #ddd6c7;border-radius:12px;background:#fff;}
+    table{width:100%;border-collapse:collapse;min-width:1150px;}
+    th,td{padding:9px 8px;border-bottom:1px solid #efecdf;text-align:left;font-size:13px;vertical-align:top;}
+    th{background:#f8f6ef;color:#3d3f47;position:sticky;top:0;z-index:1;}
+    td.small{font-size:12px;color:#5f6572;}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+
+    .crop-btn{padding:6px 10px;border-radius:8px;border:1px solid #bbb29f;background:#fff;cursor:pointer;font-size:12px;font-weight:700;}
+    .crop-btn:hover{background:#f8f5ee;}
+
+    .modal{position:fixed;inset:0;display:none;z-index:50;}
+    .modal.show{display:block;}
+    .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}
+    .dialog{position:relative;max-width:1100px;margin:34px auto;background:#fff;border:1px solid #d6d0c2;border-radius:14px;padding:16px;z-index:1;max-height:calc(100vh - 68px);overflow:auto;}
+    .dialog h2{margin:0 0 6px;font-size:24px;}
+    .dialog .subtxt{margin:0 0 12px;color:#5f6572;}
+
+    .crop-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;}
+    .stage-box{border:1px solid #d4d7df;border-radius:12px;background:#f5f5f5;padding:10px;}
+    .stage{position:relative;overflow:hidden;background:#ececec;border-radius:8px;height:min(65vh,640px);}
+    .image-area{position:absolute;overflow:hidden;}
+    .image-area img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none;}
+    .rect{position:absolute;border:2px solid #ffe816;background:rgba(255,232,22,.15);cursor:move;touch-action:none;}
+    .rect .handle{position:absolute;width:14px;height:14px;right:-7px;bottom:-7px;border-radius:50%;background:#ffe816;border:2px solid #3f3f3f;cursor:nwse-resize;}
+
+    .crop-controls{border:1px solid #ddd6c7;border-radius:12px;padding:12px;background:#faf8f2;}
+    .control{margin-bottom:12px;}
+    .control label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;font-weight:700;color:#3b3f49;}
+    .control input[type="range"]{width:100%;}
+    .control .val{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#5f6572;}
+    .row-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;}
+    .crop-preview-result{margin-top:10px;border:1px solid #ddd6c7;border-radius:10px;background:#fff;padding:8px;}
+    .crop-preview-result h4{margin:0 0 6px;font-size:13px;color:#3b3f49;}
+    .crop-preview-result .box{width:100%;aspect-ratio:16/10;background:#f1f1f1;border:1px solid #e2e2e2;border-radius:8px;overflow:hidden;display:grid;place-items:center;}
+    .crop-preview-result img{max-width:100%;max-height:100%;display:block;}
+    .crop-preview-result .hint{margin:6px 0 0;font-size:12px;color:#5f6572;}
+
+    @media (max-width:980px){
+      .crop-layout{grid-template-columns:1fr;}
+      .stage{height:50vh;}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="hero">
+      <div>
+        <h1>Solar Midtown · Presentaciones</h1>
+        <p class="sub"></p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a id="editorBtn" class="btn" href="/presentaciones/solar-midtown/editor">Editar plantilla</a>
+        <a class="btn" href="/presentaciones">Volver a proyectos</a>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="tools">
+        <input id="searchInput" class="search" type="text" placeholder="Buscar por unidad, tipo de departamento, m2, precio...">
+        <button id="previewBtn" class="btn primary" type="button" disabled>Abrir vista previa</button>
+        <button id="downloadBtnEs" class="btn" type="button" disabled>Descargar presentación (PDF ES)</button>
+        <button id="downloadBtnEn" class="btn" type="button" disabled>Descargar presentación (PDF EN)</button>
+      </div>
+      <p id="status" class="status">Cargando inventario...</p>
+      <p class="status">Seleccionadas: <span id="selectedCount" style="font-weight:700">0</span></p>
+    </section>
+
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sel</th>
+            <th>Unidad (D)</th>
+            <th>Tipo de departamento</th>
+            <th>Metros cuadrados</th>
+            <th>Precio lista</th>
+            <th>Descuento %</th>
+            <th>Descuento valor</th>
+            <th>Precio final</th>
+            <th>Corte plano</th>
+          </tr>
+        </thead>
+        <tbody id="rowsBody">
+          <tr><td colspan="9" class="small">Sin datos.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="cropModal" class="modal" aria-hidden="true">
+    <div class="backdrop" data-close="1"></div>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+      <h2 id="cropTitle">Editor de recorte por cuadro</h2>
+      <p id="cropSub" class="subtxt">Arrastra el cuadro amarillo. Usa el punto inferior derecho para tamaño.</p>
+      <div class="crop-layout">
+        <section class="stage-box">
+          <div id="cropStage" class="stage">
+            <div id="cropImageArea" class="image-area">
+              <img id="cropStageImg" alt="Plano">
+              <div id="cropRect" class="rect">
+                <span id="cropHandle" class="handle"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="crop-controls">
+          <div class="control">
+            <label for="cropX">X <span id="cropXVal" class="val">0%</span></label>
+            <input id="cropX" type="range" min="0" max="100" step="0.1" value="0">
+          </div>
+          <div class="control">
+            <label for="cropY">Y <span id="cropYVal" class="val">0%</span></label>
+            <input id="cropY" type="range" min="0" max="100" step="0.1" value="0">
+          </div>
+          <div class="control">
+            <label for="cropW">Ancho <span id="cropWVal" class="val">100%</span></label>
+            <input id="cropW" type="range" min="5" max="100" step="0.1" value="100">
+          </div>
+          <div class="control">
+            <label for="cropH">Alto <span id="cropHVal" class="val">100%</span></label>
+            <input id="cropH" type="range" min="5" max="100" step="0.1" value="100">
+          </div>
+          <p class="status" style="margin:0">Se guarda por unidad y se respeta en preview/PDF.</p>
+          <div class="row-actions">
+            <button id="cropPreviewBtn" class="btn" type="button">Vista previa corte</button>
+            <button id="cropResetBtn" class="btn" type="button">Restaurar</button>
+            <button id="cropCancelBtn" class="btn" type="button">Cancelar</button>
+            <button id="cropSaveBtn" class="btn primary" type="button">Guardar recorte</button>
+          </div>
+          <div class="crop-preview-result">
+            <h4>Resultado del recorte</h4>
+            <div class="box"><img id="cropResultImg" alt="Preview de recorte"></div>
+            <p id="cropResultHint" class="hint">Pulsa “Vista previa corte”.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const MAX_SELECTION = Infinity;
+      const MIN_SIZE = 5;
+      const DEFAULT_CROP = { x: 0, y: 0, w: 100, h: 100 };
+      const state = {
+        rows: [], filteredRows: [], selected: new Set(), crops: {},
+        cropEditor: { open: false, rowId: '', draft: { x: 0, y: 0, w: 100, h: 100 } },
+        canEdit: false,
+        editorEmail: ''
+      };
+
+      const els = {
+        searchInput: document.getElementById('searchInput'),
+        previewBtn: document.getElementById('previewBtn'),
+        downloadBtnEs: document.getElementById('downloadBtnEs'),
+        downloadBtnEn: document.getElementById('downloadBtnEn'),
+        editorBtn: document.getElementById('editorBtn'),
+        status: document.getElementById('status'),
+        rowsBody: document.getElementById('rowsBody'),
+        selectedCount: document.getElementById('selectedCount'),
+        cropModal: document.getElementById('cropModal'),
+        cropSub: document.getElementById('cropSub'),
+        cropStage: document.getElementById('cropStage'),
+        cropImageArea: document.getElementById('cropImageArea'),
+        cropStageImg: document.getElementById('cropStageImg'),
+        cropRect: document.getElementById('cropRect'),
+        cropHandle: document.getElementById('cropHandle'),
+        cropX: document.getElementById('cropX'),
+        cropY: document.getElementById('cropY'),
+        cropW: document.getElementById('cropW'),
+        cropH: document.getElementById('cropH'),
+        cropXVal: document.getElementById('cropXVal'),
+        cropYVal: document.getElementById('cropYVal'),
+        cropWVal: document.getElementById('cropWVal'),
+        cropHVal: document.getElementById('cropHVal'),
+        cropPreviewBtn: document.getElementById('cropPreviewBtn'),
+        cropResultImg: document.getElementById('cropResultImg'),
+        cropResultHint: document.getElementById('cropResultHint'),
+        cropResetBtn: document.getElementById('cropResetBtn'),
+        cropCancelBtn: document.getElementById('cropCancelBtn'),
+        cropSaveBtn: document.getElementById('cropSaveBtn')
+      };
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      function normalizeCrop(input) {
+        const src = input && typeof input === 'object' ? input : {};
+        const w = clamp(Number(src.w), MIN_SIZE, 100);
+        const h = clamp(Number(src.h), MIN_SIZE, 100);
+        const x = clamp(Number(src.x), 0, 100 - w);
+        const y = clamp(Number(src.y), 0, 100 - h);
+        return {
+          x: Number.isFinite(x) ? x : 0,
+          y: Number.isFinite(y) ? y : 0,
+          w: Number.isFinite(w) ? w : 100,
+          h: Number.isFinite(h) ? h : 100
+        };
+      }
+      function rowCrop(row) { return normalizeCrop(state.crops[row.id] || row.crop || DEFAULT_CROP); }
+
+      function renderRows() {
+        if (!state.filteredRows.length) {
+          els.rowsBody.innerHTML = '<tr><td colspan="9" class="small">No hay filas para mostrar.</td></tr>';
+          return;
+        }
+        els.rowsBody.innerHTML = state.filteredRows.map((row) => {
+          const checked = state.selected.has(row.id) ? 'checked' : '';
+          const cropBtn = row.planLink
+            ? (state.canEdit
+              ? '<button type="button" class="crop-btn" data-crop-id="' + esc(row.id) + '">Editar corte</button>'
+              : '<span class="status">Solo cuenta autorizada</span>')
+            : '<span class="status">Sin plano</span>';
+          return '<tr>' +
+            '<td><input type="checkbox" data-id="' + esc(row.id) + '" ' + checked + '></td>' +
+            '<td class="mono">' + esc(row.unidad || '-') + '</td>' +
+            '<td>' + esc(row.colE || '-') + '</td>' +
+            '<td>' + esc(row.colF || '-') + '</td>' +
+            '<td>' + esc(row.precioListaFmt || '-') + '</td>' +
+            '<td>' + esc(row.descuentoPctFmt || '-') + '</td>' +
+            '<td>' + esc(row.descuentoValorFmt || '-') + '</td>' +
+            '<td><strong>' + esc(row.precioFinalFmt || '-') + '</strong></td>' +
+            '<td>' + cropBtn + '</td>' +
+          '</tr>';
+        }).join('');
+      }
+      function updateSelectionUi() {
+        const count = state.selected.size;
+        els.selectedCount.textContent = String(count);
+        els.previewBtn.disabled = count === 0;
+        els.downloadBtnEs.disabled = count === 0;
+        els.downloadBtnEn.disabled = count === 0;
+      }
+      function applyFilter() {
+        const q = String(els.searchInput.value || '').trim().toLowerCase();
+        if (!q) { state.filteredRows = state.rows.slice(); renderRows(); return; }
+        state.filteredRows = state.rows.filter((row) => [row.unidad,row.colE,row.colF,row.precioListaFmt,row.descuentoPctFmt,row.descuentoValorFmt,row.precioFinalFmt].join(' ').toLowerCase().includes(q));
+        renderRows();
+      }
+
+      async function loadRows() {
+        els.status.textContent = 'Cargando inventario...';
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/rows', { credentials: 'same-origin' });
+          const data = await res.json().catch(function(){ return {}; });
+          if (!res.ok || !data.ok) {
+            els.status.textContent = data.error || 'No se pudo cargar el inventario.';
+            return;
+          }
+          state.rows = Array.isArray(data.rows) ? data.rows : [];
+          state.filteredRows = state.rows.slice();
+          state.crops = data && data.crops && typeof data.crops === 'object' ? data.crops : {};
+          renderRows();
+          els.status.textContent = '';
+        } catch {
+          els.status.textContent = 'Error de red cargando inventario.';
+        }
+      }
+
+      async function loadEditorAccess() {
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/editor-access', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          state.canEdit = Boolean(data && data.canEdit);
+          state.editorEmail = String(data && data.editorEmail || '');
+          if (!state.canEdit && els.editorBtn) {
+            els.editorBtn.style.display = 'none';
+            els.status.textContent = 'Edición de plantilla/cortes restringida a: ' + (state.editorEmail || 'cuenta autorizada') + '.';
+          }
+        } catch {}
+      }
+
+      function syncRectUi(crop) {
+        const c = normalizeCrop(crop);
+        state.cropEditor.draft = c;
+        els.cropRect.style.left = c.x + '%';
+        els.cropRect.style.top = c.y + '%';
+        els.cropRect.style.width = c.w + '%';
+        els.cropRect.style.height = c.h + '%';
+        els.cropX.value = String(c.x); els.cropY.value = String(c.y); els.cropW.value = String(c.w); els.cropH.value = String(c.h);
+        els.cropXVal.textContent = c.x.toFixed(1) + '%';
+        els.cropYVal.textContent = c.y.toFixed(1) + '%';
+        els.cropWVal.textContent = c.w.toFixed(1) + '%';
+        els.cropHVal.textContent = c.h.toFixed(1) + '%';
+      }
+
+      function updateImageAreaBounds() {
+        const img = els.cropStageImg;
+        const stage = els.cropStage;
+        if (!img || !stage || !img.naturalWidth || !img.naturalHeight) return;
+        const sw = stage.clientWidth;
+        const sh = stage.clientHeight;
+        if (!sw || !sh) return;
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const stageRatio = sw / sh;
+        let rw = sw;
+        let rh = sh;
+        let ox = 0;
+        let oy = 0;
+        if (imgRatio > stageRatio) {
+          rw = sw;
+          rh = rw / imgRatio;
+          oy = (sh - rh) / 2;
+        } else {
+          rh = sh;
+          rw = rh * imgRatio;
+          ox = (sw - rw) / 2;
+        }
+        els.cropImageArea.style.left = ox + 'px';
+        els.cropImageArea.style.top = oy + 'px';
+        els.cropImageArea.style.width = rw + 'px';
+        els.cropImageArea.style.height = rh + 'px';
+      }
+
+      function openCropEditor(rowId) {
+        const row = state.rows.find((r) => r.id === rowId);
+        if (!row || !row.planLink) { alert('Esta unidad no tiene link de plano.'); return; }
+        state.cropEditor.rowId = row.id;
+        const src = '/api/presentaciones/solar-midtown/plan-image?url=' + encodeURIComponent(row.planLink);
+        els.cropStageImg.src = src;
+        requestAnimationFrame(updateImageAreaBounds);
+        if (els.cropStageImg.complete) updateImageAreaBounds();
+        els.cropResultImg.removeAttribute('src');
+        els.cropResultHint.textContent = 'Pulsa “Vista previa corte”.';
+        els.cropSub.textContent = 'Unidad: ' + (row.unidad || 'SIN UNIDAD') + ' · Arrastra el cuadro y guarda.';
+        syncRectUi(rowCrop(row));
+        els.cropModal.classList.add('show');
+        els.cropModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeCropEditor() {
+        els.cropModal.classList.remove('show');
+        els.cropModal.setAttribute('aria-hidden', 'true');
+        state.cropEditor.rowId = '';
+      }
+
+      function draftFromInputs() {
+        return normalizeCrop({ x: Number(els.cropX.value), y: Number(els.cropY.value), w: Number(els.cropW.value), h: Number(els.cropH.value) });
+      }
+
+      function renderCropPreview() {
+        const img = els.cropStageImg;
+        const crop = normalizeCrop(state.cropEditor.draft);
+        if (!img || !img.naturalWidth || !img.naturalHeight) {
+          els.cropResultHint.textContent = 'Imagen aún cargando...';
+          return;
+        }
+        const iw = img.naturalWidth;
+        const ih = img.naturalHeight;
+        const sx = Math.round((crop.x / 100) * iw);
+        const sy = Math.round((crop.y / 100) * ih);
+        const sw = Math.max(1, Math.round((crop.w / 100) * iw));
+        const sh = Math.max(1, Math.round((crop.h / 100) * ih));
+        const safeSw = Math.min(sw, iw - sx);
+        const safeSh = Math.min(sh, ih - sy);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, safeSw);
+        canvas.height = Math.max(1, safeSh);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          els.cropResultHint.textContent = 'No se pudo generar preview.';
+          return;
+        }
+        ctx.drawImage(img, sx, sy, safeSw, safeSh, 0, 0, canvas.width, canvas.height);
+        els.cropResultImg.src = canvas.toDataURL('image/png');
+        els.cropResultHint.textContent = 'Así se verá en preview y PDF.';
+      }
+
+      function pointerPct(evt) {
+        const rect = els.cropImageArea.getBoundingClientRect();
+        const x = ((evt.clientX - rect.left) / rect.width) * 100;
+        const y = ((evt.clientY - rect.top) / rect.height) * 100;
+        return { x, y };
+      }
+
+      function attachDrag() {
+        let mode = '';
+        let start = null;
+        let base = null;
+
+        function onMove(evt) {
+          if (!mode || !start || !base) return;
+          const p = pointerPct(evt);
+          const dx = p.x - start.x;
+          const dy = p.y - start.y;
+          let next = { x: base.x, y: base.y, w: base.w, h: base.h };
+          if (mode === 'move') {
+            next.x = clamp(base.x + dx, 0, 100 - base.w);
+            next.y = clamp(base.y + dy, 0, 100 - base.h);
+          } else if (mode === 'resize') {
+            next.w = clamp(base.w + dx, MIN_SIZE, 100 - base.x);
+            next.h = clamp(base.h + dy, MIN_SIZE, 100 - base.y);
+          }
+          syncRectUi(next);
+        }
+        function onUp() {
+          mode = ''; start = null; base = null;
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+        }
+
+        els.cropRect.addEventListener('pointerdown', function (evt) {
+          if (evt.target === els.cropHandle) return;
+          mode = 'move';
+          start = pointerPct(evt);
+          base = normalizeCrop(state.cropEditor.draft);
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        });
+
+        els.cropHandle.addEventListener('pointerdown', function (evt) {
+          evt.stopPropagation();
+          mode = 'resize';
+          start = pointerPct(evt);
+          base = normalizeCrop(state.cropEditor.draft);
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        });
+      }
+
+      async function saveCropForCurrentRow() {
+        const id = state.cropEditor.rowId;
+        if (!id) return;
+        const crop = normalizeCrop(state.cropEditor.draft);
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/crop', {
+            method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, crop: crop })
+          });
+          const data = await res.json().catch(function(){ return {}; });
+          if (!res.ok || !data.ok) { alert(data.error || 'No se pudo guardar el recorte.'); return; }
+          state.crops[id] = normalizeCrop(data.crop || crop);
+          state.rows = state.rows.map((row) => row.id === id ? Object.assign({}, row, { crop: state.crops[id] }) : row);
+          state.filteredRows = state.filteredRows.map((row) => row.id === id ? Object.assign({}, row, { crop: state.crops[id] }) : row);
+          closeCropEditor();
+        } catch {
+          alert('Error de red guardando recorte.');
+        }
+      }
+
+      async function resetCropForCurrentRow() {
+        const id = state.cropEditor.rowId;
+        if (!id) return;
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/crop', {
+            method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, reset: true })
+          });
+          const data = await res.json().catch(function(){ return {}; });
+          if (!res.ok || !data.ok) { alert(data.error || 'No se pudo restaurar el recorte.'); return; }
+          const crop = normalizeCrop(data.crop || DEFAULT_CROP);
+          state.crops[id] = crop;
+          syncRectUi(crop);
+        } catch {
+          alert('Error de red restaurando recorte.');
+        }
+      }
+
+      els.rowsBody.addEventListener('change', function (event) {
+        const target = event.target;
+        if (!target || target.type !== 'checkbox') return;
+        const id = String(target.getAttribute('data-id') || '');
+        if (!id) return;
+        if (target.checked) {
+          if (state.selected.size >= MAX_SELECTION) { target.checked = false; return; }
+          state.selected.add(id);
+        } else { state.selected.delete(id); }
+        updateSelectionUi();
+      });
+
+      els.rowsBody.addEventListener('click', function (event) {
+        const target = event.target;
+        if (!target) return;
+        const cropId = String(target.getAttribute('data-crop-id') || '');
+        if (cropId) openCropEditor(cropId);
+      });
+
+      [els.cropX, els.cropY, els.cropW, els.cropH].forEach(function (input) {
+        input.addEventListener('input', function () { syncRectUi(draftFromInputs()); });
+      });
+
+      els.cropCancelBtn.addEventListener('click', closeCropEditor);
+      els.cropSaveBtn.addEventListener('click', saveCropForCurrentRow);
+      els.cropResetBtn.addEventListener('click', resetCropForCurrentRow);
+      els.cropPreviewBtn.addEventListener('click', renderCropPreview);
+      els.cropStageImg.addEventListener('load', function () {
+        updateImageAreaBounds();
+        if (state.cropEditor.rowId) renderCropPreview();
+      });
+      window.addEventListener('resize', function () {
+        if (!state.cropEditor.rowId) return;
+        updateImageAreaBounds();
+      });
+      els.cropModal.addEventListener('click', function (event) {
+        const t = event.target;
+        if (t && t.getAttribute && t.getAttribute('data-close') === '1') closeCropEditor();
+      });
+
+      els.searchInput.addEventListener('input', applyFilter);
+      els.previewBtn.addEventListener('click', function () {
+        const ids = Array.from(state.selected);
+        if (!ids.length) { alert('Selecciona al menos una unidad.'); return; }
+        window.open('/presentaciones/solar-midtown/preview?ids=' + encodeURIComponent(ids.join(',')), '_blank', 'noopener');
+      });
+      els.downloadBtnEs.addEventListener('click', function () {
+        const ids = Array.from(state.selected);
+        if (!ids.length) { alert('Selecciona al menos una unidad.'); return; }
+        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=' + encodeURIComponent(ids.join(',')), '_blank', 'noopener');
+      });
+      els.downloadBtnEn.addEventListener('click', function () {
+        const ids = Array.from(state.selected);
+        if (!ids.length) { alert('Selecciona al menos una unidad.'); return; }
+        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=' + encodeURIComponent(ids.join(',')), '_blank', 'noopener');
+      });
+
+      attachDrag();
+      Promise.all([loadEditorAccess(), loadRows()]).then(function () {
+        renderRows();
+        updateSelectionUi();
+      });
+    })();
+  </script>
+</body>
+</html>

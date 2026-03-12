@@ -7,6 +7,7 @@ const { execSync } = require('child_process');
 process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
+const { PDFDocument } = require('pdf-lib');
 const QRCode = require('qrcode');
 const session = require('express-session');
 const passport = require('passport');
@@ -61,6 +62,11 @@ const REPO_DATA_DIR = path.join(__dirname, 'data');
 const DATA_DIR = path.resolve(String(process.env.APP_DATA_DIR || REPO_DATA_DIR));
 const DATA_PATH = path.join(DATA_DIR, 'sample.json');
 const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
+const SOLAR_MIDTOWN_BROCHURE_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR Midtown ESP.pdf');
+const SOLAR_MIDTOWN_BROCHURE_ENG_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR Midtown ENG.pdf');
+const SOLAR_MIDTOWN_LAYOUT_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-layout.json');
+const SOLAR_MIDTOWN_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-crops.json');
+const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martina@sinca.mx').toLowerCase();
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
@@ -313,6 +319,36 @@ function requireViceroyPresentAccess(req, res, next) {
       <h1>Acceso protegido</h1>
       <p>Este enlace de presentación requiere token.</p>
       <p>Abre la URL con <code>?token=TU_TOKEN</code>.</p>
+    </section>
+  </body></html>`);
+}
+
+function hasSolarMidtownEditorAccess(req) {
+  if (LOCAL_NO_AUTH) return true;
+  const email = String(req && req.user && req.user.email || '').trim().toLowerCase();
+  return Boolean(email && email === SOLAR_MIDTOWN_EDITOR_EMAIL);
+}
+
+function requireSolarMidtownEditor(req, res, next) {
+  if (hasSolarMidtownEditorAccess(req)) return next();
+  if (String(req.path || '').startsWith('/api/')) {
+    return res.status(403).json({ error: 'Solo la cuenta autorizada puede editar plantilla/cortes.' });
+  }
+  return res.status(403).send(`<!doctype html>
+  <html lang="es"><head><meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Acceso restringido</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;background:#f4f1e8;color:#1a1a1a;display:grid;place-items:center;min-height:100vh;padding:20px;}
+    .card{width:min(620px,100%);background:#fff;border:1px solid #d8d1c1;border-radius:14px;padding:22px;}
+    h1{margin:0 0 10px;font-size:28px;}
+    p{margin:0 0 12px;color:#5f5f5f;line-height:1.4;}
+  </style></head>
+  <body>
+    <section class="card">
+      <h1>Acceso restringido</h1>
+      <p>Solo la cuenta autorizada puede editar plantilla y cortes de Solar Midtown.</p>
+      <p>Cuenta autorizada: <strong>${escapeHtml(SOLAR_MIDTOWN_EDITOR_EMAIL)}</strong>.</p>
     </section>
   </body></html>`);
 }
@@ -787,6 +823,171 @@ function sanitizeExcelFileName(rawName) {
   return base;
 }
 
+function csvCellToString(raw) {
+  if (raw == null) return '';
+  if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw);
+  return String(raw).trim();
+}
+
+function parseCurrencyLike(raw) {
+  if (raw == null || raw === '') return null;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  const cleaned = String(raw)
+    .replace(/[$,%\s]/g, '')
+    .replace(/,/g, '');
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? num : null;
+}
+
+function parsePercentLike(raw) {
+  if (raw == null || raw === '') return null;
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return raw <= 1 ? raw * 100 : raw;
+  }
+  const text = String(raw).trim();
+  const hasPercent = text.includes('%');
+  const base = parseCurrencyLike(text);
+  if (base == null) return null;
+  if (hasPercent) return base;
+  return base <= 1 ? base * 100 : base;
+}
+
+function formatCurrency(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2
+  }).format(num);
+}
+
+function normalizeDevLabel(raw) {
+  return String(raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function makeSolarMidtownRowId(unidad, rowNumber) {
+  const unitKey = normalizeDevLabel(unidad).replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (unitKey) return `solar-mt-unit-${unitKey}`;
+  return `solar-mt-${Number(rowNumber) || 0}`;
+}
+
+function readSolarMidtownRowsFromCbs() {
+  if (!fs.existsSync(ROI_MASTER_CSV_PATH)) {
+    return {
+      rows: [],
+      sourceFile: ROI_MASTER_CSV_PATH,
+      error: 'No se encontró CSV maestro (roi-master.csv).'
+    };
+  }
+  let workbook;
+  try {
+    workbook = XLSX.readFile(ROI_MASTER_CSV_PATH, { cellDates: true });
+  } catch (err) {
+    return {
+      rows: [],
+      sourceFile: ROI_MASTER_CSV_PATH,
+      error: `No se pudo leer CSV maestro: ${err && err.message ? err.message : 'error desconocido'}`
+    };
+  }
+  const firstSheetName = workbook.SheetNames && workbook.SheetNames[0];
+  if (!firstSheetName || !workbook.Sheets[firstSheetName]) {
+    return {
+      rows: [],
+      sourceFile: ROI_MASTER_CSV_PATH,
+      error: 'No hay hoja utilizable en el CSV maestro.'
+    };
+  }
+  const sheet = workbook.Sheets[firstSheetName];
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+  const out = [];
+  const cropMap = readSolarMidtownCropMap();
+  matrix.forEach((row, idx) => {
+    if (!Array.isArray(row)) return;
+    if (idx === 0) return;
+    const desarrollo = csvCellToString(row[2]);
+    if (normalizeDevLabel(desarrollo) !== 'SOLAR MT') return;
+
+    const planLink = csvCellToString(row[1]);
+    const unidad = csvCellToString(row[3]) || csvCellToString(row[4]);
+    const colE = csvCellToString(row[4]);
+    const colF = csvCellToString(row[5]);
+    const colG = csvCellToString(row[6]);
+
+    const precioListaRaw = row[7];
+    const descuentoPctRaw = row[8];
+    const descuentoValorRaw = row[9];
+    const precioFinalRaw = row[10];
+
+    const precioLista = parseCurrencyLike(precioListaRaw);
+    let descuentoPct = parsePercentLike(descuentoPctRaw);
+    let descuentoValor = parseCurrencyLike(descuentoValorRaw);
+    let precioFinal = parseCurrencyLike(precioFinalRaw);
+
+    if (precioFinal == null && precioLista != null && descuentoValor != null) {
+      precioFinal = precioLista - descuentoValor;
+    }
+    if (precioFinal == null && precioLista != null && descuentoPct != null) {
+      precioFinal = precioLista * (1 - (descuentoPct / 100));
+    }
+    if (descuentoValor == null && precioLista != null && precioFinal != null) {
+      descuentoValor = precioLista - precioFinal;
+    }
+    if (descuentoPct == null && precioLista != null && descuentoValor != null && precioLista !== 0) {
+      descuentoPct = (descuentoValor / precioLista) * 100;
+    }
+
+    const finalForPayments = Number.isFinite(precioFinal)
+      ? precioFinal
+      : (Number.isFinite(precioLista) ? precioLista : 0);
+    const enganche30 = finalForPayments * 0.30;
+    const seisMeses1 = finalForPayments * 0.10;
+    const seisMeses2 = finalForPayments * 0.10;
+    const entrega50 = finalForPayments * 0.50;
+
+    const rowId = makeSolarMidtownRowId(unidad, idx + 1);
+    out.push({
+      id: rowId,
+      rowNumber: idx + 1,
+      planLink,
+      desarrollo,
+      unidad,
+      crop: getSolarMidtownCropForId(rowId, cropMap),
+      colE,
+      colF,
+      colG,
+      precioLista,
+      descuentoPct,
+      descuentoValor,
+      precioFinal,
+      precioListaFmt: formatCurrency(precioLista),
+      descuentoPctFmt: Number.isFinite(descuentoPct) ? `${descuentoPct.toFixed(2)}%` : '',
+      descuentoValorFmt: formatCurrency(descuentoValor),
+      precioFinalFmt: formatCurrency(precioFinal),
+      pagos: {
+        enganche30,
+        seisMeses1,
+        seisMeses2,
+        entrega50,
+        enganche30Fmt: formatCurrency(enganche30),
+        seisMeses1Fmt: formatCurrency(seisMeses1),
+        seisMeses2Fmt: formatCurrency(seisMeses2),
+        entrega50Fmt: formatCurrency(entrega50)
+      }
+    });
+  });
+  return {
+    rows: out,
+    sourceFile: ROI_MASTER_CSV_PATH,
+    error: ''
+  };
+}
+
 function readJson(filePath, fallback) {
   try {
     if (!fs.existsSync(filePath)) return fallback;
@@ -801,6 +1002,210 @@ function writeJson(filePath, data) {
   const tmpPath = `${filePath}.tmp`;
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
   fs.renameSync(tmpPath, filePath);
+}
+
+function defaultSolarMidtownPlanCrop() {
+  return { x: 0, y: 0, w: 100, h: 100 };
+}
+
+function normalizeSolarMidtownPlanCrop(input) {
+  const base = defaultSolarMidtownPlanCrop();
+  const src = input && typeof input === 'object' ? input : {};
+  // Backward compatibility with previous format {x,y,zoom}
+  if (Object.prototype.hasOwnProperty.call(src, 'zoom') && !Object.prototype.hasOwnProperty.call(src, 'w')) {
+    const zoom = clampNumber(src.zoom, 1, 1, 4);
+    const boxW = clampNumber(100 / zoom, 100, 5, 100);
+    const boxH = clampNumber(100 / zoom, 100, 5, 100);
+    const centerX = clampNumber(src.x, 50, -300, 300);
+    const centerY = clampNumber(src.y, 50, -300, 300);
+    const left = centerX - (boxW / 2);
+    const top = centerY - (boxH / 2);
+    return { x: left, y: top, w: boxW, h: boxH };
+  }
+  const width = clampNumber(src.w, base.w, 5, 100);
+  const height = clampNumber(src.h, base.h, 5, 100);
+  return {
+    x: clampNumber(src.x, base.x, -300, 300),
+    y: clampNumber(src.y, base.y, -300, 300),
+    w: width,
+    h: height
+  };
+}
+
+function normalizeSolarMidtownCropMap(input) {
+  const src = input && typeof input === 'object' ? input : {};
+  const out = {};
+  Object.keys(src).forEach((key) => {
+    const id = String(key || '').trim();
+    if (!id) return;
+    out[id] = normalizeSolarMidtownPlanCrop(src[id]);
+  });
+  return out;
+}
+
+function readSolarMidtownCropMap() {
+  const raw = readJson(SOLAR_MIDTOWN_CROPS_PATH, {});
+  return normalizeSolarMidtownCropMap(raw);
+}
+
+function saveSolarMidtownCropMap(map) {
+  const normalized = normalizeSolarMidtownCropMap(map);
+  writeJson(SOLAR_MIDTOWN_CROPS_PATH, normalized);
+  return normalized;
+}
+
+function getSolarMidtownCropForId(rowId, cropMap) {
+  const id = String(rowId || '').trim();
+  if (!id) return defaultSolarMidtownPlanCrop();
+  const map = cropMap && typeof cropMap === 'object' ? cropMap : readSolarMidtownCropMap();
+  return normalizeSolarMidtownPlanCrop(map[id]);
+}
+
+function buildSolarMidtownCropDataAttrs(cropInput, row, layoutInput) {
+  const crop = normalizeSolarMidtownPlanCrop(cropInput);
+  const layout = normalizeSolarMidtownLayout(layoutInput);
+  const verticalExpandRatio = clampNumber(layout && layout.crop && layout.crop.verticalExpandRatio, 1.9, 1, 2.4);
+  const expand = isSolarMidtownVerticalUnit(row && row.unidad) ? verticalExpandRatio : 1;
+  return `data-crop-x="${crop.x}" data-crop-y="${crop.y}" data-crop-w="${crop.w}" data-crop-h="${crop.h}" data-crop-expand="${expand}"`;
+}
+
+function defaultSolarMidtownLayout() {
+  return {
+    version: 1,
+    crop: {
+      verticalExpandRatio: 1.9
+    },
+    page: {
+      backgroundColor: '#f28b2c',
+      padding: 16
+    },
+    title: {
+      show: true,
+      text: 'Página adicional',
+      color: '#1f2330',
+      fontSize: 22,
+      fontWeight: 700
+    },
+    subtitle: {
+      show: true,
+      color: '#5f6572',
+      fontSize: 14
+    },
+    grid: {
+      gap: 14,
+      leftRatio: 1.2,
+      rightRatio: 1
+    },
+    planBox: {
+      backgroundColor: '#f8f8f8',
+      borderColor: '#d4d7df',
+      borderRadius: 12,
+      minHeight: 340
+    },
+    priceBox: {
+      backgroundColor: '#f28b2c',
+      borderColor: '#df7d24',
+      borderRadius: 12,
+      textColor: '#ffffff',
+      headingColor: '#ffffff',
+      dividerColor: 'rgba(255,255,255,0.35)',
+      headingSize: 15,
+      bodySize: 12,
+      labelSize: 12,
+      valueSize: 12,
+      metaSize: 12,
+      rowPaddingY: 7,
+      lineHeight: 1.2,
+      wordSpacing: 0,
+      letterSpacing: 0,
+      metaTopOffset: 0,
+      metaGroupGap: 14,
+      verticalAlign: 'start'
+    }
+  };
+}
+
+function clampNumber(value, fallback, min, max) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  if (Number.isFinite(min) && num < min) return min;
+  if (Number.isFinite(max) && num > max) return max;
+  return num;
+}
+
+function normalizeSolarMidtownLayout(input) {
+  const base = defaultSolarMidtownLayout();
+  const src = input && typeof input === 'object' ? input : {};
+  const out = {
+    ...base,
+    crop: {
+      ...base.crop,
+      ...(src.crop && typeof src.crop === 'object' ? src.crop : {})
+    },
+    page: {
+      ...base.page,
+      ...(src.page && typeof src.page === 'object' ? src.page : {})
+    },
+    title: {
+      ...base.title,
+      ...(src.title && typeof src.title === 'object' ? src.title : {})
+    },
+    subtitle: {
+      ...base.subtitle,
+      ...(src.subtitle && typeof src.subtitle === 'object' ? src.subtitle : {})
+    },
+    grid: {
+      ...base.grid,
+      ...(src.grid && typeof src.grid === 'object' ? src.grid : {})
+    },
+    planBox: {
+      ...base.planBox,
+      ...(src.planBox && typeof src.planBox === 'object' ? src.planBox : {})
+    },
+    priceBox: {
+      ...base.priceBox,
+      ...(src.priceBox && typeof src.priceBox === 'object' ? src.priceBox : {})
+    }
+  };
+  out.version = 1;
+  out.crop.verticalExpandRatio = clampNumber(out.crop.verticalExpandRatio, base.crop.verticalExpandRatio, 1, 2.4);
+  out.page.padding = clampNumber(out.page.padding, base.page.padding, 0, 80);
+  out.title.fontSize = clampNumber(out.title.fontSize, base.title.fontSize, 12, 80);
+  out.subtitle.fontSize = clampNumber(out.subtitle.fontSize, base.subtitle.fontSize, 10, 50);
+  out.grid.gap = clampNumber(out.grid.gap, base.grid.gap, 0, 60);
+  out.grid.leftRatio = clampNumber(out.grid.leftRatio, base.grid.leftRatio, 0.2, 4);
+  out.grid.rightRatio = clampNumber(out.grid.rightRatio, base.grid.rightRatio, 0.2, 4);
+  out.planBox.borderRadius = clampNumber(out.planBox.borderRadius, base.planBox.borderRadius, 0, 48);
+  out.planBox.minHeight = clampNumber(out.planBox.minHeight, base.planBox.minHeight, 120, 1000);
+  out.priceBox.borderRadius = clampNumber(out.priceBox.borderRadius, base.priceBox.borderRadius, 0, 48);
+  out.priceBox.headingSize = clampNumber(out.priceBox.headingSize, base.priceBox.headingSize, 10, 40);
+  out.priceBox.bodySize = clampNumber(out.priceBox.bodySize, base.priceBox.bodySize, 9, 32);
+  out.priceBox.labelSize = clampNumber(out.priceBox.labelSize, out.priceBox.bodySize, 9, 40);
+  out.priceBox.valueSize = clampNumber(out.priceBox.valueSize, out.priceBox.bodySize, 9, 40);
+  out.priceBox.metaSize = clampNumber(out.priceBox.metaSize, base.priceBox.metaSize, 8, 24);
+  out.priceBox.rowPaddingY = clampNumber(out.priceBox.rowPaddingY, base.priceBox.rowPaddingY, 0, 30);
+  out.priceBox.lineHeight = clampNumber(out.priceBox.lineHeight, base.priceBox.lineHeight, 1, 2.4);
+  out.priceBox.wordSpacing = clampNumber(out.priceBox.wordSpacing, base.priceBox.wordSpacing, 0, 20);
+  out.priceBox.letterSpacing = clampNumber(out.priceBox.letterSpacing, base.priceBox.letterSpacing, 0, 10);
+  out.priceBox.metaTopOffset = clampNumber(out.priceBox.metaTopOffset, base.priceBox.metaTopOffset, -30, 80);
+  out.priceBox.metaGroupGap = clampNumber(out.priceBox.metaGroupGap, base.priceBox.metaGroupGap, 0, 80);
+  const alignRaw = String(out.priceBox.verticalAlign || '').toLowerCase();
+  out.priceBox.verticalAlign = ['start', 'center', 'end'].includes(alignRaw) ? alignRaw : base.priceBox.verticalAlign;
+  if (typeof out.title.text !== 'string') out.title.text = base.title.text;
+  out.title.show = Boolean(out.title.show);
+  out.subtitle.show = Boolean(out.subtitle.show);
+  return out;
+}
+
+function readSolarMidtownLayout() {
+  const raw = readJson(SOLAR_MIDTOWN_LAYOUT_PATH, null);
+  return normalizeSolarMidtownLayout(raw);
+}
+
+function saveSolarMidtownLayout(layout) {
+  const normalized = normalizeSolarMidtownLayout(layout);
+  writeJson(SOLAR_MIDTOWN_LAYOUT_PATH, normalized);
+  return normalized;
 }
 
 function normalizeWhisperlistKey(raw) {
@@ -2354,6 +2759,12 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Gerente Ventas</h2>
           <p class="desc">Acceso directo a herramientas de planos, edición y descarga PDF.</p>
         </a>` : '';
+  const presentacionesCard = `
+        <a class="card" href="/presentaciones">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Presentaciones</h2>
+          <p class="desc">Generación de presentaciones por proyecto con unidades seleccionadas.</p>
+        </a>`;
   const roiMasterPanel = isGerente ? `
       <section class="master-box master-box-mini">
         <h3>CSV Maestro</h3>
@@ -2468,6 +2879,7 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
+        ${presentacionesCard}
         ${viceroyModuleCard}
         ${ownerServicesCard}
         ${gerenteCard}
@@ -2537,6 +2949,8 @@ app.use('/format-extranjera-moral', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
+app.use('/presentaciones', requireInternalUser);
+app.use('/api/presentaciones', requireInternalUser);
 app.use('/viceroy', requireAuth);
 app.use('/viceroy-piloto', requireInternalUser);
 app.use('/api/viceroy-piloto', (req, res, next) => {
@@ -2645,6 +3059,785 @@ app.post('/api/roi/master-csv', requireGerente, (req, res) => {
   } catch (err) {
     return res.status(500).json({
       error: 'No se pudo guardar el CSV maestro',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/presentaciones', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'presentaciones.html'));
+});
+
+app.get('/presentaciones/solar-midtown', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'presentaciones-solar-midtown.html'));
+});
+
+app.get('/presentaciones/solar-midtown/editor', requireSolarMidtownEditor, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'presentaciones-solar-midtown-editor.html'));
+});
+
+app.get('/api/presentaciones/solar-midtown/rows', (req, res) => {
+  const data = readSolarMidtownRowsFromCbs();
+  return res.json({
+    ok: !data.error,
+    sourceFile: data.sourceFile,
+    totalRows: data.rows.length,
+    rows: data.rows,
+    crops: readSolarMidtownCropMap(),
+    error: data.error || ''
+  });
+});
+
+app.get('/api/presentaciones/solar-midtown/editor-access', (req, res) => {
+  return res.json({
+    ok: true,
+    canEdit: hasSolarMidtownEditorAccess(req),
+    editorEmail: SOLAR_MIDTOWN_EDITOR_EMAIL
+  });
+});
+
+app.get('/api/presentaciones/solar-midtown/crops', (req, res) => {
+  return res.json({ ok: true, crops: readSolarMidtownCropMap() });
+});
+
+app.post('/api/presentaciones/solar-midtown/crop', requireSolarMidtownEditor, (req, res) => {
+  try {
+    const id = String(req.body && req.body.id || '').trim();
+    if (!id) {
+      return res.status(400).json({ error: 'Falta id de unidad.' });
+    }
+    const shouldReset = Boolean(req.body && req.body.reset);
+    const map = readSolarMidtownCropMap();
+    if (shouldReset) {
+      delete map[id];
+      saveSolarMidtownCropMap(map);
+      return res.json({ ok: true, id, crop: defaultSolarMidtownPlanCrop(), reset: true });
+    }
+    const crop = normalizeSolarMidtownPlanCrop(req.body && req.body.crop);
+    map[id] = crop;
+    saveSolarMidtownCropMap(map);
+    return res.json({ ok: true, id, crop, reset: false });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar el recorte del plano.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/presentaciones/solar-midtown/layout', (req, res) => {
+  const layout = readSolarMidtownLayout();
+  return res.json({ ok: true, layout });
+});
+
+app.get('/api/presentaciones/solar-midtown/page-size', async (req, res) => {
+  const brochurePath = getSolarMidtownBrochurePath(req.query && req.query.lang);
+  const size = await readSolarMidtownBrochurePageSize(brochurePath);
+  return res.json({ ok: true, pageSize: size });
+});
+
+app.post('/api/presentaciones/solar-midtown/render-sample', requireSolarMidtownEditor, async (req, res) => {
+  try {
+    const incomingLayout = req.body && req.body.layout ? req.body.layout : req.body;
+    const layout = normalizeSolarMidtownLayout(incomingLayout);
+    const lang = normalizeSolarMidtownLang(req.body && req.body.lang);
+    const sampleId = String(req.body && req.body.sampleId || '').trim();
+    const data = readSolarMidtownRowsFromCbs();
+    if (!Array.isArray(data.rows) || !data.rows.length) {
+      return res.status(400).send('<!doctype html><html lang="es"><body>Sin datos de Solar Midtown.</body></html>');
+    }
+    const sampleRow = data.rows.find((row) => String(row && row.id || '') === sampleId) || data.rows[0];
+    const brochurePath = getSolarMidtownBrochurePath(lang);
+    const pageSize = await readSolarMidtownBrochurePageSize(brochurePath);
+    const pagesHtml = buildSolarMidtownPagesHtml([sampleRow], layout, { absoluteAssets: true, lang });
+    const html = buildSolarMidtownPagesDocument({
+      title: 'Vista real · Solar Midtown',
+      contentTop: '',
+      pagesHtml,
+      pdfMode: true,
+      pageWidthPt: pageSize.widthPt,
+      pageHeightPt: pageSize.heightPt,
+      layout
+    });
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(html);
+  } catch (err) {
+    return res.status(500).send(`<!doctype html><html lang="es"><body>Error render sample: ${escapeHtml(err && err.message ? err.message : 'desconocido')}</body></html>`);
+  }
+});
+
+app.post('/api/presentaciones/solar-midtown/layout', requireSolarMidtownEditor, (req, res) => {
+  try {
+    const incoming = req.body && req.body.layout ? req.body.layout : req.body;
+    const saved = saveSolarMidtownLayout(incoming);
+    return res.json({ ok: true, layout: saved });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar layout de Solar Midtown',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/presentaciones/solar-midtown/brochure', (req, res) => {
+  const brochurePath = getSolarMidtownBrochurePath(req.query && req.query.lang);
+  if (!fs.existsSync(brochurePath)) {
+    return res.status(404).json({
+      error: 'No se encontró brochure local de Solar Midtown.',
+      expectedPath: brochurePath
+    });
+  }
+  return res.sendFile(brochurePath);
+});
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function parseSolarMidtownSelectedIds(rawIds) {
+  return String(rawIds || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseSolarMidtownNumber(raw) {
+  if (raw == null) return null;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  const text = String(raw).replace(/,/g, '.');
+  const match = text.match(/-?\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const num = Number(match[0]);
+  return Number.isFinite(num) ? num : null;
+}
+
+const SOLAR_MIDTOWN_VERTICAL_UNITS = new Set([
+  101, 102, 103, 117, 118, 120, 220, 217, 201, 202,
+  318, 317, 301, 302, 303, 401, 402, 403, 502
+]);
+
+function isSolarMidtownVerticalUnit(unidadRaw) {
+  const num = parseSolarMidtownNumber(unidadRaw);
+  if (!Number.isFinite(num)) return false;
+  return SOLAR_MIDTOWN_VERTICAL_UNITS.has(Math.trunc(num));
+}
+
+function hasSolarMidtownDiscount(row) {
+  const pct = Number(row && row.descuentoPct);
+  const val = Number(row && row.descuentoValor);
+  const list = Number(row && row.precioLista);
+  const final = Number(row && row.precioFinal);
+  if (Number.isFinite(pct) && Math.abs(pct) > 0.0001) return true;
+  if (Number.isFinite(val) && Math.abs(val) > 0.0001) return true;
+  if (Number.isFinite(list) && Number.isFinite(final) && Math.abs(list - final) > 0.01) return true;
+  return false;
+}
+
+function parseSolarMidtownBrochurePages(raw, totalPages) {
+  const total = Number(totalPages);
+  if (!Number.isFinite(total) || total <= 0) return [];
+  const safeTotal = Math.floor(total);
+  const text = String(raw || '').trim();
+  if (!text) {
+    return Array.from({ length: safeTotal }, (_, idx) => idx);
+  }
+  const unique = new Set();
+  text.split(',').forEach((piece) => {
+    const part = String(piece || '').trim();
+    if (!part) return;
+    const rangeMatch = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (rangeMatch) {
+      const from = Math.max(1, Number(rangeMatch[1]));
+      const to = Math.min(safeTotal, Number(rangeMatch[2]));
+      if (Number.isFinite(from) && Number.isFinite(to)) {
+        const start = Math.min(from, to);
+        const end = Math.max(from, to);
+        for (let page = start; page <= end; page += 1) unique.add(page - 1);
+      }
+      return;
+    }
+    const single = Number(part);
+    if (!Number.isFinite(single)) return;
+    const page = Math.floor(single);
+    if (page < 1 || page > safeTotal) return;
+    unique.add(page - 1);
+  });
+  return Array.from(unique).sort((a, b) => a - b);
+}
+
+function normalizeSolarMidtownLang(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  return value === 'en' ? 'en' : 'es';
+}
+
+function getSolarMidtownBrochurePath(langInput) {
+  const lang = normalizeSolarMidtownLang(langInput);
+  if (lang === 'en') return SOLAR_MIDTOWN_BROCHURE_ENG_PATH;
+  return SOLAR_MIDTOWN_BROCHURE_PATH;
+}
+
+function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
+  const layout = normalizeSolarMidtownLayout(layoutInput);
+  const opts = options && typeof options === 'object' ? options : {};
+  const absoluteAssets = Boolean(opts.absoluteAssets);
+  const lang = normalizeSolarMidtownLang(opts.lang);
+  const t = lang === 'en'
+    ? {
+      titleFallback: 'Option',
+      development: 'Development',
+      department: 'Department',
+      sqm: 'Square meters',
+      priceSummary: 'Price summary',
+      listPrice: 'List price',
+      discountPct: 'Discount %',
+      discountValue: 'Discount amount',
+      finalPrice: 'Final price',
+      paymentPlan: 'Payment plan',
+      downPayment: '30% Down payment',
+      months1: '10% at 6 months (1)',
+      months2: '10% at 6 months (2)',
+      delivery: '50% On delivery'
+    }
+    : {
+      titleFallback: 'Página adicional',
+      development: 'Desarrollo',
+      department: 'Departamento',
+      sqm: 'Metros cuadrados',
+      priceSummary: 'Resumen de precio',
+      listPrice: 'Precio lista',
+      discountPct: 'Descuento %',
+      discountValue: 'Descuento valor',
+      finalPrice: 'Precio final',
+      paymentPlan: 'Forma de pago',
+      downPayment: '30% Enganche',
+      months1: '10% a 6 meses (1)',
+      months2: '10% a 6 meses (2)',
+      delivery: '50% Entrega'
+    };
+  const planDataUrlById = opts.planDataUrlById && typeof opts.planDataUrlById === 'object'
+    ? opts.planDataUrlById
+    : {};
+  if (!selectedRows.length) {
+    return '<section class="empty">No se seleccionaron unidades para la vista previa.</section>';
+  }
+  return selectedRows.map((row, index) => {
+    const rowPlanDataUrl = planDataUrlById[String(row && row.id || '')] || '';
+    const planPath = row.planLink
+      ? `/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(row.planLink)}`
+      : '';
+    const planProxy = planPath
+      ? (absoluteAssets ? `${APP_BASE_URL_NORMALIZED}${planPath}` : planPath)
+      : '';
+    const planSrc = rowPlanDataUrl || planProxy;
+    const cropDataAttrs = buildSolarMidtownCropDataAttrs(row && row.crop, row, layout);
+    const planBlock = planSrc
+      ? `<img class="plan-image" ${cropDataAttrs} src="${escapeHtml(planSrc)}" alt="Plano ${escapeHtml(row.unidad || `Unidad ${index + 1}`)}" />`
+      : '<div class="empty">Sin link de plano (columna B)</div>';
+    const titleText = layout.title.text || t.titleFallback;
+    const metros = String(row && row.colF || '').trim();
+    const discountApplies = hasSolarMidtownDiscount(row);
+    return `<article class="unit-page">
+      <header>
+        ${layout.title.show ? `<h2 style="color:${escapeHtml(layout.title.color)};font-size:${layout.title.fontSize}px;font-weight:${layout.title.fontWeight};">${escapeHtml(titleText)} ${index + 1}</h2>` : ''}
+        ${layout.subtitle.show ? `<p style="color:${escapeHtml(layout.subtitle.color)};font-size:${layout.subtitle.fontSize}px;">${escapeHtml(t.development)}: ${escapeHtml(row.desarrollo || 'SOLAR MT')}</p>` : ''}
+      </header>
+      <div class="unit-grid" style="display:grid;grid-template-columns:${layout.grid.leftRatio}fr ${layout.grid.rightRatio}fr;gap:${layout.grid.gap}px;">
+        <section class="plan-box" style="background:${escapeHtml(layout.planBox.backgroundColor)};border:1px solid ${escapeHtml(layout.planBox.borderColor)};border-radius:${layout.planBox.borderRadius}px;min-height:${layout.planBox.minHeight}px;">${planBlock}</section>
+        <section class="data-box" data-align="${escapeHtml(layout.priceBox.verticalAlign)}" style="background:${escapeHtml(layout.priceBox.backgroundColor)};border:1px solid ${escapeHtml(layout.priceBox.borderColor)};border-radius:${layout.priceBox.borderRadius}px;color:${escapeHtml(layout.priceBox.textColor)};">
+          <div class="unit-meta-top">
+            <p class="meta">${escapeHtml(t.department)}: <strong>${escapeHtml(row.unidad || '-')}</strong></p>
+            <p class="meta">${escapeHtml(t.sqm)}: <strong>${escapeHtml(metros || '-')} m²</strong></p>
+          </div>
+          <h3>${escapeHtml(t.priceSummary)}</h3>
+          <ul>
+            <li><span>${escapeHtml(t.listPrice)}</span><strong>${escapeHtml(row.precioListaFmt || '-')}</strong></li>
+            ${discountApplies ? `<li><span>${escapeHtml(t.discountPct)}</span><strong>${escapeHtml(row.descuentoPctFmt || '-')}</strong></li>` : ''}
+            ${discountApplies ? `<li><span>${escapeHtml(t.discountValue)}</span><strong>${escapeHtml(row.descuentoValorFmt || '-')}</strong></li>` : ''}
+            ${discountApplies ? `<li><span>${escapeHtml(t.finalPrice)}</span><strong>${escapeHtml(row.precioFinalFmt || '-')}</strong></li>` : ''}
+          </ul>
+          <h3>${escapeHtml(t.paymentPlan)}</h3>
+          <ul>
+            <li><span>${escapeHtml(t.downPayment)}</span><strong>${escapeHtml(row.pagos && row.pagos.enganche30Fmt || '-')}</strong></li>
+            <li><span>${escapeHtml(t.months1)}</span><strong>${escapeHtml(row.pagos && row.pagos.seisMeses1Fmt || '-')}</strong></li>
+            <li><span>${escapeHtml(t.months2)}</span><strong>${escapeHtml(row.pagos && row.pagos.seisMeses2Fmt || '-')}</strong></li>
+            <li><span>${escapeHtml(t.delivery)}</span><strong>${escapeHtml(row.pagos && row.pagos.entrega50Fmt || '-')}</strong></li>
+          </ul>
+        </section>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+async function fetchImageAsDataUrl(url) {
+  try {
+    const parsed = new URL(String(url || '').trim());
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    const upstream = await fetch(parsed.toString());
+    if (!upstream.ok) return '';
+    const contentType = upstream.headers.get('content-type') || 'image/png';
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    if (!buf.length) return '';
+    return `data:${contentType};base64,${buf.toString('base64')}`;
+  } catch {
+    return '';
+  }
+}
+
+// PDF now reuses the exact same HTML renderer as preview to avoid crop mismatches.
+
+async function readSolarMidtownBrochurePageSize(brochurePathInput) {
+  const fallback = { widthPt: 792, heightPt: 612 };
+  const brochurePath = String(brochurePathInput || SOLAR_MIDTOWN_BROCHURE_PATH);
+  try {
+    if (!fs.existsSync(brochurePath)) return fallback;
+    const bytes = fs.readFileSync(brochurePath);
+    const doc = await PDFDocument.load(bytes);
+    const first = doc.getPage(0);
+    if (!first) return fallback;
+    const widthPt = first.getWidth();
+    const heightPt = first.getHeight();
+    if (!Number.isFinite(widthPt) || !Number.isFinite(heightPt) || widthPt <= 0 || heightPt <= 0) {
+      return fallback;
+    }
+    return { widthPt, heightPt };
+  } catch {
+    return fallback;
+  }
+}
+
+async function readSolarMidtownBrochureMeta(brochurePathInput) {
+  const fallback = { widthPt: 792, heightPt: 612, pageCount: 0 };
+  const brochurePath = String(brochurePathInput || SOLAR_MIDTOWN_BROCHURE_PATH);
+  try {
+    if (!fs.existsSync(brochurePath)) return fallback;
+    const bytes = fs.readFileSync(brochurePath);
+    const doc = await PDFDocument.load(bytes);
+    const pageCount = doc.getPageCount();
+    const first = pageCount > 0 ? doc.getPage(0) : null;
+    if (!first) return { ...fallback, pageCount };
+    const widthPt = first.getWidth();
+    const heightPt = first.getHeight();
+    if (!Number.isFinite(widthPt) || !Number.isFinite(heightPt) || widthPt <= 0 || heightPt <= 0) {
+      return { ...fallback, pageCount };
+    }
+    return { widthPt, heightPt, pageCount };
+  } catch {
+    return fallback;
+  }
+}
+
+function buildSolarMidtownCropScript() {
+  return `<script>
+    (function () {
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      function numAttr(el, name, fallback) {
+        const value = Number(el.getAttribute(name));
+        return Number.isFinite(value) ? value : fallback;
+      }
+      function cropPlanImage(img) {
+        return new Promise(function (resolve) {
+          const src = img.getAttribute('src');
+          if (!src) return resolve();
+          const helper = new Image();
+          helper.crossOrigin = 'anonymous';
+          helper.onload = function () {
+            try {
+              const iw = helper.naturalWidth || helper.width;
+              const ih = helper.naturalHeight || helper.height;
+              if (!iw || !ih) return resolve();
+              const cx = numAttr(img, 'data-crop-x', 0);
+              const cy = numAttr(img, 'data-crop-y', 0);
+              const cw = clamp(numAttr(img, 'data-crop-w', 100), 1, 100);
+              const ch = clamp(numAttr(img, 'data-crop-h', 100), 1, 100);
+              const expand = clamp(numAttr(img, 'data-crop-expand', 1), 1, 2.4);
+              const centerX = cx + (cw / 2);
+              const centerY = cy + (ch / 2);
+              const ew = clamp(cw * expand, 1, 100);
+              const eh = clamp(ch * expand, 1, 100);
+              const ex = centerX - (ew / 2);
+              const ey = centerY - (eh / 2);
+              const sx = Math.round((ex / 100) * iw);
+              const sy = Math.round((ey / 100) * ih);
+              const sw = Math.max(1, Math.round((ew / 100) * iw));
+              const sh = Math.max(1, Math.round((eh / 100) * ih));
+              const out = document.createElement('canvas');
+              out.width = Math.max(1, sw);
+              out.height = Math.max(1, sh);
+              const outCtx = out.getContext('2d');
+              if (!outCtx) return resolve();
+              const srcX = Math.max(0, sx);
+              const srcY = Math.max(0, sy);
+              const srcX2 = Math.min(iw, sx + sw);
+              const srcY2 = Math.min(ih, sy + sh);
+              const srcW = Math.max(0, srcX2 - srcX);
+              const srcH = Math.max(0, srcY2 - srcY);
+              if (srcW > 0 && srcH > 0) {
+                const destX = Math.max(0, -sx);
+                const destY = Math.max(0, -sy);
+                outCtx.drawImage(helper, srcX, srcY, srcW, srcH, destX, destY, srcW, srcH);
+              }
+              img.src = out.toDataURL('image/png');
+            } catch {}
+            resolve();
+          };
+          helper.onerror = function () { resolve(); };
+          helper.src = src;
+        });
+      }
+      window.__pdfReady = false;
+      const images = Array.from(document.querySelectorAll('img.plan-image'));
+      if (!images.length) {
+        window.__pdfReady = true;
+        return;
+      }
+      Promise.all(images.map(cropPlanImage)).finally(function () {
+        window.__pdfReady = true;
+      });
+    })();
+  </script>`;
+}
+
+function buildSolarMidtownPagesDocument(options) {
+  const layout = normalizeSolarMidtownLayout(options && options.layout);
+  const title = options && options.title ? options.title : 'Vista previa · Solar Midtown';
+  const pagesHtml = options && options.pagesHtml ? options.pagesHtml : '';
+  const contentTop = options && options.contentTop ? options.contentTop : '';
+  const pdfMode = Boolean(options && options.pdfMode);
+  const pageWidthPt = Number(options && options.pageWidthPt) > 0 ? Number(options.pageWidthPt) : 792;
+  const pageHeightPt = Number(options && options.pageHeightPt) > 0 ? Number(options.pageHeightPt) : 612;
+  const pageSizeCss = `${pageWidthPt}pt ${pageHeightPt}pt`;
+  const pageBg = pdfMode ? layout.page.backgroundColor : '#f4f1e8';
+  const wrapBg = 'transparent';
+  const pageCss = pdfMode
+    ? `@page { size: ${pageSizeCss}; margin: 0; }`
+    : '';
+  const wrapPadding = clampNumber(layout.page.padding, 16, 0, 80);
+  const wrapCss = pdfMode
+    ? `max-width:none;margin:0;padding:0;`
+    : 'max-width:1160px;margin:0 auto;padding:22px 16px 40px;';
+  const unitPageCss = pdfMode
+    ? `background:#fff;border:0;border-radius:0;padding:${wrapPadding}pt;height:${Math.max(120, pageHeightPt)}pt;width:${Math.max(120, pageWidthPt)}pt;margin:0;page-break-inside:avoid;page-break-after:always;overflow:hidden;display:flex;flex-direction:column;`
+    : 'background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;page-break-inside:avoid;page-break-after:always;';
+  const pageContainerCss = pdfMode
+    ? `padding:0;margin:0;`
+    : '';
+  return `<!doctype html>
+  <html lang="es"><head><meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    ${pageCss}
+    :root{
+      --bg:${pageBg};
+      --card:#fff;
+      --line:#d9d3c3;
+      --ink:#1f2330;
+      --muted:#5f6572;
+      --price-heading:${escapeHtml(layout.priceBox.headingColor)};
+      --price-text:${escapeHtml(layout.priceBox.textColor)};
+      --price-divider:${escapeHtml(layout.priceBox.dividerColor)};
+      --price-heading-size:${layout.priceBox.headingSize}px;
+      --price-body-size:${layout.priceBox.bodySize}px;
+      --price-label-size:${layout.priceBox.labelSize}px;
+      --price-value-size:${layout.priceBox.valueSize}px;
+      --price-meta-size:${layout.priceBox.metaSize}px;
+      --price-row-padding-y:${layout.priceBox.rowPaddingY}px;
+      --price-line-height:${layout.priceBox.lineHeight};
+      --price-word-spacing:${layout.priceBox.wordSpacing}px;
+      --price-letter-spacing:${layout.priceBox.letterSpacing}px;
+      --price-meta-top-offset:${layout.priceBox.metaTopOffset}px;
+      --price-meta-gap:${layout.priceBox.metaGroupGap}px;
+      --price-justify:${layout.priceBox.verticalAlign};
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{${wrapCss}background:${wrapBg};}
+    .head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+    h1{margin:0;font-size:28px;}
+    .sub{margin:6px 0 0;color:var(--muted);}
+    .btn{display:inline-block;padding:9px 12px;border:1px solid #beb8a8;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;}
+    iframe{width:100%;height:72vh;border:1px solid #d6d8df;border-radius:12px;background:#fff;}
+    .unit-page{${unitPageCss}}
+    .unit-page:last-child{page-break-after:auto;}
+    .unit-page h2{margin:0 0 4px;font-size:22px;}
+    .unit-page header p{margin:0;color:var(--muted);}
+    .page-content{${pageContainerCss}}
+    .unit-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:10px;flex:1;min-height:0;}
+    .plan-box{border:1px solid #d4d7df;border-radius:12px;background:#f8f8f8;display:grid;place-items:center;min-height:340px;overflow:hidden;}
+    .unit-page .plan-box,.unit-page .data-box{height:100%;}
+    .plan-box img{max-width:100%;max-height:100%;display:block;object-fit:contain;}
+    .data-box{
+      border:1px solid #df7d24;border-radius:12px;padding:14px;background:#f28b2c;color:#fff;
+      display:flex;flex-direction:column;justify-content:flex-start;
+    }
+    .data-box[data-align="center"]{justify-content:center;}
+    .data-box[data-align="end"]{justify-content:flex-end;}
+    .data-box h3{
+      margin:0 0 8px;font-size:var(--price-heading-size);color:var(--price-heading);
+      line-height:var(--price-line-height);word-spacing:var(--price-word-spacing);letter-spacing:var(--price-letter-spacing);
+    }
+    .data-box ul{list-style:none;padding:0;margin:0 0 12px;}
+    .data-box li{
+      display:flex;justify-content:space-between;gap:12px;
+      padding:var(--price-row-padding-y) 0;border-bottom:1px solid var(--price-divider);
+      line-height:var(--price-line-height);word-spacing:var(--price-word-spacing);letter-spacing:var(--price-letter-spacing);
+      font-size:var(--price-body-size);
+    }
+    .data-box li:last-child{border-bottom:0;}
+    .data-box span{
+      color:var(--price-text);font-size:var(--price-label-size);
+      line-height:var(--price-line-height);word-spacing:var(--price-word-spacing);letter-spacing:var(--price-letter-spacing);
+    }
+    .data-box strong{
+      color:var(--price-text);font-size:var(--price-value-size);
+      line-height:var(--price-line-height);word-spacing:var(--price-word-spacing);letter-spacing:var(--price-letter-spacing);
+    }
+    .meta{
+      margin:8px 0 0;color:var(--price-text);font-size:var(--price-meta-size);
+      line-height:var(--price-line-height);word-spacing:var(--price-word-spacing);letter-spacing:var(--price-letter-spacing);
+    }
+    .unit-meta-top{margin-top:var(--price-meta-top-offset);margin-bottom:var(--price-meta-gap);}
+    .unit-meta-top .meta{margin:0 0 4px;}
+    .unit-meta-top .meta:last-child{margin-bottom:0;}
+    .empty{display:grid;place-items:center;text-align:center;min-height:170px;border:1px dashed #cfd4df;border-radius:12px;color:var(--muted);padding:12px;background:#fff;}
+    code{background:#f2f4f8;padding:2px 4px;border-radius:6px}
+    @media (max-width:900px){.unit-grid{grid-template-columns:1fr;} iframe{height:58vh;}}
+  </style></head><body>
+    <div class="wrap">${contentTop}${pagesHtml}</div>
+    ${buildSolarMidtownCropScript()}
+  </body></html>`;
+}
+
+app.get('/api/presentaciones/solar-midtown/plan-image', async (req, res) => {
+  try {
+    const source = String(req.query && req.query.url || '').trim();
+    if (!source) return res.status(400).json({ error: 'Falta parámetro url' });
+    let parsed;
+    try {
+      parsed = new URL(source);
+    } catch {
+      return res.status(400).json({ error: 'URL inválida' });
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ error: 'Solo se permiten URLs http/https' });
+    }
+    const upstream = await fetch(parsed.toString());
+    if (!upstream.ok) {
+      return res.status(502).json({ error: `No se pudo descargar plano (${upstream.status})` });
+    }
+    const contentType = upstream.headers.get('content-type') || 'image/png';
+    const data = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.send(data);
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Error al obtener la imagen del plano',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
+  const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids);
+  const data = readSolarMidtownRowsFromCbs();
+  const layout = readSolarMidtownLayout();
+  const selectedRows = data.rows.filter((row) => selectedIds.includes(row.id));
+  const brochurePathEs = getSolarMidtownBrochurePath('es');
+  const brochureExists = fs.existsSync(brochurePathEs);
+  const brochureMeta = brochureExists ? await readSolarMidtownBrochureMeta(brochurePathEs) : { pageCount: 0 };
+  const selectedBrochurePages = parseSolarMidtownBrochurePages(req.query && req.query.pages, brochureMeta.pageCount);
+  const selectedBrochurePagesCsv = selectedBrochurePages.map((idx) => String(idx + 1)).join(',');
+  const idsRaw = selectedIds.join(',');
+  const brochureEmbed = brochureExists
+    ? `<iframe src="/api/presentaciones/solar-midtown/brochure?lang=es" title="Brochure Solar Midtown"></iframe>`
+    : `<div class="empty">No se encontró brochure local en:<br><code>${escapeHtml(brochurePathEs)}</code></div>`;
+  const brochurePagesPanel = brochureExists && brochureMeta.pageCount > 0 ? `<section class="panel">
+      <h2 style="margin:0 0 8px;font-size:20px;">Hojas del brochure para descargar</h2>
+      <p class="sub" style="margin:0 0 10px;">Marca las hojas que quieras conservar en el PDF final.</p>
+      <div id="brochurePagesBox" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px;max-width:900px;">
+        ${Array.from({ length: brochureMeta.pageCount }, (_, idx) => {
+          const page = idx + 1;
+          const checked = selectedBrochurePages.includes(idx) ? 'checked' : '';
+          return `<label style="display:flex;align-items:center;gap:6px;border:1px solid #d5d9e3;padding:6px 8px;border-radius:8px;background:#fff;">
+              <input type="checkbox" class="brochure-page-check" value="${page}" ${checked}>
+              <span style="font-size:12px;">Hoja ${page}</span>
+            </label>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        <button type="button" class="btn" id="brochureSelectAllBtn">Seleccionar todo</button>
+        <button type="button" class="btn" id="brochureSelectNoneBtn">Quitar todo</button>
+      </div>
+      <p id="brochurePagesHint" class="sub" style="margin:8px 0 0;">Seleccionadas: ${selectedBrochurePages.length} de ${brochureMeta.pageCount}</p>
+    </section>` : '';
+  const pagesHtml = `<section><h2 style="margin:0 0 8px;font-size:20px;">Páginas agregadas al final</h2>${buildSolarMidtownPagesHtml(selectedRows, layout, { lang: 'es' })}</section>`;
+  const sampleIdForEditor = selectedRows[0] && selectedRows[0].id ? String(selectedRows[0].id) : '';
+  const editorHref = `/presentaciones/solar-midtown/editor?ids=${encodeURIComponent(idsRaw)}${sampleIdForEditor ? `&sample=${encodeURIComponent(sampleIdForEditor)}` : ''}`;
+  const contentTop = `<div class="head">
+      <div>
+        <h1>Vista previa · Solar Midtown</h1>
+        <p class="sub">Brochure base + páginas adicionales por unidad seleccionada.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a class="btn" href="${editorHref}">Editar plantilla</a>
+        <a class="btn" id="downloadWithPagesBtnEs" href="/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=${encodeURIComponent(idsRaw)}&pages=${encodeURIComponent(selectedBrochurePagesCsv)}">Descargar presentación (PDF ES)</a>
+        <a class="btn" id="downloadWithPagesBtnEn" href="/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=${encodeURIComponent(idsRaw)}&pages=${encodeURIComponent(selectedBrochurePagesCsv)}">Descargar presentación (PDF EN)</a>
+        <a class="btn" href="/presentaciones/solar-midtown">Volver</a>
+      </div>
+    </div>
+    ${brochurePagesPanel}
+    <section class="panel">
+      <h2 style="margin:0 0 8px;font-size:20px;">Brochure base</h2>
+      ${brochureEmbed}
+    </section>
+    <script>
+      (function () {
+        const checks = Array.from(document.querySelectorAll('.brochure-page-check'));
+        const hint = document.getElementById('brochurePagesHint');
+        const downloadBtnEs = document.getElementById('downloadWithPagesBtnEs');
+        const downloadBtnEn = document.getElementById('downloadWithPagesBtnEn');
+        const selectAllBtn = document.getElementById('brochureSelectAllBtn');
+        const selectNoneBtn = document.getElementById('brochureSelectNoneBtn');
+        if (!checks.length || !downloadBtnEs || !downloadBtnEn) return;
+        const baseUrlEs = '/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=${encodeURIComponent(idsRaw)}';
+        const baseUrlEn = '/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=${encodeURIComponent(idsRaw)}';
+        function selectedPages() {
+          return checks
+            .filter((c) => c.checked)
+            .map((c) => Number(c.value))
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .sort((a, b) => a - b);
+        }
+        function updateDownloadLink() {
+          const pages = selectedPages();
+          if (hint) hint.textContent = 'Seleccionadas: ' + pages.length + ' de ' + checks.length;
+          if (!pages.length) {
+            downloadBtnEs.setAttribute('href', '#');
+            downloadBtnEn.setAttribute('href', '#');
+            downloadBtnEs.style.opacity = '0.5';
+            downloadBtnEn.style.opacity = '0.5';
+            return;
+          }
+          downloadBtnEs.style.opacity = '1';
+          downloadBtnEn.style.opacity = '1';
+          downloadBtnEs.setAttribute('href', baseUrlEs + '&pages=' + encodeURIComponent(pages.join(',')));
+          downloadBtnEn.setAttribute('href', baseUrlEn + '&pages=' + encodeURIComponent(pages.join(',')));
+        }
+        checks.forEach((check) => check.addEventListener('change', updateDownloadLink));
+        if (selectAllBtn) selectAllBtn.addEventListener('click', function () {
+          checks.forEach((check) => { check.checked = true; });
+          updateDownloadLink();
+        });
+        if (selectNoneBtn) selectNoneBtn.addEventListener('click', function () {
+          checks.forEach((check) => { check.checked = false; });
+          updateDownloadLink();
+        });
+        function onDownloadClick(evt) {
+          const href = String(evt.currentTarget && evt.currentTarget.getAttribute('href') || '');
+          if (href === '#') {
+            evt.preventDefault();
+            alert('Selecciona al menos 1 hoja del brochure.');
+          }
+        }
+        downloadBtnEs.addEventListener('click', onDownloadClick);
+        downloadBtnEn.addEventListener('click', onDownloadClick);
+        updateDownloadLink();
+      })();
+    </script>`;
+  return res.send(buildSolarMidtownPagesDocument({
+    title: 'Vista previa · Solar Midtown',
+    contentTop,
+    pagesHtml,
+    layout
+  }));
+});
+
+app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
+  try {
+    const lang = normalizeSolarMidtownLang(req.query && req.query.lang);
+    const brochurePath = getSolarMidtownBrochurePath(lang);
+    const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids);
+    if (!selectedIds.length) {
+      return res.status(400).json({ error: 'Selecciona al menos una unidad para descargar.' });
+    }
+    if (!fs.existsSync(brochurePath)) {
+      return res.status(404).json({
+        error: 'No se encontró brochure local de Solar Midtown.',
+        expectedPath: brochurePath
+      });
+    }
+    const data = readSolarMidtownRowsFromCbs();
+    const layout = readSolarMidtownLayout();
+    const selectedRows = data.rows.filter((row) => selectedIds.includes(row.id));
+    if (!selectedRows.length) {
+      return res.status(400).json({ error: 'No se encontraron filas válidas para las unidades seleccionadas.' });
+    }
+
+    const baseBytes = fs.readFileSync(brochurePath);
+    const baseDoc = await PDFDocument.load(baseBytes);
+    const selectedBasePageIndices = parseSolarMidtownBrochurePages(req.query && req.query.pages, baseDoc.getPageCount());
+    if (!selectedBasePageIndices.length) {
+      return res.status(400).json({ error: 'Selecciona al menos 1 hoja del brochure para descargar.' });
+    }
+    const baseFirstPage = baseDoc.getPage(0);
+    const pageWidthPt = baseFirstPage.getWidth();
+    const pageHeightPt = baseFirstPage.getHeight();
+
+    const planDataUrlById = {};
+    await Promise.all(selectedRows.map(async (row) => {
+      const rowId = String(row && row.id || '');
+      const link = String(row && row.planLink || '').trim();
+      if (!rowId || !link) return;
+      const dataUrl = await fetchImageAsDataUrl(link);
+      if (dataUrl) planDataUrlById[rowId] = dataUrl;
+    }));
+    const appendixPagesHtml = buildSolarMidtownPagesHtml(selectedRows, layout, {
+      absoluteAssets: true,
+      planDataUrlById,
+      lang
+    });
+    const appendixHtml = buildSolarMidtownPagesDocument({
+      title: 'Solar Midtown · Páginas agregadas',
+      contentTop: '',
+      pagesHtml: appendixPagesHtml,
+      pdfMode: true,
+      pageWidthPt,
+      pageHeightPt,
+      layout
+    });
+    const pageWidthIn = (pageWidthPt / 72).toFixed(4);
+    const pageHeightIn = (pageHeightPt / 72).toFixed(4);
+    const appendixPdfBuffer = await generatePdfWithSharedBrowser(appendixHtml, {
+      width: `${pageWidthIn}in`,
+      height: `${pageHeightIn}in`,
+      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+    });
+
+    const appendixDoc = await PDFDocument.load(appendixPdfBuffer);
+    const merged = await PDFDocument.create();
+    const basePages = await merged.copyPages(baseDoc, selectedBasePageIndices);
+    basePages.forEach((page) => merged.addPage(page));
+    const appendixPages = await merged.copyPages(appendixDoc, appendixDoc.getPageIndices());
+    appendixPages.forEach((page) => merged.addPage(page));
+    const finalPdf = await merged.save();
+
+    const langLabel = lang === 'en' ? 'EN' : 'ES';
+    const fileName = `Solar-Midtown-Presentacion-${langLabel}-${Date.now()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(Buffer.from(finalPdf));
+  } catch (err) {
+    log(`Error en /api/presentaciones/solar-midtown/download.pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar la presentación PDF',
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
