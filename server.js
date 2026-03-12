@@ -1106,6 +1106,9 @@ function readSolarMidtownCropMap() {
   const runtimeRaw = readJson(SOLAR_MIDTOWN_CROPS_PATH, {});
   const repoMap = normalizeSolarMidtownCropMap(repoRaw);
   const runtimeMap = normalizeSolarMidtownCropMap(runtimeRaw);
+  if (Object.keys(repoMap).length > 0) {
+    return repoMap;
+  }
   const merged = { ...repoMap };
   Object.keys(runtimeMap).forEach((id) => {
     const runtimeCrop = runtimeMap[id];
@@ -1276,6 +1279,9 @@ function readSolarMidtownLayout() {
   const repoRaw = readJson(SOLAR_MIDTOWN_LAYOUT_REPO_PATH, null);
   const runtimeRaw = readJson(SOLAR_MIDTOWN_LAYOUT_PATH, null);
   const repoNorm = normalizeSolarMidtownLayout(repoRaw);
+  if (!isJsonEqual(repoNorm, normalizeSolarMidtownLayout(base))) {
+    return repoNorm;
+  }
   const runtimeNorm = normalizeSolarMidtownLayout(runtimeRaw);
   const merged = applyNonDefaultOverlay(
     deepCloneJson(repoNorm || base),
