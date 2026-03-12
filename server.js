@@ -66,7 +66,7 @@ const SOLAR_MIDTOWN_BROCHURE_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR 
 const SOLAR_MIDTOWN_BROCHURE_ENG_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR Midtown ENG.pdf');
 const SOLAR_MIDTOWN_LAYOUT_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-crops.json');
-const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martina@sinca.mx').toLowerCase();
+const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
@@ -2736,11 +2736,9 @@ app.get('/logout', (req, res, next) => {
 app.get('/', requireAuth, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
   const isInternalUser = isInternalUserEmail(currentEmail);
-  if (!isInternalUser) {
-    return res.redirect('/whisperlist');
-  }
+  if (!isInternalUser) return res.redirect('/whisperlist');
   const isGerente = currentEmail === GERENTE_EMAIL;
-  const showViceroyModuleCard = currentEmail === 'martin@simca.mx';
+  const showViceroyModuleCard = true;
   const ownerServicesCard = isGerente ? `
         <a class="card" href="/owner-services">
           <span class="tag">Módulo</span>
@@ -3291,7 +3289,7 @@ function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
       titleFallback: 'Option',
       development: 'Development',
       department: 'Department',
-      sqm: 'Square meters',
+      sqm: 'SQFT',
       priceSummary: 'Price summary',
       listPrice: 'List price',
       discountPct: 'Discount %',
@@ -3340,6 +3338,7 @@ function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
       : '<div class="empty">Sin link de plano (columna B)</div>';
     const titleText = layout.title.text || t.titleFallback;
     const metros = String(row && row.colF || '').trim();
+    const sqft = String(row && row.colG || '').trim();
     const discountApplies = hasSolarMidtownDiscount(row);
     return `<article class="unit-page">
       <header>
@@ -3351,7 +3350,7 @@ function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
         <section class="data-box" data-align="${escapeHtml(layout.priceBox.verticalAlign)}" style="background:${escapeHtml(layout.priceBox.backgroundColor)};border:1px solid ${escapeHtml(layout.priceBox.borderColor)};border-radius:${layout.priceBox.borderRadius}px;color:${escapeHtml(layout.priceBox.textColor)};">
           <div class="unit-meta-top">
             <p class="meta">${escapeHtml(t.department)}: <strong>${escapeHtml(row.unidad || '-')}</strong></p>
-            <p class="meta">${escapeHtml(t.sqm)}: <strong>${escapeHtml(metros || '-')} m²</strong></p>
+            <p class="meta">${escapeHtml(t.sqm)}: <strong>${escapeHtml(lang === 'en' ? (sqft || '-') : (metros || '-'))}${lang === 'en' ? '' : ' m²'}</strong></p>
           </div>
           <h3>${escapeHtml(t.priceSummary)}</h3>
           <ul>
