@@ -1024,6 +1024,38 @@ function readFirstExistingJson(paths, fallback) {
   return fallback;
 }
 
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function deepCloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function isJsonEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function applyNonDefaultOverlay(baseInput, overlayInput, defaultsInput) {
+  const base = isPlainObject(baseInput) ? baseInput : {};
+  const overlay = isPlainObject(overlayInput) ? overlayInput : {};
+  const defaults = isPlainObject(defaultsInput) ? defaultsInput : {};
+  Object.keys(overlay).forEach((key) => {
+    const overlayVal = overlay[key];
+    const defaultVal = defaults[key];
+    const baseVal = base[key];
+    if (isPlainObject(overlayVal) && isPlainObject(defaultVal)) {
+      const nextBase = isPlainObject(baseVal) ? baseVal : {};
+      base[key] = applyNonDefaultOverlay(nextBase, overlayVal, defaultVal);
+      return;
+    }
+    if (!isJsonEqual(overlayVal, defaultVal)) {
+      base[key] = overlayVal;
+    }
+  });
+  return base;
+}
+
 function defaultSolarMidtownPlanCrop() {
   return { x: 0, y: 0, w: 100, h: 100 };
 }
@@ -1063,12 +1095,31 @@ function normalizeSolarMidtownCropMap(input) {
   return out;
 }
 
+function isDefaultSolarMidtownCrop(cropInput) {
+  const crop = normalizeSolarMidtownPlanCrop(cropInput);
+  const def = defaultSolarMidtownPlanCrop();
+  return crop.x === def.x && crop.y === def.y && crop.w === def.w && crop.h === def.h;
+}
+
 function readSolarMidtownCropMap() {
-  const raw = readFirstExistingJson(
-    [SOLAR_MIDTOWN_CROPS_REPO_PATH, SOLAR_MIDTOWN_CROPS_PATH],
-    {}
-  );
-  return normalizeSolarMidtownCropMap(raw);
+  const repoRaw = readJson(SOLAR_MIDTOWN_CROPS_REPO_PATH, {});
+  const runtimeRaw = readJson(SOLAR_MIDTOWN_CROPS_PATH, {});
+  const repoMap = normalizeSolarMidtownCropMap(repoRaw);
+  const runtimeMap = normalizeSolarMidtownCropMap(runtimeRaw);
+  const merged = { ...repoMap };
+  Object.keys(runtimeMap).forEach((id) => {
+    const runtimeCrop = runtimeMap[id];
+    const repoCrop = merged[id];
+    if (!repoCrop) {
+      merged[id] = runtimeCrop;
+      return;
+    }
+    // If runtime has a real edit, keep it. If runtime is default/no-crop, preserve repo edit.
+    if (!isDefaultSolarMidtownCrop(runtimeCrop) || isDefaultSolarMidtownCrop(repoCrop)) {
+      merged[id] = runtimeCrop;
+    }
+  });
+  return merged;
 }
 
 function saveSolarMidtownCropMap(map) {
@@ -1221,11 +1272,17 @@ function normalizeSolarMidtownLayout(input) {
 }
 
 function readSolarMidtownLayout() {
-  const raw = readFirstExistingJson(
-    [SOLAR_MIDTOWN_LAYOUT_REPO_PATH, SOLAR_MIDTOWN_LAYOUT_PATH],
-    null
+  const base = defaultSolarMidtownLayout();
+  const repoRaw = readJson(SOLAR_MIDTOWN_LAYOUT_REPO_PATH, null);
+  const runtimeRaw = readJson(SOLAR_MIDTOWN_LAYOUT_PATH, null);
+  const repoNorm = normalizeSolarMidtownLayout(repoRaw);
+  const runtimeNorm = normalizeSolarMidtownLayout(runtimeRaw);
+  const merged = applyNonDefaultOverlay(
+    deepCloneJson(repoNorm || base),
+    runtimeNorm || {},
+    base
   );
-  return normalizeSolarMidtownLayout(raw);
+  return normalizeSolarMidtownLayout(merged);
 }
 
 function saveSolarMidtownLayout(layout) {
@@ -3152,6 +3209,53 @@ app.post('/api/presentaciones/solar-midtown/crop', requireSolarMidtownEditor, (r
 app.get('/api/presentaciones/solar-midtown/layout', (req, res) => {
   const layout = readSolarMidtownLayout();
   return res.json({ ok: true, layout });
+});
+
+app.get('/api/presentaciones/solar-midtown/presets-debug', (req, res) => {
+  const repoCropsRaw = readJson(SOLAR_MIDTOWN_CROPS_REPO_PATH, {});
+  const runtimeCropsRaw = readJson(SOLAR_MIDTOWN_CROPS_PATH, {});
+  const repoCrops = normalizeSolarMidtownCropMap(repoCropsRaw);
+  const runtimeCrops = normalizeSolarMidtownCropMap(runtimeCropsRaw);
+  const mergedCrops = readSolarMidtownCropMap();
+
+  const repoLayoutRaw = readJson(SOLAR_MIDTOWN_LAYOUT_REPO_PATH, null);
+  const runtimeLayoutRaw = readJson(SOLAR_MIDTOWN_LAYOUT_PATH, null);
+  const mergedLayout = readSolarMidtownLayout();
+
+  const data = readSolarMidtownRowsFromCbs();
+  const rowIds = new Set((data.rows || []).map((row) => String(row && row.id || '').trim()).filter(Boolean));
+  let cropCoverage = 0;
+  rowIds.forEach((id) => {
+    if (Object.prototype.hasOwnProperty.call(mergedCrops, id)) cropCoverage += 1;
+  });
+
+  return res.json({
+    ok: true,
+    paths: {
+      repoCrops: SOLAR_MIDTOWN_CROPS_REPO_PATH,
+      runtimeCrops: SOLAR_MIDTOWN_CROPS_PATH,
+      repoLayout: SOLAR_MIDTOWN_LAYOUT_REPO_PATH,
+      runtimeLayout: SOLAR_MIDTOWN_LAYOUT_PATH
+    },
+    exists: {
+      repoCrops: fs.existsSync(SOLAR_MIDTOWN_CROPS_REPO_PATH),
+      runtimeCrops: fs.existsSync(SOLAR_MIDTOWN_CROPS_PATH),
+      repoLayout: fs.existsSync(SOLAR_MIDTOWN_LAYOUT_REPO_PATH),
+      runtimeLayout: fs.existsSync(SOLAR_MIDTOWN_LAYOUT_PATH)
+    },
+    counts: {
+      repoCrops: Object.keys(repoCrops).length,
+      runtimeCrops: Object.keys(runtimeCrops).length,
+      mergedCrops: Object.keys(mergedCrops).length,
+      rows: rowIds.size,
+      cropCoverage
+    },
+    sample: {
+      mergedCropUnit117: mergedCrops['solar-mt-unit-117'] || null,
+      mergedLayout
+    },
+    layoutDiffersFromDefault: !isJsonEqual(mergedLayout, normalizeSolarMidtownLayout(defaultSolarMidtownLayout()))
+  });
 });
 
 app.get('/api/presentaciones/solar-midtown/page-size', async (req, res) => {
