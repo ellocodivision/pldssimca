@@ -3136,6 +3136,30 @@ app.get('/api/presentaciones/solar-midtown/page-size', async (req, res) => {
   return res.json({ ok: true, pageSize: size });
 });
 
+app.get('/api/presentaciones/solar-midtown/brochure-debug', (req, res) => {
+  const lang = normalizeSolarMidtownLang(req.query && req.query.lang);
+  const candidates = getSolarMidtownBrochureCandidates(lang);
+  const checks = candidates.map((p) => {
+    let exists = false;
+    let size = 0;
+    try {
+      if (fs.existsSync(p)) {
+        exists = true;
+        size = fs.statSync(p).size;
+      }
+    } catch {}
+    return { path: p, exists, size };
+  });
+  return res.json({
+    ok: true,
+    lang,
+    selectedPath: getSolarMidtownBrochurePath(lang),
+    dataDir: DATA_DIR,
+    repoDataDir: REPO_DATA_DIR,
+    checks
+  });
+});
+
 app.post('/api/presentaciones/solar-midtown/render-sample', requireSolarMidtownEditor, async (req, res) => {
   try {
     const incomingLayout = req.body && req.body.layout ? req.body.layout : req.body;
@@ -3303,6 +3327,24 @@ function getSolarMidtownBrochurePath(langInput) {
     path.join(REPO_DATA_DIR, 'SOLAR Midtown ESP.pdf'),
     SOLAR_MIDTOWN_BROCHURE_PATH
   ]);
+}
+
+function getSolarMidtownBrochureCandidates(langInput) {
+  const lang = normalizeSolarMidtownLang(langInput);
+  if (lang === 'en') {
+    return [
+      SOLAR_MIDTOWN_BROCHURE_EN_ENV_PATH,
+      path.join(DATA_DIR, 'SOLAR Midtown ENG.pdf'),
+      path.join(REPO_DATA_DIR, 'SOLAR Midtown ENG.pdf'),
+      SOLAR_MIDTOWN_BROCHURE_ENG_PATH
+    ].filter((p) => String(p || '').trim());
+  }
+  return [
+    SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH,
+    path.join(DATA_DIR, 'SOLAR Midtown ESP.pdf'),
+    path.join(REPO_DATA_DIR, 'SOLAR Midtown ESP.pdf'),
+    SOLAR_MIDTOWN_BROCHURE_PATH
+  ].filter((p) => String(p || '').trim());
 }
 
 function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
