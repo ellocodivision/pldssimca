@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editor plantilla · Solar Midtown</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1120px;margin:0 auto;padding:22px 16px 40px;}
+    .head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+    h1{margin:0;font-size:28px;}
+    .sub{margin:6px 0 0;color:var(--muted);}
+    .btn{display:inline-block;padding:9px 12px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer;}
+    .btn.primary{background:var(--accent);border-color:#cab700;}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:10px;}
+    label{display:block;font-size:12px;color:#5f6572;margin-bottom:4px;}
+    input[type="text"],input[type="number"],input[type="color"],select{width:100%;padding:8px 9px;border:1px solid #cac3b2;border-radius:9px;background:#fff;}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+    .status{font-size:13px;color:#5f6572;}
+    .demo{border-radius:14px;border:1px solid #cfc8b8;margin-top:10px;background:#f5f1e7;padding:12px;overflow:auto;}
+    .demo-shell{width:100%;display:flex;justify-content:center;}
+    .demo-page{padding:14px;background:#f28b2c;width:100%;max-width:100%;box-shadow:0 8px 20px rgba(0,0,0,0.15);transform-origin:top center;display:flex;flex-direction:column;}
+    .demo-unit{background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;flex:1;min-height:0;}
+    .demo-title{margin:0 0 4px;font-size:20px;}
+    .demo-sub{margin:0 0 8px;color:#5f6572;font-size:14px;}
+    .demo-grid{display:grid;gap:10px;grid-template-columns:1.2fr 1fr;flex:1;min-height:0;}
+    .demo-plan{min-height:180px;height:100%;border-radius:10px;border:1px solid #d4d7df;background:#f8f8f8;display:grid;place-items:center;color:#8a90a0;font-size:13px;overflow:hidden;}
+    .demo-plan img{max-width:100%;max-height:100%;display:block;object-fit:contain;}
+    .demo-plan .plan-preview-image{cursor:grab;user-select:none;-webkit-user-drag:none;transform:translate(0px,0px);}
+    .demo-plan.dragging .plan-preview-image{cursor:grabbing;}
+    .demo-price{border-radius:10px;padding:10px;background:#f28b2c;border:1px solid #df7d24;color:#fff;height:100%;}
+    .demo-price h3{margin:0 0 8px;font-size:14px;}
+    .demo-price .line{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.35);}
+    .demo-price .line:last-child{border-bottom:0;}
+    .demo-price .meta{margin:0 0 8px;font-size:12px;}
+    .demo-price .meta-group{margin:0 0 12px;}
+    .demo-price .meta-group .meta{margin:0 0 4px;}
+    .demo-price .meta-group .meta:last-child{margin-bottom:0;}
+    .real-frame-wrap{margin-top:10px;border:1px solid #cfc8b8;border-radius:12px;background:#fff;overflow:hidden;}
+    .real-frame{width:100%;height:640px;border:0;display:block;background:#fff;}
+    @media (max-width:980px){.grid{grid-template-columns:repeat(2,minmax(160px,1fr));}.demo-grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="head">
+      <div>
+        <h1>Editor plantilla · Solar Midtown</h1>
+        <p class="sub">Ajusta posición/estilo de la hoja agregada y guarda para preview + PDF.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a class="btn" href="/presentaciones/solar-midtown">Volver</a>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="grid">
+        <div>
+          <label>Texto título</label>
+          <input id="titleText" type="text" value="">
+        </div>
+        <div>
+          <label>Tamaño título (px)</label>
+          <input id="titleSize" type="number" min="12" max="80" step="1" value="22">
+        </div>
+        <div>
+          <label>Color título</label>
+          <input id="titleColor" type="color" value="#1f2330">
+        </div>
+        <div>
+          <label>Tamaño subtítulo (px)</label>
+          <input id="subtitleSize" type="number" min="10" max="50" step="1" value="14">
+        </div>
+        <div>
+          <label>Color subtítulo</label>
+          <input id="subtitleColor" type="color" value="#5f6572">
+        </div>
+        <div>
+          <label>Fondo página agregada</label>
+          <input id="pageBg" type="color" value="#f28b2c">
+        </div>
+        <div>
+          <label>Padding página (pt)</label>
+          <input id="pagePadding" type="number" min="0" max="80" step="1" value="16">
+        </div>
+        <div>
+          <label>Gap columnas (px)</label>
+          <input id="gridGap" type="number" min="0" max="60" step="1" value="14">
+        </div>
+        <div>
+          <label>Ancho plano (ratio)</label>
+          <input id="leftRatio" type="number" min="0.2" max="4" step="0.1" value="1.2">
+        </div>
+        <div>
+          <label>Ancho precio (ratio)</label>
+          <input id="rightRatio" type="number" min="0.2" max="4" step="0.1" value="1">
+        </div>
+        <div>
+          <label>Fondo caja plano</label>
+          <input id="planBg" type="color" value="#f8f8f8">
+        </div>
+        <div>
+          <label>Borde caja plano</label>
+          <input id="planBorder" type="color" value="#d4d7df">
+        </div>
+        <div>
+          <label>Alto mínimo plano (px)</label>
+          <input id="planMinHeight" type="number" min="120" max="1000" step="10" value="340">
+        </div>
+        <div>
+          <label>Fondo caja precio</label>
+          <input id="priceBg" type="color" value="#f28b2c">
+        </div>
+        <div>
+          <label>Borde caja precio</label>
+          <input id="priceBorder" type="color" value="#df7d24">
+        </div>
+        <div>
+          <label>Color texto precio</label>
+          <input id="priceText" type="color" value="#ffffff">
+        </div>
+        <div>
+          <label>Tamaño encabezado precio (px)</label>
+          <input id="priceHeadingSize" type="number" min="10" max="40" step="1" value="15">
+        </div>
+        <div>
+          <label>Tamaño filas precio (px)</label>
+          <input id="priceBodySize" type="number" min="9" max="32" step="1" value="12">
+        </div>
+        <div>
+          <label>Tamaño etiqueta fila (px)</label>
+          <input id="priceLabelSize" type="number" min="9" max="40" step="1" value="12">
+        </div>
+        <div>
+          <label>Tamaño valor fila (px)</label>
+          <input id="priceValueSize" type="number" min="9" max="40" step="1" value="12">
+        </div>
+        <div>
+          <label>Tamaño texto meta (px)</label>
+          <input id="priceMetaSize" type="number" min="8" max="24" step="1" value="12">
+        </div>
+        <div>
+          <label>Espacio entre filas (px)</label>
+          <input id="priceRowPaddingY" type="number" min="0" max="30" step="1" value="7">
+        </div>
+        <div>
+          <label>Altura de línea</label>
+          <input id="priceLineHeight" type="number" min="1" max="2.4" step="0.05" value="1.2">
+        </div>
+        <div>
+          <label>Espaciado entre palabras (px)</label>
+          <input id="priceWordSpacing" type="number" min="0" max="20" step="0.5" value="0">
+        </div>
+        <div>
+          <label>Espaciado entre letras (px)</label>
+          <input id="priceLetterSpacing" type="number" min="0" max="10" step="0.2" value="0">
+        </div>
+        <div>
+          <label>Zoom verticales (ratio)</label>
+          <input id="verticalExpandRatio" type="number" min="1" max="2.4" step="0.05" value="1.9">
+        </div>
+        <div>
+          <label>Subir bloque Depto/M2 (px)</label>
+          <input id="priceMetaTopOffset" type="number" min="-30" max="80" step="1" value="0">
+        </div>
+        <div>
+          <label>Separación Depto/M2 vs precios (px)</label>
+          <input id="priceMetaGroupGap" type="number" min="0" max="80" step="1" value="14">
+        </div>
+        <div>
+          <label>Alineación vertical caja precio</label>
+          <select id="priceVerticalAlign">
+            <option value="start">Arriba</option>
+            <option value="center">Centro</option>
+            <option value="end">Abajo</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <button id="saveBtn" class="btn primary" type="button">Guardar plantilla</button>
+        <button id="resetBtn" class="btn" type="button">Restaurar default</button>
+        <span id="status" class="status">Cargando layout...</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 style="margin:0 0 8px;font-size:18px;">Vista rápida del layout</h2>
+      <div class="row" style="margin-top:0;margin-bottom:8px;">
+        <label for="sampleUnitSelect" style="margin:0;">Unidad para preview</label>
+        <select id="sampleUnitSelect" style="width:auto;min-width:180px;"></select>
+        <span class="status">El recorte se guarda por unidad. Compara con la misma unidad que descargarás.</span>
+        <span id="dragStatus" class="status"></span>
+      </div>
+      <p id="pageInfo" class="status" style="margin:0 0 8px;">Tamaño hoja PDF: cargando...</p>
+      <div class="demo">
+        <div id="demoShell" class="demo-shell">
+          <div id="demoPage" class="demo-page">
+            <div class="demo-unit">
+              <h3 id="demoTitle" class="demo-title">Página adicional 1</h3>
+              <p id="demoSub" class="demo-sub">Desarrollo: SOLAR MT</p>
+              <div id="demoGrid" class="demo-grid">
+                <div id="demoPlan" class="demo-plan">Cargando plano...</div>
+                <div id="demoPrice" class="demo-price"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 style="margin:14px 0 8px;font-size:18px;">Vista real (motor PDF)</h2>
+      <div class="real-frame-wrap">
+        <iframe id="realPreviewFrame" class="real-frame" title="Vista real PDF"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const els = {
+        titleText: document.getElementById('titleText'),
+        titleSize: document.getElementById('titleSize'),
+        titleColor: document.getElementById('titleColor'),
+        subtitleSize: document.getElementById('subtitleSize'),
+        subtitleColor: document.getElementById('subtitleColor'),
+        pageBg: document.getElementById('pageBg'),
+        pagePadding: document.getElementById('pagePadding'),
+        gridGap: document.getElementById('gridGap'),
+        leftRatio: document.getElementById('leftRatio'),
+        rightRatio: document.getElementById('rightRatio'),
+        planBg: document.getElementById('planBg'),
+        planBorder: document.getElementById('planBorder'),
+        planMinHeight: document.getElementById('planMinHeight'),
+        priceBg: document.getElementById('priceBg'),
+        priceBorder: document.getElementById('priceBorder'),
+        priceText: document.getElementById('priceText'),
+        priceHeadingSize: document.getElementById('priceHeadingSize'),
+        priceBodySize: document.getElementById('priceBodySize'),
+        priceLabelSize: document.getElementById('priceLabelSize'),
+        priceValueSize: document.getElementById('priceValueSize'),
+        priceMetaSize: document.getElementById('priceMetaSize'),
+        priceRowPaddingY: document.getElementById('priceRowPaddingY'),
+        priceLineHeight: document.getElementById('priceLineHeight'),
+        priceWordSpacing: document.getElementById('priceWordSpacing'),
+        priceLetterSpacing: document.getElementById('priceLetterSpacing'),
+        verticalExpandRatio: document.getElementById('verticalExpandRatio'),
+        priceMetaTopOffset: document.getElementById('priceMetaTopOffset'),
+        priceMetaGroupGap: document.getElementById('priceMetaGroupGap'),
+        priceVerticalAlign: document.getElementById('priceVerticalAlign'),
+        saveBtn: document.getElementById('saveBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        status: document.getElementById('status'),
+        pageInfo: document.getElementById('pageInfo'),
+        sampleUnitSelect: document.getElementById('sampleUnitSelect'),
+        dragStatus: document.getElementById('dragStatus'),
+        realPreviewFrame: document.getElementById('realPreviewFrame'),
+        demoShell: document.getElementById('demoShell'),
+        demoPage: document.getElementById('demoPage'),
+        demoTitle: document.getElementById('demoTitle'),
+        demoSub: document.getElementById('demoSub'),
+        demoGrid: document.getElementById('demoGrid'),
+        demoPlan: document.getElementById('demoPlan'),
+        demoPrice: document.getElementById('demoPrice')
+      };
+      const state = {
+        pageSize: { widthPt: 792, heightPt: 612 },
+        sampleRow: null,
+        sampleRows: [],
+        drag: null
+      };
+      let realPreviewTimer = null;
+      const query = new URLSearchParams(window.location.search || '');
+      const querySampleId = String(query.get('sample') || '').trim();
+      const VERTICAL_UNITS = new Set([101, 102, 103, 117, 118, 120, 220, 217, 201, 202, 318, 317, 301, 302, 303, 401, 402, 403, 502]);
+
+      function parseNumberLike(raw) {
+        if (raw == null) return null;
+        if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+        const match = String(raw).replace(/,/g, '.').match(/-?\d+(?:\.\d+)?/);
+        if (!match) return null;
+        const num = Number(match[0]);
+        return Number.isFinite(num) ? num : null;
+      }
+
+      function isVerticalUnit(unidadRaw) {
+        const n = parseNumberLike(unidadRaw);
+        if (!Number.isFinite(n)) return false;
+        return VERTICAL_UNITS.has(Math.trunc(n));
+      }
+
+      function hasDiscount(row) {
+        if (!row || typeof row !== 'object') return false;
+        const pct = Number(row.descuentoPct);
+        const val = Number(row.descuentoValor);
+        const list = Number(row.precioLista);
+        const final = Number(row.precioFinal);
+        if (Number.isFinite(pct) && Math.abs(pct) > 0.0001) return true;
+        if (Number.isFinite(val) && Math.abs(val) > 0.0001) return true;
+        if (Number.isFinite(list) && Number.isFinite(final) && Math.abs(list - final) > 0.01) return true;
+        return false;
+      }
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function normalizeCrop(crop) {
+        const src = crop && typeof crop === 'object' ? crop : {};
+        const w = Number.isFinite(Number(src.w)) ? Number(src.w) : 100;
+        const h = Number.isFinite(Number(src.h)) ? Number(src.h) : 100;
+        const x = Number.isFinite(Number(src.x)) ? Number(src.x) : 0;
+        const y = Number.isFinite(Number(src.y)) ? Number(src.y) : 0;
+        return {
+          x: Math.max(-300, Math.min(300, x)),
+          y: Math.max(-300, Math.min(300, y)),
+          w: Math.max(1, Math.min(100, w)),
+          h: Math.max(1, Math.min(100, h))
+        };
+      }
+
+      function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+      }
+
+      function getEffectiveCrop(crop, unidad) {
+        const c = normalizeCrop(crop);
+        const ratio = getNumber('verticalExpandRatio', 1.9);
+        const expand = isVerticalUnit(unidad) ? clamp(ratio, 1, 2.4) : 1;
+        const centerX = c.x + (c.w / 2);
+        const centerY = c.y + (c.h / 2);
+        const ew = clamp(c.w * expand, 1, 100);
+        const eh = clamp(c.h * expand, 1, 100);
+        const ex = centerX - (ew / 2);
+        const ey = centerY - (eh / 2);
+        return { c, ew, eh, ex, ey };
+      }
+
+      async function saveSampleCrop(rowId, crop) {
+        if (!rowId) return;
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/crop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ id: rowId, crop: crop })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (res.ok && data && data.ok && data.crop) {
+            const idx = state.sampleRows.findIndex(function (row) { return String(row.id) === String(rowId); });
+            if (idx >= 0) state.sampleRows[idx].crop = normalizeCrop(data.crop);
+            if (state.sampleRow && String(state.sampleRow.id) === String(rowId)) {
+              state.sampleRow.crop = normalizeCrop(data.crop);
+            }
+            els.dragStatus.textContent = 'Recorte guardado.';
+          } else {
+            els.dragStatus.textContent = 'No se pudo guardar recorte.';
+          }
+        } catch {
+          els.dragStatus.textContent = 'Error guardando recorte.';
+        }
+      }
+
+      function bindPlanDrag(img, sample, crop) {
+        img.classList.add('plan-preview-image');
+        const rowId = String(sample && sample.id || '');
+        if (!rowId) return;
+        img.addEventListener('mousedown', function (evt) {
+          const boxRect = els.demoPlan.getBoundingClientRect();
+          const info = getEffectiveCrop(crop, sample && sample.unidad);
+          state.drag = {
+            rowId: rowId,
+            startX: evt.clientX,
+            startY: evt.clientY,
+            boxW: Math.max(1, boxRect.width),
+            boxH: Math.max(1, boxRect.height),
+            crop: info.c,
+            ew: info.ew,
+            eh: info.eh,
+            ex: info.ex,
+            ey: info.ey
+          };
+          els.demoPlan.classList.add('dragging');
+          els.dragStatus.textContent = 'Arrastrando... suelta para guardar.';
+          evt.preventDefault();
+        });
+      }
+
+      window.addEventListener('mousemove', function (evt) {
+        if (!state.drag) return;
+        const img = els.demoPlan.querySelector('.plan-preview-image');
+        if (!img) return;
+        const dx = evt.clientX - state.drag.startX;
+        const dy = evt.clientY - state.drag.startY;
+        img.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      });
+
+      window.addEventListener('mouseup', function (evt) {
+        if (!state.drag) return;
+        const drag = state.drag;
+        state.drag = null;
+        const img = els.demoPlan.querySelector('.plan-preview-image');
+        if (img) img.style.transform = 'translate(0px,0px)';
+        els.demoPlan.classList.remove('dragging');
+        const dx = evt.clientX - drag.startX;
+        const dy = evt.clientY - drag.startY;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+          els.dragStatus.textContent = '';
+          return;
+        }
+        const shiftX = (dx / drag.boxW) * drag.ew;
+        const shiftY = (dy / drag.boxH) * drag.eh;
+        const newEx = drag.ex - shiftX;
+        const newEy = drag.ey - shiftY;
+        const centerX = newEx + (drag.ew / 2);
+        const centerY = newEy + (drag.eh / 2);
+        const nextCrop = normalizeCrop({
+          x: centerX - (drag.crop.w / 2),
+          y: centerY - (drag.crop.h / 2),
+          w: drag.crop.w,
+          h: drag.crop.h
+        });
+        if (state.sampleRow && String(state.sampleRow.id) === String(drag.rowId)) {
+          state.sampleRow.crop = nextCrop;
+        }
+        const idx = state.sampleRows.findIndex(function (row) { return String(row.id) === String(drag.rowId); });
+        if (idx >= 0) state.sampleRows[idx].crop = nextCrop;
+        renderSamplePlan(state.sampleRow || {});
+        scheduleRealPreview();
+        saveSampleCrop(drag.rowId, nextCrop);
+      });
+
+      function renderSamplePriceBox(row) {
+        const sample = row || {};
+        const withDiscount = hasDiscount(sample);
+        const metros = String(sample.colF || '').trim();
+        const parts = [];
+        parts.push('<div class="meta-group"><p class="meta">Departamento: <strong>' + esc(sample.unidad || '-') + '</strong></p><p class="meta">Metros cuadrados: <strong>' + esc(metros || '-') + ' m²</strong></p></div>');
+        parts.push('<h3>Resumen de precio</h3>');
+        parts.push('<div class="line"><span>Precio lista</span><strong>' + esc(sample.precioListaFmt || '-') + '</strong></div>');
+        if (withDiscount) {
+          parts.push('<div class="line"><span>Descuento %</span><strong>' + esc(sample.descuentoPctFmt || '-') + '</strong></div>');
+          parts.push('<div class="line"><span>Descuento valor</span><strong>' + esc(sample.descuentoValorFmt || '-') + '</strong></div>');
+          parts.push('<div class="line"><span>Precio final</span><strong>' + esc(sample.precioFinalFmt || '-') + '</strong></div>');
+        }
+        parts.push('<h3>Forma de pago</h3>');
+        parts.push('<div class="line"><span>30% Enganche</span><strong>' + esc(sample.pagos && sample.pagos.enganche30Fmt || '-') + '</strong></div>');
+        parts.push('<div class="line"><span>10% a 6 meses (1)</span><strong>' + esc(sample.pagos && sample.pagos.seisMeses1Fmt || '-') + '</strong></div>');
+        parts.push('<div class="line"><span>10% a 6 meses (2)</span><strong>' + esc(sample.pagos && sample.pagos.seisMeses2Fmt || '-') + '</strong></div>');
+        parts.push('<div class="line"><span>50% Entrega</span><strong>' + esc(sample.pagos && sample.pagos.entrega50Fmt || '-') + '</strong></div>');
+        els.demoPrice.innerHTML = parts.join('');
+      }
+
+      async function renderSamplePlan(row) {
+        const sample = row || {};
+        const planLink = String(sample.planLink || '').trim();
+        if (!planLink) {
+          els.demoPlan.innerHTML = 'Sin plano disponible';
+          return;
+        }
+        const proxy = '/api/presentaciones/solar-midtown/plan-image?url=' + encodeURIComponent(planLink);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () {
+          try {
+            const iw = img.naturalWidth || img.width;
+            const ih = img.naturalHeight || img.height;
+            if (!iw || !ih) throw new Error('sin dimensiones');
+            const crop = normalizeCrop(sample.crop);
+            const ratio = getNumber('verticalExpandRatio', 1.9);
+            const expand = isVerticalUnit(sample.unidad) ? Math.max(1, Math.min(2.4, ratio)) : 1;
+            const centerX = crop.x + (crop.w / 2);
+            const centerY = crop.y + (crop.h / 2);
+            const ew = Math.max(1, Math.min(100, crop.w * expand));
+            const eh = Math.max(1, Math.min(100, crop.h * expand));
+            const ex = centerX - (ew / 2);
+            const ey = centerY - (eh / 2);
+            const sx = Math.round((ex / 100) * iw);
+            const sy = Math.round((ey / 100) * ih);
+            const sw = Math.max(1, Math.round((ew / 100) * iw));
+            const sh = Math.max(1, Math.round((eh / 100) * ih));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, sw);
+            canvas.height = Math.max(1, sh);
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('sin contexto');
+            const srcX = Math.max(0, sx);
+            const srcY = Math.max(0, sy);
+            const srcX2 = Math.min(iw, sx + sw);
+            const srcY2 = Math.min(ih, sy + sh);
+            const srcW = Math.max(0, srcX2 - srcX);
+            const srcH = Math.max(0, srcY2 - srcY);
+            if (srcW > 0 && srcH > 0) {
+              const destX = Math.max(0, -sx);
+              const destY = Math.max(0, -sy);
+              ctx.drawImage(img, srcX, srcY, srcW, srcH, destX, destY, srcW, srcH);
+            }
+            const out = new Image();
+            out.className = 'plan-preview-image';
+            out.src = canvas.toDataURL('image/png');
+            els.demoPlan.innerHTML = '';
+            els.demoPlan.appendChild(out);
+            bindPlanDrag(out, sample, crop);
+          } catch {
+            els.demoPlan.innerHTML = '<img src="' + esc(proxy) + '" alt="Plano">';
+            const fallbackImg = els.demoPlan.querySelector('img');
+            if (fallbackImg) bindPlanDrag(fallbackImg, sample, normalizeCrop(sample.crop));
+          }
+        };
+        img.onerror = function () {
+          els.demoPlan.innerHTML = 'No se pudo cargar plano';
+        };
+        img.src = proxy;
+      }
+
+      function getNumber(id, fallback) {
+        const n = Number(els[id].value);
+        return Number.isFinite(n) ? n : fallback;
+      }
+
+      function getLayoutFromForm() {
+        return {
+          version: 1,
+          crop: {
+            verticalExpandRatio: getNumber('verticalExpandRatio', 1.9)
+          },
+          page: {
+            backgroundColor: els.pageBg.value,
+            padding: getNumber('pagePadding', 16)
+          },
+          title: {
+            show: true,
+            text: els.titleText.value || 'Página adicional',
+            color: els.titleColor.value,
+            fontSize: getNumber('titleSize', 22),
+            fontWeight: 700
+          },
+          subtitle: {
+            show: true,
+            color: els.subtitleColor.value,
+            fontSize: getNumber('subtitleSize', 14)
+          },
+          grid: {
+            gap: getNumber('gridGap', 14),
+            leftRatio: getNumber('leftRatio', 1.2),
+            rightRatio: getNumber('rightRatio', 1)
+          },
+          planBox: {
+            backgroundColor: els.planBg.value,
+            borderColor: els.planBorder.value,
+            borderRadius: 12,
+            minHeight: getNumber('planMinHeight', 340)
+          },
+          priceBox: {
+            backgroundColor: els.priceBg.value,
+            borderColor: els.priceBorder.value,
+            borderRadius: 12,
+            textColor: els.priceText.value,
+            headingColor: els.priceText.value,
+            dividerColor: 'rgba(255,255,255,0.35)',
+            headingSize: getNumber('priceHeadingSize', 15),
+            bodySize: getNumber('priceBodySize', 12),
+            labelSize: getNumber('priceLabelSize', getNumber('priceBodySize', 12)),
+            valueSize: getNumber('priceValueSize', getNumber('priceBodySize', 12)),
+            metaSize: getNumber('priceMetaSize', 12),
+            rowPaddingY: getNumber('priceRowPaddingY', 7),
+            lineHeight: getNumber('priceLineHeight', 1.2),
+            wordSpacing: getNumber('priceWordSpacing', 0),
+            letterSpacing: getNumber('priceLetterSpacing', 0),
+            metaTopOffset: getNumber('priceMetaTopOffset', 0),
+            metaGroupGap: getNumber('priceMetaGroupGap', 14),
+            verticalAlign: els.priceVerticalAlign.value || 'start'
+          }
+        };
+      }
+
+      function setFormFromLayout(layout) {
+        const l = layout || {};
+        els.titleText.value = (l.title && l.title.text) || 'Página adicional';
+        els.titleSize.value = (l.title && l.title.fontSize) || 22;
+        els.titleColor.value = (l.title && l.title.color) || '#1f2330';
+        els.subtitleSize.value = (l.subtitle && l.subtitle.fontSize) || 14;
+        els.subtitleColor.value = (l.subtitle && l.subtitle.color) || '#5f6572';
+        els.pageBg.value = (l.page && l.page.backgroundColor) || '#f28b2c';
+        els.pagePadding.value = (l.page && l.page.padding) || 16;
+        els.gridGap.value = (l.grid && l.grid.gap) || 14;
+        els.leftRatio.value = (l.grid && l.grid.leftRatio) || 1.2;
+        els.rightRatio.value = (l.grid && l.grid.rightRatio) || 1;
+        els.planBg.value = (l.planBox && l.planBox.backgroundColor) || '#f8f8f8';
+        els.planBorder.value = (l.planBox && l.planBox.borderColor) || '#d4d7df';
+        els.planMinHeight.value = (l.planBox && l.planBox.minHeight) || 340;
+        els.priceBg.value = (l.priceBox && l.priceBox.backgroundColor) || '#f28b2c';
+        els.priceBorder.value = (l.priceBox && l.priceBox.borderColor) || '#df7d24';
+        els.priceText.value = (l.priceBox && l.priceBox.textColor) || '#ffffff';
+        els.priceHeadingSize.value = (l.priceBox && l.priceBox.headingSize) || 15;
+        els.priceBodySize.value = (l.priceBox && l.priceBox.bodySize) || 12;
+        els.priceLabelSize.value = (l.priceBox && l.priceBox.labelSize) || (l.priceBox && l.priceBox.bodySize) || 12;
+        els.priceValueSize.value = (l.priceBox && l.priceBox.valueSize) || (l.priceBox && l.priceBox.bodySize) || 12;
+        els.priceMetaSize.value = (l.priceBox && l.priceBox.metaSize) || 12;
+        els.priceRowPaddingY.value = (l.priceBox && l.priceBox.rowPaddingY) || 7;
+        els.priceLineHeight.value = (l.priceBox && l.priceBox.lineHeight) || 1.2;
+        els.priceWordSpacing.value = (l.priceBox && l.priceBox.wordSpacing) || 0;
+        els.priceLetterSpacing.value = (l.priceBox && l.priceBox.letterSpacing) || 0;
+        els.verticalExpandRatio.value = (l.crop && l.crop.verticalExpandRatio) || 1.9;
+        els.priceMetaTopOffset.value = (l.priceBox && l.priceBox.metaTopOffset) || 0;
+        els.priceMetaGroupGap.value = (l.priceBox && l.priceBox.metaGroupGap) || 14;
+        els.priceVerticalAlign.value = (l.priceBox && l.priceBox.verticalAlign) || 'start';
+      }
+
+      function applyDemo() {
+        const l = getLayoutFromForm();
+        const widthPt = Number(state.pageSize.widthPt) || 792;
+        const heightPt = Number(state.pageSize.heightPt) || 612;
+        const PT_TO_PX = 96 / 72;
+        const aspect = widthPt / heightPt;
+        const realWidthPx = widthPt * PT_TO_PX;
+        const realHeightPx = heightPt * PT_TO_PX;
+        const maxWidthPx = Math.min(980, Math.max(520, window.innerWidth - 140));
+        const scale = Math.min(1, maxWidthPx / realWidthPx);
+        els.demoShell.style.width = Math.round(realWidthPx * scale) + 'px';
+        els.demoShell.style.minHeight = Math.round(realHeightPx * scale) + 'px';
+        els.demoPage.style.width = widthPt + 'pt';
+        els.demoPage.style.height = heightPt + 'pt';
+        els.demoPage.style.transformOrigin = 'top left';
+        els.demoPage.style.transform = 'scale(' + scale.toFixed(5) + ')';
+        els.demoPage.style.background = l.page.backgroundColor;
+        els.demoPage.style.padding = l.page.padding + 'pt';
+        const sample = state.sampleRow || {};
+        els.demoTitle.textContent = (l.title.text || 'Página adicional') + ' 1';
+        els.demoTitle.style.color = l.title.color;
+        els.demoTitle.style.fontSize = l.title.fontSize + 'px';
+        els.demoSub.style.color = l.subtitle.color;
+        els.demoSub.style.fontSize = l.subtitle.fontSize + 'px';
+        els.demoSub.textContent = 'Desarrollo: ' + (sample.desarrollo || 'SOLAR MT');
+        els.demoGrid.style.gap = l.grid.gap + 'px';
+        els.demoGrid.style.gridTemplateColumns = l.grid.leftRatio + 'fr ' + l.grid.rightRatio + 'fr';
+        els.demoPlan.style.background = l.planBox.backgroundColor;
+        els.demoPlan.style.borderColor = l.planBox.borderColor;
+        els.demoPlan.style.minHeight = l.planBox.minHeight + 'px';
+        els.demoPrice.style.background = l.priceBox.backgroundColor;
+        els.demoPrice.style.borderColor = l.priceBox.borderColor;
+        els.demoPrice.style.color = l.priceBox.textColor;
+        els.demoPrice.style.justifyContent = l.priceBox.verticalAlign === 'center'
+          ? 'center'
+          : (l.priceBox.verticalAlign === 'end' ? 'flex-end' : 'flex-start');
+        els.demoPrice.style.display = 'flex';
+        els.demoPrice.style.flexDirection = 'column';
+        renderSamplePriceBox(sample);
+        renderSamplePlan(sample);
+        const demoHeading = els.demoPrice.querySelector('h3');
+        if (demoHeading) {
+          demoHeading.style.fontSize = l.priceBox.headingSize + 'px';
+          demoHeading.style.lineHeight = String(l.priceBox.lineHeight || 1.2);
+          demoHeading.style.wordSpacing = (l.priceBox.wordSpacing || 0) + 'px';
+          demoHeading.style.letterSpacing = (l.priceBox.letterSpacing || 0) + 'px';
+        }
+        els.demoPrice.querySelectorAll('.line').forEach(function (lineNode) {
+          lineNode.style.padding = (l.priceBox.rowPaddingY || 7) + 'px 0';
+          lineNode.style.lineHeight = String(l.priceBox.lineHeight || 1.2);
+          lineNode.style.wordSpacing = (l.priceBox.wordSpacing || 0) + 'px';
+          lineNode.style.letterSpacing = (l.priceBox.letterSpacing || 0) + 'px';
+        });
+        els.demoPrice.querySelectorAll('.line span').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.labelSize || l.priceBox.bodySize) + 'px';
+          node.style.lineHeight = String(l.priceBox.lineHeight || 1.2);
+          node.style.wordSpacing = (l.priceBox.wordSpacing || 0) + 'px';
+          node.style.letterSpacing = (l.priceBox.letterSpacing || 0) + 'px';
+        });
+        els.demoPrice.querySelectorAll('.line strong').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.valueSize || l.priceBox.bodySize) + 'px';
+          node.style.lineHeight = String(l.priceBox.lineHeight || 1.2);
+          node.style.wordSpacing = (l.priceBox.wordSpacing || 0) + 'px';
+          node.style.letterSpacing = (l.priceBox.letterSpacing || 0) + 'px';
+        });
+        els.demoPrice.querySelectorAll('.meta').forEach(function (node) {
+          node.style.fontSize = l.priceBox.metaSize + 'px';
+          node.style.color = l.priceBox.textColor;
+          node.style.lineHeight = String(l.priceBox.lineHeight || 1.2);
+          node.style.wordSpacing = (l.priceBox.wordSpacing || 0) + 'px';
+          node.style.letterSpacing = (l.priceBox.letterSpacing || 0) + 'px';
+        });
+        const metaGroup = els.demoPrice.querySelector('.meta-group');
+        if (metaGroup) {
+          metaGroup.style.marginTop = (l.priceBox.metaTopOffset || 0) + 'px';
+          metaGroup.style.marginBottom = (l.priceBox.metaGroupGap || 14) + 'px';
+        }
+        els.pageInfo.textContent = 'Tamaño hoja PDF: ' + Math.round(widthPt) + 'pt x ' + Math.round(heightPt) + 'pt (ratio ' + aspect.toFixed(3) + ', zoom editor ' + Math.round(scale * 100) + '%, zoom verticales ' + Number(l.crop && l.crop.verticalExpandRatio || 1.9).toFixed(2) + 'x)';
+      }
+
+      async function loadSampleRow() {
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/rows', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok || !Array.isArray(data.rows) || !data.rows.length) return;
+          state.sampleRows = data.rows.slice();
+          els.sampleUnitSelect.innerHTML = state.sampleRows.map(function (row) {
+            const unidad = String(row && row.unidad || '').trim() || '-';
+            const hasPlan = String(row && row.planLink || '').trim() ? '' : ' (sin plano)';
+            return '<option value="' + esc(row.id) + '">' + esc(unidad + hasPlan) + '</option>';
+          }).join('');
+          const fromQuery = querySampleId
+            ? state.sampleRows.find(function (row) { return String(row && row.id || '') === querySampleId; })
+            : null;
+          if (fromQuery) {
+            state.sampleRow = fromQuery;
+            els.sampleUnitSelect.value = fromQuery.id;
+            return;
+          }
+          const by101 = state.sampleRows.find(function (row) { return String(row && row.unidad || '').trim() === '101'; });
+          if (by101) {
+            state.sampleRow = by101;
+            els.sampleUnitSelect.value = by101.id;
+            return;
+          }
+          const withPlan = state.sampleRows.find(function (row) { return String(row && row.planLink || '').trim(); });
+          state.sampleRow = withPlan || state.sampleRows[0];
+          if (state.sampleRow) els.sampleUnitSelect.value = state.sampleRow.id;
+        } catch {}
+      }
+
+      async function loadPageSize() {
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/page-size', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok || !data.pageSize) return;
+          const w = Number(data.pageSize.widthPt);
+          const h = Number(data.pageSize.heightPt);
+          if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
+          state.pageSize = { widthPt: w, heightPt: h };
+        } catch {}
+      }
+
+      async function loadLayout() {
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/layout', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok) {
+            els.status.textContent = data.error || 'No se pudo cargar layout.';
+            return;
+          }
+          setFormFromLayout(data.layout || {});
+          applyDemo();
+          els.status.textContent = 'Layout cargado.';
+        } catch (err) {
+          els.status.textContent = 'Error de red cargando layout.';
+        }
+      }
+
+      async function saveLayout(layout) {
+        els.saveBtn.disabled = true;
+        els.status.textContent = 'Guardando...';
+        try {
+          const res = await fetch('/api/presentaciones/solar-midtown/layout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ layout: layout })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok) {
+            els.status.textContent = data.error || 'No se pudo guardar layout.';
+            return;
+          }
+          setFormFromLayout(data.layout || layout);
+          applyDemo();
+          els.status.textContent = 'Layout guardado.';
+        } catch (err) {
+          els.status.textContent = 'Error de red guardando layout.';
+        } finally {
+          els.saveBtn.disabled = false;
+        }
+      }
+
+      async function renderRealPreview() {
+        try {
+          const sampleId = String(els.sampleUnitSelect.value || '');
+          const res = await fetch('/api/presentaciones/solar-midtown/render-sample', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              sampleId: sampleId,
+              layout: getLayoutFromForm()
+            })
+          });
+          const html = await res.text();
+          els.realPreviewFrame.srcdoc = html;
+        } catch (err) {
+          els.realPreviewFrame.srcdoc = '<!doctype html><html><body style="font-family:Arial,sans-serif;padding:16px;">No se pudo cargar vista real.</body></html>';
+        }
+      }
+
+      function scheduleRealPreview() {
+        if (realPreviewTimer) clearTimeout(realPreviewTimer);
+        realPreviewTimer = setTimeout(function () {
+          renderRealPreview();
+        }, 220);
+      }
+
+      const fields = [
+        'titleText','titleSize','titleColor','subtitleSize','subtitleColor','pageBg','pagePadding',
+        'gridGap','leftRatio','rightRatio','planBg','planBorder','planMinHeight','priceBg','priceBorder','priceText',
+        'priceHeadingSize','priceBodySize','priceLabelSize','priceValueSize','priceMetaSize',
+        'priceRowPaddingY','priceLineHeight','priceWordSpacing','priceLetterSpacing','verticalExpandRatio',
+        'priceMetaTopOffset','priceMetaGroupGap','priceVerticalAlign'
+      ];
+      fields.forEach(function (key) {
+        els[key].addEventListener('input', function () {
+          applyDemo();
+          scheduleRealPreview();
+        });
+      });
+      els.sampleUnitSelect.addEventListener('change', function () {
+        const id = String(els.sampleUnitSelect.value || '');
+        const found = state.sampleRows.find(function (row) { return String(row.id) === id; });
+        if (!found) return;
+        state.sampleRow = found;
+        applyDemo();
+        scheduleRealPreview();
+      });
+      els.verticalExpandRatio.addEventListener('change', function () {
+        saveLayout(getLayoutFromForm());
+        scheduleRealPreview();
+      });
+      window.addEventListener('resize', applyDemo);
+
+      els.saveBtn.addEventListener('click', function () {
+        saveLayout(getLayoutFromForm());
+        scheduleRealPreview();
+      });
+      els.resetBtn.addEventListener('click', async function () {
+        const defaults = {
+          version: 1,
+          crop: { verticalExpandRatio: 1.9 },
+          page: { backgroundColor: '#f28b2c', padding: 16 },
+          title: { show: true, text: 'Página adicional', color: '#1f2330', fontSize: 22, fontWeight: 700 },
+          subtitle: { show: true, color: '#5f6572', fontSize: 14 },
+          grid: { gap: 14, leftRatio: 1.2, rightRatio: 1 },
+          planBox: { backgroundColor: '#f8f8f8', borderColor: '#d4d7df', borderRadius: 12, minHeight: 340 },
+          priceBox: {
+            backgroundColor: '#f28b2c',
+            borderColor: '#df7d24',
+            borderRadius: 12,
+            textColor: '#ffffff',
+            headingColor: '#ffffff',
+            dividerColor: 'rgba(255,255,255,0.35)',
+            headingSize: 15,
+            bodySize: 12,
+            labelSize: 12,
+            valueSize: 12,
+            metaSize: 12,
+            rowPaddingY: 7,
+            lineHeight: 1.2,
+            wordSpacing: 0,
+            letterSpacing: 0,
+            metaTopOffset: 0,
+            metaGroupGap: 14,
+            verticalAlign: 'start'
+          }
+        };
+        setFormFromLayout(defaults);
+        applyDemo();
+        await saveLayout(defaults);
+        scheduleRealPreview();
+      });
+
+      Promise.all([loadPageSize(), loadSampleRow(), loadLayout()]).then(function () {
+        applyDemo();
+        scheduleRealPreview();
+      });
+    })();
+  </script>
+</body>
+</html>
