@@ -3599,7 +3599,7 @@ function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
     ? {
       titleFallback: 'Option',
       development: 'Development',
-      department: 'Department',
+      department: 'Condo',
       sqm: 'SQFT',
       priceSummary: 'Price summary',
       listPrice: 'List price',
