@@ -62,6 +62,8 @@ const REPO_DATA_DIR = path.join(__dirname, 'data');
 const DATA_DIR = path.resolve(String(process.env.APP_DATA_DIR || REPO_DATA_DIR));
 const DATA_PATH = path.join(DATA_DIR, 'sample.json');
 const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
+const SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH = String(process.env.SOLAR_MIDTOWN_BROCHURE_ES_PATH || '').trim();
+const SOLAR_MIDTOWN_BROCHURE_EN_ENV_PATH = String(process.env.SOLAR_MIDTOWN_BROCHURE_EN_PATH || '').trim();
 const SOLAR_MIDTOWN_BROCHURE_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR Midtown ESP.pdf');
 const SOLAR_MIDTOWN_BROCHURE_ENG_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR Midtown ENG.pdf');
 const SOLAR_MIDTOWN_LAYOUT_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-layout.json');
@@ -3273,10 +3275,34 @@ function normalizeSolarMidtownLang(raw) {
   return value === 'en' ? 'en' : 'es';
 }
 
+function resolveFirstExistingPath(candidates) {
+  const list = Array.isArray(candidates) ? candidates : [];
+  for (const candidate of list) {
+    const p = String(candidate || '').trim();
+    if (!p) continue;
+    try {
+      if (fs.existsSync(p)) return p;
+    } catch {}
+  }
+  return String(list.find((item) => String(item || '').trim()) || '').trim();
+}
+
 function getSolarMidtownBrochurePath(langInput) {
   const lang = normalizeSolarMidtownLang(langInput);
-  if (lang === 'en') return SOLAR_MIDTOWN_BROCHURE_ENG_PATH;
-  return SOLAR_MIDTOWN_BROCHURE_PATH;
+  if (lang === 'en') {
+    return resolveFirstExistingPath([
+      SOLAR_MIDTOWN_BROCHURE_EN_ENV_PATH,
+      path.join(DATA_DIR, 'SOLAR Midtown ENG.pdf'),
+      path.join(REPO_DATA_DIR, 'SOLAR Midtown ENG.pdf'),
+      SOLAR_MIDTOWN_BROCHURE_ENG_PATH
+    ]);
+  }
+  return resolveFirstExistingPath([
+    SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH,
+    path.join(DATA_DIR, 'SOLAR Midtown ESP.pdf'),
+    path.join(REPO_DATA_DIR, 'SOLAR Midtown ESP.pdf'),
+    SOLAR_MIDTOWN_BROCHURE_PATH
+  ]);
 }
 
 function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
