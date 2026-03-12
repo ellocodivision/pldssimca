@@ -3438,8 +3438,14 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function parseSolarMidtownSelectedIds(rawIds) {
-  return String(rawIds || '')
+function parseSolarMidtownSelectedIds(rawIds, allRows) {
+  const text = String(rawIds || '').trim();
+  if (!text) return [];
+  if (text === '__all' || text === '*') {
+    const rows = Array.isArray(allRows) ? allRows : [];
+    return rows.map((row) => String(row && row.id || '').trim()).filter(Boolean);
+  }
+  return text
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
@@ -3974,8 +3980,8 @@ app.get('/api/presentaciones/solar-midtown/plan-image', async (req, res) => {
 });
 
 app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
-  const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids);
   const data = readSolarMidtownRowsFromCbs();
+  const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids, data.rows);
   const layout = readSolarMidtownLayout();
   const selectedRows = data.rows.filter((row) => selectedIds.includes(row.id));
   const brochurePathEs = getSolarMidtownBrochurePath('es');
@@ -4092,7 +4098,8 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
   try {
     const lang = normalizeSolarMidtownLang(req.query && req.query.lang);
     const brochurePath = getSolarMidtownBrochurePath(lang);
-    const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids);
+    const data = readSolarMidtownRowsFromCbs();
+    const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids, data.rows);
     if (!selectedIds.length) {
       return res.status(400).json({ error: 'Selecciona al menos una unidad para descargar.' });
     }
@@ -4103,7 +4110,6 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
         expectedPath: brochurePath
       });
     }
-    const data = readSolarMidtownRowsFromCbs();
     const layout = readSolarMidtownLayout();
     const selectedRows = data.rows.filter((row) => selectedIds.includes(row.id));
     if (!selectedRows.length) {

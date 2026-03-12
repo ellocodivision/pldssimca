@@ -78,6 +78,8 @@
     <section class="panel">
       <div class="tools">
         <input id="searchInput" class="search" type="text" placeholder="Buscar por unidad, tipo de departamento, m2, precio...">
+        <button id="selectAllBtn" class="btn" type="button">Seleccionar todo</button>
+        <button id="clearAllBtn" class="btn" type="button">Quitar todo</button>
         <button id="previewBtn" class="btn primary" type="button" disabled>Abrir vista previa</button>
         <button id="downloadBtnEs" class="btn" type="button" disabled>Descargar presentación (PDF ES)</button>
         <button id="downloadBtnEn" class="btn" type="button" disabled>Descargar presentación (PDF EN)</button>
@@ -173,6 +175,8 @@
 
       const els = {
         searchInput: document.getElementById('searchInput'),
+        selectAllBtn: document.getElementById('selectAllBtn'),
+        clearAllBtn: document.getElementById('clearAllBtn'),
         previewBtn: document.getElementById('previewBtn'),
         downloadBtnEs: document.getElementById('downloadBtnEs'),
         downloadBtnEn: document.getElementById('downloadBtnEn'),
@@ -255,6 +259,12 @@
         els.previewBtn.disabled = count === 0;
         els.downloadBtnEs.disabled = count === 0;
         els.downloadBtnEn.disabled = count === 0;
+      }
+      function getSelectionParam() {
+        const ids = Array.from(state.selected);
+        if (!ids.length) return '';
+        if (state.rows.length && ids.length === state.rows.length) return '__all';
+        return ids.join(',');
       }
       function applyFilter() {
         const q = String(els.searchInput.value || '').trim().toLowerCase();
@@ -522,20 +532,30 @@
       });
 
       els.searchInput.addEventListener('input', applyFilter);
+      els.selectAllBtn.addEventListener('click', function () {
+        state.rows.forEach(function (row) { state.selected.add(row.id); });
+        renderRows();
+        updateSelectionUi();
+      });
+      els.clearAllBtn.addEventListener('click', function () {
+        state.selected.clear();
+        renderRows();
+        updateSelectionUi();
+      });
       els.previewBtn.addEventListener('click', function () {
-        const ids = Array.from(state.selected);
-        if (!ids.length) { alert('Selecciona al menos una unidad.'); return; }
-        window.open('/presentaciones/solar-midtown/preview?ids=' + encodeURIComponent(ids.join(',')), '_blank', 'noopener');
+        const idsParam = getSelectionParam();
+        if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
+        window.open('/presentaciones/solar-midtown/preview?ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
       });
       els.downloadBtnEs.addEventListener('click', function () {
-        const ids = Array.from(state.selected);
-        if (!ids.length) { alert('Selecciona al menos una unidad.'); return; }
-        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=' + encodeURIComponent(ids.join(',')), '_blank', 'noopener');
+        const idsParam = getSelectionParam();
+        if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
+        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
       });
       els.downloadBtnEn.addEventListener('click', function () {
-        const ids = Array.from(state.selected);
-        if (!ids.length) { alert('Selecciona al menos una unidad.'); return; }
-        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=' + encodeURIComponent(ids.join(',')), '_blank', 'noopener');
+        const idsParam = getSelectionParam();
+        if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
+        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
       });
 
       attachDrag();
