@@ -377,6 +377,14 @@ function ensureDataFiles() {
       fs.copyFileSync(src, dst);
     } catch {}
   };
+  const copyAlwaysIfExists = (src, dst) => {
+    try {
+      if (!fs.existsSync(src)) return;
+      const parent = path.dirname(dst);
+      if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true });
+      fs.copyFileSync(src, dst);
+    } catch {}
+  };
 
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(FLOOR_JSON_DIR)) fs.mkdirSync(FLOOR_JSON_DIR, { recursive: true });
@@ -417,6 +425,16 @@ function ensureDataFiles() {
   copyIfMissing(
     path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto', 'INVENTARIOMAESTROWIX.xlsx'),
     path.join(viceroyDir, 'INVENTARIOMAESTROWIX.xlsx')
+  );
+
+  // Keep Solar Midtown presets identical to repo on every boot (local/dev/prod).
+  copyAlwaysIfExists(
+    SOLAR_MIDTOWN_LAYOUT_REPO_PATH,
+    SOLAR_MIDTOWN_LAYOUT_PATH
+  );
+  copyAlwaysIfExists(
+    SOLAR_MIDTOWN_CROPS_REPO_PATH,
+    SOLAR_MIDTOWN_CROPS_PATH
   );
 }
 
