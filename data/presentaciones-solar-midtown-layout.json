@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "crop": {
+    "verticalExpandRatio": 2.4
+  },
+  "page": {
+    "backgroundColor": "#f28b2c",
+    "padding": 23
+  },
+  "title": {
+    "show": true,
+    "text": "OPCION",
+    "color": "#04323b",
+    "fontSize": 24,
+    "fontWeight": 700
+  },
+  "subtitle": {
+    "show": true,
+    "color": "#002928",
+    "fontSize": 20
+  },
+  "grid": {
+    "gap": 12,
+    "leftRatio": 1.2,
+    "rightRatio": 1.1
+  },
+  "planBox": {
+    "backgroundColor": "#ffffff",
+    "borderColor": "#f28b2d",
+    "borderRadius": 12,
+    "minHeight": 480
+  },
+  "priceBox": {
+    "backgroundColor": "#f28b2d",
+    "borderColor": "#f28b2d",
+    "borderRadius": 12,
+    "textColor": "#ffffff",
+    "headingColor": "#ffffff",
+    "dividerColor": "rgba(255,255,255,0.35)",
+    "headingSize": 24,
+    "bodySize": 10,
+    "labelSize": 22,
+    "valueSize": 22,
+    "metaSize": 24,
+    "rowPaddingY": 16,
+    "lineHeight": 1.4,
+    "wordSpacing": 1.5,
+    "letterSpacing": 0,
+    "metaTopOffset": 0,
+    "metaGroupGap": 58,
+    "verticalAlign": "center"
+  }
+}
