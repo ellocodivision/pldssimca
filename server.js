@@ -1030,6 +1030,23 @@ function writeJson(filePath, data) {
   fs.renameSync(tmpPath, filePath);
 }
 
+function sha256ForString(value) {
+  return crypto.createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
+}
+
+function sha256ForJson(value) {
+  return sha256ForString(JSON.stringify(value == null ? null : value));
+}
+
+function sha256ForFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return '';
+    return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  } catch {
+    return '';
+  }
+}
+
 function readFirstExistingJson(paths, fallback) {
   const list = Array.isArray(paths) ? paths : [];
   const unique = Array.from(new Set(list.map((p) => String(p || '').trim()).filter(Boolean)));
@@ -3273,6 +3290,14 @@ app.get('/api/presentaciones/solar-midtown/presets-debug', (req, res) => {
       mergedCrops: Object.keys(mergedCrops).length,
       rows: rowIds.size,
       cropCoverage
+    },
+    hashes: {
+      repoCropsFile: sha256ForFile(SOLAR_MIDTOWN_CROPS_REPO_PATH),
+      runtimeCropsFile: sha256ForFile(SOLAR_MIDTOWN_CROPS_PATH),
+      mergedCrops: sha256ForJson(mergedCrops),
+      repoLayoutFile: sha256ForFile(SOLAR_MIDTOWN_LAYOUT_REPO_PATH),
+      runtimeLayoutFile: sha256ForFile(SOLAR_MIDTOWN_LAYOUT_PATH),
+      mergedLayout: sha256ForJson(mergedLayout)
     },
     sample: {
       mergedCropUnit117: mergedCrops['solar-mt-unit-117'] || null,
