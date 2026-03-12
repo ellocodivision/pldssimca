@@ -462,8 +462,14 @@
             method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: id, crop: crop })
           });
-          const data = await res.json().catch(function(){ return {}; });
-          if (!res.ok || !data.ok) { alert(data.error || 'No se pudo guardar el recorte.'); return; }
+          const text = await res.text();
+          let data = {};
+          try { data = JSON.parse(text); } catch {}
+          if (!res.ok || !data.ok) {
+            const detail = data.error || data.details || text || ('HTTP ' + res.status);
+            alert('No se pudo guardar el recorte. ' + detail);
+            return;
+          }
           state.crops[id] = normalizeCrop(data.crop || crop);
           state.rows = state.rows.map((row) => row.id === id ? Object.assign({}, row, { crop: state.crops[id] }) : row);
           state.filteredRows = state.filteredRows.map((row) => row.id === id ? Object.assign({}, row, { crop: state.crops[id] }) : row);

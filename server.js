@@ -59,7 +59,34 @@ const PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.join(__dirna
 const TEMPLATE_DIR = path.join(__dirname, 'templates');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const REPO_DATA_DIR = path.join(__dirname, 'data');
-const DATA_DIR = path.resolve(String(process.env.APP_DATA_DIR || REPO_DATA_DIR));
+function isWritableDir(dirPath) {
+  try {
+    if (!dirPath) return false;
+    fs.mkdirSync(dirPath, { recursive: true });
+    const probe = path.join(dirPath, `.write-test-${process.pid}-${Date.now()}`);
+    fs.writeFileSync(probe, 'ok', 'utf-8');
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveDataDir() {
+  const envDir = String(process.env.APP_DATA_DIR || '').trim();
+  if (envDir) return path.resolve(envDir);
+  const candidates = [
+    '/var/data',
+    path.join(os.tmpdir(), 'pldssimca-data'),
+    REPO_DATA_DIR
+  ];
+  for (const candidate of candidates) {
+    if (isWritableDir(candidate)) return path.resolve(candidate);
+  }
+  return path.resolve(REPO_DATA_DIR);
+}
+
+const DATA_DIR = resolveDataDir();
 const DATA_PATH = path.join(DATA_DIR, 'sample.json');
 const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
 const SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH = String(process.env.SOLAR_MIDTOWN_BROCHURE_ES_PATH || '').trim();
@@ -90,6 +117,8 @@ const SEED_DEVELOPMENTS_DIR = path.join(__dirname, 'seed-data', 'developments');
 const DEFAULT_DEVELOPMENT_SLUG = 'ceiba';
 const FLOOR_JSON_FILE_RE = /^unidades-marcadas(?:\s*\(\d+\))?\.json$/i;
 const FLOOR_MAPPED_JSON_FILE_RE = /^imagen-mapeada-.*\.json$/i;
+log(`DATA_DIR activo: ${DATA_DIR}`);
+
 const DEVELOPMENTS = [
   { slug: 'ceiba', name: 'CEIBA' },
   { slug: 'costa-caribe', name: 'COSTA CARIBE' },
