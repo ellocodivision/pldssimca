@@ -3368,6 +3368,25 @@ function getSolarMidtownBrochureCandidates(langInput) {
   ].filter((p) => String(p || '').trim());
 }
 
+function getSolarMidtownBrochureBaseName(sourcePathOrUrl, lang) {
+  const fallback = lang === 'en' ? 'SOLAR Midtown ENG' : 'SOLAR Midtown ESP';
+  const raw = String(sourcePathOrUrl || '').trim();
+  if (!raw) return fallback;
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      const u = new URL(raw);
+      const name = path.basename(decodeURIComponent(u.pathname || ''));
+      const base = String(name || '').replace(/\.pdf$/i, '').trim();
+      return base || fallback;
+    }
+    const name = path.basename(raw);
+    const base = String(name || '').replace(/\.pdf$/i, '').trim();
+    return base || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
   const layout = normalizeSolarMidtownLayout(layoutInput);
   const opts = options && typeof options === 'object' ? options : {};
@@ -3935,8 +3954,10 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
     appendixPages.forEach((page) => merged.addPage(page));
     const finalPdf = await merged.save();
 
-    const langLabel = lang === 'en' ? 'EN' : 'ES';
-    const fileName = `Solar-Midtown-Presentacion-${langLabel}-${Date.now()}.pdf`;
+    const brochureBaseName = getSolarMidtownBrochureBaseName(brochurePath, lang);
+    const unitsCount = selectedRows.length;
+    const safeBaseName = brochureBaseName.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const fileName = `${safeBaseName} - ${unitsCount} unidades.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     return res.send(Buffer.from(finalPdf));
