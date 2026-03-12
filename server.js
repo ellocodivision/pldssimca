@@ -64,8 +64,12 @@ const DATA_PATH = path.join(DATA_DIR, 'sample.json');
 const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
 const SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH = String(process.env.SOLAR_MIDTOWN_BROCHURE_ES_PATH || '').trim();
 const SOLAR_MIDTOWN_BROCHURE_EN_ENV_PATH = String(process.env.SOLAR_MIDTOWN_BROCHURE_EN_PATH || '').trim();
+const SOLAR_MIDTOWN_BROCHURE_ES_ENV_URL = String(process.env.SOLAR_MIDTOWN_BROCHURE_ES_URL || '').trim();
+const SOLAR_MIDTOWN_BROCHURE_EN_ENV_URL = String(process.env.SOLAR_MIDTOWN_BROCHURE_EN_URL || '').trim();
 const SOLAR_MIDTOWN_BROCHURE_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR Midtown ESP.pdf');
 const SOLAR_MIDTOWN_BROCHURE_ENG_PATH = path.join(os.homedir(), 'Downloads', 'SOLAR Midtown ENG.pdf');
+const SOLAR_MIDTOWN_BROCHURE_ES_FALLBACK_URL = 'https://raw.githubusercontent.com/ellocodivision/pldssimca/main/data/SOLAR%20Midtown%20ESP.pdf';
+const SOLAR_MIDTOWN_BROCHURE_EN_FALLBACK_URL = 'https://raw.githubusercontent.com/ellocodivision/pldssimca/main/data/SOLAR%20Midtown%20ENG.pdf';
 const SOLAR_MIDTOWN_LAYOUT_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-crops.json');
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
@@ -3140,15 +3144,20 @@ app.get('/api/presentaciones/solar-midtown/brochure-debug', (req, res) => {
   const lang = normalizeSolarMidtownLang(req.query && req.query.lang);
   const candidates = getSolarMidtownBrochureCandidates(lang);
   const checks = candidates.map((p) => {
+    const isUrl = /^https?:\/\//i.test(String(p || '').trim());
     let exists = false;
     let size = 0;
-    try {
-      if (fs.existsSync(p)) {
-        exists = true;
-        size = fs.statSync(p).size;
-      }
-    } catch {}
-    return { path: p, exists, size };
+    if (isUrl) {
+      exists = true;
+    } else {
+      try {
+        if (fs.existsSync(p)) {
+          exists = true;
+          size = fs.statSync(p).size;
+        }
+      } catch {}
+    }
+    return { path: p, exists, size, sourceType: isUrl ? 'url' : 'file' };
   });
   return res.json({
     ok: true,
@@ -3203,15 +3212,18 @@ app.post('/api/presentaciones/solar-midtown/layout', requireSolarMidtownEditor, 
   }
 });
 
-app.get('/api/presentaciones/solar-midtown/brochure', (req, res) => {
+app.get('/api/presentaciones/solar-midtown/brochure', async (req, res) => {
   const brochurePath = getSolarMidtownBrochurePath(req.query && req.query.lang);
-  if (!fs.existsSync(brochurePath)) {
+  const bytes = await readSolarMidtownBrochureBytes(brochurePath);
+  if (!bytes) {
     return res.status(404).json({
       error: 'No se encontró brochure local de Solar Midtown.',
       expectedPath: brochurePath
     });
   }
-  return res.sendFile(brochurePath);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  return res.send(bytes);
 });
 
 function escapeHtml(value) {
@@ -3304,6 +3316,7 @@ function resolveFirstExistingPath(candidates) {
   for (const candidate of list) {
     const p = String(candidate || '').trim();
     if (!p) continue;
+    if (/^https?:\/\//i.test(p)) return p;
     try {
       if (fs.existsSync(p)) return p;
     } catch {}
@@ -3315,17 +3328,21 @@ function getSolarMidtownBrochurePath(langInput) {
   const lang = normalizeSolarMidtownLang(langInput);
   if (lang === 'en') {
     return resolveFirstExistingPath([
+      SOLAR_MIDTOWN_BROCHURE_EN_ENV_URL,
       SOLAR_MIDTOWN_BROCHURE_EN_ENV_PATH,
       path.join(DATA_DIR, 'SOLAR Midtown ENG.pdf'),
       path.join(REPO_DATA_DIR, 'SOLAR Midtown ENG.pdf'),
-      SOLAR_MIDTOWN_BROCHURE_ENG_PATH
+      SOLAR_MIDTOWN_BROCHURE_ENG_PATH,
+      SOLAR_MIDTOWN_BROCHURE_EN_FALLBACK_URL
     ]);
   }
   return resolveFirstExistingPath([
+    SOLAR_MIDTOWN_BROCHURE_ES_ENV_URL,
     SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH,
     path.join(DATA_DIR, 'SOLAR Midtown ESP.pdf'),
     path.join(REPO_DATA_DIR, 'SOLAR Midtown ESP.pdf'),
-    SOLAR_MIDTOWN_BROCHURE_PATH
+    SOLAR_MIDTOWN_BROCHURE_PATH,
+    SOLAR_MIDTOWN_BROCHURE_ES_FALLBACK_URL
   ]);
 }
 
@@ -3333,17 +3350,21 @@ function getSolarMidtownBrochureCandidates(langInput) {
   const lang = normalizeSolarMidtownLang(langInput);
   if (lang === 'en') {
     return [
+      SOLAR_MIDTOWN_BROCHURE_EN_ENV_URL,
       SOLAR_MIDTOWN_BROCHURE_EN_ENV_PATH,
       path.join(DATA_DIR, 'SOLAR Midtown ENG.pdf'),
       path.join(REPO_DATA_DIR, 'SOLAR Midtown ENG.pdf'),
-      SOLAR_MIDTOWN_BROCHURE_ENG_PATH
+      SOLAR_MIDTOWN_BROCHURE_ENG_PATH,
+      SOLAR_MIDTOWN_BROCHURE_EN_FALLBACK_URL
     ].filter((p) => String(p || '').trim());
   }
   return [
+    SOLAR_MIDTOWN_BROCHURE_ES_ENV_URL,
     SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH,
     path.join(DATA_DIR, 'SOLAR Midtown ESP.pdf'),
     path.join(REPO_DATA_DIR, 'SOLAR Midtown ESP.pdf'),
-    SOLAR_MIDTOWN_BROCHURE_PATH
+    SOLAR_MIDTOWN_BROCHURE_PATH,
+    SOLAR_MIDTOWN_BROCHURE_ES_FALLBACK_URL
   ].filter((p) => String(p || '').trim());
 }
 
@@ -3457,12 +3478,30 @@ async function fetchImageAsDataUrl(url) {
 
 // PDF now reuses the exact same HTML renderer as preview to avoid crop mismatches.
 
+async function readSolarMidtownBrochureBytes(sourceInput) {
+  const source = String(sourceInput || '').trim();
+  if (!source) return null;
+  try {
+    if (/^https?:\/\//i.test(source)) {
+      const upstream = await fetch(source);
+      if (!upstream.ok) return null;
+      const bytes = Buffer.from(await upstream.arrayBuffer());
+      return bytes.length ? bytes : null;
+    }
+    if (!fs.existsSync(source)) return null;
+    const bytes = fs.readFileSync(source);
+    return bytes.length ? bytes : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readSolarMidtownBrochurePageSize(brochurePathInput) {
   const fallback = { widthPt: 792, heightPt: 612 };
   const brochurePath = String(brochurePathInput || SOLAR_MIDTOWN_BROCHURE_PATH);
   try {
-    if (!fs.existsSync(brochurePath)) return fallback;
-    const bytes = fs.readFileSync(brochurePath);
+    const bytes = await readSolarMidtownBrochureBytes(brochurePath);
+    if (!bytes) return fallback;
     const doc = await PDFDocument.load(bytes);
     const first = doc.getPage(0);
     if (!first) return fallback;
@@ -3481,8 +3520,8 @@ async function readSolarMidtownBrochureMeta(brochurePathInput) {
   const fallback = { widthPt: 792, heightPt: 612, pageCount: 0 };
   const brochurePath = String(brochurePathInput || SOLAR_MIDTOWN_BROCHURE_PATH);
   try {
-    if (!fs.existsSync(brochurePath)) return fallback;
-    const bytes = fs.readFileSync(brochurePath);
+    const bytes = await readSolarMidtownBrochureBytes(brochurePath);
+    if (!bytes) return fallback;
     const doc = await PDFDocument.load(bytes);
     const pageCount = doc.getPageCount();
     const first = pageCount > 0 ? doc.getPage(0) : null;
@@ -3718,7 +3757,7 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
   const layout = readSolarMidtownLayout();
   const selectedRows = data.rows.filter((row) => selectedIds.includes(row.id));
   const brochurePathEs = getSolarMidtownBrochurePath('es');
-  const brochureExists = fs.existsSync(brochurePathEs);
+  const brochureExists = Boolean(await readSolarMidtownBrochureBytes(brochurePathEs));
   const brochureMeta = brochureExists ? await readSolarMidtownBrochureMeta(brochurePathEs) : { pageCount: 0 };
   const selectedBrochurePages = parseSolarMidtownBrochurePages(req.query && req.query.pages, brochureMeta.pageCount);
   const selectedBrochurePagesCsv = selectedBrochurePages.map((idx) => String(idx + 1)).join(',');
@@ -3835,7 +3874,8 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
     if (!selectedIds.length) {
       return res.status(400).json({ error: 'Selecciona al menos una unidad para descargar.' });
     }
-    if (!fs.existsSync(brochurePath)) {
+    const baseBytes = await readSolarMidtownBrochureBytes(brochurePath);
+    if (!baseBytes) {
       return res.status(404).json({
         error: 'No se encontró brochure local de Solar Midtown.',
         expectedPath: brochurePath
@@ -3848,7 +3888,6 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
       return res.status(400).json({ error: 'No se encontraron filas válidas para las unidades seleccionadas.' });
     }
 
-    const baseBytes = fs.readFileSync(brochurePath);
     const baseDoc = await PDFDocument.load(baseBytes);
     const selectedBasePageIndices = parseSolarMidtownBrochurePages(req.query && req.query.pages, baseDoc.getPageCount());
     if (!selectedBasePageIndices.length) {
