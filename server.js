@@ -1012,24 +1012,16 @@ function writeJson(filePath, data) {
   fs.renameSync(tmpPath, filePath);
 }
 
-function readLatestJson(paths, fallback) {
+function readFirstExistingJson(paths, fallback) {
   const list = Array.isArray(paths) ? paths : [];
   const unique = Array.from(new Set(list.map((p) => String(p || '').trim()).filter(Boolean)));
-  let pickedPath = '';
-  let pickedMtime = -1;
-  unique.forEach((p) => {
+  for (const p of unique) {
     try {
-      if (!fs.existsSync(p)) return;
-      const stat = fs.statSync(p);
-      const mtime = stat && stat.mtimeMs ? Number(stat.mtimeMs) : 0;
-      if (mtime > pickedMtime) {
-        pickedMtime = mtime;
-        pickedPath = p;
-      }
+      if (!fs.existsSync(p)) continue;
+      return readJson(p, fallback);
     } catch {}
-  });
-  if (!pickedPath) return fallback;
-  return readJson(pickedPath, fallback);
+  }
+  return fallback;
 }
 
 function defaultSolarMidtownPlanCrop() {
@@ -1072,8 +1064,8 @@ function normalizeSolarMidtownCropMap(input) {
 }
 
 function readSolarMidtownCropMap() {
-  const raw = readLatestJson(
-    [SOLAR_MIDTOWN_CROPS_PATH, SOLAR_MIDTOWN_CROPS_REPO_PATH],
+  const raw = readFirstExistingJson(
+    [SOLAR_MIDTOWN_CROPS_REPO_PATH, SOLAR_MIDTOWN_CROPS_PATH],
     {}
   );
   return normalizeSolarMidtownCropMap(raw);
@@ -1229,8 +1221,8 @@ function normalizeSolarMidtownLayout(input) {
 }
 
 function readSolarMidtownLayout() {
-  const raw = readLatestJson(
-    [SOLAR_MIDTOWN_LAYOUT_PATH, SOLAR_MIDTOWN_LAYOUT_REPO_PATH],
+  const raw = readFirstExistingJson(
+    [SOLAR_MIDTOWN_LAYOUT_REPO_PATH, SOLAR_MIDTOWN_LAYOUT_PATH],
     null
   );
   return normalizeSolarMidtownLayout(raw);
