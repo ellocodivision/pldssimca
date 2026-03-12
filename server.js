@@ -72,6 +72,8 @@ const SOLAR_MIDTOWN_BROCHURE_ES_FALLBACK_URL = 'https://raw.githubusercontent.co
 const SOLAR_MIDTOWN_BROCHURE_EN_FALLBACK_URL = 'https://raw.githubusercontent.com/ellocodivision/pldssimca/main/data/SOLAR%20Midtown%20ENG.pdf';
 const SOLAR_MIDTOWN_LAYOUT_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-solar-midtown-crops.json');
+const SOLAR_MIDTOWN_LAYOUT_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-solar-midtown-layout.json');
+const SOLAR_MIDTOWN_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-solar-midtown-crops.json');
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
@@ -1010,6 +1012,26 @@ function writeJson(filePath, data) {
   fs.renameSync(tmpPath, filePath);
 }
 
+function readLatestJson(paths, fallback) {
+  const list = Array.isArray(paths) ? paths : [];
+  const unique = Array.from(new Set(list.map((p) => String(p || '').trim()).filter(Boolean)));
+  let pickedPath = '';
+  let pickedMtime = -1;
+  unique.forEach((p) => {
+    try {
+      if (!fs.existsSync(p)) return;
+      const stat = fs.statSync(p);
+      const mtime = stat && stat.mtimeMs ? Number(stat.mtimeMs) : 0;
+      if (mtime > pickedMtime) {
+        pickedMtime = mtime;
+        pickedPath = p;
+      }
+    } catch {}
+  });
+  if (!pickedPath) return fallback;
+  return readJson(pickedPath, fallback);
+}
+
 function defaultSolarMidtownPlanCrop() {
   return { x: 0, y: 0, w: 100, h: 100 };
 }
@@ -1050,7 +1072,10 @@ function normalizeSolarMidtownCropMap(input) {
 }
 
 function readSolarMidtownCropMap() {
-  const raw = readJson(SOLAR_MIDTOWN_CROPS_PATH, {});
+  const raw = readLatestJson(
+    [SOLAR_MIDTOWN_CROPS_PATH, SOLAR_MIDTOWN_CROPS_REPO_PATH],
+    {}
+  );
   return normalizeSolarMidtownCropMap(raw);
 }
 
@@ -1204,7 +1229,10 @@ function normalizeSolarMidtownLayout(input) {
 }
 
 function readSolarMidtownLayout() {
-  const raw = readJson(SOLAR_MIDTOWN_LAYOUT_PATH, null);
+  const raw = readLatestJson(
+    [SOLAR_MIDTOWN_LAYOUT_PATH, SOLAR_MIDTOWN_LAYOUT_REPO_PATH],
+    null
+  );
   return normalizeSolarMidtownLayout(raw);
 }
 
