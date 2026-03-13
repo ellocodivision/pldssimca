@@ -88,7 +88,7 @@
         <input id="searchInput" class="search" type="text" placeholder="Buscar por unidad, tipo de departamento, m2, precio...">
         <button id="selectAllBtn" class="btn" type="button">Seleccionar todo</button>
         <button id="clearAllBtn" class="btn" type="button">Quitar todo</button>
-        <button id="previewBtn" class="btn success" type="button" disabled>Personalizar presentación</button>
+        <button id="previewBtn" class="btn primary" type="button" disabled>Personalizar presentación</button>
         <button id="downloadBtnEs" class="btn success" type="button" disabled>Descargar presentación (PDF ES)</button>
         <button id="downloadBtnEn" class="btn success" type="button" disabled>Descargar presentación (PDF EN)</button>
       </div>
@@ -177,8 +177,8 @@
 
   <script>
     (function () {
-      const MAX_SELECTION = Infinity;
-      const DOWNLOAD_CHUNK_SIZE = 24;
+      const MAX_SELECTION = 4;
+      const DOWNLOAD_CHUNK_SIZE = 4;
       const MIN_SIZE = 5;
       const DEFAULT_CROP = { x: 0, y: 0, w: 100, h: 100 };
       const state = {
@@ -276,6 +276,11 @@
         els.previewBtn.disabled = count === 0;
         els.downloadBtnEs.disabled = count === 0;
         els.downloadBtnEn.disabled = count === 0;
+        if (els.status) {
+          els.status.textContent = count >= MAX_SELECTION
+            ? 'Límite alcanzado: puedes seleccionar hasta 4 unidades por descarga.'
+            : '';
+        }
       }
       function showDownloadModal(message) {
         if (!els.downloadModal) return;
@@ -598,7 +603,11 @@
         const id = String(target.getAttribute('data-id') || '');
         if (!id) return;
         if (target.checked) {
-          if (state.selected.size >= MAX_SELECTION) { target.checked = false; return; }
+          if (state.selected.size >= MAX_SELECTION) {
+            target.checked = false;
+            alert('Puedes seleccionar hasta 4 unidades por descarga.');
+            return;
+          }
           state.selected.add(id);
         } else { state.selected.delete(id); }
         updateSelectionUi();
@@ -634,9 +643,13 @@
 
       els.searchInput.addEventListener('input', applyFilter);
       els.selectAllBtn.addEventListener('click', function () {
-        state.rows.forEach(function (row) { state.selected.add(row.id); });
+        state.selected.clear();
+        state.rows.slice(0, MAX_SELECTION).forEach(function (row) { state.selected.add(row.id); });
         renderRows();
         updateSelectionUi();
+        if (state.rows.length > MAX_SELECTION) {
+          alert('Se seleccionaron las primeras 4 unidades. El límite por descarga es de 4.');
+        }
       });
       els.clearAllBtn.addEventListener('click', function () {
         state.selected.clear();

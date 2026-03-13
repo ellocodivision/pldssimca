@@ -4355,14 +4355,7 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
     }
     const finalPdf = await merged.save();
 
-    const brochureBaseName = getSolarMidtownBrochureBaseName(brochurePath, lang);
-    const unitsCount = selectedRows.length;
-    const partLabelRaw = String(req.query && req.query.part || '').trim();
-    const safePartLabel = partLabelRaw ? partLabelRaw.replace(/[^a-zA-Z0-9_-]+/g, '') : '';
-    const safeBaseName = brochureBaseName.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const fileName = safePartLabel
-      ? `${safeBaseName} - ${unitsCount} unidades - ${safePartLabel}.pdf`
-      : `${safeBaseName} - ${unitsCount} unidades.pdf`;
+    const fileName = lang === 'en' ? 'SOLAR MT ENG.pdf' : 'SOLAR MT ESP.pdf';
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     return res.send(Buffer.from(finalPdf));
