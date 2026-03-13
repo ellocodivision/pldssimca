@@ -302,7 +302,7 @@ function requireInternalUser(req, res, next) {
   if (String(req.path || '').startsWith('/api/')) {
     return res.status(403).json({ error: 'Acceso restringido a usuarios internos' });
   }
-  return res.redirect('/whisperlist');
+  return res.redirect('/viceroy');
 }
 
 function requireGerente(req, res, next) {
@@ -2939,7 +2939,7 @@ app.get('/logout', (req, res, next) => {
 app.get('/', requireAuth, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
   const isInternalUser = isInternalUserEmail(currentEmail);
-  if (!isInternalUser) return res.redirect('/whisperlist');
+  if (!isInternalUser) return res.redirect('/viceroy');
   const isGerente = currentEmail === GERENTE_EMAIL;
   const showViceroyModuleCard = true;
   const ownerServicesCard = isGerente ? `
