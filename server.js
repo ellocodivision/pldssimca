@@ -103,9 +103,12 @@ const SOLAR_MIDTOWN_LAYOUT_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-
 const SOLAR_MIDTOWN_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-solar-midtown-crops.json');
 const SOLAR_MIDTOWN_LAYOUT_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-crops.json');
+const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
+const CEIBA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-ceiba-crops.json');
 const SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE = clampNumber(Number(process.env.SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE), 20, 5, 60);
 const SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY = clampNumber(Number(process.env.SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY), 6, 1, 16);
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
+const CEIBA_EDITOR_EMAIL = String(process.env.CEIBA_EDITOR_EMAIL || SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
@@ -390,6 +393,36 @@ function requireSolarMidtownEditor(req, res, next) {
       <h1>Acceso restringido</h1>
       <p>Solo la cuenta autorizada puede editar plantilla y cortes de Solar Midtown.</p>
       <p>Cuenta autorizada: <strong>${escapeHtml(SOLAR_MIDTOWN_EDITOR_EMAIL)}</strong>.</p>
+    </section>
+  </body></html>`);
+}
+
+function hasCeibaEditorAccess(req) {
+  if (LOCAL_NO_AUTH) return true;
+  const email = String(req && req.user && req.user.email || '').trim().toLowerCase();
+  return Boolean(email && email === CEIBA_EDITOR_EMAIL);
+}
+
+function requireCeibaEditor(req, res, next) {
+  if (hasCeibaEditorAccess(req)) return next();
+  if (String(req.path || '').startsWith('/api/')) {
+    return res.status(403).json({ error: 'Solo la cuenta autorizada puede editar cortes de Ceiba.' });
+  }
+  return res.status(403).send(`<!doctype html>
+  <html lang="es"><head><meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Acceso restringido</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;background:#f4f1e8;color:#1a1a1a;display:grid;place-items:center;min-height:100vh;padding:20px;}
+    .card{width:min(620px,100%);background:#fff;border:1px solid #d8d1c1;border-radius:14px;padding:22px;}
+    h1{margin:0 0 10px;font-size:28px;}
+    p{margin:0 0 12px;color:#5f5f5f;line-height:1.4;}
+  </style></head>
+  <body>
+    <section class="card">
+      <h1>Acceso restringido</h1>
+      <p>Solo la cuenta autorizada puede editar cortes de Ceiba.</p>
+      <p>Cuenta autorizada: <strong>${escapeHtml(CEIBA_EDITOR_EMAIL)}</strong>.</p>
     </section>
   </body></html>`);
 }
@@ -944,6 +977,12 @@ function makeSolarMidtownRowId(unidad, rowNumber) {
   return `solar-mt-${Number(rowNumber) || 0}`;
 }
 
+function makeCeibaRowId(unidad, rowNumber) {
+  const unitKey = normalizeDevLabel(unidad).replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (unitKey) return `ceiba-unit-${unitKey}`;
+  return `ceiba-${Number(rowNumber) || 0}`;
+}
+
 function readSolarMidtownRowsFromCbs() {
   if (!fs.existsSync(ROI_MASTER_CSV_PATH)) {
     return {
@@ -1055,6 +1094,96 @@ function readSolarMidtownRowsFromCbs() {
   };
 }
 
+function readCeibaRowsFromCbs() {
+  if (!fs.existsSync(ROI_MASTER_CSV_PATH)) {
+    return {
+      rows: [],
+      sourceFile: ROI_MASTER_CSV_PATH,
+      error: 'No se encontró CSV maestro (roi-master.csv).'
+    };
+  }
+  let workbook;
+  try {
+    workbook = XLSX.readFile(ROI_MASTER_CSV_PATH, { cellDates: true });
+  } catch (err) {
+    return {
+      rows: [],
+      sourceFile: ROI_MASTER_CSV_PATH,
+      error: `No se pudo leer CSV maestro: ${err && err.message ? err.message : 'error desconocido'}`
+    };
+  }
+  const firstSheetName = workbook.SheetNames && workbook.SheetNames[0];
+  if (!firstSheetName || !workbook.Sheets[firstSheetName]) {
+    return {
+      rows: [],
+      sourceFile: ROI_MASTER_CSV_PATH,
+      error: 'No hay hoja utilizable en el CSV maestro.'
+    };
+  }
+  const sheet = workbook.Sheets[firstSheetName];
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+  const out = [];
+  const cropMap = readCeibaCropMap();
+  matrix.forEach((row, idx) => {
+    if (!Array.isArray(row) || idx === 0) return;
+    const desarrollo = csvCellToString(row[2]);
+    if (normalizeDevLabel(desarrollo) !== 'CEIBA') return;
+
+    const planLink = csvCellToString(row[1]);
+    const unidad = csvCellToString(row[3]) || csvCellToString(row[4]);
+    const colE = csvCellToString(row[4]);
+    const colF = csvCellToString(row[5]);
+    const colG = csvCellToString(row[6]);
+
+    const precioListaRaw = row[7];
+    const descuentoPctRaw = row[8];
+    const descuentoValorRaw = row[9];
+    const precioFinalRaw = row[10];
+
+    const precioLista = parseCurrencyLike(precioListaRaw);
+    let descuentoPct = parsePercentLike(descuentoPctRaw);
+    let descuentoValor = parseCurrencyLike(descuentoValorRaw);
+    let precioFinal = parseCurrencyLike(precioFinalRaw);
+
+    if (precioFinal == null && precioLista != null && descuentoValor != null) {
+      precioFinal = precioLista - descuentoValor;
+    }
+    if (precioFinal == null && precioLista != null && descuentoPct != null) {
+      precioFinal = precioLista * (1 - (descuentoPct / 100));
+    }
+    if (descuentoValor == null && precioLista != null && precioFinal != null) {
+      descuentoValor = precioLista - precioFinal;
+    }
+    if (descuentoPct == null && precioLista != null && descuentoValor != null && precioLista !== 0) {
+      descuentoPct = (descuentoValor / precioLista) * 100;
+    }
+
+    const rowId = makeCeibaRowId(unidad, idx + 1);
+    out.push({
+      id: rowId,
+      rowNumber: idx + 1,
+      planLink,
+      desarrollo,
+      unidad,
+      crop: getCeibaCropForId(rowId, cropMap),
+      colE,
+      colF,
+      colG,
+      precioLista,
+      descuentoPct,
+      descuentoValor,
+      precioFinal,
+      precioListaFmt: formatCurrency(precioLista),
+      descuentoPctFmt: Number.isFinite(descuentoPct) ? `${descuentoPct.toFixed(2)}%` : '',
+      descuentoValorFmt: formatCurrency(descuentoValor),
+      precioFinalFmt: formatCurrency(precioFinal)
+    });
+  });
+
+  out.sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
+  return { rows: out, sourceFile: ROI_MASTER_CSV_PATH, error: '' };
+}
+
 function readJson(filePath, fallback) {
   try {
     if (!fs.existsSync(filePath)) return fallback;
@@ -1136,10 +1265,37 @@ function defaultSolarMidtownPlanCrop() {
   return { x: 0, y: 0, w: 100, h: 100 };
 }
 
+function defaultCeibaPlanCrop() {
+  return { x: 0, y: 0, w: 100, h: 100 };
+}
+
 function normalizeSolarMidtownPlanCrop(input) {
   const base = defaultSolarMidtownPlanCrop();
   const src = input && typeof input === 'object' ? input : {};
   // Backward compatibility with previous format {x,y,zoom}
+  if (Object.prototype.hasOwnProperty.call(src, 'zoom') && !Object.prototype.hasOwnProperty.call(src, 'w')) {
+    const zoom = clampNumber(src.zoom, 1, 1, 4);
+    const boxW = clampNumber(100 / zoom, 100, 5, 100);
+    const boxH = clampNumber(100 / zoom, 100, 5, 100);
+    const centerX = clampNumber(src.x, 50, -300, 300);
+    const centerY = clampNumber(src.y, 50, -300, 300);
+    const left = centerX - (boxW / 2);
+    const top = centerY - (boxH / 2);
+    return { x: left, y: top, w: boxW, h: boxH };
+  }
+  const width = clampNumber(src.w, base.w, 5, 100);
+  const height = clampNumber(src.h, base.h, 5, 100);
+  return {
+    x: clampNumber(src.x, base.x, -300, 300),
+    y: clampNumber(src.y, base.y, -300, 300),
+    w: width,
+    h: height
+  };
+}
+
+function normalizeCeibaPlanCrop(input) {
+  const base = defaultCeibaPlanCrop();
+  const src = input && typeof input === 'object' ? input : {};
   if (Object.prototype.hasOwnProperty.call(src, 'zoom') && !Object.prototype.hasOwnProperty.call(src, 'w')) {
     const zoom = clampNumber(src.zoom, 1, 1, 4);
     const boxW = clampNumber(100 / zoom, 100, 5, 100);
@@ -1171,9 +1327,26 @@ function normalizeSolarMidtownCropMap(input) {
   return out;
 }
 
+function normalizeCeibaCropMap(input) {
+  const src = input && typeof input === 'object' ? input : {};
+  const out = {};
+  Object.keys(src).forEach((key) => {
+    const id = String(key || '').trim();
+    if (!id) return;
+    out[id] = normalizeCeibaPlanCrop(src[id]);
+  });
+  return out;
+}
+
 function isDefaultSolarMidtownCrop(cropInput) {
   const crop = normalizeSolarMidtownPlanCrop(cropInput);
   const def = defaultSolarMidtownPlanCrop();
+  return crop.x === def.x && crop.y === def.y && crop.w === def.w && crop.h === def.h;
+}
+
+function isDefaultCeibaCrop(cropInput) {
+  const crop = normalizeCeibaPlanCrop(cropInput);
+  const def = defaultCeibaPlanCrop();
   return crop.x === def.x && crop.y === def.y && crop.w === def.w && crop.h === def.h;
 }
 
@@ -1206,9 +1379,35 @@ function readSolarMidtownCropMap() {
   return merged;
 }
 
+function readCeibaCropMap() {
+  const repoRaw = readJson(CEIBA_CROPS_REPO_PATH, {});
+  const runtimeRaw = readJson(CEIBA_CROPS_PATH, {});
+  const repoMap = normalizeCeibaCropMap(repoRaw);
+  const runtimeMap = normalizeCeibaCropMap(runtimeRaw);
+  const merged = { ...repoMap };
+  Object.keys(runtimeMap).forEach((id) => {
+    const runtimeCrop = runtimeMap[id];
+    const repoCrop = merged[id];
+    if (!repoCrop) {
+      merged[id] = runtimeCrop;
+      return;
+    }
+    if (!isDefaultCeibaCrop(runtimeCrop) || isDefaultCeibaCrop(repoCrop)) {
+      merged[id] = runtimeCrop;
+    }
+  });
+  return merged;
+}
+
 function saveSolarMidtownCropMap(map) {
   const normalized = normalizeSolarMidtownCropMap(map);
   writeJson(SOLAR_MIDTOWN_CROPS_PATH, normalized);
+  return normalized;
+}
+
+function saveCeibaCropMap(map) {
+  const normalized = normalizeCeibaCropMap(map);
+  writeJson(CEIBA_CROPS_PATH, normalized);
   return normalized;
 }
 
@@ -1217,6 +1416,13 @@ function getSolarMidtownCropForId(rowId, cropMap) {
   if (!id) return defaultSolarMidtownPlanCrop();
   const map = cropMap && typeof cropMap === 'object' ? cropMap : readSolarMidtownCropMap();
   return normalizeSolarMidtownPlanCrop(map[id]);
+}
+
+function getCeibaCropForId(rowId, cropMap) {
+  const id = String(rowId || '').trim();
+  if (!id) return defaultCeibaPlanCrop();
+  const map = cropMap && typeof cropMap === 'object' ? cropMap : readCeibaCropMap();
+  return normalizeCeibaPlanCrop(map[id]);
 }
 
 function buildSolarMidtownCropDataAttrs(cropInput, row, layoutInput) {
@@ -3269,6 +3475,10 @@ app.get('/presentaciones', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'presentaciones.html'));
 });
 
+app.get('/presentaciones/ceiba', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'presentaciones-ceiba.html'));
+});
+
 app.get('/presentaciones/solar-midtown', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'presentaciones-solar-midtown.html'));
 });
@@ -3287,6 +3497,55 @@ app.get('/api/presentaciones/solar-midtown/rows', (req, res) => {
     crops: readSolarMidtownCropMap(),
     error: data.error || ''
   });
+});
+
+app.get('/api/presentaciones/ceiba/rows', (req, res) => {
+  const data = readCeibaRowsFromCbs();
+  return res.json({
+    ok: !data.error,
+    sourceFile: data.sourceFile,
+    totalRows: data.rows.length,
+    rows: data.rows,
+    crops: readCeibaCropMap(),
+    error: data.error || ''
+  });
+});
+
+app.get('/api/presentaciones/ceiba/editor-access', (req, res) => {
+  return res.json({
+    ok: true,
+    canEdit: hasCeibaEditorAccess(req),
+    editorEmail: CEIBA_EDITOR_EMAIL
+  });
+});
+
+app.get('/api/presentaciones/ceiba/crops', (req, res) => {
+  return res.json({ ok: true, crops: readCeibaCropMap() });
+});
+
+app.post('/api/presentaciones/ceiba/crop', requireCeibaEditor, (req, res) => {
+  try {
+    const id = String(req.body && req.body.id || '').trim();
+    if (!id) {
+      return res.status(400).json({ error: 'Falta id de unidad.' });
+    }
+    const shouldReset = Boolean(req.body && req.body.reset);
+    const map = readCeibaCropMap();
+    if (shouldReset) {
+      delete map[id];
+      saveCeibaCropMap(map);
+      return res.json({ ok: true, id, crop: defaultCeibaPlanCrop(), reset: true });
+    }
+    const crop = normalizeCeibaPlanCrop(req.body && req.body.crop);
+    map[id] = crop;
+    saveCeibaCropMap(map);
+    return res.json({ ok: true, id, crop, reset: false });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar el recorte del plano.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/api/presentaciones/solar-midtown/editor-access', (req, res) => {
@@ -4049,6 +4308,37 @@ function buildSolarMidtownPagesDocument(options) {
 }
 
 app.get('/api/presentaciones/solar-midtown/plan-image', async (req, res) => {
+  try {
+    const source = String(req.query && req.query.url || '').trim();
+    if (!source) return res.status(400).json({ error: 'Falta parámetro url' });
+    let parsed;
+    try {
+      parsed = new URL(source);
+    } catch {
+      return res.status(400).json({ error: 'URL inválida' });
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ error: 'Solo se permiten URLs http/https' });
+    }
+    const upstream = await fetch(parsed.toString());
+    if (!upstream.ok) {
+      return res.status(502).json({ error: `No se pudo descargar plano (${upstream.status})` });
+    }
+    const contentType = upstream.headers.get('content-type') || 'image/png';
+    const data = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.send(data);
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Error al obtener la imagen del plano',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/presentaciones/ceiba/plan-image', async (req, res) => {
   try {
     const source = String(req.query && req.query.url || '').trim();
     if (!source) return res.status(400).json({ error: 'Falta parámetro url' });

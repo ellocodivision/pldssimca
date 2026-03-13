@@ -16,9 +16,7 @@
     .grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px;}
     .card{display:block;background:var(--card);border:1px solid #dcd7cb;border-radius:14px;padding:18px;text-decoration:none;color:inherit;}
     .card:hover{border-color:#b9b39f;}
-    .tag{display:inline-block;font-size:12px;font-weight:700;background:var(--accent);padding:4px 8px;border-radius:999px;margin-bottom:10px;}
-    .name{margin:0 0 8px;font-size:21px;}
-    .desc{margin:0;color:var(--muted);}
+    .name{margin:0;font-size:21px;}
     @media (max-width:900px){.grid{grid-template-columns:1fr;}h1{font-size:24px;}}
   </style>
 </head>
@@ -33,9 +31,10 @@
     </div>
     <section class="grid">
       <a class="card" href="/presentaciones/solar-midtown">
-        <span class="tag">Proyecto</span>
         <h2 class="name">Solar Midtown</h2>
-        <p class="desc">Inventario filtrado por columna C = Solar MT y vista previa de presentación.</p>
+      </a>
+      <a class="card" href="/presentaciones/ceiba">
+        <h2 class="name">Ceiba</h2>
       </a>
     </section>
   </main>
