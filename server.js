@@ -4152,9 +4152,11 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
         const selectNoneBtn = document.getElementById('brochureSelectNoneBtn');
         const modal = document.getElementById('previewDownloadModal');
         const modalText = document.getElementById('previewDownloadModalText');
+        const selectedIdsList = ${JSON.stringify(selectedIds)};
+        const CHUNK_SIZE = 24;
         if (!checks.length || !downloadBtnEs || !downloadBtnEn) return;
-        const baseUrlEs = '/api/presentaciones/solar-midtown/download.pdf?lang=es&quality=low&ids=${encodeURIComponent(idsRaw)}';
-        const baseUrlEn = '/api/presentaciones/solar-midtown/download.pdf?lang=en&quality=low&ids=${encodeURIComponent(idsRaw)}';
+        const baseUrlEs = '/api/presentaciones/solar-midtown/download.pdf?lang=es&quality=low';
+        const baseUrlEn = '/api/presentaciones/solar-midtown/download.pdf?lang=en&quality=low';
         function showModal(message) {
           if (!modal) return;
           if (modalText) modalText.textContent = message || 'Por favor espera, estamos recolectando datos para generar tu presentación PDF.';
@@ -4171,6 +4173,11 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
           if (!encoded) return fallback;
           try { return decodeURIComponent(String(encoded).replace(/^['"]|['"]$/g, '')); } catch { return String(encoded).replace(/^['"]|['"]$/g, ''); }
         }
+        function splitIds(list, size) {
+          const out = [];
+          for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+          return out;
+        }
         async function downloadCurrent(lang) {
           const pages = selectedPages();
           if (!pages.length) {
@@ -4178,37 +4185,47 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
             return;
           }
           const baseUrl = lang === 'en' ? baseUrlEn : baseUrlEs;
-          const url = baseUrl + '&pages=' + encodeURIComponent(pages.join(','));
+          const idChunks = splitIds(selectedIdsList, CHUNK_SIZE);
+          const multi = idChunks.length > 1;
           const msg = lang === 'en'
             ? 'Please wait, we are collecting data to generate the English PDF presentation.'
             : 'Por favor espera, estamos recolectando datos para generar tu presentación PDF.';
           showModal(msg);
           try {
-            const res = await fetch(url, { credentials: 'same-origin' });
-            if (!res.ok) {
-              const text = await res.text();
-              let errMsg = 'No se pudo generar el PDF.';
-              try {
-                const json = JSON.parse(text);
-                errMsg = json.error || json.details || errMsg;
-              } catch {
-                if (/502|bad gateway|service is currently unavailable/i.test(text)) {
-                  errMsg = 'El servidor tardó demasiado al generar el PDF. Intenta con menos unidades o vuelve a intentar en unos minutos.';
+            for (let i = 0; i < idChunks.length; i += 1) {
+              if (multi && modalText) modalText.textContent = 'Generando parte ' + (i + 1) + ' de ' + idChunks.length + '...';
+              const part = 'parte-' + (i + 1) + '-de-' + idChunks.length;
+              const url = baseUrl
+                + '&pages=' + encodeURIComponent(pages.join(','))
+                + '&ids=' + encodeURIComponent(idChunks[i].join(','))
+                + '&part=' + encodeURIComponent(part);
+              const res = await fetch(url, { credentials: 'same-origin' });
+              if (!res.ok) {
+                const text = await res.text();
+                let errMsg = 'No se pudo generar el PDF.';
+                try {
+                  const json = JSON.parse(text);
+                  errMsg = json.error || json.details || errMsg;
+                } catch {
+                  if (/502|bad gateway|service is currently unavailable/i.test(text)) {
+                    errMsg = 'El servidor tardó demasiado al generar el PDF. Intenta con menos unidades o vuelve a intentar en unos minutos.';
+                  }
                 }
+                throw new Error(errMsg);
               }
-              throw new Error(errMsg);
+              const blob = await res.blob();
+              const fallbackName = lang === 'en' ? ('Solar-Midtown-EN-' + part + '.pdf') : ('Solar-Midtown-ES-' + part + '.pdf');
+              const fileName = parseFileName(res.headers.get('content-disposition'), fallbackName);
+              const objUrl = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = objUrl;
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(objUrl);
             }
-            const blob = await res.blob();
-            const fallbackName = lang === 'en' ? 'Solar-Midtown-EN.pdf' : 'Solar-Midtown-ES.pdf';
-            const fileName = parseFileName(res.headers.get('content-disposition'), fallbackName);
-            const objUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = objUrl;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(objUrl);
+            if (multi) alert('Descarga completada en ' + idChunks.length + ' archivos PDF.');
           } catch (err) {
             alert((err && err.message) ? err.message : 'No se pudo descargar el PDF.');
           } finally {
@@ -4340,8 +4357,12 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
 
     const brochureBaseName = getSolarMidtownBrochureBaseName(brochurePath, lang);
     const unitsCount = selectedRows.length;
+    const partLabelRaw = String(req.query && req.query.part || '').trim();
+    const safePartLabel = partLabelRaw ? partLabelRaw.replace(/[^a-zA-Z0-9_-]+/g, '') : '';
     const safeBaseName = brochureBaseName.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const fileName = `${safeBaseName} - ${unitsCount} unidades.pdf`;
+    const fileName = safePartLabel
+      ? `${safeBaseName} - ${unitsCount} unidades - ${safePartLabel}.pdf`
+      : `${safeBaseName} - ${unitsCount} unidades.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     return res.send(Buffer.from(finalPdf));

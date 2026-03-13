@@ -178,6 +178,7 @@
   <script>
     (function () {
       const MAX_SELECTION = Infinity;
+      const DOWNLOAD_CHUNK_SIZE = 24;
       const MIN_SIZE = 5;
       const DEFAULT_CROP = { x: 0, y: 0, w: 100, h: 100 };
       const state = {
@@ -294,44 +295,60 @@
         if (!encoded) return fallback;
         try { return decodeURIComponent(String(encoded).replace(/^['"]|['"]$/g, '')); } catch { return String(encoded).replace(/^['"]|['"]$/g, ''); }
       }
+      function chunkIds(list, size) {
+        const out = [];
+        for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+        return out;
+      }
       async function downloadPdf(lang) {
-        const idsParam = getSelectionParam();
-        if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
-        const message = lang === 'en'
+        const selectedIds = Array.from(state.selected);
+        if (!selectedIds.length) { alert('Selecciona al menos una unidad.'); return; }
+        const chunks = chunkIds(selectedIds, DOWNLOAD_CHUNK_SIZE);
+        const multi = chunks.length > 1;
+        const baseMsg = lang === 'en'
           ? 'Please wait, we are collecting data to generate the English PDF presentation.'
           : 'Por favor espera, estamos recolectando datos para generar la presentación PDF.';
-        showDownloadModal(message);
+        showDownloadModal(baseMsg);
         try {
-          const url = '/api/presentaciones/solar-midtown/download.pdf?quality=low&lang=' + encodeURIComponent(lang) + '&ids=' + encodeURIComponent(idsParam);
-          const res = await fetch(url, { credentials: 'same-origin' });
-          if (!res.ok) {
-            const text = await res.text();
-            const contentType = String(res.headers.get('content-type') || '').toLowerCase();
-            let errMsg = 'No se pudo generar el PDF.';
-            try {
-              const json = JSON.parse(text);
-              errMsg = json.error || json.details || errMsg;
-            } catch {
-              const looksLikeGateway = /502|503|504|bad gateway|service is currently unavailable|connection reset|worker timeout/i.test(text);
-              const looksLikeHtml = contentType.includes('text/html') || /^\s*<!doctype html>/i.test(text);
-              if (looksLikeGateway || looksLikeHtml) {
-                errMsg = 'El servidor tardó demasiado al generar el PDF. Intenta con menos unidades o vuelve a intentar en unos minutos.';
-              } else if (text) {
-                errMsg = text.slice(0, 220);
-              }
+          for (let i = 0; i < chunks.length; i += 1) {
+            const idsParam = chunks[i].join(',');
+            if (multi && els.downloadModalText) {
+              els.downloadModalText.textContent = 'Generando parte ' + (i + 1) + ' de ' + chunks.length + '...';
             }
-            throw new Error(errMsg);
+            const part = 'parte-' + (i + 1) + '-de-' + chunks.length;
+            const url = '/api/presentaciones/solar-midtown/download.pdf?quality=low&lang=' + encodeURIComponent(lang) + '&ids=' + encodeURIComponent(idsParam) + '&part=' + encodeURIComponent(part);
+            const res = await fetch(url, { credentials: 'same-origin' });
+            if (!res.ok) {
+              const text = await res.text();
+              const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+              let errMsg = 'No se pudo generar el PDF.';
+              try {
+                const json = JSON.parse(text);
+                errMsg = json.error || json.details || errMsg;
+              } catch {
+                const looksLikeGateway = /502|503|504|bad gateway|service is currently unavailable|connection reset|worker timeout/i.test(text);
+                const looksLikeHtml = contentType.includes('text/html') || /^\s*<!doctype html>/i.test(text);
+                if (looksLikeGateway || looksLikeHtml) {
+                  errMsg = 'El servidor tardó demasiado al generar el PDF. Intenta con menos unidades o vuelve a intentar en unos minutos.';
+                } else if (text) {
+                  errMsg = text.slice(0, 220);
+                }
+              }
+              throw new Error(errMsg);
+            }
+            const blob = await res.blob();
+            const fallbackName = lang === 'en' ? ('Solar-Midtown-EN-' + part + '.pdf') : ('Solar-Midtown-ES-' + part + '.pdf');
+            const fileName = parseFileNameFromDisposition(res.headers.get('content-disposition'), fallbackName);
+            const objUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(objUrl);
           }
-          const blob = await res.blob();
-          const fileName = parseFileNameFromDisposition(res.headers.get('content-disposition'), lang === 'en' ? 'Solar-Midtown-EN.pdf' : 'Solar-Midtown-ES.pdf');
-          const objUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = objUrl;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(objUrl);
+          if (multi) alert('Descarga completada en ' + chunks.length + ' archivos PDF.');
         } catch (err) {
           alert((err && err.message) ? err.message : 'No se pudo descargar el PDF.');
         } finally {
