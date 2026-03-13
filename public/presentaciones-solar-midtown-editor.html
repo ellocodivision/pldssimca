@@ -143,6 +143,14 @@
           <input id="priceMetaSize" type="number" min="8" max="24" step="1" value="12">
         </div>
         <div>
+          <label>Tamaño Departamento (px)</label>
+          <input id="priceDepartmentSize" type="number" min="8" max="40" step="1" value="12">
+        </div>
+        <div>
+          <label>Tamaño Metros cuadrados (px)</label>
+          <input id="priceMetersSize" type="number" min="8" max="40" step="1" value="12">
+        </div>
+        <div>
           <label>Espacio entre filas (px)</label>
           <input id="priceRowPaddingY" type="number" min="0" max="30" step="1" value="7">
         </div>
@@ -187,7 +195,7 @@
     </section>
 
     <section class="panel">
-      <h2 style="margin:0 0 8px;font-size:18px;">Vista rápida del layout</h2>
+      <h2 style="margin:0 0 8px;font-size:18px;">Vista real (motor PDF)</h2>
       <div class="row" style="margin-top:0;margin-bottom:8px;">
         <label for="sampleUnitSelect" style="margin:0;">Unidad para preview</label>
         <select id="sampleUnitSelect" style="width:auto;min-width:180px;"></select>
@@ -195,6 +203,10 @@
         <span id="dragStatus" class="status"></span>
       </div>
       <p id="pageInfo" class="status" style="margin:0 0 8px;">Tamaño hoja PDF: cargando...</p>
+      <div class="real-frame-wrap">
+        <iframe id="realPreviewFrame" class="real-frame" title="Vista real PDF"></iframe>
+      </div>
+      <h2 style="margin:14px 0 8px;font-size:18px;">Vista rápida del layout</h2>
       <div class="demo">
         <div id="demoShell" class="demo-shell">
           <div id="demoPage" class="demo-page">
@@ -208,10 +220,6 @@
             </div>
           </div>
         </div>
-      </div>
-      <h2 style="margin:14px 0 8px;font-size:18px;">Vista real (motor PDF)</h2>
-      <div class="real-frame-wrap">
-        <iframe id="realPreviewFrame" class="real-frame" title="Vista real PDF"></iframe>
       </div>
     </section>
   </main>
@@ -240,6 +248,8 @@
         priceLabelSize: document.getElementById('priceLabelSize'),
         priceValueSize: document.getElementById('priceValueSize'),
         priceMetaSize: document.getElementById('priceMetaSize'),
+        priceDepartmentSize: document.getElementById('priceDepartmentSize'),
+        priceMetersSize: document.getElementById('priceMetersSize'),
         priceRowPaddingY: document.getElementById('priceRowPaddingY'),
         priceLineHeight: document.getElementById('priceLineHeight'),
         priceWordSpacing: document.getElementById('priceWordSpacing'),
@@ -440,7 +450,7 @@
         const withDiscount = hasDiscount(sample);
         const metros = String(sample.colF || '').trim();
         const parts = [];
-        parts.push('<div class="meta-group"><p class="meta">Departamento: <strong>' + esc(sample.unidad || '-') + '</strong></p><p class="meta">Metros cuadrados: <strong>' + esc(metros || '-') + ' m²</strong></p></div>');
+        parts.push('<div class="meta-group"><p class="meta department-meta">Departamento: <strong>' + esc(sample.unidad || '-') + '</strong></p><p class="meta meters-meta">Metros cuadrados: <strong>' + esc(metros || '-') + ' m²</strong></p></div>');
         parts.push('<h3>Resumen de precio</h3>');
         parts.push('<div class="line"><span>Precio lista</span><strong>' + esc(sample.precioListaFmt || '-') + '</strong></div>');
         if (withDiscount) {
@@ -568,6 +578,8 @@
             labelSize: getNumber('priceLabelSize', getNumber('priceBodySize', 12)),
             valueSize: getNumber('priceValueSize', getNumber('priceBodySize', 12)),
             metaSize: getNumber('priceMetaSize', 12),
+            departmentSize: getNumber('priceDepartmentSize', getNumber('priceMetaSize', 12)),
+            metersSize: getNumber('priceMetersSize', getNumber('priceMetaSize', 12)),
             rowPaddingY: getNumber('priceRowPaddingY', 7),
             lineHeight: getNumber('priceLineHeight', 1.2),
             wordSpacing: getNumber('priceWordSpacing', 0),
@@ -602,6 +614,8 @@
         els.priceLabelSize.value = (l.priceBox && l.priceBox.labelSize) || (l.priceBox && l.priceBox.bodySize) || 12;
         els.priceValueSize.value = (l.priceBox && l.priceBox.valueSize) || (l.priceBox && l.priceBox.bodySize) || 12;
         els.priceMetaSize.value = (l.priceBox && l.priceBox.metaSize) || 12;
+        els.priceDepartmentSize.value = (l.priceBox && (l.priceBox.departmentSize || l.priceBox.metaSize)) || 12;
+        els.priceMetersSize.value = (l.priceBox && (l.priceBox.metersSize || l.priceBox.metaSize)) || 12;
         els.priceRowPaddingY.value = (l.priceBox && l.priceBox.rowPaddingY) || 7;
         els.priceLineHeight.value = (l.priceBox && l.priceBox.lineHeight) || 1.2;
         els.priceWordSpacing.value = (l.priceBox && l.priceBox.wordSpacing) || 0;
@@ -683,6 +697,12 @@
           node.style.lineHeight = String(l.priceBox.lineHeight || 1.2);
           node.style.wordSpacing = (l.priceBox.wordSpacing || 0) + 'px';
           node.style.letterSpacing = (l.priceBox.letterSpacing || 0) + 'px';
+        });
+        els.demoPrice.querySelectorAll('.department-meta').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.departmentSize || l.priceBox.metaSize) + 'px';
+        });
+        els.demoPrice.querySelectorAll('.meters-meta').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.metersSize || l.priceBox.metaSize) + 'px';
         });
         const metaGroup = els.demoPrice.querySelector('.meta-group');
         if (metaGroup) {
@@ -805,7 +825,7 @@
       const fields = [
         'titleText','titleSize','titleColor','subtitleSize','subtitleColor','pageBg','pagePadding',
         'gridGap','leftRatio','rightRatio','planBg','planBorder','planMinHeight','priceBg','priceBorder','priceText',
-        'priceHeadingSize','priceBodySize','priceLabelSize','priceValueSize','priceMetaSize',
+        'priceHeadingSize','priceBodySize','priceLabelSize','priceValueSize','priceMetaSize','priceDepartmentSize','priceMetersSize',
         'priceRowPaddingY','priceLineHeight','priceWordSpacing','priceLetterSpacing','verticalExpandRatio',
         'priceMetaTopOffset','priceMetaGroupGap','priceVerticalAlign'
       ];
@@ -854,6 +874,8 @@
             labelSize: 12,
             valueSize: 12,
             metaSize: 12,
+            departmentSize: 12,
+            metersSize: 12,
             rowPaddingY: 7,
             lineHeight: 1.2,
             wordSpacing: 0,
