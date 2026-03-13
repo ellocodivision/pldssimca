@@ -4128,6 +4128,15 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
         <a class="btn" href="/presentaciones/solar-midtown">Volver</a>
       </div>
     </div>
+    <div id="previewDownloadModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:70;padding:18px;align-items:center;justify-content:center;">
+      <section style="background:#fff;border:1px solid #d4d7df;border-radius:14px;max-width:560px;width:100%;padding:18px;">
+        <h3 style="margin:0 0 6px;font-size:22px;color:#1f2330;"><span style="width:22px;height:22px;border-radius:50%;border:3px solid #dfe4ee;border-top-color:#1f8f3a;display:inline-block;vertical-align:middle;margin-right:8px;animation:spinPreviewDownload .8s linear infinite;"></span>Preparando descarga</h3>
+        <p id="previewDownloadModalText" style="margin:0;color:#5f6572;line-height:1.45;">Por favor espera, estamos recolectando datos para generar tu presentación PDF.</p>
+      </section>
+    </div>
+    <style>
+      @keyframes spinPreviewDownload { to { transform: rotate(360deg); } }
+    </style>
     ${brochurePagesPanel}
     <section class="panel">
       <h2 style="margin:0 0 8px;font-size:20px;">Brochure base</h2>
@@ -4141,9 +4150,71 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
         const downloadBtnEn = document.getElementById('downloadWithPagesBtnEn');
         const selectAllBtn = document.getElementById('brochureSelectAllBtn');
         const selectNoneBtn = document.getElementById('brochureSelectNoneBtn');
+        const modal = document.getElementById('previewDownloadModal');
+        const modalText = document.getElementById('previewDownloadModalText');
         if (!checks.length || !downloadBtnEs || !downloadBtnEn) return;
         const baseUrlEs = '/api/presentaciones/solar-midtown/download.pdf?lang=es&quality=low&ids=${encodeURIComponent(idsRaw)}';
         const baseUrlEn = '/api/presentaciones/solar-midtown/download.pdf?lang=en&quality=low&ids=${encodeURIComponent(idsRaw)}';
+        function showModal(message) {
+          if (!modal) return;
+          if (modalText) modalText.textContent = message || 'Por favor espera, estamos recolectando datos para generar tu presentación PDF.';
+          modal.style.display = 'flex';
+        }
+        function hideModal() {
+          if (!modal) return;
+          modal.style.display = 'none';
+        }
+        function parseFileName(disposition, fallback) {
+          const raw = String(disposition || '');
+          const m = raw.match(/filename\\*=UTF-8''([^;]+)|filename=\\"([^\\"]+)\\"|filename=([^;]+)/i);
+          const encoded = m && (m[1] || m[2] || m[3]);
+          if (!encoded) return fallback;
+          try { return decodeURIComponent(String(encoded).replace(/^['"]|['"]$/g, '')); } catch { return String(encoded).replace(/^['"]|['"]$/g, ''); }
+        }
+        async function downloadCurrent(lang) {
+          const pages = selectedPages();
+          if (!pages.length) {
+            alert('Selecciona al menos 1 hoja del brochure.');
+            return;
+          }
+          const baseUrl = lang === 'en' ? baseUrlEn : baseUrlEs;
+          const url = baseUrl + '&pages=' + encodeURIComponent(pages.join(','));
+          const msg = lang === 'en'
+            ? 'Please wait, we are collecting data to generate the English PDF presentation.'
+            : 'Por favor espera, estamos recolectando datos para generar tu presentación PDF.';
+          showModal(msg);
+          try {
+            const res = await fetch(url, { credentials: 'same-origin' });
+            if (!res.ok) {
+              const text = await res.text();
+              let errMsg = 'No se pudo generar el PDF.';
+              try {
+                const json = JSON.parse(text);
+                errMsg = json.error || json.details || errMsg;
+              } catch {
+                if (/502|bad gateway|service is currently unavailable/i.test(text)) {
+                  errMsg = 'El servidor tardó demasiado al generar el PDF. Intenta con menos unidades o vuelve a intentar en unos minutos.';
+                }
+              }
+              throw new Error(errMsg);
+            }
+            const blob = await res.blob();
+            const fallbackName = lang === 'en' ? 'Solar-Midtown-EN.pdf' : 'Solar-Midtown-ES.pdf';
+            const fileName = parseFileName(res.headers.get('content-disposition'), fallbackName);
+            const objUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(objUrl);
+          } catch (err) {
+            alert((err && err.message) ? err.message : 'No se pudo descargar el PDF.');
+          } finally {
+            hideModal();
+          }
+        }
         function selectedPages() {
           return checks
             .filter((c) => c.checked)
@@ -4176,11 +4247,9 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
           updateDownloadLink();
         });
         function onDownloadClick(evt) {
-          const href = String(evt.currentTarget && evt.currentTarget.getAttribute('href') || '');
-          if (href === '#') {
-            evt.preventDefault();
-            alert('Selecciona al menos 1 hoja del brochure.');
-          }
+          evt.preventDefault();
+          const lang = evt.currentTarget === downloadBtnEn ? 'en' : 'es';
+          downloadCurrent(lang);
         }
         downloadBtnEs.addEventListener('click', onDownloadClick);
         downloadBtnEn.addEventListener('click', onDownloadClick);
