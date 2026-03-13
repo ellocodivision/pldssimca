@@ -103,6 +103,8 @@ const SOLAR_MIDTOWN_LAYOUT_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-
 const SOLAR_MIDTOWN_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-solar-midtown-crops.json');
 const SOLAR_MIDTOWN_LAYOUT_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-crops.json');
+const SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE = clampNumber(Number(process.env.SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE), 20, 5, 60);
+const SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY = clampNumber(Number(process.env.SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY), 6, 1, 16);
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
@@ -1763,6 +1765,34 @@ async function generatePdfWithSharedBrowser(html, pdfOptions = {}) {
     const retryBrowser = await getSharedPdfBrowser();
     return await buildPdfBufferWithBrowser(retryBrowser, html, pdfOptions);
   }
+}
+
+function splitIntoChunks(listInput, chunkSizeInput) {
+  const list = Array.isArray(listInput) ? listInput : [];
+  const chunkSize = Math.max(1, Math.floor(Number(chunkSizeInput) || 1));
+  const out = [];
+  for (let i = 0; i < list.length; i += chunkSize) {
+    out.push(list.slice(i, i + chunkSize));
+  }
+  return out;
+}
+
+async function mapWithConcurrency(itemsInput, concurrencyInput, worker) {
+  const items = Array.isArray(itemsInput) ? itemsInput : [];
+  const concurrency = Math.max(1, Math.floor(Number(concurrencyInput) || 1));
+  const results = new Array(items.length);
+  let idx = 0;
+  async function run() {
+    while (true) {
+      const current = idx;
+      idx += 1;
+      if (current >= items.length) return;
+      results[current] = await worker(items[current], current);
+    }
+  }
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, () => run());
+  await Promise.all(runners);
+  return results;
 }
 
 function getWhisperlistSellers(rows) {
@@ -4198,43 +4228,45 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
     const pageWidthPt = baseFirstPage.getWidth();
     const pageHeightPt = baseFirstPage.getHeight();
 
-    const planDataUrlById = {};
-    await Promise.all(selectedRows.map(async (row) => {
-      const rowId = String(row && row.id || '');
-      const link = String(row && row.planLink || '').trim();
-      if (!rowId || !link) return;
-      const dataUrl = await fetchImageAsDataUrl(link);
-      if (dataUrl) planDataUrlById[rowId] = dataUrl;
-    }));
-    const appendixPagesHtml = buildSolarMidtownPagesHtml(selectedRows, layout, {
-      absoluteAssets: true,
-      planDataUrlById,
-      lang
-    });
-    const appendixHtml = buildSolarMidtownPagesDocument({
-      title: 'Solar Midtown · Páginas agregadas',
-      contentTop: '',
-      pagesHtml: appendixPagesHtml,
-      pdfMode: true,
-      pageWidthPt,
-      pageHeightPt,
-      layout,
-      renderProfile
-    });
-    const pageWidthIn = (pageWidthPt / 72).toFixed(4);
-    const pageHeightIn = (pageHeightPt / 72).toFixed(4);
-    const appendixPdfBuffer = await generatePdfWithSharedBrowser(appendixHtml, {
-      width: `${pageWidthIn}in`,
-      height: `${pageHeightIn}in`,
-      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
-    });
-
-    const appendixDoc = await PDFDocument.load(appendixPdfBuffer);
     const merged = await PDFDocument.create();
     const basePages = await merged.copyPages(baseDoc, selectedBasePageIndices);
     basePages.forEach((page) => merged.addPage(page));
-    const appendixPages = await merged.copyPages(appendixDoc, appendixDoc.getPageIndices());
-    appendixPages.forEach((page) => merged.addPage(page));
+    const pageWidthIn = (pageWidthPt / 72).toFixed(4);
+    const pageHeightIn = (pageHeightPt / 72).toFixed(4);
+    const rowChunks = splitIntoChunks(selectedRows, SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE);
+    for (const rowChunk of rowChunks) {
+      const planDataUrlById = {};
+      await mapWithConcurrency(rowChunk, SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY, async (row) => {
+        const rowId = String(row && row.id || '');
+        const link = String(row && row.planLink || '').trim();
+        if (!rowId || !link) return;
+        const dataUrl = await fetchImageAsDataUrl(link);
+        if (dataUrl) planDataUrlById[rowId] = dataUrl;
+      });
+      const appendixPagesHtml = buildSolarMidtownPagesHtml(rowChunk, layout, {
+        absoluteAssets: true,
+        planDataUrlById,
+        lang
+      });
+      const appendixHtml = buildSolarMidtownPagesDocument({
+        title: 'Solar Midtown · Páginas agregadas',
+        contentTop: '',
+        pagesHtml: appendixPagesHtml,
+        pdfMode: true,
+        pageWidthPt,
+        pageHeightPt,
+        layout,
+        renderProfile
+      });
+      const appendixPdfBuffer = await generatePdfWithSharedBrowser(appendixHtml, {
+        width: `${pageWidthIn}in`,
+        height: `${pageHeightIn}in`,
+        margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+      });
+      const appendixDoc = await PDFDocument.load(appendixPdfBuffer);
+      const appendixPages = await merged.copyPages(appendixDoc, appendixDoc.getPageIndices());
+      appendixPages.forEach((page) => merged.addPage(page));
+    }
     const finalPdf = await merged.save();
 
     const brochureBaseName = getSolarMidtownBrochureBaseName(brochurePath, lang);
@@ -6418,6 +6450,10 @@ async function startServer() {
   const server = app.listen(PORT, HOST, () => {
     log(`Servidor listo en http://${HOST}:${PORT}`);
   });
+  // Helps prevent intermittent gateway resets on long-running PDF generation requests.
+  server.keepAliveTimeout = 120000;
+  server.headersTimeout = 121000;
+  server.requestTimeout = 300000;
   server.on('error', (err) => {
     log(`Error al iniciar servidor: ${err && err.stack ? err.stack : err}`);
   });
