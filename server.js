@@ -1478,8 +1478,10 @@ function defaultSolarMidtownLayout() {
       labelSize: 12,
       valueSize: 12,
       metaSize: 12,
-      departmentSize: 12,
-      metersSize: 12,
+      departmentLabelSize: 12,
+      departmentValueSize: 12,
+      metersLabelSize: 12,
+      metersValueSize: 12,
       rowPaddingY: 7,
       lineHeight: 1.2,
       wordSpacing: 0,
@@ -1549,8 +1551,10 @@ function normalizeSolarMidtownLayout(input) {
   out.priceBox.labelSize = clampNumber(out.priceBox.labelSize, out.priceBox.bodySize, 9, 40);
   out.priceBox.valueSize = clampNumber(out.priceBox.valueSize, out.priceBox.bodySize, 9, 40);
   out.priceBox.metaSize = clampNumber(out.priceBox.metaSize, base.priceBox.metaSize, 8, 24);
-  out.priceBox.departmentSize = clampNumber(out.priceBox.departmentSize, out.priceBox.metaSize, 8, 40);
-  out.priceBox.metersSize = clampNumber(out.priceBox.metersSize, out.priceBox.metaSize, 8, 40);
+  out.priceBox.departmentLabelSize = clampNumber(out.priceBox.departmentLabelSize, out.priceBox.metaSize, 8, 40);
+  out.priceBox.departmentValueSize = clampNumber(out.priceBox.departmentValueSize, out.priceBox.metaSize, 8, 40);
+  out.priceBox.metersLabelSize = clampNumber(out.priceBox.metersLabelSize, out.priceBox.metaSize, 8, 40);
+  out.priceBox.metersValueSize = clampNumber(out.priceBox.metersValueSize, out.priceBox.metaSize, 8, 40);
   out.priceBox.rowPaddingY = clampNumber(out.priceBox.rowPaddingY, base.priceBox.rowPaddingY, 0, 30);
   out.priceBox.lineHeight = clampNumber(out.priceBox.lineHeight, base.priceBox.lineHeight, 1, 2.4);
   out.priceBox.wordSpacing = clampNumber(out.priceBox.wordSpacing, base.priceBox.wordSpacing, 0, 20);
@@ -4006,8 +4010,8 @@ function buildSolarMidtownPagesHtml(selectedRows, layoutInput, options) {
         <section class="plan-box" style="background:${escapeHtml(layout.planBox.backgroundColor)};border:1px solid ${escapeHtml(layout.planBox.borderColor)};border-radius:${layout.planBox.borderRadius}px;min-height:${layout.planBox.minHeight}px;">${planBlock}</section>
         <section class="data-box" data-align="${escapeHtml(layout.priceBox.verticalAlign)}" style="background:${escapeHtml(layout.priceBox.backgroundColor)};border:1px solid ${escapeHtml(layout.priceBox.borderColor)};border-radius:${layout.priceBox.borderRadius}px;color:${escapeHtml(layout.priceBox.textColor)};">
           <div class="unit-meta-top">
-            <p class="meta department-meta">${escapeHtml(t.department)}: <strong>${escapeHtml(row.unidad || '-')}</strong></p>
-            <p class="meta meters-meta">${escapeHtml(t.sqm)}: <strong>${escapeHtml(lang === 'en' ? (sqft || '-') : (metros || '-'))}${lang === 'en' ? '' : ' m²'}</strong></p>
+            <p class="meta department-meta"><span class="meta-label">${escapeHtml(t.department)}:</span> <strong class="meta-value">${escapeHtml(row.unidad || '-')}</strong></p>
+            <p class="meta meters-meta"><span class="meta-label">${escapeHtml(t.sqm)}:</span> <strong class="meta-value">${escapeHtml(lang === 'en' ? (sqft || '-') : (metros || '-'))}${lang === 'en' ? '' : ' m²'}</strong></p>
           </div>
           <h3>${escapeHtml(t.priceSummary)}</h3>
           <ul>
@@ -4243,8 +4247,10 @@ function buildSolarMidtownPagesDocument(options) {
       --price-label-size:${layout.priceBox.labelSize}px;
       --price-value-size:${layout.priceBox.valueSize}px;
       --price-meta-size:${layout.priceBox.metaSize}px;
-      --price-department-size:${layout.priceBox.departmentSize || layout.priceBox.metaSize}px;
-      --price-meters-size:${layout.priceBox.metersSize || layout.priceBox.metaSize}px;
+      --price-department-label-size:${layout.priceBox.departmentLabelSize || layout.priceBox.metaSize}px;
+      --price-department-value-size:${layout.priceBox.departmentValueSize || layout.priceBox.metaSize}px;
+      --price-meters-label-size:${layout.priceBox.metersLabelSize || layout.priceBox.metaSize}px;
+      --price-meters-value-size:${layout.priceBox.metersValueSize || layout.priceBox.metaSize}px;
       --price-row-padding-y:${layout.priceBox.rowPaddingY}px;
       --price-line-height:${layout.priceBox.lineHeight};
       --price-word-spacing:${layout.priceBox.wordSpacing}px;
@@ -4304,8 +4310,10 @@ function buildSolarMidtownPagesDocument(options) {
     .unit-meta-top{margin-top:var(--price-meta-top-offset);margin-bottom:var(--price-meta-gap);}
     .unit-meta-top .meta{margin:0 0 4px;}
     .unit-meta-top .meta:last-child{margin-bottom:0;}
-    .unit-meta-top .department-meta{font-size:var(--price-department-size);}
-    .unit-meta-top .meters-meta{font-size:var(--price-meters-size);}
+    .unit-meta-top .department-meta .meta-label{font-size:var(--price-department-label-size);}
+    .unit-meta-top .department-meta .meta-value{font-size:var(--price-department-value-size);}
+    .unit-meta-top .meters-meta .meta-label{font-size:var(--price-meters-label-size);}
+    .unit-meta-top .meters-meta .meta-value{font-size:var(--price-meters-value-size);}
     .empty{display:grid;place-items:center;text-align:center;min-height:170px;border:1px dashed #cfd4df;border-radius:12px;color:var(--muted);padding:12px;background:#fff;}
     code{background:#f2f4f8;padding:2px 4px;border-radius:6px}
     @media (max-width:900px){.unit-grid{grid-template-columns:1fr;} iframe{height:58vh;}}

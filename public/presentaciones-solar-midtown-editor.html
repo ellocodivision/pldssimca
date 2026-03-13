@@ -143,12 +143,20 @@
           <input id="priceMetaSize" type="number" min="8" max="24" step="1" value="12">
         </div>
         <div>
-          <label>Tamaño Departamento (px)</label>
-          <input id="priceDepartmentSize" type="number" min="8" max="40" step="1" value="12">
+          <label>Tamaño etiqueta Departamento (px)</label>
+          <input id="priceDepartmentLabelSize" type="number" min="8" max="40" step="1" value="12">
         </div>
         <div>
-          <label>Tamaño Metros cuadrados (px)</label>
-          <input id="priceMetersSize" type="number" min="8" max="40" step="1" value="12">
+          <label>Tamaño valor Departamento (px)</label>
+          <input id="priceDepartmentValueSize" type="number" min="8" max="40" step="1" value="12">
+        </div>
+        <div>
+          <label>Tamaño etiqueta Metros cuadrados (px)</label>
+          <input id="priceMetersLabelSize" type="number" min="8" max="40" step="1" value="12">
+        </div>
+        <div>
+          <label>Tamaño valor Metros cuadrados (px)</label>
+          <input id="priceMetersValueSize" type="number" min="8" max="40" step="1" value="12">
         </div>
         <div>
           <label>Espacio entre filas (px)</label>
@@ -248,8 +256,10 @@
         priceLabelSize: document.getElementById('priceLabelSize'),
         priceValueSize: document.getElementById('priceValueSize'),
         priceMetaSize: document.getElementById('priceMetaSize'),
-        priceDepartmentSize: document.getElementById('priceDepartmentSize'),
-        priceMetersSize: document.getElementById('priceMetersSize'),
+        priceDepartmentLabelSize: document.getElementById('priceDepartmentLabelSize'),
+        priceDepartmentValueSize: document.getElementById('priceDepartmentValueSize'),
+        priceMetersLabelSize: document.getElementById('priceMetersLabelSize'),
+        priceMetersValueSize: document.getElementById('priceMetersValueSize'),
         priceRowPaddingY: document.getElementById('priceRowPaddingY'),
         priceLineHeight: document.getElementById('priceLineHeight'),
         priceWordSpacing: document.getElementById('priceWordSpacing'),
@@ -450,7 +460,7 @@
         const withDiscount = hasDiscount(sample);
         const metros = String(sample.colF || '').trim();
         const parts = [];
-        parts.push('<div class="meta-group"><p class="meta department-meta">Departamento: <strong>' + esc(sample.unidad || '-') + '</strong></p><p class="meta meters-meta">Metros cuadrados: <strong>' + esc(metros || '-') + ' m²</strong></p></div>');
+        parts.push('<div class="meta-group"><p class="meta department-meta"><span class="meta-label">Departamento:</span> <strong class="meta-value">' + esc(sample.unidad || '-') + '</strong></p><p class="meta meters-meta"><span class="meta-label">Metros cuadrados:</span> <strong class="meta-value">' + esc(metros || '-') + ' m²</strong></p></div>');
         parts.push('<h3>Resumen de precio</h3>');
         parts.push('<div class="line"><span>Precio lista</span><strong>' + esc(sample.precioListaFmt || '-') + '</strong></div>');
         if (withDiscount) {
@@ -578,8 +588,10 @@
             labelSize: getNumber('priceLabelSize', getNumber('priceBodySize', 12)),
             valueSize: getNumber('priceValueSize', getNumber('priceBodySize', 12)),
             metaSize: getNumber('priceMetaSize', 12),
-            departmentSize: getNumber('priceDepartmentSize', getNumber('priceMetaSize', 12)),
-            metersSize: getNumber('priceMetersSize', getNumber('priceMetaSize', 12)),
+            departmentLabelSize: getNumber('priceDepartmentLabelSize', getNumber('priceMetaSize', 12)),
+            departmentValueSize: getNumber('priceDepartmentValueSize', getNumber('priceMetaSize', 12)),
+            metersLabelSize: getNumber('priceMetersLabelSize', getNumber('priceMetaSize', 12)),
+            metersValueSize: getNumber('priceMetersValueSize', getNumber('priceMetaSize', 12)),
             rowPaddingY: getNumber('priceRowPaddingY', 7),
             lineHeight: getNumber('priceLineHeight', 1.2),
             wordSpacing: getNumber('priceWordSpacing', 0),
@@ -614,8 +626,10 @@
         els.priceLabelSize.value = (l.priceBox && l.priceBox.labelSize) || (l.priceBox && l.priceBox.bodySize) || 12;
         els.priceValueSize.value = (l.priceBox && l.priceBox.valueSize) || (l.priceBox && l.priceBox.bodySize) || 12;
         els.priceMetaSize.value = (l.priceBox && l.priceBox.metaSize) || 12;
-        els.priceDepartmentSize.value = (l.priceBox && (l.priceBox.departmentSize || l.priceBox.metaSize)) || 12;
-        els.priceMetersSize.value = (l.priceBox && (l.priceBox.metersSize || l.priceBox.metaSize)) || 12;
+        els.priceDepartmentLabelSize.value = (l.priceBox && (l.priceBox.departmentLabelSize || l.priceBox.metaSize)) || 12;
+        els.priceDepartmentValueSize.value = (l.priceBox && (l.priceBox.departmentValueSize || l.priceBox.metaSize)) || 12;
+        els.priceMetersLabelSize.value = (l.priceBox && (l.priceBox.metersLabelSize || l.priceBox.metaSize)) || 12;
+        els.priceMetersValueSize.value = (l.priceBox && (l.priceBox.metersValueSize || l.priceBox.metaSize)) || 12;
         els.priceRowPaddingY.value = (l.priceBox && l.priceBox.rowPaddingY) || 7;
         els.priceLineHeight.value = (l.priceBox && l.priceBox.lineHeight) || 1.2;
         els.priceWordSpacing.value = (l.priceBox && l.priceBox.wordSpacing) || 0;
@@ -698,11 +712,17 @@
           node.style.wordSpacing = (l.priceBox.wordSpacing || 0) + 'px';
           node.style.letterSpacing = (l.priceBox.letterSpacing || 0) + 'px';
         });
-        els.demoPrice.querySelectorAll('.department-meta').forEach(function (node) {
-          node.style.fontSize = (l.priceBox.departmentSize || l.priceBox.metaSize) + 'px';
+        els.demoPrice.querySelectorAll('.department-meta .meta-label').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.departmentLabelSize || l.priceBox.metaSize) + 'px';
         });
-        els.demoPrice.querySelectorAll('.meters-meta').forEach(function (node) {
-          node.style.fontSize = (l.priceBox.metersSize || l.priceBox.metaSize) + 'px';
+        els.demoPrice.querySelectorAll('.department-meta .meta-value').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.departmentValueSize || l.priceBox.metaSize) + 'px';
+        });
+        els.demoPrice.querySelectorAll('.meters-meta .meta-label').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.metersLabelSize || l.priceBox.metaSize) + 'px';
+        });
+        els.demoPrice.querySelectorAll('.meters-meta .meta-value').forEach(function (node) {
+          node.style.fontSize = (l.priceBox.metersValueSize || l.priceBox.metaSize) + 'px';
         });
         const metaGroup = els.demoPrice.querySelector('.meta-group');
         if (metaGroup) {
@@ -825,7 +845,7 @@
       const fields = [
         'titleText','titleSize','titleColor','subtitleSize','subtitleColor','pageBg','pagePadding',
         'gridGap','leftRatio','rightRatio','planBg','planBorder','planMinHeight','priceBg','priceBorder','priceText',
-        'priceHeadingSize','priceBodySize','priceLabelSize','priceValueSize','priceMetaSize','priceDepartmentSize','priceMetersSize',
+        'priceHeadingSize','priceBodySize','priceLabelSize','priceValueSize','priceMetaSize','priceDepartmentLabelSize','priceDepartmentValueSize','priceMetersLabelSize','priceMetersValueSize',
         'priceRowPaddingY','priceLineHeight','priceWordSpacing','priceLetterSpacing','verticalExpandRatio',
         'priceMetaTopOffset','priceMetaGroupGap','priceVerticalAlign'
       ];
@@ -874,8 +894,10 @@
             labelSize: 12,
             valueSize: 12,
             metaSize: 12,
-            departmentSize: 12,
-            metersSize: 12,
+            departmentLabelSize: 12,
+            departmentValueSize: 12,
+            metersLabelSize: 12,
+            metersValueSize: 12,
             rowPaddingY: 7,
             lineHeight: 1.2,
             wordSpacing: 0,
