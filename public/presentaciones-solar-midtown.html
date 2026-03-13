@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Presentaciones · Solar Midtown</title>
   <style>
-    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;}
+    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;--ok:#1f8f3a;--ok-border:#16682a;}
     *{box-sizing:border-box}
     body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
     .wrap{max-width:1280px;margin:0 auto;padding:24px 16px 40px;}
@@ -14,6 +14,7 @@
     .sub{margin:6px 0 0;color:var(--muted);}
     .btn{display:inline-block;padding:9px 12px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer;}
     .btn.primary{background:var(--accent);border-color:#cdbb0b;}
+    .btn.success{background:var(--ok);border-color:var(--ok-border);color:#fff;}
     .btn:disabled{opacity:.5;cursor:not-allowed}
     .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;}
     .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
@@ -60,6 +61,13 @@
       .crop-layout{grid-template-columns:1fr;}
       .stage{height:50vh;}
     }
+    .download-modal{position:fixed;inset:0;background:rgba(0,0,0,.42);display:none;align-items:center;justify-content:center;z-index:70;padding:18px;}
+    .download-modal.show{display:flex;}
+    .download-card{background:#fff;border:1px solid #d4d7df;border-radius:14px;max-width:560px;width:100%;padding:18px;}
+    .download-card h3{margin:0 0 6px;font-size:22px;}
+    .download-card p{margin:0;color:#5f6572;line-height:1.45;}
+    .spinner{width:22px;height:22px;border-radius:50%;border:3px solid #dfe4ee;border-top-color:#1f8f3a;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
@@ -80,9 +88,9 @@
         <input id="searchInput" class="search" type="text" placeholder="Buscar por unidad, tipo de departamento, m2, precio...">
         <button id="selectAllBtn" class="btn" type="button">Seleccionar todo</button>
         <button id="clearAllBtn" class="btn" type="button">Quitar todo</button>
-        <button id="previewBtn" class="btn primary" type="button" disabled>Abrir vista previa</button>
-        <button id="downloadBtnEs" class="btn" type="button" disabled>Descargar presentación (PDF ES)</button>
-        <button id="downloadBtnEn" class="btn" type="button" disabled>Descargar presentación (PDF EN)</button>
+        <button id="previewBtn" class="btn success" type="button" disabled>Personalizar presentación</button>
+        <button id="downloadBtnEs" class="btn success" type="button" disabled>Descargar presentación (PDF ES)</button>
+        <button id="downloadBtnEn" class="btn success" type="button" disabled>Descargar presentación (PDF EN)</button>
       </div>
       <p id="status" class="status">Cargando inventario...</p>
       <p class="status">Seleccionadas: <span id="selectedCount" style="font-weight:700">0</span></p>
@@ -160,6 +168,12 @@
       </div>
     </div>
   </div>
+  <div id="downloadModal" class="download-modal" aria-hidden="true">
+    <section class="download-card">
+      <h3><span class="spinner"></span>Preparando descarga</h3>
+      <p id="downloadModalText">Por favor espera, estamos recolectando datos para generar tu presentación PDF.</p>
+    </section>
+  </div>
 
   <script>
     (function () {
@@ -204,7 +218,9 @@
         cropResultHint: document.getElementById('cropResultHint'),
         cropResetBtn: document.getElementById('cropResetBtn'),
         cropCancelBtn: document.getElementById('cropCancelBtn'),
-        cropSaveBtn: document.getElementById('cropSaveBtn')
+        cropSaveBtn: document.getElementById('cropSaveBtn'),
+        downloadModal: document.getElementById('downloadModal'),
+        downloadModalText: document.getElementById('downloadModalText')
       };
 
       function esc(value) {
@@ -259,6 +275,61 @@
         els.previewBtn.disabled = count === 0;
         els.downloadBtnEs.disabled = count === 0;
         els.downloadBtnEn.disabled = count === 0;
+      }
+      function showDownloadModal(message) {
+        if (!els.downloadModal) return;
+        if (els.downloadModalText) els.downloadModalText.textContent = message || 'Por favor espera, estamos recolectando datos para generar tu presentación PDF.';
+        els.downloadModal.classList.add('show');
+        els.downloadModal.setAttribute('aria-hidden', 'false');
+      }
+      function hideDownloadModal() {
+        if (!els.downloadModal) return;
+        els.downloadModal.classList.remove('show');
+        els.downloadModal.setAttribute('aria-hidden', 'true');
+      }
+      function parseFileNameFromDisposition(disposition, fallback) {
+        const raw = String(disposition || '');
+        const m = raw.match(/filename\*=UTF-8''([^;]+)|filename=\"([^\"]+)\"|filename=([^;]+)/i);
+        const encoded = m && (m[1] || m[2] || m[3]);
+        if (!encoded) return fallback;
+        try { return decodeURIComponent(String(encoded).replace(/^['"]|['"]$/g, '')); } catch { return String(encoded).replace(/^['"]|['"]$/g, ''); }
+      }
+      async function downloadPdf(lang) {
+        const idsParam = getSelectionParam();
+        if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
+        const message = lang === 'en'
+          ? 'Please wait, we are collecting data to generate the English PDF presentation.'
+          : 'Por favor espera, estamos recolectando datos para generar la presentación PDF.';
+        showDownloadModal(message);
+        try {
+          const url = '/api/presentaciones/solar-midtown/download.pdf?quality=low&lang=' + encodeURIComponent(lang) + '&ids=' + encodeURIComponent(idsParam);
+          const res = await fetch(url, { credentials: 'same-origin' });
+          if (!res.ok) {
+            const text = await res.text();
+            let errMsg = 'No se pudo generar el PDF.';
+            try {
+              const json = JSON.parse(text);
+              errMsg = json.error || json.details || errMsg;
+            } catch {
+              if (text) errMsg = text.slice(0, 220);
+            }
+            throw new Error(errMsg);
+          }
+          const blob = await res.blob();
+          const fileName = parseFileNameFromDisposition(res.headers.get('content-disposition'), lang === 'en' ? 'Solar-Midtown-EN.pdf' : 'Solar-Midtown-ES.pdf');
+          const objUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = objUrl;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(objUrl);
+        } catch (err) {
+          alert((err && err.message) ? err.message : 'No se pudo descargar el PDF.');
+        } finally {
+          hideDownloadModal();
+        }
       }
       function getSelectionParam() {
         const ids = Array.from(state.selected);
@@ -554,14 +625,10 @@
         window.open('/presentaciones/solar-midtown/preview?ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
       });
       els.downloadBtnEs.addEventListener('click', function () {
-        const idsParam = getSelectionParam();
-        if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
-        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=es&quality=low&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
+        downloadPdf('es');
       });
       els.downloadBtnEn.addEventListener('click', function () {
-        const idsParam = getSelectionParam();
-        if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
-        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=en&quality=low&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
+        downloadPdf('en');
       });
 
       attachDrag();
