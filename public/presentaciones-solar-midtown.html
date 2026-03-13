@@ -556,12 +556,12 @@
       els.downloadBtnEs.addEventListener('click', function () {
         const idsParam = getSelectionParam();
         if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
-        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
+        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=es&quality=low&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
       });
       els.downloadBtnEn.addEventListener('click', function () {
         const idsParam = getSelectionParam();
         if (!idsParam) { alert('Selecciona al menos una unidad.'); return; }
-        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
+        window.open('/api/presentaciones/solar-midtown/download.pdf?lang=en&quality=low&ids=' + encodeURIComponent(idsParam), '_blank', 'noopener');
       });
 
       attachDrag();

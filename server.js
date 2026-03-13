@@ -3480,6 +3480,24 @@ function parseSolarMidtownSelectedIds(rawIds, allRows) {
     .filter(Boolean);
 }
 
+function normalizeSolarMidtownPdfQuality(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (value === 'high' || value === 'alta') return 'high';
+  if (value === 'medium' || value === 'media') return 'medium';
+  return 'low';
+}
+
+function getSolarMidtownPdfRenderProfile(qualityRaw) {
+  const quality = normalizeSolarMidtownPdfQuality(qualityRaw);
+  if (quality === 'high') {
+    return { quality, imageFormat: 'jpeg', jpegQuality: 0.9, maxSide: 2600 };
+  }
+  if (quality === 'medium') {
+    return { quality, imageFormat: 'jpeg', jpegQuality: 0.8, maxSide: 1800 };
+  }
+  return { quality: 'low', imageFormat: 'jpeg', jpegQuality: 0.68, maxSide: 1200 };
+}
+
 function parseSolarMidtownNumber(raw) {
   if (raw == null) return null;
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
@@ -3794,10 +3812,19 @@ async function readSolarMidtownBrochureMeta(brochurePathInput) {
   }
 }
 
-function buildSolarMidtownCropScript() {
+function buildSolarMidtownCropScript(options) {
+  const opts = options && typeof options === 'object' ? options : {};
+  const imageFormat = String(opts.imageFormat || 'png').toLowerCase() === 'jpeg' ? 'jpeg' : 'png';
+  const jpegQuality = clampNumber(opts.jpegQuality, 0.82, 0.4, 0.98);
+  const maxSide = clampNumber(opts.maxSide, 1800, 400, 5000);
+  const qualityLiteral = Number(jpegQuality.toFixed(3));
+  const maxSideLiteral = Math.round(maxSide);
   return `<script>
     (function () {
       function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      const OUT_FORMAT = '${imageFormat}';
+      const JPEG_QUALITY = ${qualityLiteral};
+      const MAX_SIDE = ${maxSideLiteral};
       function numAttr(el, name, fallback) {
         const value = Number(el.getAttribute(name));
         return Number.isFinite(value) ? value : fallback;
@@ -3829,8 +3856,16 @@ function buildSolarMidtownCropScript() {
               const sw = Math.max(1, Math.round((ew / 100) * iw));
               const sh = Math.max(1, Math.round((eh / 100) * ih));
               const out = document.createElement('canvas');
-              out.width = Math.max(1, sw);
-              out.height = Math.max(1, sh);
+              let outW = Math.max(1, sw);
+              let outH = Math.max(1, sh);
+              const longest = Math.max(outW, outH);
+              if (longest > MAX_SIDE) {
+                const ratio = MAX_SIDE / longest;
+                outW = Math.max(1, Math.round(outW * ratio));
+                outH = Math.max(1, Math.round(outH * ratio));
+              }
+              out.width = outW;
+              out.height = outH;
               const outCtx = out.getContext('2d');
               if (!outCtx) return resolve();
               const srcX = Math.max(0, sx);
@@ -3842,9 +3877,12 @@ function buildSolarMidtownCropScript() {
               if (srcW > 0 && srcH > 0) {
                 const destX = Math.max(0, -sx);
                 const destY = Math.max(0, -sy);
-                outCtx.drawImage(helper, srcX, srcY, srcW, srcH, destX, destY, srcW, srcH);
+                outCtx.drawImage(helper, srcX, srcY, srcW, srcH, Math.round(destX * (outW / sw)), Math.round(destY * (outH / sh)), Math.round(srcW * (outW / sw)), Math.round(srcH * (outH / sh)));
               }
-              img.src = out.toDataURL('image/png');
+              const mime = OUT_FORMAT === 'jpeg' ? 'image/jpeg' : 'image/png';
+              img.src = OUT_FORMAT === 'jpeg'
+                ? out.toDataURL(mime, JPEG_QUALITY)
+                : out.toDataURL(mime);
             } catch {}
             resolve();
           };
@@ -3889,6 +3927,9 @@ function buildSolarMidtownPagesDocument(options) {
   const pageContainerCss = pdfMode
     ? `padding:0;margin:0;`
     : '';
+  const renderProfile = options && options.renderProfile && typeof options.renderProfile === 'object'
+    ? options.renderProfile
+    : { imageFormat: 'png', jpegQuality: 0.9, maxSide: 2600 };
   return `<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -3973,7 +4014,7 @@ function buildSolarMidtownPagesDocument(options) {
     @media (max-width:900px){.unit-grid{grid-template-columns:1fr;} iframe{height:58vh;}}
   </style></head><body>
     <div class="wrap">${contentTop}${pagesHtml}</div>
-    ${buildSolarMidtownCropScript()}
+    ${buildSolarMidtownCropScript(renderProfile)}
   </body></html>`;
 }
 
@@ -4011,6 +4052,7 @@ app.get('/api/presentaciones/solar-midtown/plan-image', async (req, res) => {
 app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
   const data = readSolarMidtownRowsFromCbs();
   const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids, data.rows);
+  const renderProfile = getSolarMidtownPdfRenderProfile('low');
   const layout = readSolarMidtownLayout();
   const selectedRows = data.rows.filter((row) => selectedIds.includes(row.id));
   const brochurePathEs = getSolarMidtownBrochurePath('es');
@@ -4051,8 +4093,8 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn" href="${editorHref}">Editar plantilla</a>
-        <a class="btn" id="downloadWithPagesBtnEs" href="/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=${encodeURIComponent(idsRaw)}&pages=${encodeURIComponent(selectedBrochurePagesCsv)}">Descargar presentación (PDF ES)</a>
-        <a class="btn" id="downloadWithPagesBtnEn" href="/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=${encodeURIComponent(idsRaw)}&pages=${encodeURIComponent(selectedBrochurePagesCsv)}">Descargar presentación (PDF EN)</a>
+        <a class="btn" id="downloadWithPagesBtnEs" href="/api/presentaciones/solar-midtown/download.pdf?lang=es&quality=low&ids=${encodeURIComponent(idsRaw)}&pages=${encodeURIComponent(selectedBrochurePagesCsv)}">Descargar presentación (PDF ES)</a>
+        <a class="btn" id="downloadWithPagesBtnEn" href="/api/presentaciones/solar-midtown/download.pdf?lang=en&quality=low&ids=${encodeURIComponent(idsRaw)}&pages=${encodeURIComponent(selectedBrochurePagesCsv)}">Descargar presentación (PDF EN)</a>
         <a class="btn" href="/presentaciones/solar-midtown">Volver</a>
       </div>
     </div>
@@ -4070,8 +4112,8 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
         const selectAllBtn = document.getElementById('brochureSelectAllBtn');
         const selectNoneBtn = document.getElementById('brochureSelectNoneBtn');
         if (!checks.length || !downloadBtnEs || !downloadBtnEn) return;
-        const baseUrlEs = '/api/presentaciones/solar-midtown/download.pdf?lang=es&ids=${encodeURIComponent(idsRaw)}';
-        const baseUrlEn = '/api/presentaciones/solar-midtown/download.pdf?lang=en&ids=${encodeURIComponent(idsRaw)}';
+        const baseUrlEs = '/api/presentaciones/solar-midtown/download.pdf?lang=es&quality=low&ids=${encodeURIComponent(idsRaw)}';
+        const baseUrlEn = '/api/presentaciones/solar-midtown/download.pdf?lang=en&quality=low&ids=${encodeURIComponent(idsRaw)}';
         function selectedPages() {
           return checks
             .filter((c) => c.checked)
@@ -4119,13 +4161,15 @@ app.get('/presentaciones/solar-midtown/preview', async (req, res) => {
     title: 'Vista previa · Solar Midtown',
     contentTop,
     pagesHtml,
-    layout
+    layout,
+    renderProfile
   }));
 });
 
 app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
   try {
     const lang = normalizeSolarMidtownLang(req.query && req.query.lang);
+    const renderProfile = getSolarMidtownPdfRenderProfile(req.query && req.query.quality);
     const brochurePath = getSolarMidtownBrochurePath(lang);
     const data = readSolarMidtownRowsFromCbs();
     const selectedIds = parseSolarMidtownSelectedIds(req.query && req.query.ids, data.rows);
@@ -4174,7 +4218,8 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
       pdfMode: true,
       pageWidthPt,
       pageHeightPt,
-      layout
+      layout,
+      renderProfile
     });
     const pageWidthIn = (pageWidthPt / 72).toFixed(4);
     const pageHeightIn = (pageHeightPt / 72).toFixed(4);
