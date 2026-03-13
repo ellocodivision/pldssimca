@@ -306,12 +306,19 @@
           const res = await fetch(url, { credentials: 'same-origin' });
           if (!res.ok) {
             const text = await res.text();
+            const contentType = String(res.headers.get('content-type') || '').toLowerCase();
             let errMsg = 'No se pudo generar el PDF.';
             try {
               const json = JSON.parse(text);
               errMsg = json.error || json.details || errMsg;
             } catch {
-              if (text) errMsg = text.slice(0, 220);
+              const looksLikeGateway = /502|503|504|bad gateway|service is currently unavailable|connection reset|worker timeout/i.test(text);
+              const looksLikeHtml = contentType.includes('text/html') || /^\s*<!doctype html>/i.test(text);
+              if (looksLikeGateway || looksLikeHtml) {
+                errMsg = 'El servidor tardó demasiado al generar el PDF. Intenta con menos unidades o vuelve a intentar en unos minutos.';
+              } else if (text) {
+                errMsg = text.slice(0, 220);
+              }
             }
             throw new Error(errMsg);
           }
