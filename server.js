@@ -44,6 +44,7 @@ const EXTRA_ALLOWED_EMAILS = new Set(
     .map((item) => String(item || '').trim().toLowerCase())
     .filter(Boolean)
 );
+EXTRA_ALLOWED_EMAILS.add('jmotta@relatedgroup.com');
 const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
 const USE_WHISPERLIST_DB = Boolean(DATABASE_URL);
 const LOG_PATH = '/tmp/fr-ven-server.log';
