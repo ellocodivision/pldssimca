@@ -3442,6 +3442,7 @@ app.get('/plds/cliente-nacional-persona-fisica', (req, res) => {
 });
 
 app.get('/plds/cliente-nacional-persona-moral', (req, res) => {
+app.use('/viceroy/inicio', requireGerente);
   res.redirect('/form-nacional-moral');
 });
 
@@ -4809,6 +4810,11 @@ app.get('/api/viceroy/registros/export.xlsx', requireGerente, async (req, res) =
 });
 
 app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
+        <a class="card" href="/viceroy/inicio">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Inicio</h2>
+          <p class="desc">Acceso al módulo de presentación comercial.</p>
+        </a>
   try {
     const rowId = String(req.params.id || '').trim();
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
@@ -4824,6 +4830,38 @@ app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
     if (!isGerente && ownerEmail !== currentEmail) {
       return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
     }
+
+app.get('/viceroy/inicio', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio.html'));
+});
+
+app.get('/viceroy/inicio/presentacion', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-presentacion.html'));
+});
+
+app.get('/viceroy/inicio/acabados', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-acabados.html'));
+});
+
+app.get('/viceroy/inicio/planos', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-planos.html'));
+});
+
+app.get('/viceroy/inicio/carpeta-legal', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-carpeta-legal.html'));
+});
+
+app.get('/viceroy/inicio/ubicacion', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-ubicacion.html'));
+});
+
+app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
+});
+
+app.get('/viceroy/inicio/presentacion/pdf', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'maresol-ppt-sales-desktop.pdf'));
+});
 
     const body = req.body || {};
     const nextRow = {

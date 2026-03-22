@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viceroy Inicio</title>
+  <style>
+    :root {
+      --beige: #ffffff;
+      --ink: #36363f;
+      --ink-soft: #575760;
+      --line: #d4d6cc;
+      --card-line: #cfd2c8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
+      background: var(--beige);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1080px, 92vw);
+      margin: 0 auto;
+      padding: 26px 0 36px;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .back,
+    .quick-link {
+      display: inline-block;
+      padding: 8px 12px;
+      border: 1px solid #b9beb1;
+      border-radius: 10px;
+      background: #fff;
+      color: #242830;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 400;
+    }
+    .hero {
+      background: #ffffff;
+      border: 1px solid #ffffff;
+      border-radius: 16px;
+      padding: 18px 20px 16px;
+      margin-bottom: 18px;
+    }
+    .logo {
+      text-align: center;
+      line-height: 1;
+      margin: 18px 0 22px;
+      color: #3d3d45;
+    }
+    .logo .v1 { font-size: clamp(42px, 8vw, 92px); letter-spacing: 0.09em; font-weight: 500; }
+    .logo .v2 { font-size: clamp(22px, 4vw, 44px); letter-spacing: 0.1em; margin-top: 8px; }
+    .logo .v3 { font-size: clamp(26px, 4.8vw, 52px); margin-top: 10px; }
+    h1 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--ink-soft);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.2;
+      text-align: center;
+      font-weight: 400;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #fff;
+      border: 1px solid var(--card-line);
+      border-radius: 14px;
+      padding: 14px;
+      min-height: 110px;
+      transition: transform 0.18s ease, border-color 0.18s ease;
+      text-align: left;
+    }
+    .card:hover {
+      border-color: #aeb5a0;
+      transform: translateY(-1px);
+    }
+    .name {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    @media (max-width: 680px) {
+      .wrap { width: min(92vw, 1080px); padding-top: 20px; }
+      .hero, .card { border-radius: 18px; }
+      .name { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <a class="back" href="/viceroy">Volver a Viceroy</a>
+    </div>
+
+    <section class="hero">
+      <div class="logo">
+        <div class="v1">VICEROY</div>
+        <div class="v2">RESIDENCES</div>
+        <div class="v3">PLAYA DEL CARMEN</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <a class="card" href="/viceroy/inicio/presentacion">
+        <h2 class="name">Presentación / Overview</h2>
+      </a>
+      <a class="card" href="/viceroy-piloto-presentacion">
+        <h2 class="name">Disponibilidad / Availability</h2>
+      </a>
+      <a class="card" href="/viceroy/inicio/acabados">
+        <h2 class="name">Acabados / Finishes</h2>
+      </a>
+      <a class="card" href="/viceroy/inicio/planos">
+        <h2 class="name">Planos / Floor Plans</h2>
+      </a>
+      <a class="card" href="/viceroy/inicio/carpeta-legal">
+        <h2 class="name">Legal / Legal</h2>
+      </a>
+      <a class="card" href="/viceroy/inicio/ubicacion">
+        <h2 class="name">Ubicación / Location</h2>
+      </a>
+      <a class="card" href="/viceroy/inicio/apartar-unidad">
+        <h2 class="name">Apartar Unidad / Reserve Unit</h2>
+      </a>
+    </section>
+  </main>
+</body>
+</html>
