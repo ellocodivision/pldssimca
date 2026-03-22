@@ -2476,6 +2476,8 @@
         const rightRect = rightCol.getBoundingClientRect();
         const planoForBounds = body.querySelector('#plano');
         const planoRectForBounds = planoForBounds ? planoForBounds.getBoundingClientRect() : null;
+        const planoStyleWidth = planoForBounds ? (parseFloat(planoForBounds.style.width || '') || 0) : 0;
+        const planoStyleHeight = planoForBounds ? (parseFloat(planoForBounds.style.height || '') || 0) : 0;
 
         const availableBodyHeight = Math.max(0, Math.round(page2Rect.bottom - bodyRect.top));
         const bodyHeight = Math.max(body.scrollHeight, leftCol.scrollHeight, rightCol.scrollHeight, bodyRect.height, availableBodyHeight);
@@ -2493,8 +2495,8 @@
             el: rightCol,
             rect: rightRect,
             override: planoRectForBounds ? {
-              width: Math.max(rightRect.width, planoRectForBounds.width),
-              height: Math.max(rightRect.height, planoRectForBounds.height),
+              width: Math.max(rightRect.width, planoRectForBounds.width, planoStyleWidth),
+              height: Math.max(rightRect.height, planoRectForBounds.height, planoStyleHeight),
               left: Math.min(rightRect.left, planoRectForBounds.left),
               top: Math.min(rightRect.top, planoRectForBounds.top)
             } : null
@@ -2517,6 +2519,8 @@
         const plano = body.querySelector('#plano');
         if (plano) {
           const planoRect = plano.getBoundingClientRect();
+          const explicitPlanoWidth = parseFloat(plano.style.width || '') || planoRect.width;
+          const explicitPlanoHeight = parseFloat(plano.style.height || '') || planoRect.height;
           let liveSrc = plano.getAttribute('src') || '';
           if (!liveSrc && state.previewPayload && state.previewPayload.plano) {
             liveSrc = state.previewPayload.plano;
@@ -2540,14 +2544,14 @@
           if (barelyVisible) {
             plano.style.left = '0px';
             plano.style.top = '0px';
-            plano.style.width = Math.round(rightRectAfterSizing.width) + 'px';
-            plano.style.height = Math.round(rightRectAfterSizing.height) + 'px';
+            plano.style.width = Math.round(Math.max(rightRectAfterSizing.width, explicitPlanoWidth)) + 'px';
+            plano.style.height = Math.round(Math.max(rightRectAfterSizing.height, explicitPlanoHeight)) + 'px';
             plano.style.objectFit = 'contain';
           } else {
             plano.style.left = Math.round(planoRect.left - rightRectAfterSizing.left) + 'px';
             plano.style.top = Math.round(planoRect.top - rightRectAfterSizing.top) + 'px';
-            plano.style.width = Math.round(planoRect.width) + 'px';
-            plano.style.height = Math.round(planoRect.height) + 'px';
+            plano.style.width = Math.round(explicitPlanoWidth) + 'px';
+            plano.style.height = Math.round(explicitPlanoHeight) + 'px';
           }
           plano.style.margin = '0';
           plano.style.maxWidth = 'none';
