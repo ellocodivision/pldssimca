@@ -104,6 +104,7 @@ const SOLAR_MIDTOWN_LAYOUT_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-
 const SOLAR_MIDTOWN_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-solar-midtown-crops.json');
 const SOLAR_MIDTOWN_LAYOUT_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-crops.json');
+const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
 const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
 const CEIBA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-ceiba-crops.json');
 const SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE = clampNumber(Number(process.env.SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE), 20, 5, 60);
@@ -1595,6 +1596,70 @@ function readSolarMidtownLayout() {
 function saveSolarMidtownLayout(layout) {
   const normalized = normalizeSolarMidtownLayout(layout);
   writeJson(SOLAR_MIDTOWN_LAYOUT_PATH, normalized);
+  return normalized;
+}
+
+function defaultBrokersSimcaTemplate() {
+  return {
+    version: 2,
+    sourceHtml: `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Documento editable</title>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#f4efe6;color:#1b1b1b}
+    .sheet{max-width:980px;margin:24px auto;padding:32px;background:#fff;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.08)}
+    .hero{padding:56px 40px;border-radius:16px;background:linear-gradient(135deg,#e6ded0,#f7f3eb)}
+    h1{margin:0 0 12px;font-size:42px}
+    p{line-height:1.6}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:24px}
+    .card{padding:20px;border:1px solid #e7dfd0;border-radius:14px;background:#fcfaf6}
+    @media (max-width:720px){.sheet{margin:0;border-radius:0;padding:18px}.hero{padding:28px 20px}.grid{grid-template-columns:1fr}h1{font-size:30px}}
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <section class="hero">
+      <h1>Documento editable</h1>
+      <p>Pega aqui tu propio HTML, luego selecciona elementos en el preview para cambiar texto, estilos y posicion.</p>
+    </section>
+    <section class="grid">
+      <article class="card">
+        <h2>Bloque 1</h2>
+        <p>Este es un contenido de muestra para que el editor no abra vacio.</p>
+      </article>
+      <article class="card">
+        <h2>Bloque 2</h2>
+        <p>Cuando pegues tu HTML, esta plantilla base se reemplaza completa.</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>`
+  };
+}
+
+function normalizeBrokersSimcaTemplate(input) {
+  const base = defaultBrokersSimcaTemplate();
+  const src = isPlainObject(input) ? input : {};
+  const sourceHtml = typeof src.sourceHtml === 'string' && src.sourceHtml.trim()
+    ? src.sourceHtml
+    : base.sourceHtml;
+  return {
+    version: 2,
+    sourceHtml
+  };
+}
+
+function readBrokersSimcaTemplate() {
+  return normalizeBrokersSimcaTemplate(readJson(BROKERS_SIMCA_TEMPLATE_PATH, null));
+}
+
+function saveBrokersSimcaTemplate(template) {
+  const normalized = normalizeBrokersSimcaTemplate(template);
+  writeJson(BROKERS_SIMCA_TEMPLATE_PATH, normalized);
   return normalized;
 }
 
@@ -3181,6 +3246,12 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Presentaciones</h2>
           <p class="desc">Generación de presentaciones por proyecto con unidades seleccionadas.</p>
         </a>`;
+  const brokersCard = `
+        <a class="card" href="/brokers.simca.mx">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Brokers.simca.mx</h2>
+          <p class="desc">Editor visual de fichas HTML listo para copiar a Wix y exportar a PDF.</p>
+        </a>`;
   const roiMasterPanel = isGerente ? `
       <section class="master-box master-box-mini">
         <h3>CSV Maestro</h3>
@@ -3295,6 +3366,7 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
+        ${brokersCard}
         ${presentacionesCard}
         ${viceroyModuleCard}
         ${ownerServicesCard}
@@ -3365,9 +3437,12 @@ app.use('/format-extranjera-moral', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
+app.use('/brokers.simca.mx', requireInternalUser);
+app.use('/api/brokers-simca-mx', requireInternalUser);
 app.use('/presentaciones', requireInternalUser);
 app.use('/api/presentaciones', requireInternalUser);
 app.use('/viceroy', requireAuth);
+app.use('/viceroy/inicio', requireGerente);
 app.use('/viceroy-piloto', requireInternalUser);
 app.use('/api/viceroy-piloto', (req, res, next) => {
   if (req.path === '/public-data') return next();
@@ -3442,7 +3517,6 @@ app.get('/plds/cliente-nacional-persona-fisica', (req, res) => {
 });
 
 app.get('/plds/cliente-nacional-persona-moral', (req, res) => {
-app.use('/viceroy/inicio', requireGerente);
   res.redirect('/form-nacional-moral');
 });
 
@@ -3483,6 +3557,27 @@ app.post('/api/roi/master-csv', requireGerente, (req, res) => {
 
 app.get('/presentaciones', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'presentaciones.html'));
+});
+
+app.get('/brokers.simca.mx', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'brokers-simca-mx.html'));
+});
+
+app.get('/api/brokers-simca-mx/template', (req, res) => {
+  return res.json({ ok: true, template: readBrokersSimcaTemplate() });
+});
+
+app.post('/api/brokers-simca-mx/template', (req, res) => {
+  try {
+    const incoming = req.body && req.body.template ? req.body.template : req.body;
+    const saved = saveBrokersSimcaTemplate(incoming);
+    return res.json({ ok: true, template: saved });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar la plantilla de Brokers.simca.mx',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/presentaciones/ceiba', (req, res) => {
@@ -4715,6 +4810,11 @@ app.get('/viceroy', (req, res) => {
         <a class="back" href="/">Volver al backend</a>
       </div>
       <div class="grid">
+        <a class="card" href="/viceroy/inicio">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Inicio</h2>
+          <p class="desc">Acceso al módulo de presentación comercial.</p>
+        </a>
         <a class="card" href="/whisperlist">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy Whisperlist</h2>
@@ -4729,6 +4829,38 @@ app.get('/viceroy', (req, res) => {
       </div>
     </div>
   </body></html>`);
+});
+
+app.get('/viceroy/inicio', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio.html'));
+});
+
+app.get('/viceroy/inicio/presentacion', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-presentacion.html'));
+});
+
+app.get('/viceroy/inicio/acabados', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-acabados.html'));
+});
+
+app.get('/viceroy/inicio/planos', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-planos.html'));
+});
+
+app.get('/viceroy/inicio/carpeta-legal', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-carpeta-legal.html'));
+});
+
+app.get('/viceroy/inicio/ubicacion', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-ubicacion.html'));
+});
+
+app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
+});
+
+app.get('/viceroy/inicio/presentacion/pdf', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'maresol-ppt-sales-desktop.pdf'));
 });
 
 app.get('/viceroy/registros', (req, res) => {
@@ -4810,11 +4942,6 @@ app.get('/api/viceroy/registros/export.xlsx', requireGerente, async (req, res) =
 });
 
 app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
-        <a class="card" href="/viceroy/inicio">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Inicio</h2>
-          <p class="desc">Acceso al módulo de presentación comercial.</p>
-        </a>
   try {
     const rowId = String(req.params.id || '').trim();
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
@@ -4830,38 +4957,6 @@ app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
     if (!isGerente && ownerEmail !== currentEmail) {
       return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
     }
-
-app.get('/viceroy/inicio', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio.html'));
-});
-
-app.get('/viceroy/inicio/presentacion', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-presentacion.html'));
-});
-
-app.get('/viceroy/inicio/acabados', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-acabados.html'));
-});
-
-app.get('/viceroy/inicio/planos', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-planos.html'));
-});
-
-app.get('/viceroy/inicio/carpeta-legal', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-carpeta-legal.html'));
-});
-
-app.get('/viceroy/inicio/ubicacion', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-ubicacion.html'));
-});
-
-app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
-});
-
-app.get('/viceroy/inicio/presentacion/pdf', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'maresol-ppt-sales-desktop.pdf'));
-});
 
     const body = req.body || {};
     const nextRow = {
