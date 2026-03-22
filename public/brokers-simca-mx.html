@@ -2474,6 +2474,8 @@
         const bodyRect = body.getBoundingClientRect();
         const leftRect = leftCol.getBoundingClientRect();
         const rightRect = rightCol.getBoundingClientRect();
+        const planoForBounds = body.querySelector('#plano');
+        const planoRectForBounds = planoForBounds ? planoForBounds.getBoundingClientRect() : null;
 
         const availableBodyHeight = Math.max(0, Math.round(page2Rect.bottom - bodyRect.top));
         const bodyHeight = Math.max(body.scrollHeight, leftCol.scrollHeight, rightCol.scrollHeight, bodyRect.height, availableBodyHeight);
@@ -2487,18 +2489,29 @@
 
         [
           { el: leftCol, rect: leftRect },
-          { el: rightCol, rect: rightRect }
-        ].forEach(({ el, rect }) => {
+          {
+            el: rightCol,
+            rect: rightRect,
+            override: planoRectForBounds ? {
+              width: Math.max(rightRect.width, planoRectForBounds.width),
+              height: Math.max(rightRect.height, planoRectForBounds.height),
+              left: Math.min(rightRect.left, planoRectForBounds.left),
+              top: Math.min(rightRect.top, planoRectForBounds.top)
+            } : null
+          }
+        ].forEach(({ el, rect, override }) => {
+          const nextRect = override || rect;
           el.style.position = 'absolute';
-          el.style.left = Math.round(rect.left - bodyRect.left) + 'px';
-          el.style.top = Math.round(rect.top - bodyRect.top) + 'px';
-          el.style.width = Math.round(rect.width) + 'px';
-          el.style.height = Math.round(rect.height) + 'px';
+          el.style.left = Math.round(nextRect.left - bodyRect.left) + 'px';
+          el.style.top = Math.round(nextRect.top - bodyRect.top) + 'px';
+          el.style.width = Math.round(nextRect.width) + 'px';
+          el.style.height = Math.round(nextRect.height) + 'px';
           el.style.maxWidth = 'none';
           el.style.flex = 'none';
           el.style.margin = '0';
         });
 
+        const rightRectAfterSizing = rightCol.getBoundingClientRect();
         rightCol.style.overflow = 'hidden';
 
         const plano = body.querySelector('#plano');
@@ -2514,25 +2527,25 @@
           if (plano.parentElement !== rightCol) {
             rightCol.appendChild(plano);
           }
-          const overlapLeft = Math.max(planoRect.left, rightRect.left);
-          const overlapTop = Math.max(planoRect.top, rightRect.top);
-          const overlapRight = Math.min(planoRect.right, rightRect.right);
-          const overlapBottom = Math.min(planoRect.bottom, rightRect.bottom);
+          const overlapLeft = Math.max(planoRect.left, rightRectAfterSizing.left);
+          const overlapTop = Math.max(planoRect.top, rightRectAfterSizing.top);
+          const overlapRight = Math.min(planoRect.right, rightRectAfterSizing.right);
+          const overlapBottom = Math.min(planoRect.bottom, rightRectAfterSizing.bottom);
           const overlapWidth = Math.max(0, overlapRight - overlapLeft);
           const overlapHeight = Math.max(0, overlapBottom - overlapTop);
           const overlapArea = overlapWidth * overlapHeight;
-          const wrapperArea = Math.max(1, rightRect.width * rightRect.height);
+          const wrapperArea = Math.max(1, rightRectAfterSizing.width * rightRectAfterSizing.height);
           const barelyVisible = overlapArea < (wrapperArea * 0.08);
           plano.style.position = 'absolute';
           if (barelyVisible) {
             plano.style.left = '0px';
             plano.style.top = '0px';
-            plano.style.width = Math.round(rightRect.width) + 'px';
-            plano.style.height = Math.round(rightRect.height) + 'px';
+            plano.style.width = Math.round(rightRectAfterSizing.width) + 'px';
+            plano.style.height = Math.round(rightRectAfterSizing.height) + 'px';
             plano.style.objectFit = 'contain';
           } else {
-            plano.style.left = Math.round(planoRect.left - rightRect.left) + 'px';
-            plano.style.top = Math.round(planoRect.top - rightRect.top) + 'px';
+            plano.style.left = Math.round(planoRect.left - rightRectAfterSizing.left) + 'px';
+            plano.style.top = Math.round(planoRect.top - rightRectAfterSizing.top) + 'px';
             plano.style.width = Math.round(planoRect.width) + 'px';
             plano.style.height = Math.round(planoRect.height) + 'px';
           }
