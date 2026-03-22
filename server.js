@@ -3246,12 +3246,12 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Presentaciones</h2>
           <p class="desc">Generación de presentaciones por proyecto con unidades seleccionadas.</p>
         </a>`;
-  const brokersCard = `
+  const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
           <h2 class="name">Brokers.simca.mx</h2>
           <p class="desc">Editor visual de fichas HTML listo para copiar a Wix y exportar a PDF.</p>
-        </a>`;
+        </a>` : '';
   const roiMasterPanel = isGerente ? `
       <section class="master-box master-box-mini">
         <h3>CSV Maestro</h3>
@@ -3437,8 +3437,8 @@ app.use('/format-extranjera-moral', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
-app.use('/brokers.simca.mx', requireInternalUser);
-app.use('/api/brokers-simca-mx', requireInternalUser);
+app.use('/brokers.simca.mx', requireGerente);
+app.use('/api/brokers-simca-mx', requireGerente);
 app.use('/presentaciones', requireInternalUser);
 app.use('/api/presentaciones', requireInternalUser);
 app.use('/viceroy', requireAuth);
