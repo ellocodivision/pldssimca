@@ -704,6 +704,170 @@
         else if (doc.head) doc.head.appendChild(compatScript);
       }
 
+      function injectCotizadorBridge(doc) {
+        if (!doc) return;
+        doc.querySelectorAll('script#brokersCotizadorBridge').forEach((node) => node.remove());
+        const bridgeScript = doc.createElement('script');
+        bridgeScript.id = 'brokersCotizadorBridge';
+        bridgeScript.textContent = [
+          '(function(){',
+          '  const byId = (id) => document.getElementById(id);',
+          '  function safeNumber(val){',
+          '    if(!val) return NaN;',
+          "    let s = String(val).trim().replace(/[^\\d.,]/g, '');",
+          "    if(s === '') return NaN;",
+          "    if(s.includes(',') && s.includes('.')) s = s.replace(/,/g, '');",
+          "    else if(s.includes(',') && !s.includes('.')) s = s.replace(',', '.');",
+          '    return parseFloat(s);',
+          '  }',
+          '  function fmtUSD(n, lang){',
+          "    return Number(n || 0).toLocaleString(lang && lang.startsWith('en') ? 'en-US' : 'es-MX', { style:'currency', currency:'USD' });",
+          '  }',
+          '  function setLangUI(lang){',
+          "    const safeLang = (lang || 'es').toLowerCase();",
+          "    const esEls = document.querySelectorAll('.es');",
+          "    const enEls = document.querySelectorAll('.en');",
+          "    const btn = byId('btnDescargar');",
+          "    if(safeLang.startsWith('en')){",
+          "      esEls.forEach((e) => e.style.display = 'none');",
+          "      enEls.forEach((e) => e.style.display = 'block');",
+          "      if (btn) btn.innerHTML = '<i class=\"fa-solid fa-download\"></i> Generate PDF';",
+          '    } else {',
+          "      esEls.forEach((e) => e.style.display = 'block');",
+          "      enEls.forEach((e) => e.style.display = 'none');",
+          "      if (btn) btn.innerHTML = '<i class=\"fa-solid fa-download\"></i> Generar ficha PDF';",
+          '    }',
+          '  }',
+          '  function showMoneyField(el, label, amount, lang){',
+          '    if(!el) return;',
+          '    if(amount > 0){',
+          "      el.style.display = 'block';",
+          '      el.textContent = label + ": " + fmtUSD(amount, lang);',
+          '    } else {',
+          "      el.style.display = 'none';",
+          '    }',
+          '  }',
+          "  window.addEventListener('message', function(event){",
+          "    if(!(event && event.data && event.data.type === 'cotizadorParams')) return;",
+          '    const d = event.data.payload || {};',
+          "    const lang = (d.lang || 'es').toLowerCase();",
+          "    const t = function(es, en){ return lang.startsWith('en') ? en : es; };",
+          '    setLangUI(lang);',
+          "    const nombreDesarrollo = byId('nombreDesarrollo');",
+          "    const unidad = byId('unidad');",
+          "    const m2 = byId('m2');",
+          "    const recamaras = byId('recamaras');",
+          "    const precioLista = byId('precioLista');",
+          "    const descuento = byId('descuento');",
+          "    const precioFinal = byId('precioFinal');",
+          "    const planPago = byId('planPago');",
+          "    const enganche = byId('enganche');",
+          "    const pago1 = byId('pago1');",
+          "    const pago2 = byId('pago2');",
+          "    const saldo = byId('saldo');",
+          "    const rendimiento = byId('rendimiento');",
+          "    const nombreCliente = byId('nombreCliente');",
+          "    const emailCliente = byId('emailCliente');",
+          "    const telefonoCliente = byId('telefonoCliente');",
+          "    const plano = byId('plano');",
+          '    const m2Num = safeNumber(d.m2);',
+          "    let superficieTexto = lang.startsWith('en') ? 'Area: - ft²' : 'Superficie: - m²';",
+          '    if(!isNaN(m2Num)){',
+          "      superficieTexto = lang.startsWith('en')",
+          "        ? 'Area: ' + (m2Num * 10.7639).toLocaleString('en-US', { maximumFractionDigits:0 }) + ' ft²'",
+          "        : 'Superficie: ' + m2Num.toLocaleString('es-MX', { maximumFractionDigits:0 }) + ' m²';",
+          '    }',
+          "    let recText = '';",
+          "    if(lang.startsWith('en')){",
+          "      const r = (d.recamaras || '').toString().trim();",
+          "      if(!r || r === '-') recText = 'Bedrooms: -';",
+          "      else if(r.toLowerCase().includes('studio')) recText = 'Studio';",
+          "      else if(r.toLowerCase().includes('loft')) recText = 'Loft';",
+          "      else if(parseInt(r, 10) === 1) recText = 'Bedroom: 1';",
+          "      else recText = 'Bedrooms: ' + r;",
+          '    } else {',
+          "      recText = 'Recámaras: ' + (d.recamaras || '-');",
+          '    }',
+          "    if(nombreDesarrollo) nombreDesarrollo.textContent = d.desarrollo || nombreDesarrollo.textContent || '-';",
+          "    if(unidad) unidad.textContent = t('Unidad','Unit') + ' ' + (d.unidad || '-');",
+          '    if(m2) m2.textContent = superficieTexto;',
+          '    if(recamaras) recamaras.textContent = recText;',
+          '    const precioListaNum = parseFloat(d.precioLista) || 0;',
+          '    const descuentoNum = parseFloat(d.descuento) || 0;',
+          '    const precioFinalNum = parseFloat(d.precioFinal) || 0;',
+          '    const engancheNum = parseFloat(d.enganche) || 0;',
+          '    const pago1Num = parseFloat(d.pago1) || 0;',
+          '    const pago2Num = parseFloat(d.pago2) || 0;',
+          '    const saldoNum = parseFloat(d.saldo) || 0;',
+          '    const rendimientoNum = parseFloat(d.rendimiento) || 0;',
+          "    const planNum = parseFloat((d.plan || '').replace(/[^\\d.]/g, '')) || 0;",
+          "    showMoneyField(precioLista, t('Precio de lista','List price'), precioListaNum, lang);",
+          "    showMoneyField(descuento, t('Descuento','Discount'), descuentoNum, lang);",
+          "    showMoneyField(precioFinal, t('Precio final','Final price'), precioFinalNum, lang);",
+          '    if(planPago){',
+          '      if(d.plan){',
+          "        planPago.style.display = 'block';",
+          "        planPago.textContent = t('Plan de pago','Payment plan') + ': ' + d.plan;",
+          '      } else {',
+          "        planPago.style.display = 'none';",
+          '      }',
+          '    }',
+          "    showMoneyField(enganche, t('Enganche','Down payment'), engancheNum, lang);",
+          "    showMoneyField(pago1, t('Pago 1 (10%)','Payment 1 (10%)'), pago1Num, lang);",
+          "    showMoneyField(pago2, t('Pago 2 (10%)','Payment 2 (10%)'), pago2Num, lang);",
+          "    showMoneyField(saldo, t('Saldo restante','Remaining balance'), saldoNum, lang);",
+          '    if(rendimiento){',
+          '      if(planNum >= 50 && rendimientoNum > 0){',
+          "        rendimiento.style.display = 'block';",
+          "        rendimiento.textContent = t('Rendimiento mensual','Monthly yield') + ': ' + fmtUSD(rendimientoNum, lang);",
+          '      } else {',
+          "        rendimiento.style.display = 'none';",
+          '      }',
+          '    }',
+          "    if(nombreCliente) nombreCliente.textContent = t('Nombre','Name') + ': ' + (d.nombre || '-');",
+          "    if(emailCliente) emailCliente.textContent = 'Email: ' + (d.email || '-');",
+          "    if(telefonoCliente) telefonoCliente.textContent = t('Teléfono','Phone') + ': ' + (d.telefono || '-');",
+          "    const contactoLabel = document.querySelector('.contacto span');",
+          "    if(contactoLabel) contactoLabel.textContent = t('Contacto','Contact');",
+          "    if(plano && d.plano) plano.setAttribute('src', d.plano);",
+          '  });',
+          '})();'
+        ].join('');
+        const firstScript = (doc.body && doc.body.querySelector('script')) || (doc.head && doc.head.querySelector('script'));
+        if (firstScript && firstScript.parentNode) firstScript.parentNode.insertBefore(bridgeScript, firstScript);
+        else if (doc.body) doc.body.appendChild(bridgeScript);
+        else if (doc.head) doc.head.appendChild(bridgeScript);
+      }
+
+      function restoreDynamicFieldsFromSource(clone) {
+        if (!clone || !state.sourceHtml) return;
+        const parser = new DOMParser();
+        const sourceDoc = parser.parseFromString(String(state.sourceHtml || ''), 'text/html');
+        const dynamicIds = [
+          'nombreDesarrollo', 'unidad', 'm2', 'recamaras', 'precioLista', 'descuento',
+          'precioFinal', 'planPago', 'enganche', 'pago1', 'pago2', 'saldo', 'rendimiento',
+          'nombreCliente', 'emailCliente', 'telefonoCliente'
+        ];
+        dynamicIds.forEach((id) => {
+          const sourceNode = sourceDoc.getElementById(id);
+          const cloneNode = clone.getElementById ? clone.getElementById(id) : clone.querySelector('#' + id);
+          if (!cloneNode || !sourceNode) return;
+          cloneNode.textContent = sourceNode.textContent;
+        });
+        const sourcePlano = sourceDoc.getElementById('plano');
+        const clonePlano = clone.getElementById ? clone.getElementById('plano') : clone.querySelector('#plano');
+        if (clonePlano && sourcePlano) {
+          const sourceSrc = sourcePlano.getAttribute('src');
+          if (sourceSrc) clonePlano.setAttribute('src', sourceSrc);
+          else clonePlano.removeAttribute('src');
+        }
+        const sourceContactoLabel = sourceDoc.querySelector('.contacto span');
+        const cloneContactoLabel = clone.querySelector('.contacto span');
+        if (sourceContactoLabel && cloneContactoLabel) {
+          cloneContactoLabel.textContent = sourceContactoLabel.textContent;
+        }
+      }
+
       function cleanNodeForExport(node) {
         if (!node || node.nodeType !== 1) return;
         if (node.hasAttribute('data-editor-prev-outline')) {
@@ -1024,6 +1188,7 @@
           }
         });
         injectLegacyDomGlobalsCompat(doc);
+        injectCotizadorBridge(doc);
         cleanupEnglishFlowStyles(doc);
         doc.querySelectorAll('*').forEach((node) => cleanNodeForExport(node));
         const sharedStyles = Array.from(doc.head ? doc.head.querySelectorAll('style') : []).filter((style) => {
@@ -1799,6 +1964,7 @@
         const doc = frameDoc();
         if (!doc) return state.currentHtml;
         const clone = doc.documentElement.cloneNode(true);
+        restoreDynamicFieldsFromSource(clone);
         const cloneImgs = clone.querySelectorAll('img');
         doc.querySelectorAll('img').forEach((liveImg, index) => {
           const cloneImg = cloneImgs[index];
