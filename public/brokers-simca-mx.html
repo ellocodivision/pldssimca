@@ -680,6 +680,30 @@
         return '<!doctype html>\n' + doc.documentElement.outerHTML;
       }
 
+      function injectLegacyDomGlobalsCompat(doc) {
+        if (!doc) return;
+        doc.querySelectorAll('script#brokersLegacyDomGlobalsCompat').forEach((node) => node.remove());
+        const compatScript = doc.createElement('script');
+        compatScript.id = 'brokersLegacyDomGlobalsCompat';
+        compatScript.textContent = [
+          '(function(){',
+          '  const ids = ["nombreDesarrollo","unidad","m2","recamaras","precioLista","descuento","precioFinal","planPago","enganche","pago1","pago2","saldo","rendimiento","nombreCliente","emailCliente","telefonoCliente","plano","btnDescargar"];',
+          '  function bind(){',
+          '    ids.forEach((id) => {',
+          '      const el = document.getElementById(id);',
+          '      if (el) window[id] = el;',
+          '    });',
+          '  }',
+          '  bind();',
+          '  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once:true });',
+          '})();'
+        ].join('');
+        const firstScript = (doc.body && doc.body.querySelector('script')) || (doc.head && doc.head.querySelector('script'));
+        if (firstScript && firstScript.parentNode) firstScript.parentNode.insertBefore(compatScript, firstScript);
+        else if (doc.body) doc.body.appendChild(compatScript);
+        else if (doc.head) doc.head.appendChild(compatScript);
+      }
+
       function cleanNodeForExport(node) {
         if (!node || node.nodeType !== 1) return;
         if (node.hasAttribute('data-editor-prev-outline')) {
@@ -999,6 +1023,7 @@
             script.remove();
           }
         });
+        injectLegacyDomGlobalsCompat(doc);
         cleanupEnglishFlowStyles(doc);
         doc.querySelectorAll('*').forEach((node) => cleanNodeForExport(node));
         const sharedStyles = Array.from(doc.head ? doc.head.querySelectorAll('style') : []).filter((style) => {
