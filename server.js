@@ -1741,12 +1741,21 @@ function normalizeYesNo(raw) {
 function normalizeWhisperlistKpi(raw) {
   const item = raw && typeof raw === 'object' ? raw : {};
   return {
-    apartadoPldComprobante: normalizeYesNo(item.apartadoPldComprobante),
-    fechaFirma: normalizeDateString(item.fechaFirma),
-    acuerdoFirmado: normalizeYesNo(item.acuerdoFirmado),
-    fechaEnganche: normalizeDateString(item.fechaEnganche),
-    enganchePagado: normalizeYesNo(item.enganchePagado),
-    cartaEnviada: normalizeYesNo(item.cartaEnviada)
+    presupuesto: String(item.presupuesto || '').trim(),
+    vista: ['32', '38', 'MAR', 'INTERIOR'].includes(String(item.vista || '').trim().toUpperCase())
+      ? String(item.vista || '').trim().toUpperCase()
+      : '',
+    prioridades: String(item.prioridades || '').trim(),
+    opcionA: String(item.opcionA || '').trim(),
+    opcionB: String(item.opcionB || '').trim(),
+    opcionC: String(item.opcionC || '').trim(),
+    opcionD: String(item.opcionD || '').trim(),
+    hojaReserva: normalizeYesNo(item.hojaReserva) || 'NO',
+    reservaPagada: normalizeYesNo(item.reservaPagada) || 'NO',
+    unidadAsignada: normalizeYesNo(item.unidadAsignada) || 'NO',
+    contratoEnviado: normalizeYesNo(item.contratoEnviado) || 'NO',
+    contratoFirmado: normalizeYesNo(item.contratoFirmado) || 'NO',
+    enganchePagado: normalizeYesNo(item.enganchePagado) || 'NO'
   };
 }
 
@@ -1825,6 +1834,21 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
     ciudad: normalizeWhisperlistCity(normalized.ciudad || normalized.city || normalized.ciudad_cliente),
     clientEmail: normalizeClientEmail(normalized.correo_cliente || normalized.email_cliente || normalized.client_email),
     clientPhone: normalizeClientPhone(normalized.telefono_cliente || normalized.telefono || normalized.client_phone),
+    kpi: normalizeWhisperlistKpi({
+      presupuesto: normalized.presupuesto || normalized.kpi_presupuesto,
+      vista: normalized.vista || normalized.kpi_vista,
+      prioridades: normalized.prioridades || normalized.kpi_prioridades,
+      opcionA: normalized.opcion_a || normalized.kpi_opcion_a,
+      opcionB: normalized.opcion_b || normalized.kpi_opcion_b,
+      opcionC: normalized.opcion_c || normalized.kpi_opcion_c,
+      opcionD: normalized.opcion_d || normalized.kpi_opcion_d,
+      hojaReserva: normalized.hoja_de_reserva || normalized.kpi_hoja_de_reserva,
+      reservaPagada: normalized.reserva_pagada || normalized.kpi_reserva_pagada,
+      unidadAsignada: normalized.unidad_asignada || normalized.kpi_unidad_asignada,
+      contratoEnviado: normalized.contrato_enviado || normalized.kpi_contrato_enviado,
+      contratoFirmado: normalized.contrato_firmado || normalized.kpi_contrato_firmado,
+      enganchePagado: normalized.enganche_pagado || normalized.kpi_enganche_pagado
+    }),
     updatedAt: new Date().toISOString()
   };
 }
@@ -2115,12 +2139,19 @@ function whisperlistExportRows(rows) {
     CIUDAD: normalizeWhisperlistCity(row.ciudad),
     CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
     TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
-    KPI_APARTADO_PLD_COMPROBANTE: normalizeYesNo(row && row.kpi && row.kpi.apartadoPldComprobante),
-    KPI_FECHA_FIRMA: normalizeDateString(row && row.kpi && row.kpi.fechaFirma),
-    KPI_ACUERDO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.acuerdoFirmado),
-    KPI_FECHA_ENGANCHE: normalizeDateString(row && row.kpi && row.kpi.fechaEnganche),
+    KPI_PRESUPUESTO: String(row && row.kpi && row.kpi.presupuesto || ''),
+    KPI_VISTA: String(row && row.kpi && row.kpi.vista || ''),
+    KPI_PRIORIDADES: String(row && row.kpi && row.kpi.prioridades || ''),
+    KPI_OPCION_A: String(row && row.kpi && row.kpi.opcionA || ''),
+    KPI_OPCION_B: String(row && row.kpi && row.kpi.opcionB || ''),
+    KPI_OPCION_C: String(row && row.kpi && row.kpi.opcionC || ''),
+    KPI_OPCION_D: String(row && row.kpi && row.kpi.opcionD || ''),
+    KPI_HOJA_DE_RESERVA: normalizeYesNo(row && row.kpi && row.kpi.hojaReserva),
+    KPI_RESERVA_PAGADA: normalizeYesNo(row && row.kpi && row.kpi.reservaPagada),
+    KPI_UNIDAD_ASIGNADA: normalizeYesNo(row && row.kpi && row.kpi.unidadAsignada),
+    KPI_CONTRATO_ENVIADO: normalizeYesNo(row && row.kpi && row.kpi.contratoEnviado),
+    KPI_CONTRATO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.contratoFirmado),
     KPI_ENGANCHE_PAGADO: normalizeYesNo(row && row.kpi && row.kpi.enganchePagado),
-    KPI_CARTA_ENVIADA: normalizeYesNo(row && row.kpi && row.kpi.cartaEnviada),
     UPDATED_AT: String(row.updatedAt || '')
   }));
 }
@@ -5317,9 +5348,12 @@ app.post('/api/whisperlist/rows/:id/kpi', async (req, res) => {
       return res.status(403).json({ error: 'Solo puedes editar KPI de filas asignadas a tu correo' });
     }
 
+    const body = req.body || {};
     const nextRow = {
       ...target,
-      kpi: normalizeWhisperlistKpi(req.body || {}),
+      pais: normalizeWhisperlistCountry(body.pais !== undefined ? body.pais : target.pais),
+      ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
+      kpi: normalizeWhisperlistKpi(body || {}),
       updatedAt: new Date().toISOString()
     };
     data.rows[index] = nextRow;

@@ -224,12 +224,9 @@
         <thead>
           <tr>
             <th>ASESOR</th>
-            <th>CANAL</th>
             <th>TIPO DE VENTA</th>
             <th>NOMBRE CLIENTE</th>
             <th>RECAMARAS</th>
-            <th>PAIS</th>
-            <th>CIUDAD</th>
             <th>ACCION</th>
           </tr>
         </thead>
@@ -256,23 +253,66 @@
     <section class="modal-card">
       <h3 style="margin:0 0 10px">KPI de contacto</h3>
       <div class="kpi-grid">
-        <label class="modal-field"><span class="modal-label">Registro 1: Apartado (PLD y comprobante recibido)</span>
-          <select id="kpiApartado" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        <label class="modal-field"><span class="modal-label">PAIS</span>
+          <select id="kpiPais" class="cell-input">
+            <option value=""></option>
+            <option value="MEXICO">MEXICO</option>
+            <option value="CANADA">CANADA</option>
+            <option value="USA">USA</option>
+            <option value="RESTO AMERICA">RESTO AMERICA</option>
+            <option value="EUROPA">EUROPA</option>
+            <option value="ASIA">ASIA</option>
+            <option value="AFRICA">AFRICA</option>
+            <option value="OCEANIA">OCEANIA</option>
+          </select>
         </label>
-        <label class="modal-field"><span class="modal-label">Registro 2: Fecha de firma</span>
-          <input id="kpiFechaFirma" type="date" class="cell-input" />
+        <label class="modal-field"><span class="modal-label">CIUDAD</span>
+          <input id="kpiCiudad" class="cell-input" />
         </label>
-        <label class="modal-field"><span class="modal-label">Registro 3: Acuerdo firmado</span>
-          <select id="kpiAcuerdo" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        <label class="modal-field"><span class="modal-label">PRESUPUESTO</span>
+          <input id="kpiPresupuesto" class="cell-input" />
         </label>
-        <label class="modal-field"><span class="modal-label">Registro 4: Fecha de enganche</span>
-          <input id="kpiFechaEnganche" type="date" class="cell-input" />
+        <label class="modal-field"><span class="modal-label">VISTA</span>
+          <select id="kpiVista" class="cell-input">
+            <option value=""></option>
+            <option value="32">32</option>
+            <option value="38">38</option>
+            <option value="MAR">MAR</option>
+            <option value="INTERIOR">INTERIOR</option>
+          </select>
         </label>
-        <label class="modal-field"><span class="modal-label">Registro 5: Enganche pagado</span>
-          <select id="kpiEnganchePagado" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        <label class="modal-field" style="grid-column:1 / -1"><span class="modal-label">PRIORIDADES</span>
+          <input id="kpiPrioridades" class="cell-input" />
         </label>
-        <label class="modal-field"><span class="modal-label">Registro 6: Carta enviada</span>
-          <select id="kpiCartaEnviada" class="cell-input"><option value=""></option><option value="SI">SI</option><option value="NO">NO</option></select>
+        <label class="modal-field"><span class="modal-label">OPCION A</span>
+          <input id="kpiOpcionA" class="cell-input" />
+        </label>
+        <label class="modal-field"><span class="modal-label">OPCION B</span>
+          <input id="kpiOpcionB" class="cell-input" />
+        </label>
+        <label class="modal-field"><span class="modal-label">OPCION C</span>
+          <input id="kpiOpcionC" class="cell-input" />
+        </label>
+        <label class="modal-field"><span class="modal-label">OPCION D</span>
+          <input id="kpiOpcionD" class="cell-input" />
+        </label>
+        <label class="modal-field"><span class="modal-label">HOJA DE RESERVA</span>
+          <select id="kpiHojaReserva" class="cell-input"><option value="NO">NO</option><option value="SI">SI</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">RESERVA PAGADA</span>
+          <select id="kpiReservaPagada" class="cell-input"><option value="NO">NO</option><option value="SI">SI</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">UNIDAD ASIGNADA</span>
+          <select id="kpiUnidadAsignada" class="cell-input"><option value="NO">NO</option><option value="SI">SI</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">CONTRATO ENVIADO</span>
+          <select id="kpiContratoEnviado" class="cell-input"><option value="NO">NO</option><option value="SI">SI</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">CONTRATO FIRMADO</span>
+          <select id="kpiContratoFirmado" class="cell-input"><option value="NO">NO</option><option value="SI">SI</option></select>
+        </label>
+        <label class="modal-field"><span class="modal-label">ENGANCHE PAGADO</span>
+          <select id="kpiEnganchePagado" class="cell-input"><option value="NO">NO</option><option value="SI">SI</option></select>
         </label>
       </div>
       <div class="kpi-actions">
@@ -325,12 +365,21 @@
         kpiCloseBtn: document.getElementById('kpiCloseBtn'),
         kpiSaveBtn: document.getElementById('kpiSaveBtn'),
         kpiStatus: document.getElementById('kpiStatus'),
-        kpiApartado: document.getElementById('kpiApartado'),
-        kpiFechaFirma: document.getElementById('kpiFechaFirma'),
-        kpiAcuerdo: document.getElementById('kpiAcuerdo'),
-        kpiFechaEnganche: document.getElementById('kpiFechaEnganche'),
+        kpiPais: document.getElementById('kpiPais'),
+        kpiCiudad: document.getElementById('kpiCiudad'),
+        kpiPresupuesto: document.getElementById('kpiPresupuesto'),
+        kpiVista: document.getElementById('kpiVista'),
+        kpiPrioridades: document.getElementById('kpiPrioridades'),
+        kpiOpcionA: document.getElementById('kpiOpcionA'),
+        kpiOpcionB: document.getElementById('kpiOpcionB'),
+        kpiOpcionC: document.getElementById('kpiOpcionC'),
+        kpiOpcionD: document.getElementById('kpiOpcionD'),
+        kpiHojaReserva: document.getElementById('kpiHojaReserva'),
+        kpiReservaPagada: document.getElementById('kpiReservaPagada'),
+        kpiUnidadAsignada: document.getElementById('kpiUnidadAsignada'),
+        kpiContratoEnviado: document.getElementById('kpiContratoEnviado'),
+        kpiContratoFirmado: document.getElementById('kpiContratoFirmado'),
         kpiEnganchePagado: document.getElementById('kpiEnganchePagado'),
-        kpiCartaEnviada: document.getElementById('kpiCartaEnviada'),
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
@@ -364,21 +413,16 @@
         const canEdit = Boolean(row.canEdit);
         const lockText = canEdit ? '' : '<div class="lock">Solo lectura</div>';
         const disabled = canEdit ? '' : 'disabled';
-        const canalSelect = selectHtml('canal', row.canal || '', ['SIMCA', 'RELATED'], disabled);
         const tipoSelect = selectHtml('tipoVenta', row.tipoVenta || '', ['EXTERNO', 'INTERNO', 'MERITO PROPIO'], disabled);
         const recamarasSelect = selectHtml('recamaras', row.recamaras || '', ['1', '2', '3', '2PH', '3PH'], disabled);
-        const paisSelect = selectHtml('pais', row.pais || '', COUNTRY_OPTIONS, disabled);
         const isDuplicateName = duplicateNameSet.has(String(row.nombreCliente || '').trim().toUpperCase());
         const duplicateClass = isDuplicateName ? 'dup-row' : '';
         return `
           <tr data-id="${String(row.id)}" class="${duplicateClass}">
             <td>${escapeHtml(row.asesor || '')}</td>
-            <td>${canalSelect}</td>
             <td>${tipoSelect}</td>
             <td><input class="cell-input" data-field="nombreCliente" value="${escapeHtml(row.nombreCliente || '')}" ${disabled}></td>
             <td>${recamarasSelect}</td>
-            <td>${paisSelect}</td>
-            <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
               ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn send-reg-btn" type="button">Enviar a Registros</button> <button class="btn save-btn kpi-btn" type="button">KPI</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
@@ -422,12 +466,21 @@
         if (!row) return;
         const kpi = row.kpi || {};
         state.kpiRowId = String(id || '');
-        els.kpiApartado.value = String(kpi.apartadoPldComprobante || '');
-        els.kpiFechaFirma.value = String(kpi.fechaFirma || '');
-        els.kpiAcuerdo.value = String(kpi.acuerdoFirmado || '');
-        els.kpiFechaEnganche.value = String(kpi.fechaEnganche || '');
-        els.kpiEnganchePagado.value = String(kpi.enganchePagado || '');
-        els.kpiCartaEnviada.value = String(kpi.cartaEnviada || '');
+        els.kpiPais.value = String(row.pais || '');
+        els.kpiCiudad.value = String(row.ciudad || '');
+        els.kpiPresupuesto.value = String(kpi.presupuesto || '');
+        els.kpiVista.value = String(kpi.vista || '');
+        els.kpiPrioridades.value = String(kpi.prioridades || '');
+        els.kpiOpcionA.value = String(kpi.opcionA || '');
+        els.kpiOpcionB.value = String(kpi.opcionB || '');
+        els.kpiOpcionC.value = String(kpi.opcionC || '');
+        els.kpiOpcionD.value = String(kpi.opcionD || '');
+        els.kpiHojaReserva.value = String(kpi.hojaReserva || 'NO');
+        els.kpiReservaPagada.value = String(kpi.reservaPagada || 'NO');
+        els.kpiUnidadAsignada.value = String(kpi.unidadAsignada || 'NO');
+        els.kpiContratoEnviado.value = String(kpi.contratoEnviado || 'NO');
+        els.kpiContratoFirmado.value = String(kpi.contratoFirmado || 'NO');
+        els.kpiEnganchePagado.value = String(kpi.enganchePagado || 'NO');
         setStatus(els.kpiStatus, '', null);
         els.kpiModal.classList.add('open');
       }
@@ -440,12 +493,21 @@
       async function saveKpi() {
         if (!state.kpiRowId) return;
         const payload = {
-          apartadoPldComprobante: els.kpiApartado.value,
-          fechaFirma: els.kpiFechaFirma.value,
-          acuerdoFirmado: els.kpiAcuerdo.value,
-          fechaEnganche: els.kpiFechaEnganche.value,
-          enganchePagado: els.kpiEnganchePagado.value,
-          cartaEnviada: els.kpiCartaEnviada.value
+          pais: els.kpiPais.value,
+          ciudad: els.kpiCiudad.value,
+          presupuesto: els.kpiPresupuesto.value,
+          vista: els.kpiVista.value,
+          prioridades: els.kpiPrioridades.value,
+          opcionA: els.kpiOpcionA.value,
+          opcionB: els.kpiOpcionB.value,
+          opcionC: els.kpiOpcionC.value,
+          opcionD: els.kpiOpcionD.value,
+          hojaReserva: els.kpiHojaReserva.value,
+          reservaPagada: els.kpiReservaPagada.value,
+          unidadAsignada: els.kpiUnidadAsignada.value,
+          contratoEnviado: els.kpiContratoEnviado.value,
+          contratoFirmado: els.kpiContratoFirmado.value,
+          enganchePagado: els.kpiEnganchePagado.value
         };
         els.kpiSaveBtn.disabled = true;
         setStatus(els.kpiStatus, 'Guardando KPI...', null);
@@ -494,8 +556,8 @@
         };
         rows.forEach(function (row) {
           const k = row && row.kpi ? row.kpi : {};
-          if (String(k.apartadoPldComprobante || '').toUpperCase() === 'SI') totals.apartado += 1;
-          if (String(k.acuerdoFirmado || '').toUpperCase() === 'SI') totals.contrato += 1;
+          if (String(k.reservaPagada || '').toUpperCase() === 'SI') totals.apartado += 1;
+          if (String(k.contratoFirmado || '').toUpperCase() === 'SI') totals.contrato += 1;
           if (String(k.enganchePagado || '').toUpperCase() === 'SI') totals.enganche += 1;
         });
         tbody.innerHTML = [
@@ -691,12 +753,9 @@
       async function saveRow(tr) {
         const id = tr.getAttribute('data-id');
         const payload = {
-          canal: tr.querySelector('[data-field="canal"]').value,
           tipoVenta: tr.querySelector('[data-field="tipoVenta"]').value,
           nombreCliente: tr.querySelector('[data-field="nombreCliente"]').value,
-          recamaras: tr.querySelector('[data-field="recamaras"]').value,
-          pais: tr.querySelector('[data-field="pais"]').value,
-          ciudad: tr.querySelector('[data-field="ciudad"]').value
+          recamaras: tr.querySelector('[data-field="recamaras"]').value
         };
         const btn = tr.querySelector('.save-btn');
         if (btn) btn.disabled = true;
