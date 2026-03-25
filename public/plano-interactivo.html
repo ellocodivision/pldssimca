@@ -614,7 +614,7 @@
     }
 
     function updateZoneAdjustControls(zone) {
-      const enabled = Boolean(zone);
+      const enabled = Boolean(zone) || getSelectedZoneIds().length > 0;
       if (undoZoneEditBtn) undoZoneEditBtn.disabled = !state.zoneEditHistory.length;
       [zoneLeftInBtn, zoneLeftOutBtn, zoneRightInBtn, zoneRightOutBtn, zoneTopInBtn, zoneTopOutBtn, zoneBottomInBtn, zoneBottomOutBtn]
         .forEach((btn) => {
@@ -622,38 +622,42 @@
         });
     }
 
-    function pushZoneEditSnapshot(zone) {
-      if (!zone) return;
+    function pushZoneEditSnapshot(zoneOrZones) {
+      const zones = (Array.isArray(zoneOrZones) ? zoneOrZones : [zoneOrZones]).filter(Boolean);
+      if (!zones.length) return;
       state.zoneEditHistory.push({
-        floorId: state.activeFloorId,
-        zoneId: zone.id,
-        points: zone.points.map(([x, y]) => [x, y]),
-        labelOffset: {
-          x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
-          y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
-        }
+        snapshots: zones.map((zone) => ({
+          floorId: state.activeFloorId,
+          zoneId: zone.id,
+          points: zone.points.map(([x, y]) => [x, y]),
+          labelOffset: {
+            x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
+            y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
+          }
+        }))
       });
       if (state.zoneEditHistory.length > 50) state.zoneEditHistory.shift();
-      updateZoneAdjustControls(zone);
+      updateZoneAdjustControls(zones[0]);
     }
 
     function undoZoneEdit() {
-      const snapshot = state.zoneEditHistory.pop();
-      if (!snapshot) return;
-      const floor = state.floors.find((entry) => entry.id === snapshot.floorId);
-      const zone = floor && floor.zones.find((entry) => entry.id === snapshot.zoneId);
-      if (!zone) {
-        updateZoneAdjustControls(getSelectedZones()[0] || null);
-        return;
-      }
-      zone.points = snapshot.points.map(([x, y]) => [x, y]);
-      zone.labelOffset = { x: snapshot.labelOffset.x, y: snapshot.labelOffset.y };
-      if (snapshot.floorId === state.activeFloorId) {
+      const entry = state.zoneEditHistory.pop();
+      if (!entry || !Array.isArray(entry.snapshots) || !entry.snapshots.length) return;
+      let restoredOnActiveFloor = false;
+      entry.snapshots.forEach((snapshot) => {
+        const floor = state.floors.find((item) => item.id === snapshot.floorId);
+        const zone = floor && floor.zones.find((item) => item.id === snapshot.zoneId);
+        if (!zone) return;
+        zone.points = snapshot.points.map(([x, y]) => [x, y]);
+        zone.labelOffset = { x: snapshot.labelOffset.x, y: snapshot.labelOffset.y };
+        if (snapshot.floorId === state.activeFloorId) restoredOnActiveFloor = true;
+      });
+      if (restoredOnActiveFloor) {
         syncSelectionInputs();
         render();
         enableButtons();
       }
-      updateZoneAdjustControls(zone);
+      updateZoneAdjustControls(getSelectedZones()[0] || null);
       drawHint.textContent = "Se deshizo el último ajuste de zona.";
     }
 
@@ -689,9 +693,8 @@
 
     function adjustSelectedZoneBoundary(side, direction) {
       const selectedZones = getSelectedZones();
-      const zone = selectedZones.length === 1 ? selectedZones[0] : null;
-      if (!zone) return;
-      pushZoneEditSnapshot(zone);
+      if (!selectedZones.length) return;
+      pushZoneEditSnapshot(selectedZones);
       const step = 2.5;
       const amountMap = {
         left: direction === "in" ? step : -step,
@@ -699,16 +702,20 @@
         top: direction === "in" ? step : -step,
         bottom: direction === "in" ? -step : step
       };
-      const changed = moveZoneBoundary(zone, side, amountMap[side] || 0);
+      const changed = selectedZones.reduce((count, zone) => {
+        return count + (moveZoneBoundary(zone, side, amountMap[side] || 0) ? 1 : 0);
+      }, 0);
       if (!changed) {
         state.zoneEditHistory.pop();
-        updateZoneAdjustControls(zone);
+        updateZoneAdjustControls(getSelectedZones()[0] || null);
         return;
       }
       syncSelectionInputs();
       render();
       enableButtons();
-      drawHint.textContent = `Se ajustó el borde ${side}.`;
+      drawHint.textContent = changed === 1
+        ? `Se ajustó el borde ${side}.`
+        : `Se ajustó el borde ${side} en ${changed} zonas.`;
     }
 
     function boundsOverlapRatio(a, b) {
@@ -1991,10 +1998,7 @@
               }
             }
             const dragIds = getSelectedZoneIds().includes(zoneId) ? getSelectedZoneIds() : [zoneId];
-            dragIds.forEach((id) => {
-              const dragZone = zoneById(id);
-              if (dragZone) pushZoneEditSnapshot(dragZone);
-            });
+            pushZoneEditSnapshot(dragIds.map((id) => zoneById(id)).filter(Boolean));
             state.draggingZone = {
               zoneIds: dragIds,
               startX: point[0],
