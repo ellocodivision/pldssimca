@@ -647,6 +647,15 @@
       return best;
     }
 
+    function edgeCursorFromNormal(normalX, normalY) {
+      const angle = Math.atan2(normalY, normalX) * (180 / Math.PI);
+      const normalized = ((angle % 180) + 180) % 180;
+      if (normalized < 22.5 || normalized >= 157.5) return "ew-resize";
+      if (normalized < 67.5) return "nesw-resize";
+      if (normalized < 112.5) return "ns-resize";
+      return "nwse-resize";
+    }
+
     function normalizeImportedFloors(payload) {
       const sourceFloors = Array.isArray(payload)
         ? payload
@@ -1813,7 +1822,10 @@
             const zone = zoneById(zoneId);
             if (!zone) return;
             const toggle = evt.metaKey || evt.ctrlKey || evt.shiftKey;
-            setSelectedZone(zoneId, { toggle });
+            const alreadySingleSelected = getSelectedZoneIds().length === 1 && getSelectedZoneIds()[0] === zoneId;
+            if (toggle || !alreadySingleSelected) {
+              setSelectedZone(zoneId, { toggle });
+            }
             const point = getRawPointFromEvent(evt);
             if (!point) return;
             const singleSelection = getSelectedZoneIds().length === 1 && getSelectedZoneIds()[0] === zoneId;
@@ -1834,8 +1846,10 @@
                   startY: point[1],
                   normalX: nx,
                   normalY: ny,
+                  cursor: edgeCursorFromNormal(nx, ny),
                   originalPoints: zone.points.map(([x, y]) => [x, y])
                 };
+                overlay.style.cursor = state.draggingEdge.cursor;
                 return;
               }
             }
@@ -1875,6 +1889,68 @@
           };
         });
       });
+    }
+
+    function handleOverlayDragMove(evt) {
+      if (state.paintingMask) return false;
+      if (state.draggingEdge) {
+        const zone = zoneById(state.draggingEdge.zoneId);
+        if (!zone) return true;
+        const point = getRawPointFromEvent(evt);
+        if (!point) return true;
+        const dx = point[0] - state.draggingEdge.startX;
+        const dy = point[1] - state.draggingEdge.startY;
+        const delta = dx * state.draggingEdge.normalX + dy * state.draggingEdge.normalY;
+        const nextPoints = state.draggingEdge.originalPoints.map(([x, y]) => [x, y]);
+        const startIndex = state.draggingEdge.edgeIndex;
+        const endIndex = (startIndex + 1) % nextPoints.length;
+        nextPoints[startIndex] = [
+          Math.round(nextPoints[startIndex][0] + state.draggingEdge.normalX * delta),
+          Math.round(nextPoints[startIndex][1] + state.draggingEdge.normalY * delta)
+        ];
+        nextPoints[endIndex] = [
+          Math.round(nextPoints[endIndex][0] + state.draggingEdge.normalX * delta),
+          Math.round(nextPoints[endIndex][1] + state.draggingEdge.normalY * delta)
+        ];
+        zone.points = nextPoints;
+        overlay.style.cursor = state.draggingEdge.cursor || "move";
+        renderOverlay();
+        renderZoneList();
+        return true;
+      }
+      if (state.draggingZone) {
+        const point = getRawPointFromEvent(evt);
+        if (!point) return true;
+        const dx = point[0] - state.draggingZone.startX;
+        const dy = point[1] - state.draggingZone.startY;
+        state.draggingZone.zoneIds.forEach((zoneId) => {
+          const zone = zoneById(zoneId);
+          const originalPoints = state.draggingZone.originalPointsById[zoneId];
+          if (!zone || !Array.isArray(originalPoints)) return;
+          zone.points = originalPoints.map(([x, y]) => [
+            Math.round(x + dx),
+            Math.round(y + dy)
+          ]);
+        });
+        renderOverlay();
+        renderZoneList();
+        return true;
+      }
+      if (state.draggingLabel) {
+        const zone = zoneById(state.draggingLabel.zoneId);
+        if (!zone) return true;
+        const point = getRawPointFromEvent(evt);
+        if (!point) return true;
+        const dx = point[0] - state.draggingLabel.startX;
+        const dy = point[1] - state.draggingLabel.startY;
+        zone.labelOffset = {
+          x: Math.round(state.draggingLabel.startOffsetX + dx),
+          y: Math.round(state.draggingLabel.startOffsetY + dy)
+        };
+        renderOverlay();
+        return true;
+      }
+      return false;
     }
 
     function render() {
@@ -2039,62 +2115,7 @@
     });
 
     overlay.addEventListener("mousemove", (evt) => {
-      if (state.paintingMask) return;
-      if (state.draggingEdge) {
-        const zone = zoneById(state.draggingEdge.zoneId);
-        if (!zone) return;
-        const point = getRawPointFromEvent(evt);
-        if (!point) return;
-        const dx = point[0] - state.draggingEdge.startX;
-        const dy = point[1] - state.draggingEdge.startY;
-        const delta = dx * state.draggingEdge.normalX + dy * state.draggingEdge.normalY;
-        const nextPoints = state.draggingEdge.originalPoints.map(([x, y]) => [x, y]);
-        const startIndex = state.draggingEdge.edgeIndex;
-        const endIndex = (startIndex + 1) % nextPoints.length;
-        nextPoints[startIndex] = [
-          Math.round(nextPoints[startIndex][0] + state.draggingEdge.normalX * delta),
-          Math.round(nextPoints[startIndex][1] + state.draggingEdge.normalY * delta)
-        ];
-        nextPoints[endIndex] = [
-          Math.round(nextPoints[endIndex][0] + state.draggingEdge.normalX * delta),
-          Math.round(nextPoints[endIndex][1] + state.draggingEdge.normalY * delta)
-        ];
-        zone.points = nextPoints;
-        overlay.style.cursor = "ew-resize";
-        renderOverlay();
-        renderZoneList();
-        return;
-      }
-      if (state.draggingZone) {
-        const point = getRawPointFromEvent(evt);
-        if (!point) return;
-        const dx = point[0] - state.draggingZone.startX;
-        const dy = point[1] - state.draggingZone.startY;
-        state.draggingZone.zoneIds.forEach((zoneId) => {
-          const zone = zoneById(zoneId);
-          const originalPoints = state.draggingZone.originalPointsById[zoneId];
-          if (!zone || !Array.isArray(originalPoints)) return;
-          zone.points = originalPoints.map(([x, y]) => [
-            Math.round(x + dx),
-            Math.round(y + dy)
-          ]);
-        });
-        renderOverlay();
-        renderZoneList();
-        return;
-      }
-      if (!state.draggingLabel) return;
-      const zone = zoneById(state.draggingLabel.zoneId);
-      if (!zone) return;
-      const point = getRawPointFromEvent(evt);
-      if (!point) return;
-      const dx = point[0] - state.draggingLabel.startX;
-      const dy = point[1] - state.draggingLabel.startY;
-      zone.labelOffset = {
-        x: Math.round(state.draggingLabel.startOffsetX + dx),
-        y: Math.round(state.draggingLabel.startOffsetY + dy)
-      };
-      renderOverlay();
+      handleOverlayDragMove(evt);
     });
 
     overlay.addEventListener("mousemove", (evt) => {
@@ -2115,7 +2136,23 @@
       }
       const point = getRawPointFromEvent(evt);
       const nearestEdge = point ? findNearestEdge(selectedZones[0], point) : null;
-      overlay.style.cursor = nearestEdge ? "ew-resize" : "default";
+      if (nearestEdge) {
+        const [ax, ay] = nearestEdge.start;
+        const [bx, by] = nearestEdge.end;
+        const edgeDx = bx - ax;
+        const edgeDy = by - ay;
+        const edgeLen = Math.hypot(edgeDx, edgeDy);
+        if (edgeLen >= 1) {
+          overlay.style.cursor = edgeCursorFromNormal(-edgeDy / edgeLen, edgeDx / edgeLen);
+          return;
+        }
+      }
+      overlay.style.cursor = "default";
+    });
+
+    window.addEventListener("mousemove", (evt) => {
+      if (!state.draggingEdge && !state.draggingZone && !state.draggingLabel) return;
+      handleOverlayDragMove(evt);
     });
 
     window.addEventListener("mouseup", () => {
