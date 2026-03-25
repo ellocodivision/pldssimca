@@ -353,6 +353,7 @@
       showUnitLabels: true,
       draggingLabel: null,
       draggingZone: null,
+      draggingEdge: null,
       copiedZones: [],
       copiedFromFloorId: null,
       paintingMask: false,
@@ -612,6 +613,38 @@
         if (Number.isFinite(x) && Number.isFinite(y)) return [x, y];
       }
       return null;
+    }
+
+    function distancePointToSegment(point, a, b) {
+      if (!point || !a || !b) return Infinity;
+      const [px, py] = point;
+      const [ax, ay] = a;
+      const [bx, by] = b;
+      const abx = bx - ax;
+      const aby = by - ay;
+      const lenSq = abx * abx + aby * aby;
+      if (lenSq < 1e-6) return Math.hypot(px - ax, py - ay);
+      let t = ((px - ax) * abx + (py - ay) * aby) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      const cx = ax + abx * t;
+      const cy = ay + aby * t;
+      return Math.hypot(px - cx, py - cy);
+    }
+
+    function findNearestEdge(zone, point, threshold = 14) {
+      if (!zone || !Array.isArray(zone.points) || zone.points.length < 2 || !point) return null;
+      let best = null;
+      const points = zone.points;
+      for (let i = 0; i < points.length; i += 1) {
+        const start = points[i];
+        const end = points[(i + 1) % points.length];
+        const distance = distancePointToSegment(point, start, end);
+        if (!best || distance < best.distance) {
+          best = { index: i, distance, start, end };
+        }
+      }
+      if (!best || best.distance > threshold) return null;
+      return best;
     }
 
     function normalizeImportedFloors(payload) {
@@ -1783,6 +1816,29 @@
             setSelectedZone(zoneId, { toggle });
             const point = getRawPointFromEvent(evt);
             if (!point) return;
+            const singleSelection = getSelectedZoneIds().length === 1 && getSelectedZoneIds()[0] === zoneId;
+            const nearestEdge = !toggle && singleSelection ? findNearestEdge(zone, point) : null;
+            if (nearestEdge) {
+              const [ax, ay] = nearestEdge.start;
+              const [bx, by] = nearestEdge.end;
+              const edgeDx = bx - ax;
+              const edgeDy = by - ay;
+              const edgeLen = Math.hypot(edgeDx, edgeDy);
+              if (edgeLen >= 1) {
+                const nx = -edgeDy / edgeLen;
+                const ny = edgeDx / edgeLen;
+                state.draggingEdge = {
+                  zoneId,
+                  edgeIndex: nearestEdge.index,
+                  startX: point[0],
+                  startY: point[1],
+                  normalX: nx,
+                  normalY: ny,
+                  originalPoints: zone.points.map(([x, y]) => [x, y])
+                };
+                return;
+              }
+            }
             const dragIds = getSelectedZoneIds().includes(zoneId) ? getSelectedZoneIds() : [zoneId];
             state.draggingZone = {
               zoneIds: dragIds,
@@ -1984,6 +2040,31 @@
 
     overlay.addEventListener("mousemove", (evt) => {
       if (state.paintingMask) return;
+      if (state.draggingEdge) {
+        const zone = zoneById(state.draggingEdge.zoneId);
+        if (!zone) return;
+        const point = getRawPointFromEvent(evt);
+        if (!point) return;
+        const dx = point[0] - state.draggingEdge.startX;
+        const dy = point[1] - state.draggingEdge.startY;
+        const delta = dx * state.draggingEdge.normalX + dy * state.draggingEdge.normalY;
+        const nextPoints = state.draggingEdge.originalPoints.map(([x, y]) => [x, y]);
+        const startIndex = state.draggingEdge.edgeIndex;
+        const endIndex = (startIndex + 1) % nextPoints.length;
+        nextPoints[startIndex] = [
+          Math.round(nextPoints[startIndex][0] + state.draggingEdge.normalX * delta),
+          Math.round(nextPoints[startIndex][1] + state.draggingEdge.normalY * delta)
+        ];
+        nextPoints[endIndex] = [
+          Math.round(nextPoints[endIndex][0] + state.draggingEdge.normalX * delta),
+          Math.round(nextPoints[endIndex][1] + state.draggingEdge.normalY * delta)
+        ];
+        zone.points = nextPoints;
+        overlay.style.cursor = "ew-resize";
+        renderOverlay();
+        renderZoneList();
+        return;
+      }
       if (state.draggingZone) {
         const point = getRawPointFromEvent(evt);
         if (!point) return;
@@ -2018,16 +2099,30 @@
 
     overlay.addEventListener("mousemove", (evt) => {
       if (state.paintingMask) return;
-      if (!state.drawing || state.draggingLabel || state.draggingZone) return;
+      if (!state.drawing || state.draggingLabel || state.draggingZone || state.draggingEdge) return;
       const rawPoint = getRawPointFromEvent(evt);
       if (!rawPoint) return;
       state.cursorPoint = snapDrawPoint(rawPoint);
       renderOverlay();
     });
 
+    overlay.addEventListener("mousemove", (evt) => {
+      if (state.paintingMask || state.drawing || state.draggingLabel || state.draggingZone || state.draggingEdge) return;
+      const selectedZones = getSelectedZones();
+      if (selectedZones.length !== 1) {
+        overlay.style.cursor = "default";
+        return;
+      }
+      const point = getRawPointFromEvent(evt);
+      const nearestEdge = point ? findNearestEdge(selectedZones[0], point) : null;
+      overlay.style.cursor = nearestEdge ? "ew-resize" : "default";
+    });
+
     window.addEventListener("mouseup", () => {
       state.draggingLabel = null;
       state.draggingZone = null;
+      state.draggingEdge = null;
+      overlay.style.cursor = state.drawing ? "crosshair" : "default";
     });
 
     startZoneBtn.addEventListener("click", startDrawing);
