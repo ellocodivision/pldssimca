@@ -289,21 +289,29 @@
           <button id="autoLabelBtn">Auto (1,2,3)</button>
         </div>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e3e8e4;">
-          <p class="hint" style="margin:0 0 8px 0;">Ajuste manual de zona</p>
-          <label for="zoneWidthInput">Ancho</label>
-          <div class="btn-row three" style="margin-top:6px;">
-            <button id="zoneWidthDownBtn" type="button">-10</button>
-            <input id="zoneWidthInput" type="number" min="1" step="1" placeholder="Ancho" disabled>
-            <button id="zoneWidthUpBtn" type="button">+10</button>
+          <p class="hint" style="margin:0 0 8px 0;">Ajuste por borde</p>
+          <div class="btn-row" style="margin-top:6px;">
+            <button id="undoZoneEditBtn" type="button" disabled>Deshacer zona</button>
           </div>
-          <label for="zoneHeightInput" style="margin-top:8px;">Alto</label>
-          <div class="btn-row three" style="margin-top:6px;">
-            <button id="zoneHeightDownBtn" type="button">-10</button>
-            <input id="zoneHeightInput" type="number" min="1" step="1" placeholder="Alto" disabled>
-            <button id="zoneHeightUpBtn" type="button">+10</button>
+          <label style="margin-top:8px;">Borde izquierdo</label>
+          <div class="btn-row two" style="margin-top:6px;">
+            <button id="zoneLeftInBtn" type="button" disabled>Meter 10</button>
+            <button id="zoneLeftOutBtn" type="button" disabled>Sacar 10</button>
           </div>
-          <div class="btn-row" style="margin-top:8px;">
-            <button id="applyZoneSizeBtn" type="button" disabled>Aplicar ancho/alto</button>
+          <label style="margin-top:8px;">Borde derecho</label>
+          <div class="btn-row two" style="margin-top:6px;">
+            <button id="zoneRightInBtn" type="button" disabled>Meter 10</button>
+            <button id="zoneRightOutBtn" type="button" disabled>Sacar 10</button>
+          </div>
+          <label style="margin-top:8px;">Borde superior</label>
+          <div class="btn-row two" style="margin-top:6px;">
+            <button id="zoneTopInBtn" type="button" disabled>Meter 10</button>
+            <button id="zoneTopOutBtn" type="button" disabled>Sacar 10</button>
+          </div>
+          <label style="margin-top:8px;">Borde inferior</label>
+          <div class="btn-row two" style="margin-top:6px;">
+            <button id="zoneBottomInBtn" type="button" disabled>Meter 10</button>
+            <button id="zoneBottomOutBtn" type="button" disabled>Sacar 10</button>
           </div>
         </div>
       </div>
@@ -374,6 +382,7 @@
       draggingEdge: null,
       copiedZones: [],
       copiedFromFloorId: null,
+      zoneEditHistory: [],
       paintingMask: false,
       paintingMaskStroke: false,
       paintingMaskLastPoint: null,
@@ -424,13 +433,15 @@
     const unitTipologia = document.getElementById("unitTipologia");
     const applyUnitBtn = document.getElementById("applyUnitBtn");
     const autoLabelBtn = document.getElementById("autoLabelBtn");
-    const zoneWidthInput = document.getElementById("zoneWidthInput");
-    const zoneHeightInput = document.getElementById("zoneHeightInput");
-    const zoneWidthDownBtn = document.getElementById("zoneWidthDownBtn");
-    const zoneWidthUpBtn = document.getElementById("zoneWidthUpBtn");
-    const zoneHeightDownBtn = document.getElementById("zoneHeightDownBtn");
-    const zoneHeightUpBtn = document.getElementById("zoneHeightUpBtn");
-    const applyZoneSizeBtn = document.getElementById("applyZoneSizeBtn");
+    const undoZoneEditBtn = document.getElementById("undoZoneEditBtn");
+    const zoneLeftInBtn = document.getElementById("zoneLeftInBtn");
+    const zoneLeftOutBtn = document.getElementById("zoneLeftOutBtn");
+    const zoneRightInBtn = document.getElementById("zoneRightInBtn");
+    const zoneRightOutBtn = document.getElementById("zoneRightOutBtn");
+    const zoneTopInBtn = document.getElementById("zoneTopInBtn");
+    const zoneTopOutBtn = document.getElementById("zoneTopOutBtn");
+    const zoneBottomInBtn = document.getElementById("zoneBottomInBtn");
+    const zoneBottomOutBtn = document.getElementById("zoneBottomOutBtn");
     const zoneList = document.getElementById("zoneList");
     const exportBtn = document.getElementById("exportBtn");
     const importBtn = document.getElementById("importBtn");
@@ -558,7 +569,7 @@
       if (unitTipologia) {
         unitTipologia.value = zone ? String(zone.tipologia || "") : "";
       }
-      updateZoneSizeControls(zone);
+      updateZoneAdjustControls(zone);
     }
 
     function clearSelection() {
@@ -602,77 +613,101 @@
       return { minX, minY, maxX, maxY };
     }
 
-    function polygonSize(points) {
-      const bounds = polygonBounds(points);
-      if (!bounds) return { width: 0, height: 0, bounds: null };
-      return {
-        width: Math.max(0, bounds.maxX - bounds.minX),
-        height: Math.max(0, bounds.maxY - bounds.minY),
-        bounds
-      };
-    }
-
-    function updateZoneSizeControls(zone) {
+    function updateZoneAdjustControls(zone) {
       const enabled = Boolean(zone);
-      const size = zone ? polygonSize(zone.points) : { width: 0, height: 0 };
-      if (zoneWidthInput) {
-        zoneWidthInput.disabled = !enabled;
-        zoneWidthInput.value = enabled ? String(Math.round(size.width)) : "";
-      }
-      if (zoneHeightInput) {
-        zoneHeightInput.disabled = !enabled;
-        zoneHeightInput.value = enabled ? String(Math.round(size.height)) : "";
-      }
-      if (zoneWidthDownBtn) zoneWidthDownBtn.disabled = !enabled;
-      if (zoneWidthUpBtn) zoneWidthUpBtn.disabled = !enabled;
-      if (zoneHeightDownBtn) zoneHeightDownBtn.disabled = !enabled;
-      if (zoneHeightUpBtn) zoneHeightUpBtn.disabled = !enabled;
-      if (applyZoneSizeBtn) applyZoneSizeBtn.disabled = !enabled;
+      if (undoZoneEditBtn) undoZoneEditBtn.disabled = !state.zoneEditHistory.length;
+      [zoneLeftInBtn, zoneLeftOutBtn, zoneRightInBtn, zoneRightOutBtn, zoneTopInBtn, zoneTopOutBtn, zoneBottomInBtn, zoneBottomOutBtn]
+        .forEach((btn) => {
+          if (btn) btn.disabled = !enabled;
+        });
     }
 
-    function resizeZoneToDimensions(zone, targetWidth, targetHeight) {
-      if (!zone || !Array.isArray(zone.points) || zone.points.length < 3) return false;
-      const { width, height, bounds } = polygonSize(zone.points);
-      if (!bounds || width <= 0 || height <= 0) return false;
-      const nextWidth = Math.max(1, Number(targetWidth) || width);
-      const nextHeight = Math.max(1, Number(targetHeight) || height);
-      const scaleX = nextWidth / width;
-      const scaleY = nextHeight / height;
-      const centerX = (bounds.minX + bounds.maxX) / 2;
-      const centerY = (bounds.minY + bounds.maxY) / 2;
-      zone.points = zone.points.map(([x, y]) => [
-        Math.round(centerX + (x - centerX) * scaleX),
-        Math.round(centerY + (y - centerY) * scaleY)
-      ]);
+    function pushZoneEditSnapshot(zone) {
+      if (!zone) return;
+      state.zoneEditHistory.push({
+        floorId: state.activeFloorId,
+        zoneId: zone.id,
+        points: zone.points.map(([x, y]) => [x, y]),
+        labelOffset: {
+          x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
+          y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
+        }
+      });
+      if (state.zoneEditHistory.length > 50) state.zoneEditHistory.shift();
+      updateZoneAdjustControls(zone);
+    }
+
+    function undoZoneEdit() {
+      const snapshot = state.zoneEditHistory.pop();
+      if (!snapshot) return;
+      const floor = state.floors.find((entry) => entry.id === snapshot.floorId);
+      const zone = floor && floor.zones.find((entry) => entry.id === snapshot.zoneId);
+      if (!zone) {
+        updateZoneAdjustControls(getSelectedZones()[0] || null);
+        return;
+      }
+      zone.points = snapshot.points.map(([x, y]) => [x, y]);
+      zone.labelOffset = { x: snapshot.labelOffset.x, y: snapshot.labelOffset.y };
+      if (snapshot.floorId === state.activeFloorId) {
+        syncSelectionInputs();
+        render();
+        enableButtons();
+      }
+      updateZoneAdjustControls(zone);
+      drawHint.textContent = "Se deshizo el último ajuste de zona.";
+    }
+
+    function moveZoneBoundary(zone, side, amount) {
+      if (!zone || !Array.isArray(zone.points) || zone.points.length < 3 || !amount) return false;
+      const bounds = polygonBounds(zone.points);
+      if (!bounds) return false;
+      const tolerance = 2;
+      const nextPoints = zone.points.map(([x, y]) => [x, y]);
+      let changed = false;
+      nextPoints.forEach((point) => {
+        if (side === "left" && Math.abs(point[0] - bounds.minX) <= tolerance) {
+          point[0] = Math.round(point[0] + amount);
+          changed = true;
+        }
+        if (side === "right" && Math.abs(point[0] - bounds.maxX) <= tolerance) {
+          point[0] = Math.round(point[0] + amount);
+          changed = true;
+        }
+        if (side === "top" && Math.abs(point[1] - bounds.minY) <= tolerance) {
+          point[1] = Math.round(point[1] + amount);
+          changed = true;
+        }
+        if (side === "bottom" && Math.abs(point[1] - bounds.maxY) <= tolerance) {
+          point[1] = Math.round(point[1] + amount);
+          changed = true;
+        }
+      });
+      if (!changed) return false;
+      zone.points = nextPoints;
       return true;
     }
 
-    function applySelectedZoneDimensions() {
-      const selectedZones = getSelectedZones();
-      const zone = selectedZones.length === 1 ? selectedZones[0] : null;
-      if (!zone || !zoneWidthInput || !zoneHeightInput) return;
-      const width = Math.max(1, Number(zoneWidthInput.value) || 0);
-      const height = Math.max(1, Number(zoneHeightInput.value) || 0);
-      if (!width || !height) return;
-      if (!resizeZoneToDimensions(zone, width, height)) return;
-      syncSelectionInputs();
-      render();
-      enableButtons();
-      drawHint.textContent = "Tamaño de zona actualizado.";
-    }
-
-    function nudgeSelectedZoneSize(axis, delta) {
+    function adjustSelectedZoneBoundary(side, direction) {
       const selectedZones = getSelectedZones();
       const zone = selectedZones.length === 1 ? selectedZones[0] : null;
       if (!zone) return;
-      const size = polygonSize(zone.points);
-      const nextWidth = axis === "width" ? Math.max(1, Math.round(size.width + delta)) : Math.max(1, Math.round(size.width));
-      const nextHeight = axis === "height" ? Math.max(1, Math.round(size.height + delta)) : Math.max(1, Math.round(size.height));
-      if (!resizeZoneToDimensions(zone, nextWidth, nextHeight)) return;
+      pushZoneEditSnapshot(zone);
+      const amountMap = {
+        left: direction === "in" ? 10 : -10,
+        right: direction === "in" ? -10 : 10,
+        top: direction === "in" ? 10 : -10,
+        bottom: direction === "in" ? -10 : 10
+      };
+      const changed = moveZoneBoundary(zone, side, amountMap[side] || 0);
+      if (!changed) {
+        state.zoneEditHistory.pop();
+        updateZoneAdjustControls(zone);
+        return;
+      }
       syncSelectionInputs();
       render();
       enableButtons();
-      drawHint.textContent = "Tamaño de zona ajustado.";
+      drawHint.textContent = `Se ajustó el borde ${side}.`;
     }
 
     function boundsOverlapRatio(a, b) {
@@ -848,6 +883,7 @@
       }
       if (imageEditEraseBtn) imageEditEraseBtn.disabled = !hasFloor || state.autoMapping;
       if (imageEditDrawBtn) imageEditDrawBtn.disabled = !hasFloor || state.autoMapping;
+      updateZoneAdjustControls(getSelectedZones().length === 1 ? getSelectedZones()[0] : null);
     }
 
     function setSelectedZone(zoneId, options = {}) {
@@ -1948,11 +1984,16 @@
                   cursor: edgeCursorFromNormal(nx, ny),
                   originalPoints: zone.points.map(([x, y]) => [x, y])
                 };
+                pushZoneEditSnapshot(zone);
                 overlay.style.cursor = state.draggingEdge.cursor;
                 return;
               }
             }
             const dragIds = getSelectedZoneIds().includes(zoneId) ? getSelectedZoneIds() : [zoneId];
+            dragIds.forEach((id) => {
+              const dragZone = zoneById(id);
+              if (dragZone) pushZoneEditSnapshot(dragZone);
+            });
             state.draggingZone = {
               zoneIds: dragIds,
               startX: point[0],
@@ -1979,6 +2020,7 @@
           const point = getRawPointFromEvent(evt);
           if (!point) return;
           if (!zone.labelOffset) zone.labelOffset = { x: 0, y: 0 };
+          pushZoneEditSnapshot(zone);
           state.draggingLabel = {
             zoneId,
             startX: point[0],
@@ -2307,29 +2349,15 @@
         setDrawColor(drawColorInput.value);
       });
     }
-    if (zoneWidthDownBtn) {
-      zoneWidthDownBtn.addEventListener("click", () => {
-        nudgeSelectedZoneSize("width", -10);
-      });
-    }
-    if (zoneWidthUpBtn) {
-      zoneWidthUpBtn.addEventListener("click", () => {
-        nudgeSelectedZoneSize("width", 10);
-      });
-    }
-    if (zoneHeightDownBtn) {
-      zoneHeightDownBtn.addEventListener("click", () => {
-        nudgeSelectedZoneSize("height", -10);
-      });
-    }
-    if (zoneHeightUpBtn) {
-      zoneHeightUpBtn.addEventListener("click", () => {
-        nudgeSelectedZoneSize("height", 10);
-      });
-    }
-    if (applyZoneSizeBtn) {
-      applyZoneSizeBtn.addEventListener("click", applySelectedZoneDimensions);
-    }
+    if (undoZoneEditBtn) undoZoneEditBtn.addEventListener("click", undoZoneEdit);
+    if (zoneLeftInBtn) zoneLeftInBtn.addEventListener("click", () => adjustSelectedZoneBoundary("left", "in"));
+    if (zoneLeftOutBtn) zoneLeftOutBtn.addEventListener("click", () => adjustSelectedZoneBoundary("left", "out"));
+    if (zoneRightInBtn) zoneRightInBtn.addEventListener("click", () => adjustSelectedZoneBoundary("right", "in"));
+    if (zoneRightOutBtn) zoneRightOutBtn.addEventListener("click", () => adjustSelectedZoneBoundary("right", "out"));
+    if (zoneTopInBtn) zoneTopInBtn.addEventListener("click", () => adjustSelectedZoneBoundary("top", "in"));
+    if (zoneTopOutBtn) zoneTopOutBtn.addEventListener("click", () => adjustSelectedZoneBoundary("top", "out"));
+    if (zoneBottomInBtn) zoneBottomInBtn.addEventListener("click", () => adjustSelectedZoneBoundary("bottom", "in"));
+    if (zoneBottomOutBtn) zoneBottomOutBtn.addEventListener("click", () => adjustSelectedZoneBoundary("bottom", "out"));
     if (drawEyedropperBtn) {
       drawEyedropperBtn.addEventListener("click", async () => {
         if (!window.EyeDropper) {
