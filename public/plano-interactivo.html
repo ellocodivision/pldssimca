@@ -295,23 +295,23 @@
           </div>
           <label style="margin-top:8px;">Borde izquierdo</label>
           <div class="btn-row two" style="margin-top:6px;">
-            <button id="zoneLeftInBtn" type="button" disabled>Meter 10</button>
-            <button id="zoneLeftOutBtn" type="button" disabled>Sacar 10</button>
+            <button id="zoneLeftInBtn" type="button" disabled>Meter 2.5</button>
+            <button id="zoneLeftOutBtn" type="button" disabled>Sacar 2.5</button>
           </div>
           <label style="margin-top:8px;">Borde derecho</label>
           <div class="btn-row two" style="margin-top:6px;">
-            <button id="zoneRightInBtn" type="button" disabled>Meter 10</button>
-            <button id="zoneRightOutBtn" type="button" disabled>Sacar 10</button>
+            <button id="zoneRightInBtn" type="button" disabled>Meter 2.5</button>
+            <button id="zoneRightOutBtn" type="button" disabled>Sacar 2.5</button>
           </div>
           <label style="margin-top:8px;">Borde superior</label>
           <div class="btn-row two" style="margin-top:6px;">
-            <button id="zoneTopInBtn" type="button" disabled>Meter 10</button>
-            <button id="zoneTopOutBtn" type="button" disabled>Sacar 10</button>
+            <button id="zoneTopInBtn" type="button" disabled>Meter 2.5</button>
+            <button id="zoneTopOutBtn" type="button" disabled>Sacar 2.5</button>
           </div>
           <label style="margin-top:8px;">Borde inferior</label>
           <div class="btn-row two" style="margin-top:6px;">
-            <button id="zoneBottomInBtn" type="button" disabled>Meter 10</button>
-            <button id="zoneBottomOutBtn" type="button" disabled>Sacar 10</button>
+            <button id="zoneBottomInBtn" type="button" disabled>Meter 2.5</button>
+            <button id="zoneBottomOutBtn" type="button" disabled>Sacar 2.5</button>
           </div>
         </div>
       </div>
@@ -692,11 +692,12 @@
       const zone = selectedZones.length === 1 ? selectedZones[0] : null;
       if (!zone) return;
       pushZoneEditSnapshot(zone);
+      const step = 2.5;
       const amountMap = {
-        left: direction === "in" ? 10 : -10,
-        right: direction === "in" ? -10 : 10,
-        top: direction === "in" ? 10 : -10,
-        bottom: direction === "in" ? -10 : 10
+        left: direction === "in" ? step : -step,
+        right: direction === "in" ? -step : step,
+        top: direction === "in" ? step : -step,
+        bottom: direction === "in" ? -step : step
       };
       const changed = moveZoneBoundary(zone, side, amountMap[side] || 0);
       if (!changed) {
