@@ -209,6 +209,11 @@
         <h2>1) Cargar pisos (hasta 6)</h2>
         <label for="imagesInput">Imágenes del proyecto</label>
         <input id="imagesInput" type="file" accept="image/*" multiple>
+        <div class="btn-row" style="margin-top:8px;">
+          <button id="replaceFloorsBtn" type="button">Reemplazar pisos</button>
+          <button id="appendFloorsBtn" type="button">Agregar pisos</button>
+        </div>
+        <p class="hint">Usa "Agregar pisos" para anexar nuevas imágenes al JSON ya cargado.</p>
         <div id="floorTabs" class="tabs"></div>
         <div class="btn-row" style="margin-top:8px;">
           <button id="moveFloorUpBtn" type="button" disabled>Subir piso</button>
@@ -393,12 +398,15 @@
       editHistoryByFloor: {},
       nextZoneId: 1,
       zoom: 1,
-      autoMapping: false
+      autoMapping: false,
+      imageLoadMode: "replace"
     };
 
     const stage = document.getElementById("stage");
     const canvasWrap = document.querySelector(".canvas-wrap");
     const imagesInput = document.getElementById("imagesInput");
+    const replaceFloorsBtn = document.getElementById("replaceFloorsBtn");
+    const appendFloorsBtn = document.getElementById("appendFloorsBtn");
     const floorTabs = document.getElementById("floorTabs");
     const moveFloorUpBtn = document.getElementById("moveFloorUpBtn");
     const moveFloorDownBtn = document.getElementById("moveFloorDownBtn");
@@ -2208,7 +2216,10 @@
     }
 
     imagesInput.addEventListener("change", (evt) => {
-      const files = Array.from(evt.target.files || []).slice(0, MAX_FLOORS);
+      const remainingSlots = state.imageLoadMode === "append"
+        ? Math.max(0, MAX_FLOORS - state.floors.length)
+        : MAX_FLOORS;
+      const files = Array.from(evt.target.files || []).slice(0, remainingSlots);
       if (!files.length) return;
 
       Promise.all(files.map((file, index) => {
@@ -2228,8 +2239,13 @@
           reader.readAsDataURL(file);
         });
       })).then((floors) => {
-        state.floors = floors;
-        state.activeFloorId = floors[0].id;
+        if (state.imageLoadMode === "append" && state.floors.length) {
+          state.floors = state.floors.concat(floors);
+          state.activeFloorId = floors[floors.length - 1].id;
+        } else {
+          state.floors = floors;
+          state.activeFloorId = floors[0].id;
+        }
         clearSelection();
         state.drawing = false;
         state.drawingPoints = [];
@@ -2238,6 +2254,8 @@
         updateHint();
         render();
         enableButtons();
+        imagesInput.value = "";
+        state.imageLoadMode = "replace";
       });
     });
 
@@ -2449,6 +2467,23 @@
 
     exportBtn.addEventListener("click", exportJson);
     importBtn.addEventListener("click", () => importInput.click());
+    if (replaceFloorsBtn) {
+      replaceFloorsBtn.addEventListener("click", () => {
+        state.imageLoadMode = "replace";
+        imagesInput.click();
+      });
+    }
+    if (appendFloorsBtn) {
+      appendFloorsBtn.addEventListener("click", () => {
+        const remainingSlots = MAX_FLOORS - state.floors.length;
+        if (remainingSlots <= 0) {
+          alert(`Ya tienes ${MAX_FLOORS} pisos cargados.`);
+          return;
+        }
+        state.imageLoadMode = "append";
+        imagesInput.click();
+      });
+    }
     importInput.addEventListener("change", () => {
       const file = importInput.files && importInput.files[0];
       if (file) importJson(file);
