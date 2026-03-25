@@ -881,9 +881,10 @@
       const primary = normalizeUnitKey(raw);
       if (primary) out.push(primary);
 
-      const numberMatch = raw.match(/(\d+(?:\.\d+)?)/);
-      if (numberMatch) {
-        const numeric = String(parseInt(numberMatch[1], 10));
+      const normalized = raw.replace(/\s+/g, "");
+      const isNumericOnly = /^\d+(?:\.0+)?$/.test(normalized);
+      if (isNumericOnly) {
+        const numeric = String(parseInt(normalized, 10));
         if (numeric && !out.includes(numeric)) out.push(numeric);
       }
 
