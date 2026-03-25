@@ -288,6 +288,24 @@
           <button id="applyUnitBtn">Guardar etiqueta</button>
           <button id="autoLabelBtn">Auto (1,2,3)</button>
         </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e3e8e4;">
+          <p class="hint" style="margin:0 0 8px 0;">Ajuste manual de zona</p>
+          <label for="zoneWidthInput">Ancho</label>
+          <div class="btn-row three" style="margin-top:6px;">
+            <button id="zoneWidthDownBtn" type="button">-10</button>
+            <input id="zoneWidthInput" type="number" min="1" step="1" placeholder="Ancho" disabled>
+            <button id="zoneWidthUpBtn" type="button">+10</button>
+          </div>
+          <label for="zoneHeightInput" style="margin-top:8px;">Alto</label>
+          <div class="btn-row three" style="margin-top:6px;">
+            <button id="zoneHeightDownBtn" type="button">-10</button>
+            <input id="zoneHeightInput" type="number" min="1" step="1" placeholder="Alto" disabled>
+            <button id="zoneHeightUpBtn" type="button">+10</button>
+          </div>
+          <div class="btn-row" style="margin-top:8px;">
+            <button id="applyZoneSizeBtn" type="button" disabled>Aplicar ancho/alto</button>
+          </div>
+        </div>
       </div>
 
       <div class="section">
@@ -406,6 +424,13 @@
     const unitTipologia = document.getElementById("unitTipologia");
     const applyUnitBtn = document.getElementById("applyUnitBtn");
     const autoLabelBtn = document.getElementById("autoLabelBtn");
+    const zoneWidthInput = document.getElementById("zoneWidthInput");
+    const zoneHeightInput = document.getElementById("zoneHeightInput");
+    const zoneWidthDownBtn = document.getElementById("zoneWidthDownBtn");
+    const zoneWidthUpBtn = document.getElementById("zoneWidthUpBtn");
+    const zoneHeightDownBtn = document.getElementById("zoneHeightDownBtn");
+    const zoneHeightUpBtn = document.getElementById("zoneHeightUpBtn");
+    const applyZoneSizeBtn = document.getElementById("applyZoneSizeBtn");
     const zoneList = document.getElementById("zoneList");
     const exportBtn = document.getElementById("exportBtn");
     const importBtn = document.getElementById("importBtn");
@@ -533,6 +558,7 @@
       if (unitTipologia) {
         unitTipologia.value = zone ? String(zone.tipologia || "") : "";
       }
+      updateZoneSizeControls(zone);
     }
 
     function clearSelection() {
@@ -574,6 +600,79 @@
         if (y > maxY) maxY = y;
       });
       return { minX, minY, maxX, maxY };
+    }
+
+    function polygonSize(points) {
+      const bounds = polygonBounds(points);
+      if (!bounds) return { width: 0, height: 0, bounds: null };
+      return {
+        width: Math.max(0, bounds.maxX - bounds.minX),
+        height: Math.max(0, bounds.maxY - bounds.minY),
+        bounds
+      };
+    }
+
+    function updateZoneSizeControls(zone) {
+      const enabled = Boolean(zone);
+      const size = zone ? polygonSize(zone.points) : { width: 0, height: 0 };
+      if (zoneWidthInput) {
+        zoneWidthInput.disabled = !enabled;
+        zoneWidthInput.value = enabled ? String(Math.round(size.width)) : "";
+      }
+      if (zoneHeightInput) {
+        zoneHeightInput.disabled = !enabled;
+        zoneHeightInput.value = enabled ? String(Math.round(size.height)) : "";
+      }
+      if (zoneWidthDownBtn) zoneWidthDownBtn.disabled = !enabled;
+      if (zoneWidthUpBtn) zoneWidthUpBtn.disabled = !enabled;
+      if (zoneHeightDownBtn) zoneHeightDownBtn.disabled = !enabled;
+      if (zoneHeightUpBtn) zoneHeightUpBtn.disabled = !enabled;
+      if (applyZoneSizeBtn) applyZoneSizeBtn.disabled = !enabled;
+    }
+
+    function resizeZoneToDimensions(zone, targetWidth, targetHeight) {
+      if (!zone || !Array.isArray(zone.points) || zone.points.length < 3) return false;
+      const { width, height, bounds } = polygonSize(zone.points);
+      if (!bounds || width <= 0 || height <= 0) return false;
+      const nextWidth = Math.max(1, Number(targetWidth) || width);
+      const nextHeight = Math.max(1, Number(targetHeight) || height);
+      const scaleX = nextWidth / width;
+      const scaleY = nextHeight / height;
+      const centerX = (bounds.minX + bounds.maxX) / 2;
+      const centerY = (bounds.minY + bounds.maxY) / 2;
+      zone.points = zone.points.map(([x, y]) => [
+        Math.round(centerX + (x - centerX) * scaleX),
+        Math.round(centerY + (y - centerY) * scaleY)
+      ]);
+      return true;
+    }
+
+    function applySelectedZoneDimensions() {
+      const selectedZones = getSelectedZones();
+      const zone = selectedZones.length === 1 ? selectedZones[0] : null;
+      if (!zone || !zoneWidthInput || !zoneHeightInput) return;
+      const width = Math.max(1, Number(zoneWidthInput.value) || 0);
+      const height = Math.max(1, Number(zoneHeightInput.value) || 0);
+      if (!width || !height) return;
+      if (!resizeZoneToDimensions(zone, width, height)) return;
+      syncSelectionInputs();
+      render();
+      enableButtons();
+      drawHint.textContent = "Tamaño de zona actualizado.";
+    }
+
+    function nudgeSelectedZoneSize(axis, delta) {
+      const selectedZones = getSelectedZones();
+      const zone = selectedZones.length === 1 ? selectedZones[0] : null;
+      if (!zone) return;
+      const size = polygonSize(zone.points);
+      const nextWidth = axis === "width" ? Math.max(1, Math.round(size.width + delta)) : Math.max(1, Math.round(size.width));
+      const nextHeight = axis === "height" ? Math.max(1, Math.round(size.height + delta)) : Math.max(1, Math.round(size.height));
+      if (!resizeZoneToDimensions(zone, nextWidth, nextHeight)) return;
+      syncSelectionInputs();
+      render();
+      enableButtons();
+      drawHint.textContent = "Tamaño de zona ajustado.";
     }
 
     function boundsOverlapRatio(a, b) {
@@ -2207,6 +2306,29 @@
       drawColorInput.addEventListener("input", () => {
         setDrawColor(drawColorInput.value);
       });
+    }
+    if (zoneWidthDownBtn) {
+      zoneWidthDownBtn.addEventListener("click", () => {
+        nudgeSelectedZoneSize("width", -10);
+      });
+    }
+    if (zoneWidthUpBtn) {
+      zoneWidthUpBtn.addEventListener("click", () => {
+        nudgeSelectedZoneSize("width", 10);
+      });
+    }
+    if (zoneHeightDownBtn) {
+      zoneHeightDownBtn.addEventListener("click", () => {
+        nudgeSelectedZoneSize("height", -10);
+      });
+    }
+    if (zoneHeightUpBtn) {
+      zoneHeightUpBtn.addEventListener("click", () => {
+        nudgeSelectedZoneSize("height", 10);
+      });
+    }
+    if (applyZoneSizeBtn) {
+      applyZoneSizeBtn.addEventListener("click", applySelectedZoneDimensions);
     }
     if (drawEyedropperBtn) {
       drawEyedropperBtn.addEventListener("click", async () => {
