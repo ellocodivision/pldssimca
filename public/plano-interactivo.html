@@ -142,7 +142,8 @@
       cursor: pointer;
       font-size: 13px;
     }
-    .zone-item.active { border-color: #4d7f63; background: #edf6ef; }
+    .zone-item.active,
+    .zone-item.selected { border-color: #4d7f63; background: #edf6ef; }
     .canvas-wrap {
       background: #fff;
       border: 1px solid var(--line);
@@ -318,7 +319,7 @@
         <svg id="editGuideOverlay" aria-hidden="true"></svg>
         <div id="brushCursor" aria-hidden="true"></div>
       </div>
-      <p class="hint">Tip: puedes mover el número de unidad arrastrándolo o duplicar y recolocar una zona completa.</p>
+      <p class="hint">Tip: puedes mover el número de unidad, duplicar zonas o copiar varias con Cmd/Ctrl + C y pegarlas en otro piso con Cmd/Ctrl + V.</p>
     </main>
   </div>
 
@@ -344,6 +345,7 @@
       floors: [],
       activeFloorId: null,
       selectedZoneId: null,
+      selectedZoneIds: [],
       drawing: false,
       drawingPoints: [],
       cursorPoint: null,
@@ -351,6 +353,8 @@
       showUnitLabels: true,
       draggingLabel: null,
       draggingZone: null,
+      copiedZones: [],
+      copiedFromFloorId: null,
       paintingMask: false,
       paintingMaskStroke: false,
       paintingMaskLastPoint: null,
@@ -508,6 +512,34 @@
       return floor.zones.find((z) => z.id === zoneId) || null;
     }
 
+    function getSelectedZoneIds() {
+      const ids = Array.isArray(state.selectedZoneIds) ? state.selectedZoneIds.filter(Boolean) : [];
+      if (ids.length) return ids;
+      return state.selectedZoneId ? [state.selectedZoneId] : [];
+    }
+
+    function getSelectedZones() {
+      const floor = activeFloor();
+      if (!floor) return [];
+      const selectedIds = new Set(getSelectedZoneIds());
+      return floor.zones.filter((zone) => selectedIds.has(zone.id));
+    }
+
+    function syncSelectionInputs() {
+      const selectedZones = getSelectedZones();
+      const zone = selectedZones.length === 1 ? selectedZones[0] : null;
+      unitLabel.value = zone ? zone.label : "";
+      if (unitTipologia) {
+        unitTipologia.value = zone ? String(zone.tipologia || "") : "";
+      }
+    }
+
+    function clearSelection() {
+      state.selectedZoneId = null;
+      state.selectedZoneIds = [];
+      syncSelectionInputs();
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replace(/&/g, "&amp;")
@@ -648,18 +680,19 @@
           ? "Dibujo activo: líneas ajustadas en paralelo a bordes."
           : "Dibujo activo: agrega puntos y cierra la zona.";
       } else {
-        drawHint.textContent = "Selecciona o dibuja una zona en el piso actual.";
+        drawHint.textContent = "Selecciona o dibuja una zona en el piso actual. Usa Cmd/Ctrl + clic para selección múltiple.";
       }
     }
 
     function enableButtons() {
       const hasFloor = Boolean(activeFloor());
+      const selectedCount = getSelectedZoneIds().length;
       startZoneBtn.disabled = !hasFloor || state.drawing;
       finishZoneBtn.disabled = !hasFloor || !state.drawing || state.drawingPoints.length < 3;
       cancelZoneBtn.disabled = !hasFloor || !state.drawing;
-      deleteZoneBtn.disabled = !hasFloor || !state.selectedZoneId;
-      if (duplicateZoneBtn) duplicateZoneBtn.disabled = !hasFloor || !state.selectedZoneId || state.drawing;
-      applyUnitBtn.disabled = !hasFloor || !state.selectedZoneId;
+      deleteZoneBtn.disabled = !hasFloor || !selectedCount;
+      if (duplicateZoneBtn) duplicateZoneBtn.disabled = !hasFloor || !selectedCount || state.drawing;
+      applyUnitBtn.disabled = !hasFloor || selectedCount !== 1;
       autoLabelBtn.disabled = !hasFloor;
       deleteFloorBtn.disabled = !hasFloor;
       const idx = activeFloorIndex();
@@ -676,22 +709,35 @@
       if (imageEditDrawBtn) imageEditDrawBtn.disabled = !hasFloor || state.autoMapping;
     }
 
-    function setSelectedZone(zoneId) {
-      state.selectedZoneId = zoneId;
-      const zone = zoneById(zoneId);
-      unitLabel.value = zone ? zone.label : "";
-      if (unitTipologia) {
-        unitTipologia.value = zone ? String(zone.tipologia || "") : "";
+    function setSelectedZone(zoneId, options = {}) {
+      const { toggle = false } = options;
+      const floor = activeFloor();
+      if (!floor || !zoneId) {
+        clearSelection();
+        render();
+        enableButtons();
+        return;
       }
+      let selectedIds = getSelectedZoneIds().filter((id) => floor.zones.some((zone) => zone.id === id));
+      if (toggle) {
+        if (selectedIds.includes(zoneId)) {
+          selectedIds = selectedIds.filter((id) => id !== zoneId);
+        } else {
+          selectedIds.push(zoneId);
+        }
+      } else {
+        selectedIds = [zoneId];
+      }
+      state.selectedZoneIds = selectedIds;
+      state.selectedZoneId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null;
+      syncSelectionInputs();
       render();
       enableButtons();
     }
 
     function switchFloor(floorId) {
       state.activeFloorId = floorId;
-      state.selectedZoneId = null;
-      unitLabel.value = "";
-      if (unitTipologia) unitTipologia.value = "";
+      clearSelection();
       state.drawing = false;
       state.drawingPoints = [];
       state.cursorPoint = null;
@@ -727,7 +773,7 @@
 
       if (!state.floors.length) {
         state.activeFloorId = null;
-        state.selectedZoneId = null;
+        clearSelection();
         state.drawing = false;
         state.drawingPoints = [];
         state.cursorPoint = null;
@@ -1492,9 +1538,9 @@
         }
 
         const selected = floor.zones[floor.zones.length - 1] || floor.zones[0] || null;
+        state.selectedZoneIds = selected ? [selected.id] : [];
         state.selectedZoneId = selected ? selected.id : null;
-        if (unitLabel) unitLabel.value = selected ? selected.label : "";
-        if (unitTipologia) unitTipologia.value = selected ? String(selected.tipologia || "") : "";
+        syncSelectionInputs();
         updateHint();
         render();
         alert(`Auto-mapeo incremental terminado. Nuevas zonas: ${addedZones.length}. Zonas totales: ${floor.zones.length}.`);
@@ -1513,9 +1559,7 @@
       state.drawing = true;
       state.drawingPoints = [];
       state.cursorPoint = null;
-      state.selectedZoneId = null;
-      unitLabel.value = "";
-      if (unitTipologia) unitTipologia.value = "";
+      clearSelection();
       updateHint();
       render();
       enableButtons();
@@ -1552,21 +1596,20 @@
 
     function deleteSelectedZone() {
       const floor = activeFloor();
-      if (!floor || !state.selectedZoneId) return;
-      floor.zones = floor.zones.filter((z) => z.id !== state.selectedZoneId);
-      state.selectedZoneId = null;
-      unitLabel.value = "";
-      if (unitTipologia) unitTipologia.value = "";
+      const selectedIds = new Set(getSelectedZoneIds());
+      if (!floor || !selectedIds.size) return;
+      floor.zones = floor.zones.filter((z) => !selectedIds.has(z.id));
+      clearSelection();
       render();
       enableButtons();
     }
 
     function duplicateSelectedZone() {
       const floor = activeFloor();
-      const source = zoneById(state.selectedZoneId);
-      if (!floor || !source) return;
+      const sources = getSelectedZones();
+      if (!floor || !sources.length) return;
       const offset = 24;
-      const duplicate = {
+      const duplicates = sources.map((source) => ({
         id: `zone-${state.nextZoneId++}`,
         label: source.label,
         tipologia: String(source.tipologia || ""),
@@ -1575,14 +1618,21 @@
           y: source.labelOffset && Number.isFinite(source.labelOffset.y) ? source.labelOffset.y : 0
         },
         points: source.points.map(([x, y]) => [Math.round(x + offset), Math.round(y + offset)])
-      };
-      floor.zones.push(duplicate);
-      setSelectedZone(duplicate.id);
-      drawHint.textContent = "Zona duplicada. Arrástrala para colocarla donde la necesites.";
+      }));
+      floor.zones.push(...duplicates);
+      state.selectedZoneIds = duplicates.map((zone) => zone.id);
+      state.selectedZoneId = duplicates.length ? duplicates[duplicates.length - 1].id : null;
+      syncSelectionInputs();
+      render();
+      enableButtons();
+      drawHint.textContent = duplicates.length === 1
+        ? "Zona duplicada. Arrástrala para colocarla donde la necesites."
+        : `${duplicates.length} zonas duplicadas. Arrástralas para recolocarlas.`;
     }
 
     function applySelectedUnitChanges() {
-      const zone = zoneById(state.selectedZoneId);
+      const selectedZones = getSelectedZones();
+      const zone = selectedZones.length === 1 ? selectedZones[0] : null;
       if (!zone) return;
       const label = unitLabel.value.trim();
       if (!label) return;
@@ -1645,6 +1695,7 @@
     function renderZones() {
       const floor = activeFloor();
       if (!floor) return "";
+      const selectedIds = new Set(getSelectedZoneIds());
       return floor.zones.map((zone) => {
         const pts = zone.points.map(([x, y]) => `${x},${y}`).join(" ");
         const [baseX, baseY] = polygonCenter(zone.points);
@@ -1653,7 +1704,8 @@
         const cx = baseX + dx;
         const cy = baseY + dy;
         const label = escapeHtml(zone.label);
-        const isActive = zone.id === state.selectedZoneId;
+        const isSelected = selectedIds.has(zone.id);
+        const isPrimary = zone.id === state.selectedZoneId;
         const labelHtml = state.showUnitLabels ? `
             <text
               data-label-zone-id="${zone.id}"
@@ -1673,7 +1725,7 @@
         ` : "";
         return `
           <g data-zone-id="${zone.id}">
-            <polygon points="${pts}" fill="var(--zone)" fill-opacity="0.24" stroke="${isActive ? "#163c2c" : "#2d8f63"}" stroke-width="${isActive ? 3 : 2}" style="cursor: move;" />
+            <polygon points="${pts}" fill="var(--zone)" fill-opacity="0.24" stroke="${isPrimary ? "#163c2c" : (isSelected ? "#245943" : "#2d8f63")}" stroke-width="${isPrimary ? 3 : (isSelected ? 2.5 : 2)}" style="cursor: move;" />
             ${labelHtml}
           </g>
         `;
@@ -1686,8 +1738,9 @@
         zoneList.innerHTML = "<li class='help'>No hay zonas en este piso.</li>";
         return;
       }
+      const selectedIds = new Set(getSelectedZoneIds());
       zoneList.innerHTML = floor.zones.map((zone) => {
-        const active = zone.id === state.selectedZoneId ? "active" : "";
+        const active = selectedIds.has(zone.id) ? "active selected" : "";
         const tipologia = String(zone.tipologia || "").trim();
         const left = tipologia
           ? `${escapeHtml(zone.label)} · <strong>${escapeHtml(tipologia)}</strong>`
@@ -1696,9 +1749,9 @@
       }).join("");
 
       zoneList.querySelectorAll("[data-zone-id]").forEach((el) => {
-        el.addEventListener("click", () => {
+        el.addEventListener("click", (evt) => {
           const zoneId = el.getAttribute("data-zone-id");
-          setSelectedZone(zoneId);
+          setSelectedZone(zoneId, { toggle: evt.metaKey || evt.ctrlKey || evt.shiftKey });
         });
       });
     }
@@ -1715,7 +1768,7 @@
         el.addEventListener("click", (evt) => {
           evt.stopPropagation();
           const zoneId = el.getAttribute("data-zone-id");
-          setSelectedZone(zoneId);
+          setSelectedZone(zoneId, { toggle: evt.metaKey || evt.ctrlKey || evt.shiftKey });
         });
         const polygon = el.querySelector("polygon");
         if (polygon) {
@@ -1726,14 +1779,21 @@
             const zoneId = el.getAttribute("data-zone-id");
             const zone = zoneById(zoneId);
             if (!zone) return;
-            setSelectedZone(zoneId);
+            const toggle = evt.metaKey || evt.ctrlKey || evt.shiftKey;
+            setSelectedZone(zoneId, { toggle });
             const point = getRawPointFromEvent(evt);
             if (!point) return;
+            const dragIds = getSelectedZoneIds().includes(zoneId) ? getSelectedZoneIds() : [zoneId];
             state.draggingZone = {
-              zoneId,
+              zoneIds: dragIds,
               startX: point[0],
               startY: point[1],
-              originalPoints: zone.points.map(([x, y]) => [x, y])
+              originalPointsById: Object.fromEntries(
+                dragIds.map((id) => {
+                  const dragZone = zoneById(id);
+                  return [id, dragZone ? dragZone.points.map(([x, y]) => [x, y]) : []];
+                })
+              )
             };
           });
         }
@@ -1786,7 +1846,7 @@
       state.showUnitLabels = payload.showUnitLabels !== false;
       showLabelsInput.checked = state.showUnitLabels;
       state.activeFloorId = state.floors[0].id;
-      state.selectedZoneId = null;
+      clearSelection();
       state.drawing = false;
       state.drawingPoints = [];
       state.cursorPoint = null;
@@ -1892,7 +1952,7 @@
       })).then((floors) => {
         state.floors = floors;
         state.activeFloorId = floors[0].id;
-        state.selectedZoneId = null;
+        clearSelection();
         state.drawing = false;
         state.drawingPoints = [];
         state.cursorPoint = null;
@@ -1905,7 +1965,14 @@
 
     overlay.addEventListener("click", (evt) => {
       if (state.paintingMask) return;
-      if (!state.drawing) return;
+      if (!state.drawing) {
+        if (evt.target === overlay) {
+          clearSelection();
+          render();
+          enableButtons();
+        }
+        return;
+      }
       const rawPoint = getRawPointFromEvent(evt);
       if (!rawPoint) return;
       const point = snapDrawPoint(rawPoint);
@@ -1918,16 +1985,19 @@
     overlay.addEventListener("mousemove", (evt) => {
       if (state.paintingMask) return;
       if (state.draggingZone) {
-        const zone = zoneById(state.draggingZone.zoneId);
-        if (!zone) return;
         const point = getRawPointFromEvent(evt);
         if (!point) return;
         const dx = point[0] - state.draggingZone.startX;
         const dy = point[1] - state.draggingZone.startY;
-        zone.points = state.draggingZone.originalPoints.map(([x, y]) => [
-          Math.round(x + dx),
-          Math.round(y + dy)
-        ]);
+        state.draggingZone.zoneIds.forEach((zoneId) => {
+          const zone = zoneById(zoneId);
+          const originalPoints = state.draggingZone.originalPointsById[zoneId];
+          if (!zone || !Array.isArray(originalPoints)) return;
+          zone.points = originalPoints.map(([x, y]) => [
+            Math.round(x + dx),
+            Math.round(y + dy)
+          ]);
+        });
         renderOverlay();
         renderZoneList();
         return;
@@ -2113,6 +2183,63 @@
     }, { passive: false });
 
     document.addEventListener("keydown", (evt) => {
+      const target = evt.target;
+      const isTypingTarget = target && (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable
+      );
+      if ((evt.metaKey || evt.ctrlKey) && !evt.shiftKey && !evt.altKey && !isTypingTarget) {
+        const key = String(evt.key || "").toLowerCase();
+        if (key === "c") {
+          const zones = getSelectedZones();
+          if (zones.length) {
+            state.copiedZones = zones.map((zone) => ({
+              label: zone.label,
+              tipologia: String(zone.tipologia || ""),
+              labelOffset: {
+                x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
+                y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
+              },
+              points: zone.points.map(([x, y]) => [x, y])
+            }));
+            state.copiedFromFloorId = state.activeFloorId;
+            drawHint.textContent = zones.length === 1
+              ? "1 zona copiada. Cambia de piso y pega con Cmd/Ctrl + V."
+              : `${zones.length} zonas copiadas. Cambia de piso y pega con Cmd/Ctrl + V.`;
+            evt.preventDefault();
+            return;
+          }
+        }
+        if (key === "v") {
+          const floor = activeFloor();
+          if (floor && state.copiedZones.length) {
+            const offset = state.copiedFromFloorId === state.activeFloorId ? 24 : 0;
+            const pastedZones = state.copiedZones.map((zone) => ({
+              id: `zone-${state.nextZoneId++}`,
+              label: zone.label,
+              tipologia: String(zone.tipologia || ""),
+              labelOffset: {
+                x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
+                y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
+              },
+              points: zone.points.map(([x, y]) => [Math.round(x + offset), Math.round(y + offset)])
+            }));
+            floor.zones.push(...pastedZones);
+            state.selectedZoneIds = pastedZones.map((zone) => zone.id);
+            state.selectedZoneId = pastedZones.length ? pastedZones[pastedZones.length - 1].id : null;
+            syncSelectionInputs();
+            render();
+            enableButtons();
+            drawHint.textContent = pastedZones.length === 1
+              ? "1 zona pegada en este piso."
+              : `${pastedZones.length} zonas pegadas en este piso.`;
+            evt.preventDefault();
+            return;
+          }
+        }
+      }
       if (evt.key === "Escape" && state.drawing) cancelDrawing();
       if (evt.key === "Escape" && state.paintingMask) {
         state.drawLineStart = null;
