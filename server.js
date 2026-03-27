@@ -117,6 +117,7 @@ const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
 const WHISPERLIST_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY WHISPERLIST.xlsx');
 const VICEROY_REGISTROS_JSON_PATH = path.join(DATA_DIR, 'viceroy-registros.json');
 const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx');
+const VICEROY_ROOM_RESERVATIONS_PATH = path.join(DATA_DIR, 'viceroy-room-reservations.json');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
@@ -474,6 +475,9 @@ function ensureDataFiles() {
   });
   if (!fs.existsSync(SUBMISSIONS_PATH)) fs.writeFileSync(SUBMISSIONS_PATH, '[]', 'utf-8');
   if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, '{}', 'utf-8');
+  if (!fs.existsSync(VICEROY_ROOM_RESERVATIONS_PATH)) {
+    writeJson(VICEROY_ROOM_RESERVATIONS_PATH, { rows: [], updatedAt: null });
+  }
   if (!fs.existsSync(OWNER_SERVICES_PATH)) {
     const initialOwnerServices = {
       project: {
@@ -2063,6 +2067,79 @@ async function whisperlistAllowedEmails() {
   return emails;
 }
 
+const VICEROY_ROOM_OPTIONS = new Set(['sala-grande', 'sala-chica']);
+const VICEROY_ROOM_HOURS = new Set(['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']);
+
+function normalizeReservationRoom(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (VICEROY_ROOM_OPTIONS.has(normalized)) return normalized;
+  return '';
+}
+
+function normalizeReservationDate(value) {
+  const normalized = String(value || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : '';
+}
+
+function normalizeReservationHour(value) {
+  const normalized = String(value || '').trim();
+  return VICEROY_ROOM_HOURS.has(normalized) ? normalized : '';
+}
+
+function normalizeReservationTitle(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+}
+
+function normalizeRoomReservationRow(row) {
+  return {
+    id: String(row && row.id || '').trim(),
+    date: normalizeReservationDate(row && row.date),
+    room: normalizeReservationRoom(row && row.room),
+    hour: normalizeReservationHour(row && row.hour),
+    title: normalizeReservationTitle(row && row.title),
+    createdByEmail: String(row && row.createdByEmail || '').trim().toLowerCase(),
+    createdByName: String(row && row.createdByName || '').trim(),
+    updatedAt: String(row && row.updatedAt || '').trim() || new Date().toISOString()
+  };
+}
+
+function sortRoomReservationRows(rows) {
+  return [...(Array.isArray(rows) ? rows : [])].sort((a, b) => {
+    const byDate = String(a.date || '').localeCompare(String(b.date || ''));
+    if (byDate !== 0) return byDate;
+    const byRoom = String(a.room || '').localeCompare(String(b.room || ''));
+    if (byRoom !== 0) return byRoom;
+    const byHour = String(a.hour || '').localeCompare(String(b.hour || ''));
+    if (byHour !== 0) return byHour;
+    return String(a.title || '').localeCompare(String(b.title || ''), 'es');
+  });
+}
+
+function readViceroyRoomReservations() {
+  const raw = readJson(VICEROY_ROOM_RESERVATIONS_PATH, { rows: [], updatedAt: null });
+  const rows = sortRoomReservationRows(
+    (Array.isArray(raw.rows) ? raw.rows : [])
+      .map((row) => normalizeRoomReservationRow(row))
+      .filter((row) => row.date && row.room && row.hour && row.title)
+  );
+  return {
+    rows,
+    updatedAt: raw.updatedAt || null
+  };
+}
+
+function saveViceroyRoomReservations(rows) {
+  const normalizedRows = sortRoomReservationRows(
+    (Array.isArray(rows) ? rows : [])
+      .map((row) => normalizeRoomReservationRow(row))
+      .filter((row) => row.date && row.room && row.hour && row.title)
+  );
+  writeJson(VICEROY_ROOM_RESERVATIONS_PATH, {
+    rows: normalizedRows,
+    updatedAt: new Date().toISOString()
+  });
+}
+
 async function isAllowedLoginEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return false;
@@ -3491,6 +3568,8 @@ app.use('/api/brokers-simca-mx', requireGerente);
 app.use('/presentaciones', requireInternalUser);
 app.use('/api/presentaciones', requireInternalUser);
 app.use('/viceroy', requireAuth);
+app.use('/viceroy/reservas', requireAuth);
+app.use('/api/viceroy/reservas', requireAuth);
 app.use('/viceroy/inicio', requireGerente);
 app.use('/viceroy-piloto', requireInternalUser);
 app.use('/api/viceroy-piloto', (req, res, next) => {
@@ -4869,6 +4948,11 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Viceroy Whisperlist</h2>
           <p class="desc">Módulo original de Whisperlist.</p>
         </a>
+        <a class="card" href="/viceroy/reservas">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Reserva de oficinas</h2>
+          <p class="desc">Reserva sala grande o sala chica por horario.</p>
+        </a>
         <a class="card" href="/viceroy/registros">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy Registros</h2>
@@ -4878,6 +4962,89 @@ app.get('/viceroy', (req, res) => {
       </div>
     </div>
   </body></html>`);
+});
+
+app.get('/viceroy/reservas', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-reservas.html'));
+});
+
+app.get('/api/viceroy/reservas', (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const currentName = String(req.user && req.user.name || '').trim();
+  const isGerente = currentEmail === GERENTE_EMAIL;
+  const from = normalizeReservationDate(req.query && req.query.from);
+  const to = normalizeReservationDate(req.query && req.query.to);
+  const data = readViceroyRoomReservations();
+  const rows = data.rows.filter((row) => {
+    if (from && row.date < from) return false;
+    if (to && row.date > to) return false;
+    return true;
+  });
+  return res.json({
+    ok: true,
+    currentEmail,
+    currentName,
+    isGerente,
+    updatedAt: data.updatedAt,
+    rows
+  });
+});
+
+app.post('/api/viceroy/reservas', (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const currentName = String(req.user && req.user.name || '').trim();
+  const body = req.body || {};
+  const date = normalizeReservationDate(body.date);
+  const room = normalizeReservationRoom(body.room);
+  const hour = normalizeReservationHour(body.hour);
+  const title = normalizeReservationTitle(body.title);
+
+  if (!date || !room || !hour || !title) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios de la reserva.' });
+  }
+
+  const data = readViceroyRoomReservations();
+  const occupied = data.rows.find((row) => row.date === date && row.room === room && row.hour === hour);
+  if (occupied) {
+    return res.status(409).json({
+      error: 'Horario ocupado',
+      row: occupied
+    });
+  }
+
+  const newRow = normalizeRoomReservationRow({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    date,
+    room,
+    hour,
+    title,
+    createdByEmail: currentEmail,
+    createdByName: currentName,
+    updatedAt: new Date().toISOString()
+  });
+  data.rows.push(newRow);
+  saveViceroyRoomReservations(data.rows);
+  return res.status(201).json({ ok: true, row: newRow });
+});
+
+app.delete('/api/viceroy/reservas/:id', (req, res) => {
+  const rowId = String(req.params.id || '').trim();
+  if (!rowId) return res.status(400).json({ error: 'id inválido' });
+
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const isGerente = currentEmail === GERENTE_EMAIL;
+  const data = readViceroyRoomReservations();
+  const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+  if (index < 0) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+  const target = data.rows[index];
+  if (!isGerente && String(target.createdByEmail || '').trim().toLowerCase() !== currentEmail) {
+    return res.status(403).json({ error: 'Solo puedes borrar tus propias reservas' });
+  }
+
+  data.rows.splice(index, 1);
+  saveViceroyRoomReservations(data.rows);
+  return res.json({ ok: true });
 });
 
 app.get('/viceroy/inicio', (req, res) => {

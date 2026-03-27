@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viceroy Reserva de Oficinas</title>
+  <style>
+    :root{
+      --bg:#f4f1e8;
+      --card:#ffffff;
+      --ink:#101010;
+      --muted:#67645c;
+      --line:#d8d1c1;
+      --accent:#f3df2b;
+      --ok:#1f8d3c;
+      --warn:#c23a2b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1320px;margin:0 auto;padding:24px 16px 40px;}
+    .top{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;}
+    .title{margin:0;font-size:32px;line-height:1}
+    .sub{margin:8px 0 0;color:var(--muted)}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{border:1px solid #bdb8a9;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--accent);border-color:#111}
+    .btn.danger{background:#fff2f0;border-color:#d25b4e;color:#8b1f16}
+    .card{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;align-items:start}
+    .label{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+    .cell-input{width:100%;padding:10px 11px;border:1px solid #cec7b8;border-radius:10px;background:#fff;font:inherit}
+    .status{margin-top:8px;color:var(--muted);font-size:13px;min-height:18px}
+    .status.ok{color:var(--ok)}
+    .status.error{color:var(--warn)}
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#ece7da;font-size:12px;font-weight:700}
+    .meta{display:flex;gap:8px;flex-wrap:wrap}
+    .schedule{display:grid;grid-template-columns:90px repeat(7, minmax(160px,1fr));gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+    .head{background:#faf7f0;padding:10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-size:12px;font-weight:700;min-height:68px}
+    .head:last-child{border-right:0}
+    .time-col,.slot{padding:10px;border-right:1px solid #ebe4d6;border-bottom:1px solid #ebe4d6;min-height:88px}
+    .time-col{background:#faf7f0;font-weight:700;font-size:13px}
+    .slot:last-child{border-right:0}
+    .slot.empty{background:#fff}
+    .reservation{border:1px solid #d7d0bf;border-radius:10px;padding:8px;margin-bottom:6px;background:#fffdf7}
+    .reservation:last-child{margin-bottom:0}
+    .reservation-room{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .reservation-title{font-size:13px;font-weight:700;margin-top:3px}
+    .reservation-meta{font-size:11px;color:var(--muted);margin-top:4px}
+    .reservation .btn{padding:5px 8px;font-size:11px;margin-top:6px}
+    .legend{display:flex;gap:10px;flex-wrap:wrap}
+    .legend span{font-size:12px;color:var(--muted)}
+    .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr}
+      .schedule{grid-template-columns:80px repeat(7, minmax(140px,1fr));overflow:auto}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">Reserva de oficinas</h1>
+        <p class="sub">Reserva sala grande o sala chica en bloques de una hora, de 10:00 a 19:00.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy">Volver</a>
+        <button id="reloadBtn" class="btn" type="button">Recargar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="meta">
+        <span id="metaUser" class="badge">Usuario: -</span>
+        <span id="metaUpdated" class="badge">Actualizado: -</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <div class="row"><span class="badge">Nueva reserva</span></div>
+        <div style="margin-top:10px">
+          <label class="label" for="bookingDate">Fecha</label>
+          <input id="bookingDate" class="cell-input" type="date" />
+        </div>
+        <div class="two-cols" style="margin-top:10px">
+          <div>
+            <label class="label" for="bookingRoom">Sala</label>
+            <select id="bookingRoom" class="cell-input">
+              <option value="sala-grande">Sala grande</option>
+              <option value="sala-chica">Sala chica</option>
+            </select>
+          </div>
+          <div>
+            <label class="label" for="bookingHour">Horario</label>
+            <select id="bookingHour" class="cell-input"></select>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <label class="label" for="bookingTitle">Broker y detalle</label>
+          <input id="bookingTitle" class="cell-input" placeholder="Ej: JUAN PEREZ (AGENCIA XYZ) o ANA LOPEZ (CLIENTE)" />
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="saveBtn" class="btn primary" type="button">Reservar horario</button>
+        </div>
+        <p class="status" id="formStatus"></p>
+        <p class="status">Si el horario ya está ocupado en esa sala, el sistema no te dejará guardarlo.</p>
+      </section>
+
+      <section class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div class="row">
+            <span class="badge">Calendario semanal</span>
+            <span class="legend">
+              <span>Sala grande</span>
+              <span>Sala chica</span>
+            </span>
+          </div>
+          <div class="row">
+            <button id="prevWeekBtn" class="btn" type="button">Semana anterior</button>
+            <button id="todayBtn" class="btn" type="button">Semana actual</button>
+            <button id="nextWeekBtn" class="btn" type="button">Semana siguiente</button>
+          </div>
+        </div>
+        <p id="weekLabel" class="status"></p>
+        <div id="schedule" class="schedule"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const ROOM_LABELS = {
+        "sala-grande": "Sala grande",
+        "sala-chica": "Sala chica"
+      };
+      const HOURS = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+      const state = {
+        rows: [],
+        currentEmail: "",
+        currentName: "",
+        isGerente: false,
+        weekStart: null
+      };
+
+      const bookingDate = document.getElementById("bookingDate");
+      const bookingRoom = document.getElementById("bookingRoom");
+      const bookingHour = document.getElementById("bookingHour");
+      const bookingTitle = document.getElementById("bookingTitle");
+      const saveBtn = document.getElementById("saveBtn");
+      const reloadBtn = document.getElementById("reloadBtn");
+      const prevWeekBtn = document.getElementById("prevWeekBtn");
+      const nextWeekBtn = document.getElementById("nextWeekBtn");
+      const todayBtn = document.getElementById("todayBtn");
+      const formStatus = document.getElementById("formStatus");
+      const schedule = document.getElementById("schedule");
+      const metaUser = document.getElementById("metaUser");
+      const metaUpdated = document.getElementById("metaUpdated");
+      const weekLabel = document.getElementById("weekLabel");
+
+      HOURS.forEach((hour) => {
+        const endHour = String(Number(hour.slice(0, 2)) + 1).padStart(2, "0") + ":00";
+        const opt = document.createElement("option");
+        opt.value = hour;
+        opt.textContent = `${hour} - ${endHour}`;
+        bookingHour.appendChild(opt);
+      });
+
+      function isoDate(date) {
+        return date.toISOString().slice(0, 10);
+      }
+
+      function parseIsoDate(value) {
+        const parts = String(value || "").split("-");
+        if (parts.length !== 3) return null;
+        const year = Number(parts[0]);
+        const month = Number(parts[1]);
+        const day = Number(parts[2]);
+        if (!year || !month || !day) return null;
+        return new Date(year, month - 1, day);
+      }
+
+      function getMonday(date) {
+        const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const day = copy.getDay();
+        const delta = day === 0 ? -6 : 1 - day;
+        copy.setDate(copy.getDate() + delta);
+        return copy;
+      }
+
+      function addDays(date, days) {
+        const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        copy.setDate(copy.getDate() + days);
+        return copy;
+      }
+
+      function formatDay(date) {
+        return date.toLocaleDateString("es-MX", {
+          weekday: "long",
+          day: "2-digit",
+          month: "2-digit"
+        });
+      }
+
+      function formatWeekRange(start) {
+        const end = addDays(start, 6);
+        return `${start.toLocaleDateString("es-MX")} - ${end.toLocaleDateString("es-MX")}`;
+      }
+
+      function setStatus(message, type) {
+        formStatus.textContent = message || "";
+        formStatus.className = "status" + (type ? ` ${type}` : "");
+      }
+
+      function updateMeta(updatedAt) {
+        metaUser.textContent = `Usuario: ${state.currentName || state.currentEmail || "-"}`;
+        metaUpdated.textContent = `Actualizado: ${updatedAt ? new Date(updatedAt).toLocaleString("es-MX") : "-"}`;
+      }
+
+      function getRowsForSlot(dateStr, hour) {
+        return state.rows.filter((row) => row.date === dateStr && row.hour === hour);
+      }
+
+      function canDelete(row) {
+        return state.isGerente || String(row.createdByEmail || "").toLowerCase() === String(state.currentEmail || "").toLowerCase();
+      }
+
+      async function deleteReservation(id) {
+        const ok = window.confirm("¿Borrar esta reserva?");
+        if (!ok) return;
+        const res = await fetch(`/api/viceroy/reservas/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          credentials: "same-origin"
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setStatus(data && data.error ? data.error : `No se pudo borrar (${res.status})`, "error");
+          return;
+        }
+        setStatus("Reserva borrada.", "ok");
+        await loadRows();
+      }
+
+      function renderSchedule() {
+        schedule.innerHTML = "";
+        const weekStart = state.weekStart || getMonday(new Date());
+        weekLabel.textContent = `Semana: ${formatWeekRange(weekStart)}`;
+
+        const headBlank = document.createElement("div");
+        headBlank.className = "head";
+        headBlank.textContent = "Hora";
+        schedule.appendChild(headBlank);
+
+        const days = Array.from({ length: 7 }, (_, idx) => addDays(weekStart, idx));
+        days.forEach((day) => {
+          const cell = document.createElement("div");
+          cell.className = "head";
+          cell.textContent = formatDay(day);
+          schedule.appendChild(cell);
+        });
+
+        HOURS.forEach((hour) => {
+          const endHour = String(Number(hour.slice(0, 2)) + 1).padStart(2, "0") + ":00";
+          const timeCell = document.createElement("div");
+          timeCell.className = "time-col";
+          timeCell.textContent = `${hour} - ${endHour}`;
+          schedule.appendChild(timeCell);
+
+          days.forEach((day) => {
+            const dateStr = isoDate(day);
+            const slot = document.createElement("div");
+            slot.className = "slot";
+            const rows = getRowsForSlot(dateStr, hour);
+            if (!rows.length) slot.classList.add("empty");
+            rows.forEach((row) => {
+              const card = document.createElement("div");
+              card.className = "reservation";
+              const room = document.createElement("div");
+              room.className = "reservation-room";
+              room.textContent = ROOM_LABELS[row.room] || row.room;
+              const title = document.createElement("div");
+              title.className = "reservation-title";
+              title.textContent = row.title;
+              const meta = document.createElement("div");
+              meta.className = "reservation-meta";
+              meta.textContent = row.createdByName
+                ? `Reservó: ${row.createdByName}`
+                : `Reservó: ${row.createdByEmail || "-"}`;
+              card.appendChild(room);
+              card.appendChild(title);
+              card.appendChild(meta);
+              if (canDelete(row)) {
+                const btn = document.createElement("button");
+                btn.className = "btn danger";
+                btn.type = "button";
+                btn.textContent = "Borrar";
+                btn.addEventListener("click", () => deleteReservation(row.id));
+                card.appendChild(btn);
+              }
+              slot.appendChild(card);
+            });
+            schedule.appendChild(slot);
+          });
+        });
+      }
+
+      async function loadRows() {
+        const from = isoDate(state.weekStart);
+        const to = isoDate(addDays(state.weekStart, 6));
+        const res = await fetch(`/api/viceroy/reservas?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, {
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setStatus(data && data.error ? data.error : `No se pudo cargar (${res.status})`, "error");
+          return;
+        }
+        state.rows = Array.isArray(data.rows) ? data.rows : [];
+        state.currentEmail = data.currentEmail || "";
+        state.currentName = data.currentName || "";
+        state.isGerente = Boolean(data.isGerente);
+        updateMeta(data.updatedAt);
+        renderSchedule();
+      }
+
+      async function saveReservation() {
+        setStatus("", "");
+        const payload = {
+          date: bookingDate.value,
+          room: bookingRoom.value,
+          hour: bookingHour.value,
+          title: bookingTitle.value
+        };
+        const res = await fetch("/api/viceroy/reservas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          setStatus("Ese horario ya está ocupado en esa sala.", "error");
+          await loadRows();
+          return;
+        }
+        if (!res.ok) {
+          setStatus(data && data.error ? data.error : `No se pudo guardar (${res.status})`, "error");
+          return;
+        }
+        setStatus("Reserva guardada.", "ok");
+        bookingTitle.value = "";
+        state.weekStart = getMonday(parseIsoDate(bookingDate.value) || new Date());
+        await loadRows();
+      }
+
+      function syncWeekFromDate() {
+        const selected = parseIsoDate(bookingDate.value) || new Date();
+        state.weekStart = getMonday(selected);
+        loadRows();
+      }
+
+      bookingDate.value = isoDate(new Date());
+      state.weekStart = getMonday(new Date());
+
+      saveBtn.addEventListener("click", saveReservation);
+      reloadBtn.addEventListener("click", loadRows);
+      bookingDate.addEventListener("change", syncWeekFromDate);
+      prevWeekBtn.addEventListener("click", () => {
+        state.weekStart = addDays(state.weekStart, -7);
+        bookingDate.value = isoDate(state.weekStart);
+        loadRows();
+      });
+      nextWeekBtn.addEventListener("click", () => {
+        state.weekStart = addDays(state.weekStart, 7);
+        bookingDate.value = isoDate(state.weekStart);
+        loadRows();
+      });
+      todayBtn.addEventListener("click", () => {
+        bookingDate.value = isoDate(new Date());
+        state.weekStart = getMonday(new Date());
+        loadRows();
+      });
+
+      loadRows();
+    })();
+  </script>
+</body>
+</html>
