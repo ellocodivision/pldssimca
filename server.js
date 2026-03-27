@@ -5994,7 +5994,6 @@ app.get('/gerente-ventas', (req, res) => {
 
 app.get('/gerente-ventas/:devSlug', (req, res) => {
   const dev = getRequestedDevelopment(req);
-  const onlyInteractive = dev.slug === 'viceroy-piloto';
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -6034,16 +6033,16 @@ app.get('/gerente-ventas/:devSlug', (req, res) => {
           <h2 class="name">Plano Interactivo</h2>
           <p class="desc">Marcado de unidades por piso y guardado base.</p>
         </a>
-        ${onlyInteractive ? '' : `<a class="card" href="/gerente-ventas/${dev.slug}/plano-ventas?dev=${dev.slug}">
+        <a class="card" href="/gerente-ventas/${dev.slug}/plano-ventas?dev=${dev.slug}">
           <span class="tag">B</span>
           <h2 class="name">Plano Ventas (Editor)</h2>
           <p class="desc">Editor visual completo de PDF, tabla y estado de unidades.</p>
-        </a>`}
-        ${onlyInteractive ? '' : `<a class="card" href="/gerente-ventas/${dev.slug}/plano-descargar?dev=${dev.slug}">
+        </a>
+        <a class="card" href="/gerente-ventas/${dev.slug}/plano-descargar?dev=${dev.slug}">
           <span class="tag">C</span>
           <h2 class="name">Plano Descargar</h2>
           <p class="desc">Descarga rápida del PDF con carga automática de datos.</p>
-        </a>`}
+        </a>
       </div>
     </div>
   </body></html>`);
