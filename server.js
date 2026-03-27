@@ -538,14 +538,15 @@ function getDevelopmentFloorDir(devSlug) {
 
 function getDevelopmentFloorSearchDirs(devSlug) {
   const primary = getDevelopmentFloorDir(devSlug);
+  const repoFloorDir = path.join(REPO_DATA_DIR, 'developments', devSlug, 'plano-ventas-floors');
   if (devSlug === DEFAULT_DEVELOPMENT_SLUG) {
     return [primary, FLOOR_JSON_DIR];
   }
   if (devSlug === 'viceroy-piloto') {
     const seedFloorDir = path.join(SEED_DEVELOPMENTS_DIR, devSlug, 'plano-ventas-floors');
-    return [primary, FLOOR_JSON_DIR, seedFloorDir];
+    return [primary, repoFloorDir, FLOOR_JSON_DIR, seedFloorDir];
   }
-  return [primary];
+  return [primary, repoFloorDir];
 }
 
 function getViceroyPilotoConfigPath() {
