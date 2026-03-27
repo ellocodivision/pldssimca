@@ -460,6 +460,17 @@ function ensureDataFiles() {
   DEVELOPMENTS.forEach((dev) => {
     const floorDir = path.join(DEVELOPMENTS_DIR, dev.slug, 'plano-ventas-floors');
     if (!fs.existsSync(floorDir)) fs.mkdirSync(floorDir, { recursive: true });
+    const repoFloorDir = path.join(REPO_DATA_DIR, 'developments', dev.slug, 'plano-ventas-floors');
+    try {
+      fs.readdirSync(repoFloorDir).forEach((name) => {
+        const lower = String(name || '').toLowerCase();
+        if (!lower.endsWith('.json')) return;
+        copyIfMissing(
+          path.join(repoFloorDir, name),
+          path.join(floorDir, name)
+        );
+      });
+    } catch {}
   });
   if (!fs.existsSync(SUBMISSIONS_PATH)) fs.writeFileSync(SUBMISSIONS_PATH, '[]', 'utf-8');
   if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, '{}', 'utf-8');
@@ -815,7 +826,13 @@ function updateViceroyPilotoPresentationLayout(layoutPayload) {
 function listFloorJsonFiles(dir) {
   try {
     return fs.readdirSync(dir)
-      .filter((name) => FLOOR_JSON_FILE_RE.test(name))
+      .filter((name) => {
+        const lower = String(name || '').toLowerCase();
+        if (!lower.endsWith('.json')) return false;
+        if (/^version-.*\.json$/i.test(name)) return true;
+        if (FLOOR_MAPPED_JSON_FILE_RE.test(name)) return true;
+        return FLOOR_JSON_FILE_RE.test(name);
+      })
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
   } catch {
     return [];
