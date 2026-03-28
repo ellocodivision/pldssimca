@@ -820,6 +820,7 @@
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
         const vista = String((row && (row.vista || row.view)) || '').trim();
         const price = row && row.price != null ? row.price : (row && row.precio != null ? row.precio : null);
+        const whisperAssignment = getWhisperAssignmentDetails(u);
         return {
           unidad: u,
           tipologia: tipologia,
@@ -832,21 +833,23 @@
           price: price,
           asesorAsignado: String(zone && zone.asesorAsignado || '').trim(),
           asesorAsignadoCorreo: String(zone && zone.asesorAsignadoCorreo || '').trim().toLowerCase(),
-          whisperOption: getWhisperOptionForUnit(u)
+          whisperOption: whisperAssignment ? whisperAssignment.optionKey : '',
+          whisperAssignment: whisperAssignment
         };
       }
 
-      function getWhisperOptionForUnit(unit) {
+      function getWhisperAssignmentDetails(unit) {
         const target = unitKey(unit);
-        if (!target) return '';
+        if (!target) return null;
         for (const row of (state.whisperlistRows || [])) {
           const kpi = row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
-          if (unitKey(kpi.opcionA) === target) return 'opcionA';
-          if (unitKey(kpi.opcionB) === target) return 'opcionB';
-          if (unitKey(kpi.opcionC) === target) return 'opcionC';
-          if (unitKey(kpi.opcionD) === target) return 'opcionD';
+          const clientName = String(row && row.nombreCliente || '').trim() || 'Cliente';
+          if (unitKey(kpi.opcionA) === target) return { optionKey: 'opcionA', optionLabel: 'Opción A', clientName };
+          if (unitKey(kpi.opcionB) === target) return { optionKey: 'opcionB', optionLabel: 'Opción B', clientName };
+          if (unitKey(kpi.opcionC) === target) return { optionKey: 'opcionC', optionLabel: 'Opción C', clientName };
+          if (unitKey(kpi.opcionD) === target) return { optionKey: 'opcionD', optionLabel: 'Opción D', clientName };
         }
-        return '';
+        return null;
       }
 
       function getUserEditableWhisperlistRows() {
@@ -893,7 +896,9 @@
         state.selectedUnitInfo = info || null;
         fillClientOptions();
         els.assignUnitLabel.textContent = info && info.unidad ? info.unidad : 'Unidad -';
-        els.assignStatus.textContent = '';
+        els.assignStatus.textContent = info && info.whisperAssignment
+          ? (info.whisperAssignment.optionLabel + ' - ' + info.whisperAssignment.clientName)
+          : '';
         els.assignClientSelect.value = '';
         els.assignOptionSelect.value = 'opcionA';
         els.unitAssignmentBox.classList.remove('hidden');
@@ -1171,11 +1176,14 @@
           const color = info.status === 'vendida'
             ? '#d65353'
             : (info.whisperOption ? '#e2b93b' : '#41ac63');
+          const tooltip = info.whisperAssignment
+            ? esc(info.whisperAssignment.optionLabel + ' - ' + info.whisperAssignment.clientName)
+            : '';
           const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
           const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
 
-          return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="' + color + '" fill-opacity="0.38" stroke="' + color + '" stroke-width="2" style="cursor:pointer"></polygon>' +
-            '<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#0f1014" style="cursor:pointer">' + esc(info.unidad || '') + '</text>';
+          return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" title="' + tooltip + '" points="' + polygon + '" fill="' + color + '" fill-opacity="0.38" stroke="' + color + '" stroke-width="2" style="cursor:pointer"></polygon>' +
+            '<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" title="' + tooltip + '" x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#0f1014" style="cursor:pointer">' + esc(info.unidad || '') + '</text>';
         }).join('');
 
         state.selectedFloorRows = rows;
