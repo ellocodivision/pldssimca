@@ -289,6 +289,12 @@
           <label for="unitTipologia">Tipología</label>
           <input id="unitTipologia" type="text" placeholder="Ej: T1 / Tipo A">
         </div>
+        <div id="asesorRow" style="display:none;margin-top:8px;">
+          <label for="unitAsesor">Asesor asignado</label>
+          <select id="unitAsesor">
+            <option value="">Sin asignar</option>
+          </select>
+        </div>
         <div class="btn-row">
           <button id="applyUnitBtn">Guardar etiqueta</button>
           <button id="autoLabelBtn">Auto (1,2,3)</button>
@@ -400,6 +406,8 @@
       zoom: 1,
       autoMapping: false,
       imageLoadMode: "replace"
+      ,
+      whisperlistSellers: []
     };
 
     const stage = document.getElementById("stage");
@@ -439,6 +447,8 @@
     const unitLabel = document.getElementById("unitLabel");
     const tipologiaRow = document.getElementById("tipologiaRow");
     const unitTipologia = document.getElementById("unitTipologia");
+    const asesorRow = document.getElementById("asesorRow");
+    const unitAsesor = document.getElementById("unitAsesor");
     const applyUnitBtn = document.getElementById("applyUnitBtn");
     const autoLabelBtn = document.getElementById("autoLabelBtn");
     const undoZoneEditBtn = document.getElementById("undoZoneEditBtn");
@@ -466,6 +476,9 @@
     const DEV_LABEL = String(DEV || "ceiba").replace(/[-_]+/g, " ").toUpperCase();
     if (tipologiaRow) {
       tipologiaRow.style.display = IS_VICEROY_PILOTO ? "block" : "none";
+    }
+    if (asesorRow) {
+      asesorRow.style.display = IS_VICEROY_PILOTO ? "block" : "none";
     }
     if (autoMapWrap) {
       autoMapWrap.style.display = "block";
@@ -577,7 +590,39 @@
       if (unitTipologia) {
         unitTipologia.value = zone ? String(zone.tipologia || "") : "";
       }
+      if (unitAsesor) {
+        unitAsesor.value = zone ? String(zone.asesorAsignadoCorreo || "") : "";
+      }
       updateZoneAdjustControls(zone);
+    }
+
+    function populateAsesorOptions() {
+      if (!unitAsesor) return;
+      const currentValue = String(unitAsesor.value || "");
+      const options = [`<option value="">Sin asignar</option>`];
+      state.whisperlistSellers.forEach((seller) => {
+        const correo = String(seller && seller.correo || "").trim().toLowerCase();
+        const asesor = String(seller && seller.asesor || "").trim();
+        if (!correo || !asesor) return;
+        options.push(`<option value="${escapeHtml(correo)}">${escapeHtml(`${asesor} (${correo})`)}</option>`);
+      });
+      unitAsesor.innerHTML = options.join("");
+      unitAsesor.value = currentValue;
+    }
+
+    async function loadWhisperlistSellers() {
+      if (!IS_VICEROY_PILOTO) return;
+      try {
+        const response = await fetch("/api/whisperlist/sellers", {
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        state.whisperlistSellers = Array.isArray(data && data.sellers) ? data.sellers : [];
+        populateAsesorOptions();
+        syncSelectionInputs();
+      } catch {}
     }
 
     function clearSelection() {
@@ -842,6 +887,8 @@
                 id: zoneId,
                 label: String((zone && zone.label) || ""),
                 tipologia: String((zone && zone.tipologia) || ""),
+                asesorAsignado: String((zone && zone.asesorAsignado) || ""),
+                asesorAsignadoCorreo: String((zone && zone.asesorAsignadoCorreo) || "").trim().toLowerCase(),
                 labelOffset,
                 points
               };
@@ -1715,6 +1762,8 @@
             id: `zone-${state.nextZoneId++}`,
             label: String(maxNumericLabel),
             tipologia: "",
+            asesorAsignado: "",
+            asesorAsignadoCorreo: "",
             labelOffset: { x: 0, y: 0 },
             points
           });
@@ -1765,6 +1814,8 @@
         id: `zone-${state.nextZoneId++}`,
         label: String(floor.zones.length + 1),
         tipologia: "",
+        asesorAsignado: "",
+        asesorAsignadoCorreo: "",
         labelOffset: { x: 0, y: 0 },
         points: [...state.drawingPoints]
       };
@@ -1806,6 +1857,8 @@
         id: `zone-${state.nextZoneId++}`,
         label: source.label,
         tipologia: String(source.tipologia || ""),
+        asesorAsignado: String(source.asesorAsignado || ""),
+        asesorAsignadoCorreo: String(source.asesorAsignadoCorreo || "").trim().toLowerCase(),
         labelOffset: {
           x: source.labelOffset && Number.isFinite(source.labelOffset.x) ? source.labelOffset.x : 0,
           y: source.labelOffset && Number.isFinite(source.labelOffset.y) ? source.labelOffset.y : 0
@@ -1832,6 +1885,12 @@
       zone.label = label;
       if (IS_VICEROY_PILOTO && unitTipologia) {
         zone.tipologia = String(unitTipologia.value || "").trim();
+      }
+      if (IS_VICEROY_PILOTO && unitAsesor) {
+        const selectedEmail = String(unitAsesor.value || "").trim().toLowerCase();
+        const selectedSeller = state.whisperlistSellers.find((seller) => String(seller && seller.correo || "").trim().toLowerCase() === selectedEmail);
+        zone.asesorAsignadoCorreo = selectedEmail;
+        zone.asesorAsignado = selectedSeller ? String(selectedSeller.asesor || "").trim() : "";
       }
       render();
     }
@@ -1935,9 +1994,10 @@
       zoneList.innerHTML = floor.zones.map((zone) => {
         const active = selectedIds.has(zone.id) ? "active selected" : "";
         const tipologia = String(zone.tipologia || "").trim();
-        const left = tipologia
-          ? `${escapeHtml(zone.label)} · <strong>${escapeHtml(tipologia)}</strong>`
-          : escapeHtml(zone.label);
+        const asesor = String(zone.asesorAsignado || "").trim();
+        let left = escapeHtml(zone.label);
+        if (tipologia) left += ` · <strong>${escapeHtml(tipologia)}</strong>`;
+        if (asesor) left += ` · <em>${escapeHtml(asesor)}</em>`;
         return `<li class="zone-item ${active}" data-zone-id="${zone.id}"><span>${left}</span><span>${zone.points.length} pts</span></li>`;
       }).join("");
 
@@ -2520,6 +2580,8 @@
             state.copiedZones = zones.map((zone) => ({
               label: zone.label,
               tipologia: String(zone.tipologia || ""),
+              asesorAsignado: String(zone.asesorAsignado || ""),
+              asesorAsignadoCorreo: String(zone.asesorAsignadoCorreo || "").trim().toLowerCase(),
               labelOffset: {
                 x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
                 y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
@@ -2542,6 +2604,8 @@
               id: `zone-${state.nextZoneId++}`,
               label: zone.label,
               tipologia: String(zone.tipologia || ""),
+              asesorAsignado: String(zone.asesorAsignado || ""),
+              asesorAsignadoCorreo: String(zone.asesorAsignadoCorreo || "").trim().toLowerCase(),
               labelOffset: {
                 x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
                 y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
@@ -2574,6 +2638,8 @@
     setDrawStraight(state.drawStraight);
     setDrawColor(state.drawColor);
     setPaintTool(state.paintTool);
+    populateAsesorOptions();
+    loadWhisperlistSellers();
     updateHint();
     render();
     enableButtons();

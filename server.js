@@ -5440,6 +5440,16 @@ app.get('/api/whisperlist', async (req, res) => {
   }
 });
 
+app.get('/api/whisperlist/sellers', async (req, res) => {
+  try {
+    const data = await readWhisperlistData();
+    const sellers = getWhisperlistSellers(data.rows);
+    return res.json({ ok: true, sellers });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudieron leer vendedores de whisperlist' });
+  }
+});
+
 app.get('/api/whisperlist/qr-codes', requireGerente, async (req, res) => {
   try {
     const data = await readWhisperlistData();
