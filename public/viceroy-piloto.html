@@ -177,6 +177,11 @@
           <select id="floorSelect"></select>
           <button id="reloadBtn" type="button">Recargar</button>
         </div>
+        <div class="row" style="margin-top:8px;">
+          <label class="help">JSON mapeado
+            <select id="mappedJsonSelect"></select>
+          </label>
+        </div>
         <p id="dataStatus" class="status"></p>
       </div>
 
@@ -369,7 +374,7 @@
         activeFloorId: '',
         inventoryRows: [],
         config: {
-          tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [],
+          tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], selectedFloorJsonName: '', pages: [],
           presentationLayout: { ...DEFAULT_LAYOUT }
         },
         drag: null
@@ -386,6 +391,7 @@
 
       const els = {
         floorSelect: document.getElementById('floorSelect'),
+        mappedJsonSelect: document.getElementById('mappedJsonSelect'),
         reloadBtn: document.getElementById('reloadBtn'),
         dataStatus: document.getElementById('dataStatus'),
         saveStatus: document.getElementById('saveStatus'),
@@ -591,6 +597,24 @@
         els.floorSelect.value = state.activeFloorId || '';
       }
 
+      async function loadMappedJsonOptions() {
+        if (!els.mappedJsonSelect) return;
+        try {
+          const res = await fetch('/api/plano-ventas/json-files?dev=viceroy-piloto', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          const files = Array.isArray(data.files) ? data.files : [];
+          const selected = String(state.config.selectedFloorJsonName || '').trim();
+          const options = ['<option value="">Ultimo JSON detectado</option>'].concat(files.map(function (name) {
+            const safe = String(name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            return '<option value="' + safe + '">' + safe + '</option>';
+          }));
+          els.mappedJsonSelect.innerHTML = options.join('');
+          els.mappedJsonSelect.value = selected || '';
+        } catch {
+          els.mappedJsonSelect.innerHTML = '<option value="">Ultimo JSON detectado</option>';
+        }
+      }
+
       function renderImage() {
         const floor = activeFloor();
         if (!floor || !floor.imageDataUrl) {
@@ -608,20 +632,21 @@
       async function loadAll() {
         els.dataStatus.textContent = 'Cargando datos...';
         buildFontDropdowns();
-        const [cfgRes, floorRes, invRes] = await Promise.all([
-          fetch('/api/viceroy-piloto/config', { credentials: 'same-origin' }),
-          fetch('/api/viceroy-piloto/floors', { credentials: 'same-origin' }),
-          fetch('/api/viceroy-piloto/inventory', { credentials: 'same-origin' })
-        ]);
+        const cfgRes = await fetch('/api/viceroy-piloto/config', { credentials: 'same-origin' });
         const cfg = await cfgRes.json().catch(function () { return {}; });
-        const floorData = await floorRes.json().catch(function () { return {}; });
-        const invData = await invRes.json().catch(function () { return {}; });
-
         if (!cfgRes.ok) throw new Error(cfg.error || 'No se pudo leer config');
-        if (!floorRes.ok) throw new Error(floorData.error || 'No se pudieron leer pisos');
-
         state.config = cfg.config || state.config;
         ensureLayout();
+        await loadMappedJsonOptions();
+        const selectedJsonName = String(state.config.selectedFloorJsonName || '').trim();
+        const floorUrl = '/api/viceroy-piloto/floors' + (selectedJsonName ? ('?name=' + encodeURIComponent(selectedJsonName)) : '');
+        const [floorRes, invRes] = await Promise.all([
+          fetch(floorUrl, { credentials: 'same-origin' }),
+          fetch('/api/viceroy-piloto/inventory', { credentials: 'same-origin' })
+        ]);
+        const floorData = await floorRes.json().catch(function () { return {}; });
+        const invData = await invRes.json().catch(function () { return {}; });
+        if (!floorRes.ok) throw new Error(floorData.error || 'No se pudieron leer pisos');
         state.floors = Array.isArray(floorData.floors) ? floorData.floors : [];
         state.activeFloorId = state.floors[0] ? state.floors[0].id : '';
         state.inventoryRows = Array.isArray(invData.rows) ? invData.rows : [];
@@ -632,10 +657,41 @@
         fillControlsFromLayout();
         applyLayoutToPreview();
 
-        els.dataStatus.textContent = 'Datos cargados.';
+        const sourceLabel = Array.isArray(floorData.loadedFiles) && floorData.loadedFiles[0]
+          ? floorData.loadedFiles[0]
+          : 'ultimo JSON detectado';
+        els.dataStatus.textContent = 'Datos cargados desde: ' + sourceLabel;
+      }
+
+      async function persistSelectedMappedJson() {
+        const selectedFloorJsonName = String(state.config.selectedFloorJsonName || '').trim();
+        let res;
+        let data;
+        try {
+          res = await fetch('/api/viceroy-piloto/layout', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              presentationLayout: ensureLayout(),
+              selectedFloorJsonName: selectedFloorJsonName
+            })
+          });
+          data = await res.json().catch(function () { return {}; });
+        } catch (err) {
+          data = { error: err && err.message ? err.message : 'Error de red' };
+          res = { ok: false };
+        }
+        if (!res.ok) throw new Error(data.error || 'No se pudo guardar el JSON seleccionado');
+        if (typeof data.selectedFloorJsonName === 'string') {
+          state.config.selectedFloorJsonName = data.selectedFloorJsonName;
+        }
       }
 
       async function saveLayout() {
+        if (els.mappedJsonSelect) {
+          state.config.selectedFloorJsonName = String(els.mappedJsonSelect.value || '').trim();
+        }
         syncLayoutFromControls();
         els.saveStatus.textContent = 'Guardando...';
         let res;
@@ -645,7 +701,10 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ presentationLayout: ensureLayout() })
+            body: JSON.stringify({
+              presentationLayout: ensureLayout(),
+              selectedFloorJsonName: String(state.config.selectedFloorJsonName || '')
+            })
           });
           data = await res.json().catch(function () { return {}; });
         } catch (err) {
@@ -671,6 +730,9 @@
           }
         } else if (data.presentationLayout && typeof data.presentationLayout === 'object') {
           state.config.presentationLayout = { ...ensureLayout(), ...data.presentationLayout };
+          if (typeof data.selectedFloorJsonName === 'string') {
+            state.config.selectedFloorJsonName = data.selectedFloorJsonName;
+          }
         }
         fillControlsFromLayout();
         applyLayoutToPreview();
@@ -681,6 +743,18 @@
         state.activeFloorId = String(els.floorSelect.value || '');
         renderImage();
       });
+
+      if (els.mappedJsonSelect) {
+        els.mappedJsonSelect.addEventListener('change', async function () {
+          state.config.selectedFloorJsonName = String(els.mappedJsonSelect.value || '').trim();
+          try {
+            await persistSelectedMappedJson();
+            await loadAll();
+          } catch (err) {
+            els.dataStatus.textContent = err && err.message ? err.message : 'Error de carga';
+          }
+        });
+      }
 
       ['overlayX', 'overlayY', 'overlayWidth', 'overlayBg', 'overlayBorder', 'tableHeaderBg', 'tableHeaderText', 'tableText', 'tableFontFamily', 'tableHeaderFontFamily', 'tableFontSize', 'tableHeaderFontSize', 'tableTextAlign', 'tableHeaderAlign', 'colWUnidad', 'colWRec', 'colWVista', 'colWM2', 'colWPrecio']
         .forEach(function (id) {

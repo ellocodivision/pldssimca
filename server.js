@@ -578,6 +578,7 @@ function defaultViceroyPilotoConfig() {
     unitTipologiaMap: {},
     unitRecamarasMap: {},
     mapFloorOrder: [],
+    selectedFloorJsonName: '',
     presentationLayout: {
       showBrand: false,
       showLevel: false,
@@ -715,11 +716,15 @@ function normalizeViceroyPilotoConfig(raw) {
       .filter(Boolean)
     : [];
   const presentationLayout = normalizeViceroyPresentationLayout(source.presentationLayout);
+  const selectedFloorJsonName = String(source.selectedFloorJsonName || '').trim()
+    ? sanitizeJsonFileName(source.selectedFloorJsonName)
+    : '';
   return {
     tipologias,
     unitTipologiaMap,
     unitRecamarasMap,
     mapFloorOrder,
+    selectedFloorJsonName,
     presentationLayout,
     pages,
     layoutSource: String(source.layoutSource || '').trim().toLowerCase() === 'custom' ? 'custom' : '',
@@ -823,6 +828,17 @@ function updateViceroyPilotoPresentationLayout(layoutPayload) {
     ...current,
     layoutSource: 'custom',
     presentationLayout: normalizeViceroyPresentationLayout(layoutPayload)
+  };
+  return writeViceroyPilotoConfig(next);
+}
+
+function updateViceroyPilotoSelectedFloorJson(fileName) {
+  const current = readViceroyPilotoConfig();
+  const next = {
+    ...current,
+    selectedFloorJsonName: String(fileName || '').trim()
+      ? sanitizeJsonFileName(fileName)
+      : ''
   };
   return writeViceroyPilotoConfig(next);
 }
@@ -3195,6 +3211,38 @@ function readMergedFloorsByDevelopment(devSlug) {
     } catch {}
   }
   return { floors, loadedFiles };
+}
+
+function readNamedFloorsByDevelopment(devSlug, requestedName) {
+  const rawName = String(requestedName || '').trim();
+  if (!rawName) return { floors: [], loadedFiles: [] };
+  const safeName = sanitizeJsonFileName(rawName);
+  if (!safeName) return { floors: [], loadedFiles: [] };
+  const floorDirs = getDevelopmentFloorSearchDirs(devSlug);
+  let filePath = '';
+  for (const dir of floorDirs) {
+    try {
+      const files = fs.readdirSync(dir);
+      const preferred = files.find((name) => String(name || '').toLowerCase() === safeName.toLowerCase());
+      if (preferred) {
+        filePath = path.join(dir, preferred);
+        break;
+      }
+    } catch {}
+  }
+  if (!filePath || !fs.existsSync(filePath)) return { floors: [], loadedFiles: [] };
+  try {
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const rawDevSlug = String(raw && raw.developmentSlug || '').trim().toLowerCase();
+    if (rawDevSlug && rawDevSlug !== devSlug) return { floors: [], loadedFiles: [] };
+    const payloadFloors = Array.isArray(raw)
+      ? raw
+      : (raw && Array.isArray(raw.floors) ? raw.floors : (raw && raw.imageDataUrl ? [raw] : []));
+    if (!payloadFloors.length) return { floors: [], loadedFiles: [] };
+    return { floors: payloadFloors, loadedFiles: [path.basename(filePath)] };
+  } catch {
+    return { floors: [], loadedFiles: [] };
+  }
 }
 
 function persistSubmission(formatId, formatName, payload) {
@@ -5781,8 +5829,15 @@ app.get('/viceroy-piloto-presentacion', requireViceroyPresentAccess, (req, res) 
 
 app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, res) => {
   const devSlug = 'viceroy-piloto';
-  const floorsData = readMergedFloorsByDevelopment(devSlug);
   const config = readViceroyPilotoConfig();
+  const requestedName = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+  const selectedName = requestedName || String(config.selectedFloorJsonName || '').trim();
+  let floorsData = selectedName
+    ? readNamedFloorsByDevelopment(devSlug, selectedName)
+    : readMergedFloorsByDevelopment(devSlug);
+  if ((!Array.isArray(floorsData.floors) || !floorsData.floors.length) && selectedName) {
+    floorsData = readMergedFloorsByDevelopment(devSlug);
+  }
   const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
   let inventoryRows = [];
   let inventoryFileName = '';
@@ -5841,16 +5896,28 @@ app.post('/api/viceroy-piloto/layout', (req, res) => {
   const layoutPayload = body.presentationLayout && typeof body.presentationLayout === 'object'
     ? body.presentationLayout
     : body;
-  const saved = updateViceroyPilotoPresentationLayout(layoutPayload);
+  let saved = updateViceroyPilotoPresentationLayout(layoutPayload);
+  if (Object.prototype.hasOwnProperty.call(body, 'selectedFloorJsonName')) {
+    saved = updateViceroyPilotoSelectedFloorJson(body.selectedFloorJsonName);
+  }
   return res.json({
     ok: true,
-    presentationLayout: saved.presentationLayout
+    presentationLayout: saved.presentationLayout,
+    selectedFloorJsonName: saved.selectedFloorJsonName || ''
   });
 });
 
 app.get('/api/viceroy-piloto/floors', (req, res) => {
   const devSlug = 'viceroy-piloto';
-  const data = readMergedFloorsByDevelopment(devSlug);
+  const config = readViceroyPilotoConfig();
+  const requestedName = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+  const selectedName = requestedName || String(config.selectedFloorJsonName || '').trim();
+  let data = selectedName
+    ? readNamedFloorsByDevelopment(devSlug, selectedName)
+    : readMergedFloorsByDevelopment(devSlug);
+  if ((!Array.isArray(data.floors) || !data.floors.length) && selectedName) {
+    data = readMergedFloorsByDevelopment(devSlug);
+  }
   return res.json({
     ok: true,
     dev: devSlug,
