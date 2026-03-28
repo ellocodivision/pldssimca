@@ -1066,7 +1066,7 @@
 
       function matchesFilter(info) {
         if (!state.showAllUnits && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
-        if (state.showAllOnMap) return true;
+        if (state.showAllOnMap || state.showAllUnits) return true;
         if (!state.selectedTipologia) return true;
         return norm(info.tipologia) === norm(state.selectedTipologia);
       }
@@ -1075,7 +1075,7 @@
         const bucket = getBucketMeta(state.selectedBedroom);
         const chips = [
           '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
-          '<span class="chip">Tipologia: ' + esc(state.showAllOnMap ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
+          '<span class="chip">Tipologia: ' + esc((state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
           '<span class="chip">Disponibles: ' + stats.available + '</span>',
@@ -1167,7 +1167,7 @@
         renderFilterChips({ shown: shown, available: available, sold: sold });
 
         const floorName = floor.floorDisplay || floor.name || floor.id;
-        const tipTxt = state.showAllOnMap ? 'TODAS' : (state.selectedTipologia || 'N/D');
+        const tipTxt = (state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D');
         els.floorsTopLabel.textContent = floorName + ' · Tipologia: ' + tipTxt;
         els.showAllOnMapBtn.textContent = state.showAllUnits ? 'Ver solo mis unidades' : 'Ver todas las unidades';
         applyPresentationLayout();
@@ -1297,6 +1297,7 @@
 
       els.showAllOnMapBtn.addEventListener('click', function () {
         state.showAllUnits = !state.showAllUnits;
+        state.showAllOnMap = state.showAllUnits;
         hideAssignmentBox();
         drawFloor();
       });
