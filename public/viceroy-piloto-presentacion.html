@@ -281,19 +281,25 @@
     }
     .stage {
       position: relative;
-      display: inline-block;
+      display: block;
       line-height: 0;
-      width: auto;
       max-width: calc(96vw + var(--overlay-gutter));
+    }
+    .map-canvas {
+      position: relative;
+      display: block;
+      width: fit-content;
+      max-width: min(96vw, 1500px);
+      margin-left: var(--overlay-gutter);
+      line-height: 0;
     }
     #baseImage {
       display: block;
       width: auto;
-      max-width: min(96vw, 1500px);
+      max-width: 100%;
       height: auto;
       border-radius: 0;
       background: #ffffff;
-      margin-left: var(--overlay-gutter);
     }
     #overlay {
       position: absolute;
@@ -409,6 +415,10 @@
     }
 
     @media (max-width: 980px) {
+      .map-canvas {
+        margin-left: 0;
+        max-width: 100%;
+      }
       .map-info-overlay {
         position: static;
         width: 100%;
@@ -510,8 +520,10 @@
                 <p class="assign-help">Solo verás tus clientes y tus unidades asignadas. Puedes cambiar a “ver todas” cuando necesites revisar el plano completo.</p>
               </div>
             </div>
-            <img id="baseImage" alt="Plano">
-            <svg id="overlay"></svg>
+            <div class="map-canvas">
+              <img id="baseImage" alt="Plano">
+              <svg id="overlay"></svg>
+            </div>
           </div>
         </div>
       </main>
