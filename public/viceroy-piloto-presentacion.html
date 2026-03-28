@@ -831,8 +831,22 @@
           vista: vista,
           price: price,
           asesorAsignado: String(zone && zone.asesorAsignado || '').trim(),
-          asesorAsignadoCorreo: String(zone && zone.asesorAsignadoCorreo || '').trim().toLowerCase()
+          asesorAsignadoCorreo: String(zone && zone.asesorAsignadoCorreo || '').trim().toLowerCase(),
+          whisperOption: getWhisperOptionForUnit(u)
         };
+      }
+
+      function getWhisperOptionForUnit(unit) {
+        const target = unitKey(unit);
+        if (!target) return '';
+        for (const row of (state.whisperlistRows || [])) {
+          const kpi = row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
+          if (unitKey(kpi.opcionA) === target) return 'opcionA';
+          if (unitKey(kpi.opcionB) === target) return 'opcionB';
+          if (unitKey(kpi.opcionC) === target) return 'opcionC';
+          if (unitKey(kpi.opcionD) === target) return 'opcionD';
+        }
+        return '';
       }
 
       function getUserEditableWhisperlistRows() {
@@ -926,6 +940,7 @@
             return String(row.id || '') === rowId ? { ...row, ...(nextRow || {}), canEdit: row.canEdit } : row;
           });
           els.assignStatus.textContent = 'Guardado en ' + optionKey.replace('opcion', 'Opción ') + ' para ' + (targetRow.nombreCliente || 'cliente') + '.';
+          drawFloor();
         } catch (_) {
           els.assignStatus.textContent = 'Error al guardar. Revisa tu sesión.';
         }
@@ -1153,7 +1168,9 @@
           if (info.status === 'vendida') sold += 1; else available += 1;
           rows.push(info);
 
-          const color = info.status === 'vendida' ? '#d65353' : '#41ac63';
+          const color = info.status === 'vendida'
+            ? '#d65353'
+            : (info.whisperOption ? '#e2b93b' : '#41ac63');
           const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
           const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
 
