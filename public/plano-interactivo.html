@@ -300,6 +300,14 @@
           <button id="autoLabelBtn">Auto (1,2,3)</button>
         </div>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e3e8e4;">
+          <p class="hint" style="margin:0 0 8px 0;">Borde visual de zonas seleccionadas</p>
+          <div class="btn-row">
+            <input id="zoneBorderColorInput" type="color" value="#2d8f63" aria-label="Color borde zona">
+            <input id="zoneBorderWidthInput" type="number" min="1" max="12" step="0.5" value="2" placeholder="Grosor">
+            <button id="applyZoneBorderBtn" type="button">Aplicar borde</button>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e3e8e4;">
           <p class="hint" style="margin:0 0 8px 0;">Ajuste por borde</p>
           <div class="btn-row" style="margin-top:6px;">
             <button id="undoZoneEditBtn" type="button" disabled>Deshacer zona</button>
@@ -451,6 +459,9 @@
     const unitAsesor = document.getElementById("unitAsesor");
     const applyUnitBtn = document.getElementById("applyUnitBtn");
     const autoLabelBtn = document.getElementById("autoLabelBtn");
+    const zoneBorderColorInput = document.getElementById("zoneBorderColorInput");
+    const zoneBorderWidthInput = document.getElementById("zoneBorderWidthInput");
+    const applyZoneBorderBtn = document.getElementById("applyZoneBorderBtn");
     const undoZoneEditBtn = document.getElementById("undoZoneEditBtn");
     const zoneLeftInBtn = document.getElementById("zoneLeftInBtn");
     const zoneLeftOutBtn = document.getElementById("zoneLeftOutBtn");
@@ -592,6 +603,12 @@
       }
       if (unitAsesor) {
         unitAsesor.value = zone ? String(zone.asesorAsignadoCorreo || "") : "";
+      }
+      if (zoneBorderColorInput) {
+        zoneBorderColorInput.value = zone && zone.borderColor ? String(zone.borderColor) : "#2d8f63";
+      }
+      if (zoneBorderWidthInput) {
+        zoneBorderWidthInput.value = zone && Number.isFinite(Number(zone.borderWidth)) ? String(Number(zone.borderWidth)) : "2";
       }
       updateZoneAdjustControls(zone);
     }
@@ -742,6 +759,24 @@
       if (!changed) return false;
       zone.points = nextPoints;
       return true;
+    }
+
+    function applyBorderStyleToSelection() {
+      const selectedZones = getSelectedZones();
+      if (!selectedZones.length) return;
+      const borderColor = String(zoneBorderColorInput && zoneBorderColorInput.value || "#2d8f63").trim() || "#2d8f63";
+      const borderWidth = Math.max(1, Math.min(12, Number(zoneBorderWidthInput && zoneBorderWidthInput.value) || 2));
+      pushZoneEditSnapshot(selectedZones);
+      selectedZones.forEach((zone) => {
+        zone.borderColor = borderColor;
+        zone.borderWidth = borderWidth;
+      });
+      syncSelectionInputs();
+      render();
+      enableButtons();
+      drawHint.textContent = selectedZones.length === 1
+        ? "Se actualizó el borde de la zona seleccionada."
+        : `Se actualizó el borde en ${selectedZones.length} zonas.`;
     }
 
     function adjustSelectedZoneBoundary(side, direction) {
@@ -1859,6 +1894,8 @@
         tipologia: String(source.tipologia || ""),
         asesorAsignado: String(source.asesorAsignado || ""),
         asesorAsignadoCorreo: String(source.asesorAsignadoCorreo || "").trim().toLowerCase(),
+        borderColor: String(source.borderColor || ""),
+        borderWidth: Number.isFinite(Number(source.borderWidth)) ? Number(source.borderWidth) : "",
         labelOffset: {
           x: source.labelOffset && Number.isFinite(source.labelOffset.x) ? source.labelOffset.x : 0,
           y: source.labelOffset && Number.isFinite(source.labelOffset.y) ? source.labelOffset.y : 0
@@ -1958,6 +1995,10 @@
         const label = escapeHtml(zone.label);
         const isSelected = selectedIds.has(zone.id);
         const isPrimary = zone.id === state.selectedZoneId;
+        const strokeColor = String(zone.borderColor || (isPrimary ? "#163c2c" : (isSelected ? "#245943" : "#2d8f63")));
+        const strokeWidth = Number.isFinite(Number(zone.borderWidth))
+          ? Number(zone.borderWidth)
+          : (isPrimary ? 3 : (isSelected ? 2.5 : 2));
         const labelHtml = state.showUnitLabels ? `
             <text
               data-label-zone-id="${zone.id}"
@@ -1977,7 +2018,7 @@
         ` : "";
         return `
           <g data-zone-id="${zone.id}">
-            <polygon points="${pts}" fill="var(--zone)" fill-opacity="0.24" stroke="${isPrimary ? "#163c2c" : (isSelected ? "#245943" : "#2d8f63")}" stroke-width="${isPrimary ? 3 : (isSelected ? 2.5 : 2)}" style="cursor: move;" />
+            <polygon points="${pts}" fill="var(--zone)" fill-opacity="0.24" stroke="${strokeColor}" stroke-width="${strokeWidth}" style="cursor: move;" />
             ${labelHtml}
           </g>
         `;
@@ -2441,6 +2482,7 @@
     if (zoneTopOutBtn) zoneTopOutBtn.addEventListener("click", () => adjustSelectedZoneBoundary("top", "out"));
     if (zoneBottomInBtn) zoneBottomInBtn.addEventListener("click", () => adjustSelectedZoneBoundary("bottom", "in"));
     if (zoneBottomOutBtn) zoneBottomOutBtn.addEventListener("click", () => adjustSelectedZoneBoundary("bottom", "out"));
+    if (applyZoneBorderBtn) applyZoneBorderBtn.addEventListener("click", applyBorderStyleToSelection);
     if (drawEyedropperBtn) {
       drawEyedropperBtn.addEventListener("click", async () => {
         if (!window.EyeDropper) {

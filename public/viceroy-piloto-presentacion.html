@@ -391,6 +391,26 @@
       color: #5f6573;
       line-height: 1.35;
     }
+    .unit-hover-tooltip {
+      position: fixed;
+      z-index: 40;
+      pointer-events: none;
+      max-width: 240px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(16, 18, 22, 0.92);
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.35;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 120ms ease, transform 120ms ease;
+    }
+    .unit-hover-tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
     .upload-tools {
       position: fixed;
       right: 12px;
@@ -530,6 +550,8 @@
     </div>
   </section>
 
+  <div id="unitHoverTooltip" class="unit-hover-tooltip hidden" aria-hidden="true"></div>
+
   <script>
     (function () {
       const params = new URLSearchParams(window.location.search || '');
@@ -598,6 +620,7 @@
         assignSaveBtn: document.getElementById('assignSaveBtn'),
         assignCloseBtn: document.getElementById('assignCloseBtn'),
         assignStatus: document.getElementById('assignStatus'),
+        unitHoverTooltip: document.getElementById('unitHoverTooltip'),
         inventoryUploadInput: document.getElementById('inventoryUploadInput'),
         inventoryUploadBtn: document.getElementById('inventoryUploadBtn'),
         inventoryUploadStatus: document.getElementById('inventoryUploadStatus')
@@ -880,6 +903,27 @@
         if (els.assignUnitLabel) els.assignUnitLabel.textContent = 'Unidad -';
         if (els.assignClientSelect) els.assignClientSelect.value = '';
         if (els.assignOptionSelect) els.assignOptionSelect.value = 'opcionA';
+      }
+
+      function hideHoverTooltip() {
+        if (!els.unitHoverTooltip) return;
+        els.unitHoverTooltip.classList.add('hidden');
+        els.unitHoverTooltip.classList.remove('show');
+        els.unitHoverTooltip.textContent = '';
+      }
+
+      function showHoverTooltip(text, clientX, clientY) {
+        if (!els.unitHoverTooltip || !text) {
+          hideHoverTooltip();
+          return;
+        }
+        els.unitHoverTooltip.textContent = text;
+        els.unitHoverTooltip.classList.remove('hidden');
+        const left = Math.min(window.innerWidth - 260, Math.max(12, clientX + 14));
+        const top = Math.min(window.innerHeight - 80, Math.max(12, clientY + 14));
+        els.unitHoverTooltip.style.left = left + 'px';
+        els.unitHoverTooltip.style.top = top + 'px';
+        els.unitHoverTooltip.classList.add('show');
       }
 
       function fillClientOptions() {
@@ -1176,14 +1220,11 @@
           const color = info.status === 'vendida'
             ? '#d65353'
             : (info.whisperOption ? '#e2b93b' : '#41ac63');
-          const tooltip = info.whisperAssignment
-            ? esc(info.whisperAssignment.optionLabel + ' - ' + info.whisperAssignment.clientName)
-            : '';
           const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
           const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
 
-          return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" title="' + tooltip + '" points="' + polygon + '" fill="' + color + '" fill-opacity="0.38" stroke="' + color + '" stroke-width="2" style="cursor:pointer"></polygon>' +
-            '<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" title="' + tooltip + '" x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#0f1014" style="cursor:pointer">' + esc(info.unidad || '') + '</text>';
+          return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="' + color + '" fill-opacity="0.38" stroke="' + color + '" stroke-width="2" style="cursor:pointer"></polygon>' +
+            '<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#0f1014" style="cursor:pointer">' + esc(info.unidad || '') + '</text>';
         }).join('');
 
         state.selectedFloorRows = rows;
@@ -1308,6 +1349,31 @@
           return;
         }
         showAssignmentBox(info);
+      });
+
+      els.overlay.addEventListener('mousemove', function (ev) {
+        const target = ev.target;
+        if (!target || typeof target.getAttribute !== 'function') {
+          hideHoverTooltip();
+          return;
+        }
+        const unidad = String(target.getAttribute('data-unidad') || '').trim();
+        if (!unidad) {
+          hideHoverTooltip();
+          return;
+        }
+        const info = state.selectedFloorRows.find(function (row) {
+          return String(row.unidad || '') === unidad;
+        }) || null;
+        if (!info || !info.whisperAssignment) {
+          hideHoverTooltip();
+          return;
+        }
+        showHoverTooltip(info.whisperAssignment.optionLabel + ' - ' + info.whisperAssignment.clientName, ev.clientX, ev.clientY);
+      });
+
+      els.overlay.addEventListener('mouseleave', function () {
+        hideHoverTooltip();
       });
 
       els.backToHomeBtn.addEventListener('click', function () {
