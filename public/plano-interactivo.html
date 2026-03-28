@@ -918,12 +918,18 @@
               const labelOffset = zone && zone.labelOffset && Number.isFinite(Number(zone.labelOffset.x)) && Number.isFinite(Number(zone.labelOffset.y))
                 ? { x: Number(zone.labelOffset.x), y: Number(zone.labelOffset.y) }
                 : { x: 0, y: 0 };
+              const borderColor = String((zone && zone.borderColor) || "").trim();
+              const borderWidth = Number.isFinite(Number(zone && zone.borderWidth))
+                ? Math.max(1, Math.min(12, Number(zone.borderWidth)))
+                : "";
               return {
                 id: zoneId,
                 label: String((zone && zone.label) || ""),
                 tipologia: String((zone && zone.tipologia) || ""),
                 asesorAsignado: String((zone && zone.asesorAsignado) || ""),
                 asesorAsignadoCorreo: String((zone && zone.asesorAsignadoCorreo) || "").trim().toLowerCase(),
+                borderColor,
+                borderWidth,
                 labelOffset,
                 points
               };
@@ -2624,6 +2630,8 @@
               tipologia: String(zone.tipologia || ""),
               asesorAsignado: String(zone.asesorAsignado || ""),
               asesorAsignadoCorreo: String(zone.asesorAsignadoCorreo || "").trim().toLowerCase(),
+              borderColor: String(zone.borderColor || ""),
+              borderWidth: Number.isFinite(Number(zone.borderWidth)) ? Number(zone.borderWidth) : "",
               labelOffset: {
                 x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
                 y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
@@ -2648,6 +2656,8 @@
               tipologia: String(zone.tipologia || ""),
               asesorAsignado: String(zone.asesorAsignado || ""),
               asesorAsignadoCorreo: String(zone.asesorAsignadoCorreo || "").trim().toLowerCase(),
+              borderColor: String(zone.borderColor || ""),
+              borderWidth: Number.isFinite(Number(zone.borderWidth)) ? Number(zone.borderWidth) : "",
               labelOffset: {
                 x: zone.labelOffset && Number.isFinite(zone.labelOffset.x) ? zone.labelOffset.x : 0,
                 y: zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0
