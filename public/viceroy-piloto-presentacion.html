@@ -20,6 +20,7 @@
       --overlay-top: 18px;
       --overlay-width: 360px;
       --overlay-bg: rgba(255,255,255,0.88);
+      --overlay-gutter: 408px;
       --overlay-border: #cdd2c6;
       --table-header-bg: #ecece4;
       --table-header-text: #666a75;
@@ -283,15 +284,16 @@
       display: inline-block;
       line-height: 0;
       width: auto;
-      max-width: 96vw;
+      max-width: calc(96vw + var(--overlay-gutter));
     }
     #baseImage {
       display: block;
-      width: min(96vw, 1500px);
-      max-width: 100%;
+      width: auto;
+      max-width: min(96vw, 1500px);
       height: auto;
       border-radius: 0;
       background: #ffffff;
+      margin-left: var(--overlay-gutter);
     }
     #overlay {
       position: absolute;
@@ -324,6 +326,65 @@
       backdrop-filter: blur(2px);
     }
     .map-info-overlay h3 { margin: 6px 0 8px; font-size: 12px; color: #666977; text-transform: uppercase; letter-spacing: 0.08em; }
+    .unit-assignment {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(102,105,119,0.18);
+      line-height: normal;
+    }
+    .unit-assignment.hidden { display: none !important; }
+    .assign-title {
+      margin: 0 0 6px;
+      font-size: 12px;
+      color: #666977;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .assign-unit {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #242830;
+    }
+    .assign-help {
+      margin: 6px 0 0;
+      font-size: 11px;
+      color: #666977;
+      line-height: 1.4;
+    }
+    .assign-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .assign-field label {
+      font-size: 11px;
+      color: #666977;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .assign-field select {
+      width: 100%;
+      border: 1px solid #cbd0c2;
+      border-radius: 10px;
+      background: #fff;
+      color: #242830;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    .assign-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .assign-status {
+      min-height: 18px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #5f6573;
+      line-height: 1.35;
+    }
     .upload-tools {
       position: fixed;
       right: 12px;
@@ -423,6 +484,31 @@
                   <tbody id="unitsTableBody"></tbody>
                 </table>
               </div>
+              <div id="unitAssignmentBox" class="unit-assignment hidden">
+                <p class="assign-title">Asignar Unidad a Whisperlist</p>
+                <p id="assignUnitLabel" class="assign-unit">Unidad -</p>
+                <div class="assign-field">
+                  <label for="assignClientSelect">Cliente</label>
+                  <select id="assignClientSelect">
+                    <option value="">Selecciona un cliente</option>
+                  </select>
+                </div>
+                <div class="assign-field">
+                  <label for="assignOptionSelect">Guardar en KPI</label>
+                  <select id="assignOptionSelect">
+                    <option value="opcionA">Opción A</option>
+                    <option value="opcionB">Opción B</option>
+                    <option value="opcionC">Opción C</option>
+                    <option value="opcionD">Opción D</option>
+                  </select>
+                </div>
+                <div class="assign-actions">
+                  <button id="assignSaveBtn" class="btn primary" type="button">Guardar</button>
+                  <button id="assignCloseBtn" class="btn" type="button">Cerrar</button>
+                </div>
+                <p id="assignStatus" class="assign-status"></p>
+                <p class="assign-help">Solo verás tus clientes y tus unidades asignadas. Puedes cambiar a “ver todas” cuando necesites revisar el plano completo.</p>
+              </div>
             </div>
             <img id="baseImage" alt="Plano">
             <svg id="overlay"></svg>
@@ -465,7 +551,12 @@
         selectedBedroom: '',
         selectedTipologia: '',
         showAllOnMap: false,
-        selectedFloorRows: []
+        showAllUnits: false,
+        selectedFloorRows: [],
+        currentEmail: '',
+        isGerente: false,
+        whisperlistRows: [],
+        selectedUnitInfo: null
       };
 
       const els = {
@@ -488,6 +579,13 @@
         backToHomeBtn: document.getElementById('backToHomeBtn'),
         backToTiposBtn: document.getElementById('backToTiposBtn'),
         showAllOnMapBtn: document.getElementById('showAllOnMapBtn'),
+        unitAssignmentBox: document.getElementById('unitAssignmentBox'),
+        assignUnitLabel: document.getElementById('assignUnitLabel'),
+        assignClientSelect: document.getElementById('assignClientSelect'),
+        assignOptionSelect: document.getElementById('assignOptionSelect'),
+        assignSaveBtn: document.getElementById('assignSaveBtn'),
+        assignCloseBtn: document.getElementById('assignCloseBtn'),
+        assignStatus: document.getElementById('assignStatus'),
         inventoryUploadInput: document.getElementById('inventoryUploadInput'),
         inventoryUploadBtn: document.getElementById('inventoryUploadBtn'),
         inventoryUploadStatus: document.getElementById('inventoryUploadStatus')
@@ -619,6 +717,9 @@
           if (!Number.isFinite(n)) return fallback;
           return (Math.max(0, n * scale) + 'px');
         };
+        const overlayWidthPx = Number(layout.overlayWidth);
+        const scaledOverlayWidth = Number.isFinite(overlayWidthPx) ? Math.max(220, overlayWidthPx * sx) : 360;
+        root.style.setProperty('--overlay-gutter', String(Math.max(260, scaledOverlayWidth + 48)) + 'px');
         root.style.setProperty('--overlay-left', scaledPx(layout.overlayX, '18px', sx));
         root.style.setProperty('--overlay-top', scaledPx(layout.overlayY, '18px', sy));
         root.style.setProperty('--overlay-width', scaledPx(layout.overlayWidth, '360px', sx));
@@ -716,8 +817,106 @@
           m2: m2,
           sqft: sqft,
           vista: vista,
-          price: price
+          price: price,
+          asesorAsignado: String(zone && zone.asesorAsignado || '').trim(),
+          asesorAsignadoCorreo: String(zone && zone.asesorAsignadoCorreo || '').trim().toLowerCase()
         };
+      }
+
+      function getUserEditableWhisperlistRows() {
+        return (state.whisperlistRows || []).filter(function (row) {
+          return row && row.canEdit;
+        });
+      }
+
+      function isUnitAssignedToCurrentUser(info) {
+        if (!info) return false;
+        if (state.isGerente) return true;
+        const owner = String(info.asesorAsignadoCorreo || '').trim().toLowerCase();
+        return !!owner && !!state.currentEmail && owner === state.currentEmail;
+      }
+
+      function userHasAssignedUnits() {
+        return state.floors.some(function (floor) {
+          return Array.isArray(floor && floor.zones) && floor.zones.some(function (zone) {
+            return isUnitAssignedToCurrentUser(resolveZoneInfo(zone));
+          });
+        });
+      }
+
+      function hideAssignmentBox() {
+        state.selectedUnitInfo = null;
+        if (els.unitAssignmentBox) els.unitAssignmentBox.classList.add('hidden');
+        if (els.assignStatus) els.assignStatus.textContent = '';
+        if (els.assignUnitLabel) els.assignUnitLabel.textContent = 'Unidad -';
+        if (els.assignClientSelect) els.assignClientSelect.value = '';
+        if (els.assignOptionSelect) els.assignOptionSelect.value = 'opcionA';
+      }
+
+      function fillClientOptions() {
+        const rows = getUserEditableWhisperlistRows();
+        const options = ['<option value="">Selecciona un cliente</option>'].concat(rows.map(function (row) {
+          const clientName = String(row.nombreCliente || '').trim() || 'Sin nombre';
+          const subtitle = [row.asesor, row.recamaras].filter(Boolean).join(' · ');
+          return '<option value="' + esc(row.id || '') + '">' + esc(subtitle ? (clientName + ' - ' + subtitle) : clientName) + '</option>';
+        }));
+        els.assignClientSelect.innerHTML = options.join('');
+      }
+
+      function showAssignmentBox(info) {
+        state.selectedUnitInfo = info || null;
+        fillClientOptions();
+        els.assignUnitLabel.textContent = info && info.unidad ? info.unidad : 'Unidad -';
+        els.assignStatus.textContent = '';
+        els.assignClientSelect.value = '';
+        els.assignOptionSelect.value = 'opcionA';
+        els.unitAssignmentBox.classList.remove('hidden');
+      }
+
+      async function saveUnitAssignment() {
+        const unitInfo = state.selectedUnitInfo;
+        const rowId = String(els.assignClientSelect.value || '').trim();
+        const optionKey = String(els.assignOptionSelect.value || '').trim();
+        if (!unitInfo || !unitInfo.unidad) {
+          els.assignStatus.textContent = 'Selecciona una unidad primero.';
+          return;
+        }
+        if (!rowId) {
+          els.assignStatus.textContent = 'Selecciona un cliente.';
+          return;
+        }
+        if (!/^opcion[ABCD]$/i.test(optionKey)) {
+          els.assignStatus.textContent = 'Selecciona una opción válida.';
+          return;
+        }
+        const targetRow = getUserEditableWhisperlistRows().find(function (row) {
+          return String(row.id || '') === rowId;
+        });
+        if (!targetRow) {
+          els.assignStatus.textContent = 'No se encontró el cliente seleccionado.';
+          return;
+        }
+        els.assignStatus.textContent = 'Guardando...';
+        try {
+          const res = await fetch('/api/whisperlist/rows/' + encodeURIComponent(rowId) + '/kpi', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [optionKey]: unitInfo.unidad })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            els.assignStatus.textContent = data.error || 'No se pudo guardar en Whisperlist.';
+            return;
+          }
+          const nextRow = data && data.row ? data.row : null;
+          state.whisperlistRows = state.whisperlistRows.map(function (row) {
+            return String(row.id || '') === rowId ? { ...row, ...(nextRow || {}), canEdit: row.canEdit } : row;
+          });
+          els.assignStatus.textContent = 'Guardado en ' + optionKey.replace('opcion', 'Opción ') + ' para ' + (targetRow.nombreCliente || 'cliente') + '.';
+        } catch (_) {
+          els.assignStatus.textContent = 'Error al guardar. Revisa tu sesión.';
+        }
       }
 
       function getMinimumPriceByBedroom(bucketId) {
@@ -854,6 +1053,7 @@
       }
 
       function matchesFilter(info) {
+        if (!state.showAllUnits && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
         if (state.showAllOnMap) return true;
         if (!state.selectedTipologia) return true;
         return norm(info.tipologia) === norm(state.selectedTipologia);
@@ -864,6 +1064,7 @@
         const chips = [
           '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
           '<span class="chip">Tipologia: ' + esc(state.showAllOnMap ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
+          '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
           '<span class="chip">Disponibles: ' + stats.available + '</span>',
           '<span class="chip">Vendidas: ' + stats.sold + '</span>'
@@ -903,6 +1104,7 @@
           els.baseImage.removeAttribute('src');
           els.overlay.innerHTML = '';
           state.selectedFloorRows = [];
+          hideAssignmentBox();
           renderUnitsTable([]);
           renderFilterChips({ shown: 0, available: 0, sold: 0 });
           return;
@@ -955,6 +1157,7 @@
         const floorName = floor.floorDisplay || floor.name || floor.id;
         const tipTxt = state.showAllOnMap ? 'TODAS' : (state.selectedTipologia || 'N/D');
         els.floorsTopLabel.textContent = floorName + ' · Tipologia: ' + tipTxt;
+        els.showAllOnMapBtn.textContent = state.showAllUnits ? 'Ver solo mis unidades' : 'Ver todas las unidades';
         applyPresentationLayout();
       }
 
@@ -962,6 +1165,8 @@
         state.selectedBedroom = bedroomId;
         state.selectedTipologia = '';
         state.showAllOnMap = false;
+        state.showAllUnits = false;
+        hideAssignmentBox();
         showView('tipologias');
         renderTipologias();
       }
@@ -969,6 +1174,8 @@
       function enterFloors(tipologiaId) {
         state.selectedTipologia = tipologiaId;
         state.showAllOnMap = false;
+        state.showAllUnits = false;
+        hideAssignmentBox();
         if (!state.activeFloorId && state.floors[0]) state.activeFloorId = state.floors[0].id;
         showView('floors');
         renderFloorTabs();
@@ -989,6 +1196,23 @@
         const data = await res.json().catch(function () { return {}; });
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar presentacion');
         state.canUploadInventory = await permissionPromise;
+        try {
+          const whisperRes = await fetch('/api/whisperlist', { cache: 'no-store', credentials: 'same-origin' });
+          if (whisperRes.ok) {
+            const whisperData = await whisperRes.json().catch(function () { return {}; });
+            state.currentEmail = String(whisperData.currentEmail || '').trim().toLowerCase();
+            state.isGerente = Boolean(whisperData.isGerente);
+            state.whisperlistRows = Array.isArray(whisperData.rows) ? whisperData.rows : [];
+          } else {
+            state.currentEmail = '';
+            state.isGerente = false;
+            state.whisperlistRows = [];
+          }
+        } catch (_) {
+          state.currentEmail = '';
+          state.isGerente = false;
+          state.whisperlistRows = [];
+        }
 
         const floors = Array.isArray(data.floors) ? data.floors : [];
         state.floors = floors.map(function (floor, idx) {
@@ -1034,27 +1258,44 @@
       els.overlay.addEventListener('click', function (ev) {
         const target = ev.target;
         if (!target || typeof target.getAttribute !== 'function') return;
-        const tipologia = String(target.getAttribute('data-tipologia') || '').trim();
-        if (!tipologia) return;
-        state.selectedTipologia = tipologia;
-        state.showAllOnMap = false;
-        els.showAllOnMapBtn.textContent = 'Ver todo el plano';
-        drawFloor();
+        const unidad = String(target.getAttribute('data-unidad') || '').trim();
+        if (!unidad) return;
+        const info = state.selectedFloorRows.find(function (row) {
+          return String(row.unidad || '') === unidad;
+        }) || null;
+        if (!info) return;
+        if (!isUnitAssignedToCurrentUser(info)) return;
+        if (!getUserEditableWhisperlistRows().length) {
+          els.assignStatus.textContent = 'No hay clientes disponibles en tu Whisperlist.';
+          els.unitAssignmentBox.classList.remove('hidden');
+          return;
+        }
+        showAssignmentBox(info);
       });
 
       els.backToHomeBtn.addEventListener('click', function () {
+        hideAssignmentBox();
         showView('home');
       });
 
       els.backToTiposBtn.addEventListener('click', function () {
+        hideAssignmentBox();
         showView('tipologias');
       });
 
       els.showAllOnMapBtn.addEventListener('click', function () {
-        state.showAllOnMap = !state.showAllOnMap;
-        els.showAllOnMapBtn.textContent = state.showAllOnMap ? 'Aplicar tipologia seleccionada' : 'Ver todo el plano';
+        state.showAllUnits = !state.showAllUnits;
+        hideAssignmentBox();
         drawFloor();
       });
+
+      if (els.assignSaveBtn) {
+        els.assignSaveBtn.addEventListener('click', saveUnitAssignment);
+      }
+
+      if (els.assignCloseBtn) {
+        els.assignCloseBtn.addEventListener('click', hideAssignmentBox);
+      }
 
       window.addEventListener('resize', function () {
         applyPresentationLayout();

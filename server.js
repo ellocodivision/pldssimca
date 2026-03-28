@@ -5548,7 +5548,10 @@ app.post('/api/whisperlist/rows/:id/kpi', async (req, res) => {
       ...target,
       pais: normalizeWhisperlistCountry(body.pais !== undefined ? body.pais : target.pais),
       ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
-      kpi: normalizeWhisperlistKpi(body || {}),
+      kpi: normalizeWhisperlistKpi({
+        ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
+        ...(body && typeof body === 'object' ? body : {})
+      }),
       updatedAt: new Date().toISOString()
     };
     data.rows[index] = nextRow;

@@ -27,6 +27,7 @@
       --col-w-5: 32%;
       --overlay-bg: rgba(255,255,255,0.88);
       --overlay-border: #cdd2c6;
+      --overlay-gutter: 408px;
     }
     * { box-sizing: border-box; }
     body {
@@ -92,7 +93,14 @@
       line-height: 0;
       min-width: 720px;
     }
-    #baseImage { width: 100%; max-width: 1500px; height: auto; display: block; background: #ddd; }
+    #baseImage {
+      width: auto;
+      max-width: 1500px;
+      height: auto;
+      display: block;
+      background: #ddd;
+      margin-left: var(--overlay-gutter);
+    }
     .overlay-box {
       position: absolute;
       left: 18px;
@@ -523,6 +531,7 @@
       function applyLayoutToPreview() {
         const p = ensureLayout();
         const scaled = scaledOverlayValues(p);
+        document.documentElement.style.setProperty('--overlay-gutter', String(Math.max(260, Number(scaled.w || 360) + 48)) + 'px');
         els.overlayBox.style.left = String(Math.max(0, Number(scaled.x || 18))) + 'px';
         els.overlayBox.style.top = String(Math.max(0, Number(scaled.y || 18))) + 'px';
         els.overlayBox.style.width = String(Math.max(220, Number(scaled.w || 360))) + 'px';
