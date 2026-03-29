@@ -402,6 +402,7 @@
       color: #fff;
       font-size: 12px;
       line-height: 1.35;
+      white-space: pre-line;
       box-shadow: 0 10px 24px rgba(0,0,0,0.18);
       opacity: 0;
       transform: translateY(4px);
@@ -856,23 +857,40 @@
           price: price,
           asesorAsignado: String(zone && zone.asesorAsignado || '').trim(),
           asesorAsignadoCorreo: String(zone && zone.asesorAsignadoCorreo || '').trim().toLowerCase(),
-          whisperOption: whisperAssignment ? whisperAssignment.optionKey : '',
+          whisperOption: whisperAssignment.length ? whisperAssignment[0].optionKey : '',
+          whisperAssignments: whisperAssignment,
           whisperAssignment: whisperAssignment
         };
       }
 
       function getWhisperAssignmentDetails(unit) {
         const target = unitKey(unit);
-        if (!target) return null;
+        if (!target) return [];
+        const matches = [];
         for (const row of (state.whisperlistRows || [])) {
           const kpi = row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
           const clientName = String(row && row.nombreCliente || '').trim() || 'Cliente';
-          if (unitKey(kpi.opcionA) === target) return { optionKey: 'opcionA', optionLabel: 'Opción A', clientName };
-          if (unitKey(kpi.opcionB) === target) return { optionKey: 'opcionB', optionLabel: 'Opción B', clientName };
-          if (unitKey(kpi.opcionC) === target) return { optionKey: 'opcionC', optionLabel: 'Opción C', clientName };
-          if (unitKey(kpi.opcionD) === target) return { optionKey: 'opcionD', optionLabel: 'Opción D', clientName };
+          if (unitKey(kpi.opcionA) === target) matches.push({ optionKey: 'opcionA', optionLabel: 'Opción A', clientName, rowId: String(row.id || '') });
+          if (unitKey(kpi.opcionB) === target) matches.push({ optionKey: 'opcionB', optionLabel: 'Opción B', clientName, rowId: String(row.id || '') });
+          if (unitKey(kpi.opcionC) === target) matches.push({ optionKey: 'opcionC', optionLabel: 'Opción C', clientName, rowId: String(row.id || '') });
+          if (unitKey(kpi.opcionD) === target) matches.push({ optionKey: 'opcionD', optionLabel: 'Opción D', clientName, rowId: String(row.id || '') });
         }
-        return null;
+        return matches;
+      }
+
+      function formatWhisperAssignments(assignments) {
+        const items = Array.isArray(assignments) ? assignments : [];
+        if (!items.length) return '';
+        return items.map(function (item) {
+          return item.optionLabel + ' - ' + item.clientName;
+        }).join('\n');
+      }
+
+      function getUnitOptionColor(info) {
+        const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
+        if (!assignments.length) return '#41ac63';
+        if (assignments.length === 1) return '#e2b93b';
+        return '#d96b53';
       }
 
       function getUserEditableWhisperlistRows() {
@@ -940,8 +958,8 @@
         state.selectedUnitInfo = info || null;
         fillClientOptions();
         els.assignUnitLabel.textContent = info && info.unidad ? info.unidad : 'Unidad -';
-        els.assignStatus.textContent = info && info.whisperAssignment
-          ? (info.whisperAssignment.optionLabel + ' - ' + info.whisperAssignment.clientName)
+        els.assignStatus.textContent = info && Array.isArray(info.whisperAssignments) && info.whisperAssignments.length
+          ? formatWhisperAssignments(info.whisperAssignments)
           : '';
         els.assignClientSelect.value = '';
         els.assignOptionSelect.value = 'opcionA';
@@ -1219,7 +1237,7 @@
 
           const color = info.status === 'vendida'
             ? '#d65353'
-            : (info.whisperOption ? '#e2b93b' : '#41ac63');
+            : getUnitOptionColor(info);
           const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
           const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
 
@@ -1365,11 +1383,11 @@
         const info = state.selectedFloorRows.find(function (row) {
           return String(row.unidad || '') === unidad;
         }) || null;
-        if (!info || !info.whisperAssignment) {
+        if (!info || !Array.isArray(info.whisperAssignments) || !info.whisperAssignments.length) {
           hideHoverTooltip();
           return;
         }
-        showHoverTooltip(info.whisperAssignment.optionLabel + ' - ' + info.whisperAssignment.clientName, ev.clientX, ev.clientY);
+        showHoverTooltip(formatWhisperAssignments(info.whisperAssignments), ev.clientX, ev.clientY);
       });
 
       els.overlay.addEventListener('mouseleave', function () {
