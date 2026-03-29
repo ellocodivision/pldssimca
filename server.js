@@ -2890,6 +2890,7 @@ function rowsFromSheetWithHeaderRow(sheet, headerRowNumber) {
 const VICEROY_PILOTO_COLUMN_ALIASES = {
   development: ['development', 'desarrollo', 'proyecto'],
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
+  planLink: ['link', 'plano', 'plan_link', 'planlink', 'url_plano', 'urlplano', 'plano_url', 'image_url', 'imageurl'],
   recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'habitaciones'],
   tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad', 'type'],
   view: ['vista', 'view', 'vistas'],
@@ -2933,6 +2934,7 @@ function normalizeViceroyInventoryRow(rawRow) {
   const unit = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit) || '').trim();
   if (!unit) return null;
   const development = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.development) || '').trim();
+  const planLink = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.planLink) || '').trim();
   const rawType = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
   let recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
   if (!recamaras && rawType) {
@@ -2952,6 +2954,7 @@ function normalizeViceroyInventoryRow(rawRow) {
   return {
     development,
     unidad: unit,
+    planLink,
     recamaras,
     tipologia,
     vista: view,
@@ -2991,6 +2994,7 @@ function parseViceroyRowsByFixedColumns(sheet) {
     if (['unidad', 'unit', 'departamento', 'depto', 'no'].includes(unitKey)) return;
 
     const tipologia = String(rowDataByIndex(row, 3) || '').trim(); // D
+    const planLink = String(rowDataByIndex(row, 1) || '').trim(); // B
     const vista = String(rowDataByIndex(row, 4) || '').trim(); // E
     const m2 = rowDataByIndex(row, 14); // O
     const recRaw = rowDataByIndex(row, 15); // P
@@ -2999,6 +3003,7 @@ function parseViceroyRowsByFixedColumns(sheet) {
     out.push({
       development: '',
       unidad,
+      planLink,
       recamaras: normalizeViceroyRawBedroom(recRaw),
       tipologia,
       vista,
@@ -3015,10 +3020,10 @@ function parseViceroyRowsByFixedColumns(sheet) {
 function pickRicherViceroyRow(current, next) {
   if (!current) return next;
   if (!next) return current;
-  const currentScore = ['recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
+  const currentScore = ['planLink', 'recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
     return acc + (String(current[key] || '').trim() ? 1 : 0);
   }, 0);
-  const nextScore = ['recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
+  const nextScore = ['planLink', 'recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
     return acc + (String(next[key] || '').trim() ? 1 : 0);
   }, 0);
   return nextScore >= currentScore ? next : current;

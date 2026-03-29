@@ -534,6 +534,7 @@
                   </select>
                 </div>
                 <div class="assign-actions">
+                  <button id="assignPlanBtn" class="btn hidden" type="button">Ver plano</button>
                   <button id="assignSaveBtn" class="btn primary" type="button">Guardar</button>
                   <button id="assignCloseBtn" class="btn" type="button">Cerrar</button>
                 </div>
@@ -618,6 +619,7 @@
         assignUnitLabel: document.getElementById('assignUnitLabel'),
         assignClientSelect: document.getElementById('assignClientSelect'),
         assignOptionSelect: document.getElementById('assignOptionSelect'),
+        assignPlanBtn: document.getElementById('assignPlanBtn'),
         assignSaveBtn: document.getElementById('assignSaveBtn'),
         assignCloseBtn: document.getElementById('assignCloseBtn'),
         assignStatus: document.getElementById('assignStatus'),
@@ -844,6 +846,7 @@
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
         const vista = String((row && (row.vista || row.view)) || '').trim();
         const price = row && row.price != null ? row.price : (row && row.precio != null ? row.precio : null);
+        const planLink = String((row && (row.planLink || row.link || row.plano || row.urlPlano)) || '').trim();
         const whisperAssignment = getWhisperAssignmentDetails(u);
         return {
           unidad: u,
@@ -855,6 +858,7 @@
           sqft: sqft,
           vista: vista,
           price: price,
+          planLink: planLink,
           asesorAsignado: String(zone && zone.asesorAsignado || '').trim(),
           asesorAsignadoCorreo: String(zone && zone.asesorAsignadoCorreo || '').trim().toLowerCase(),
           whisperOption: whisperAssignment.length ? whisperAssignment[0].optionKey : '',
@@ -921,6 +925,7 @@
         if (els.assignUnitLabel) els.assignUnitLabel.textContent = 'Unidad -';
         if (els.assignClientSelect) els.assignClientSelect.value = '';
         if (els.assignOptionSelect) els.assignOptionSelect.value = 'opcionA';
+        if (els.assignPlanBtn) els.assignPlanBtn.classList.add('hidden');
       }
 
       function hideHoverTooltip() {
@@ -963,6 +968,10 @@
           : '';
         els.assignClientSelect.value = '';
         els.assignOptionSelect.value = 'opcionA';
+        if (els.assignPlanBtn) {
+          if (info && info.planLink) els.assignPlanBtn.classList.remove('hidden');
+          else els.assignPlanBtn.classList.add('hidden');
+        }
         els.unitAssignmentBox.classList.remove('hidden');
       }
 
@@ -1413,6 +1422,18 @@
 
       if (els.assignSaveBtn) {
         els.assignSaveBtn.addEventListener('click', saveUnitAssignment);
+      }
+
+      if (els.assignPlanBtn) {
+        els.assignPlanBtn.addEventListener('click', function () {
+          const info = state.selectedUnitInfo;
+          const url = String(info && info.planLink || '').trim();
+          if (!url) {
+            els.assignStatus.textContent = 'Esta unidad no tiene link de plano.';
+            return;
+          }
+          window.open(url, '_blank', 'noopener,noreferrer');
+        });
       }
 
       if (els.assignCloseBtn) {
