@@ -2926,6 +2926,13 @@ function normalizeViceroyRowStatus(rawValue) {
   return 'disponible';
 }
 
+function normalizeViceroyPlanLink(rawValue) {
+  const value = String(rawValue == null ? '' : rawValue).trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value)) return value;
+  return '';
+}
+
 function normalizeViceroyInventoryRow(rawRow) {
   const row = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
@@ -2934,7 +2941,7 @@ function normalizeViceroyInventoryRow(rawRow) {
   const unit = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit) || '').trim();
   if (!unit) return null;
   const development = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.development) || '').trim();
-  const planLink = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.planLink) || '').trim();
+  const planLink = normalizeViceroyPlanLink(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.planLink));
   const rawType = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
   let recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
   if (!recamaras && rawType) {
@@ -2994,7 +3001,7 @@ function parseViceroyRowsByFixedColumns(sheet) {
     if (['unidad', 'unit', 'departamento', 'depto', 'no'].includes(unitKey)) return;
 
     const tipologia = String(rowDataByIndex(row, 3) || '').trim(); // D
-    const planLink = String(rowDataByIndex(row, 1) || '').trim(); // B
+    const planLink = normalizeViceroyPlanLink(rowDataByIndex(row, 1)); // B
     const vista = String(rowDataByIndex(row, 4) || '').trim(); // E
     const m2 = rowDataByIndex(row, 14); // O
     const recRaw = rowDataByIndex(row, 15); // P
