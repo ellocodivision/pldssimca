@@ -836,6 +836,23 @@
         return tipList[pos].id;
       }
 
+      function getTipologiaImageUrl(tipologia) {
+        const target = norm(tipologia);
+        if (!target) return '';
+        const fromConfig = (state.config.tipologias || []).find(function (tip) {
+          return norm(tip && (tip.id || tip.name)) === target;
+        });
+        if (fromConfig && String(fromConfig.imageUrl || '').trim()) {
+          return String(fromConfig.imageUrl || '').trim();
+        }
+        const fromBucket = getTipologiasByBedroom(state.selectedBedroom).find(function (tip) {
+          return norm(tip && (tip.id || tip.name)) === target;
+        });
+        return fromBucket && String(fromBucket.imageUrl || '').trim()
+          ? String(fromBucket.imageUrl || '').trim()
+          : '';
+      }
+
       function resolveZoneInfo(zone) {
         const u = unitKey(zone && zone.label);
         const row = state.byUnit.get(u) || null;
@@ -846,7 +863,7 @@
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
         const vista = String((row && (row.vista || row.view)) || '').trim();
         const price = row && row.price != null ? row.price : (row && row.precio != null ? row.precio : null);
-        const planLink = String((row && (row.planLink || row.link || row.plano || row.urlPlano)) || '').trim();
+        const planLink = String((row && (row.planLink || row.link || row.plano || row.urlPlano)) || '').trim() || getTipologiaImageUrl(tipologia);
         const whisperAssignment = getWhisperAssignmentDetails(u);
         return {
           unidad: u,
