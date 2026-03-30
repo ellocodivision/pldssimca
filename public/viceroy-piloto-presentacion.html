@@ -512,6 +512,7 @@
       <span class="label" id="floorsTopLabel">Plano interactivo</span>
       <div>
         <button id="backToTiposBtn" class="btn" type="button">Volver a tipologias</button>
+        <button id="refreshViewBtn" class="btn" type="button">Refresh</button>
         <button id="showAllOnMapBtn" class="btn primary" type="button">Ver todo el plano</button>
       </div>
     </div>
@@ -627,7 +628,8 @@
         currentEmail: '',
         isGerente: false,
         whisperlistRows: [],
-        selectedUnitInfo: null
+        selectedUnitInfo: null,
+        autoRefreshTimer: null
       };
 
       const els = {
@@ -645,6 +647,7 @@
         advisorFilterSelect: document.getElementById('advisorFilterSelect'),
         clientFilterSelect: document.getElementById('clientFilterSelect'),
         clearClientFilterBtn: document.getElementById('clearClientFilterBtn'),
+        refreshViewBtn: document.getElementById('refreshViewBtn'),
         unitsTableBody: document.getElementById('unitsTableBody'),
         floorTabs: document.getElementById('floorTabs'),
         baseImage: document.getElementById('baseImage'),
@@ -687,6 +690,41 @@
 
       function unitKey(s) {
         return String(s || '').trim().toUpperCase();
+      }
+
+      function boolFromParam(value) {
+        const txt = String(value || '').trim().toLowerCase();
+        return txt === '1' || txt === 'true' || txt === 'yes';
+      }
+
+      function applyRouteState() {
+        const route = new URLSearchParams(window.location.search || '');
+        state.view = String(route.get('view') || '').trim() || 'home';
+        state.selectedBedroom = String(route.get('bedroom') || '').trim();
+        state.selectedTipologia = String(route.get('tipologia') || '').trim();
+        state.activeFloorId = String(route.get('floor') || '').trim();
+        state.showAllUnits = boolFromParam(route.get('all'));
+        state.showAllOnMap = state.showAllUnits;
+        state.selectedAdvisorEmail = String(route.get('advisor') || '').trim().toLowerCase();
+        state.selectedWhisperRowId = String(route.get('client') || '').trim();
+      }
+
+      function persistRouteState() {
+        const route = new URLSearchParams(window.location.search || '');
+        const setOrDelete = function (key, value) {
+          const txt = String(value == null ? '' : value).trim();
+          if (txt) route.set(key, txt);
+          else route.delete(key);
+        };
+        setOrDelete('view', state.view || 'home');
+        setOrDelete('bedroom', state.selectedBedroom);
+        setOrDelete('tipologia', state.selectedTipologia);
+        setOrDelete('floor', state.activeFloorId);
+        if (state.showAllUnits) route.set('all', '1'); else route.delete('all');
+        setOrDelete('advisor', state.selectedAdvisorEmail);
+        setOrDelete('client', state.selectedWhisperRowId);
+        const next = window.location.pathname + (route.toString() ? ('?' + route.toString()) : '');
+        window.history.replaceState({}, '', next);
       }
 
       function normalizeBedroom(raw) {
@@ -1227,6 +1265,7 @@
           const shouldShowUpload = state.canUploadInventory && viewName === 'home';
           els.uploadTools.classList.toggle('hidden', !shouldShowUpload);
         }
+        persistRouteState();
       }
 
       function renderHome() {
@@ -1281,6 +1320,25 @@
           const tabLabel = (parts.length > 1 ? parts.slice(1).join(':') : rawLabel).trim() || rawLabel;
           return '<button class="floor-tab' + active + '" data-floor="' + esc(floor.id) + '">' + esc(tabLabel) + '</button>';
         }).join('');
+      }
+
+      function restoreCurrentView() {
+        if (state.activeFloorId && !state.floors.some(function (floor) { return floor.id === state.activeFloorId; })) {
+          state.activeFloorId = state.floors[0] ? state.floors[0].id : '';
+        }
+        if (state.view === 'floors' && state.selectedTipologia) {
+          showView('floors');
+          renderFloorTabs();
+          drawFloor();
+          return;
+        }
+        if (state.view === 'tipologias' && state.selectedBedroom) {
+          showView('tipologias');
+          renderTipologias();
+          return;
+        }
+        renderHome();
+        showView('home');
       }
 
       function matchesFilter(info) {
@@ -1469,9 +1527,27 @@
         orderFloors();
         buildUnitIndex();
         renderWhisperFilters();
+        restoreCurrentView();
+      }
 
-        renderHome();
-        showView('home');
+      async function refreshCurrentView(options) {
+        const silent = Boolean(options && options.silent);
+        const keepStatus = Boolean(options && options.keepStatus);
+        if (!silent && els.homeStatus) els.homeStatus.textContent = 'Actualizando...';
+        hideAssignmentBox();
+        await load();
+        if (!silent && !keepStatus && els.homeStatus && state.view === 'home') {
+          els.homeStatus.textContent = state.inventoryRows.length
+            ? ('Inventario detectado: ' + state.inventoryRows.length + ' registros.')
+            : 'Sin inventario cargado aun. Se muestran datos piloto.';
+        }
+      }
+
+      function startAutoRefresh() {
+        if (state.autoRefreshTimer) window.clearInterval(state.autoRefreshTimer);
+        state.autoRefreshTimer = window.setInterval(function () {
+          refreshCurrentView({ silent: true }).catch(function () {});
+        }, 20000);
       }
 
       els.bedGrid.addEventListener('click', function (ev) {
@@ -1491,6 +1567,7 @@
         const btn = ev.target.closest('.floor-tab');
         if (!btn) return;
         state.activeFloorId = btn.getAttribute('data-floor') || '';
+        persistRouteState();
         renderFloorTabs();
         drawFloor();
       });
@@ -1551,6 +1628,7 @@
       els.showAllOnMapBtn.addEventListener('click', function () {
         state.showAllUnits = !state.showAllUnits;
         state.showAllOnMap = state.showAllUnits;
+        persistRouteState();
         hideAssignmentBox();
         drawFloor();
       });
@@ -1559,6 +1637,7 @@
         els.advisorFilterSelect.addEventListener('change', function () {
           state.selectedAdvisorEmail = String(els.advisorFilterSelect.value || '').trim().toLowerCase();
           state.selectedWhisperRowId = '';
+          persistRouteState();
           renderWhisperFilters();
           hideAssignmentBox();
           drawFloor();
@@ -1568,6 +1647,7 @@
       if (els.clientFilterSelect) {
         els.clientFilterSelect.addEventListener('change', function () {
           state.selectedWhisperRowId = String(els.clientFilterSelect.value || '').trim();
+          persistRouteState();
           hideAssignmentBox();
           drawFloor();
         });
@@ -1577,9 +1657,19 @@
         els.clearClientFilterBtn.addEventListener('click', function () {
           state.selectedAdvisorEmail = '';
           state.selectedWhisperRowId = '';
+          persistRouteState();
           renderWhisperFilters();
           hideAssignmentBox();
           drawFloor();
+        });
+      }
+
+      if (els.refreshViewBtn) {
+        els.refreshViewBtn.addEventListener('click', function () {
+          refreshCurrentView({ keepStatus: true }).catch(function (err) {
+            const msg = err && err.message ? err.message : 'No se pudo actualizar';
+            if (els.homeStatus) els.homeStatus.textContent = msg;
+          });
         });
       }
 
@@ -1620,7 +1710,10 @@
         });
       }
 
-      load().catch(function (err) {
+      applyRouteState();
+      load().then(function () {
+        startAutoRefresh();
+      }).catch(function (err) {
         const msg = err && err.message ? err.message : 'Error de carga';
         els.homeStatus.textContent = msg;
         els.tipoStatus.textContent = msg;
