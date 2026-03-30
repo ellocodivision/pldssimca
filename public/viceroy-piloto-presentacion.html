@@ -211,6 +211,28 @@
       color: #3d414a;
       background: #ffffff;
     }
+    .client-filter-box {
+      margin: 8px 0 10px;
+      padding: 8px;
+      border: 1px solid #d7dbcf;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.92);
+    }
+    .client-filter-box label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: #666977;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .client-filter-box select {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    .client-filter-box .btn {
+      width: 100%;
+    }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 
     .table-wrap {
@@ -501,6 +523,17 @@
           <div class="stage">
             <div class="map-info-overlay">
               <div id="activeFilterChips" class="hidden"></div>
+              <div class="client-filter-box">
+                <label for="advisorFilterSelect">Asesor</label>
+                <select id="advisorFilterSelect">
+                  <option value="">Todos los asesores</option>
+                </select>
+                <label for="clientFilterSelect">Cliente KPI</label>
+                <select id="clientFilterSelect">
+                  <option value="">Todos los clientes</option>
+                </select>
+                <button id="clearClientFilterBtn" class="btn" type="button">Quitar filtro cliente</button>
+              </div>
               <div class="table-wrap">
                 <table>
                   <thead>
@@ -588,6 +621,8 @@
         selectedTipologia: '',
         showAllOnMap: false,
         showAllUnits: false,
+        selectedWhisperRowId: '',
+        selectedAdvisorEmail: '',
         selectedFloorRows: [],
         currentEmail: '',
         isGerente: false,
@@ -607,6 +642,9 @@
         tipoStatus: document.getElementById('tipoStatus'),
         floorsTopLabel: document.getElementById('floorsTopLabel'),
         activeFilterChips: document.getElementById('activeFilterChips'),
+        advisorFilterSelect: document.getElementById('advisorFilterSelect'),
+        clientFilterSelect: document.getElementById('clientFilterSelect'),
+        clearClientFilterBtn: document.getElementById('clearClientFilterBtn'),
         unitsTableBody: document.getElementById('unitsTableBody'),
         floorTabs: document.getElementById('floorTabs'),
         baseImage: document.getElementById('baseImage'),
@@ -920,6 +958,79 @@
         });
       }
 
+      function getVisibleWhisperlistRows() {
+        const rows = getUserEditableWhisperlistRows();
+        const advisorEmail = String(state.selectedAdvisorEmail || '').trim().toLowerCase();
+        if (!advisorEmail) return rows;
+        return rows.filter(function (row) {
+          return String(row && row.correo || '').trim().toLowerCase() === advisorEmail;
+        });
+      }
+
+      function getSelectedWhisperRow() {
+        const rowId = String(state.selectedWhisperRowId || '').trim();
+        if (!rowId) return null;
+        return getVisibleWhisperlistRows().find(function (row) {
+          return String(row && row.id || '') === rowId;
+        }) || null;
+      }
+
+      function getWhisperRowOptionUnits(row) {
+        const kpi = row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
+        const set = new Set();
+        [kpi.opcionA, kpi.opcionB, kpi.opcionC, kpi.opcionD].forEach(function (value) {
+          const key = unitKey(value);
+          if (key) set.add(key);
+        });
+        return set;
+      }
+
+      function renderWhisperFilters() {
+        const rows = getUserEditableWhisperlistRows();
+        const advisorMap = new Map();
+        rows.forEach(function (row) {
+          const email = String(row && row.correo || '').trim().toLowerCase();
+          const asesor = String(row && row.asesor || '').trim() || email;
+          if (!email) return;
+          if (!advisorMap.has(email)) advisorMap.set(email, asesor);
+        });
+        if (els.advisorFilterSelect) {
+          const advisorOptions = ['<option value="">Todos los asesores</option>'].concat(
+            Array.from(advisorMap.entries())
+              .sort(function (a, b) { return String(a[1] || '').localeCompare(String(b[1] || ''), 'es', { sensitivity: 'base' }); })
+              .map(function (entry) {
+                return '<option value="' + esc(entry[0]) + '">' + esc(entry[1]) + '</option>';
+              })
+          );
+          els.advisorFilterSelect.innerHTML = advisorOptions.join('');
+          els.advisorFilterSelect.value = String(state.selectedAdvisorEmail || '');
+        }
+
+        const visibleRows = getVisibleWhisperlistRows().slice().sort(function (a, b) {
+          const asesorA = String(a && a.asesor || '').trim();
+          const asesorB = String(b && b.asesor || '').trim();
+          const clientA = String(a && a.nombreCliente || '').trim();
+          const clientB = String(b && b.nombreCliente || '').trim();
+          return (asesorA + ' ' + clientA).localeCompare((asesorB + ' ' + clientB), 'es', { sensitivity: 'base' });
+        });
+
+        if (els.clientFilterSelect) {
+          const clientOptions = ['<option value="">Todos los clientes</option>'].concat(
+            visibleRows.map(function (row) {
+              const clientName = String(row && row.nombreCliente || '').trim() || 'Sin nombre';
+              const asesor = String(row && row.asesor || '').trim();
+              const label = state.isGerente && asesor ? (clientName + ' — ' + asesor) : clientName;
+              return '<option value="' + esc(row.id || '') + '">' + esc(label) + '</option>';
+            })
+          );
+          els.clientFilterSelect.innerHTML = clientOptions.join('');
+          const currentRowId = String(state.selectedWhisperRowId || '');
+          const exists = visibleRows.some(function (row) { return String(row && row.id || '') === currentRowId; });
+          if (!exists) state.selectedWhisperRowId = '';
+          els.clientFilterSelect.value = String(state.selectedWhisperRowId || '');
+        }
+      }
+
       function isUnitAssignedToCurrentUser(info) {
         if (!info) return false;
         if (state.isGerente) return true;
@@ -967,7 +1078,7 @@
       }
 
       function fillClientOptions() {
-        const rows = getUserEditableWhisperlistRows();
+        const rows = getVisibleWhisperlistRows();
         const options = ['<option value="">Selecciona un cliente</option>'].concat(rows.map(function (row) {
           const clientName = String(row.nombreCliente || '').trim() || 'Sin nombre';
           const subtitle = [row.asesor, row.recamaras].filter(Boolean).join(' · ');
@@ -1173,6 +1284,11 @@
       }
 
       function matchesFilter(info) {
+        const selectedWhisperRow = getSelectedWhisperRow();
+        if (selectedWhisperRow) {
+          const allowedUnits = getWhisperRowOptionUnits(selectedWhisperRow);
+          if (!allowedUnits.has(unitKey(info && info.unidad))) return false;
+        }
         if (!state.showAllUnits && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
         if (state.showAllOnMap || state.showAllUnits) return true;
         if (!state.selectedTipologia) return true;
@@ -1185,6 +1301,7 @@
           '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
           '<span class="chip">Tipologia: ' + esc((state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
+          '<span class="chip">Cliente KPI: ' + esc((getSelectedWhisperRow() && getSelectedWhisperRow().nombreCliente) || 'TODOS') + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
           '<span class="chip">Disponibles: ' + stats.available + '</span>',
           '<span class="chip">Vendidas: ' + stats.sold + '</span>'
@@ -1351,6 +1468,7 @@
 
         orderFloors();
         buildUnitIndex();
+        renderWhisperFilters();
 
         renderHome();
         showView('home');
@@ -1436,6 +1554,34 @@
         hideAssignmentBox();
         drawFloor();
       });
+
+      if (els.advisorFilterSelect) {
+        els.advisorFilterSelect.addEventListener('change', function () {
+          state.selectedAdvisorEmail = String(els.advisorFilterSelect.value || '').trim().toLowerCase();
+          state.selectedWhisperRowId = '';
+          renderWhisperFilters();
+          hideAssignmentBox();
+          drawFloor();
+        });
+      }
+
+      if (els.clientFilterSelect) {
+        els.clientFilterSelect.addEventListener('change', function () {
+          state.selectedWhisperRowId = String(els.clientFilterSelect.value || '').trim();
+          hideAssignmentBox();
+          drawFloor();
+        });
+      }
+
+      if (els.clearClientFilterBtn) {
+        els.clearClientFilterBtn.addEventListener('click', function () {
+          state.selectedAdvisorEmail = '';
+          state.selectedWhisperRowId = '';
+          renderWhisperFilters();
+          hideAssignmentBox();
+          drawFloor();
+        });
+      }
 
       if (els.assignSaveBtn) {
         els.assignSaveBtn.addEventListener('click', saveUnitAssignment);
