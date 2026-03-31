@@ -2892,8 +2892,10 @@ const VICEROY_PILOTO_COLUMN_ALIASES = {
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
   planLink: ['link', 'plano', 'plan_link', 'planlink', 'url_plano', 'urlplano', 'plano_url', 'image_url', 'imageurl'],
   recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'habitaciones'],
+  building: ['edificio', 'building', 'torre', 'tower', 'fase', 'phase'],
   tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad', 'type'],
   view: ['vista', 'view', 'vistas'],
+  assignment: ['asignacion', 'assignment', 'assigned_to', 'assignedto', 'asesor', 'advisor', 'broker'],
   m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area'],
   sqft: ['sqft', 'ft2', 'pies2', 'pies_cuadrados', 'square_feet', 'area_sqft'],
   price: ['precio_final', 'precio final', 'precio', 'precio_venta', 'venta', 'sale_price', 'price'],
@@ -2942,6 +2944,7 @@ function normalizeViceroyInventoryRow(rawRow) {
   if (!unit) return null;
   const development = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.development) || '').trim();
   const planLink = normalizeViceroyPlanLink(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.planLink));
+  const building = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.building) || '').trim();
   const rawType = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
   let recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
   if (!recamaras && rawType) {
@@ -2954,6 +2957,7 @@ function normalizeViceroyInventoryRow(rawRow) {
   }
   const tipologia = rawType;
   const view = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.view) || '').trim();
+  const assignment = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.assignment) || '').trim();
   const m2Raw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.m2);
   const sqftRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.sqft);
   const priceRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.price);
@@ -2963,8 +2967,10 @@ function normalizeViceroyInventoryRow(rawRow) {
     unidad: unit,
     planLink,
     recamaras,
+    edificio: building,
     tipologia,
     vista: view,
+    asignacion: assignment,
     m2: m2Raw === '' ? '' : m2Raw,
     sqft: sqftRaw === '' ? '' : sqftRaw,
     price: priceRaw === '' ? '' : priceRaw,
@@ -3000,8 +3006,9 @@ function parseViceroyRowsByFixedColumns(sheet) {
     if (!unitKey) return;
     if (['unidad', 'unit', 'departamento', 'depto', 'no'].includes(unitKey)) return;
 
-    const tipologia = String(rowDataByIndex(row, 3) || '').trim(); // D
     const planLink = normalizeViceroyPlanLink(rowDataByIndex(row, 1)); // B
+    const building = String(rowDataByIndex(row, 2) || '').trim(); // C
+    const tipologia = String(rowDataByIndex(row, 3) || '').trim(); // D
     const vista = String(rowDataByIndex(row, 4) || '').trim(); // E
     const m2 = rowDataByIndex(row, 14); // O
     const recRaw = rowDataByIndex(row, 15); // P
@@ -3012,8 +3019,10 @@ function parseViceroyRowsByFixedColumns(sheet) {
       unidad,
       planLink,
       recamaras: normalizeViceroyRawBedroom(recRaw),
+      edificio: building,
       tipologia,
       vista,
+      asignacion: '',
       m2: m2 === '' ? '' : m2,
       sqft: '',
       price: price === '' ? '' : price,
@@ -3027,10 +3036,10 @@ function parseViceroyRowsByFixedColumns(sheet) {
 function pickRicherViceroyRow(current, next) {
   if (!current) return next;
   if (!next) return current;
-  const currentScore = ['planLink', 'recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
+  const currentScore = ['planLink', 'recamaras', 'edificio', 'tipologia', 'vista', 'asignacion', 'm2', 'sqft', 'price'].reduce((acc, key) => {
     return acc + (String(current[key] || '').trim() ? 1 : 0);
   }, 0);
-  const nextScore = ['planLink', 'recamaras', 'tipologia', 'vista', 'm2', 'sqft', 'price'].reduce((acc, key) => {
+  const nextScore = ['planLink', 'recamaras', 'edificio', 'tipologia', 'vista', 'asignacion', 'm2', 'sqft', 'price'].reduce((acc, key) => {
     return acc + (String(next[key] || '').trim() ? 1 : 0);
   }, 0);
   return nextScore >= currentScore ? next : current;

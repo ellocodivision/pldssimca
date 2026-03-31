@@ -233,6 +233,23 @@
     .client-filter-box .btn {
       width: 100%;
     }
+    .zone-filter-box {
+      margin: 10px 0 0;
+      padding-top: 10px;
+      border-top: 1px solid rgba(102,105,119,0.18);
+    }
+    .zone-filter-box label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: #666977;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .zone-filter-box select {
+      width: 100%;
+      margin-bottom: 8px;
+    }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 
     .table-wrap {
@@ -548,6 +565,24 @@
                   <option value="">Todos los clientes</option>
                 </select>
                 <button id="clearClientFilterBtn" class="btn" type="button">Quitar filtro cliente</button>
+                <div class="zone-filter-box">
+                  <label for="filterRecamarasSelect">Recámaras</label>
+                  <select id="filterRecamarasSelect">
+                    <option value="">Todas</option>
+                  </select>
+                  <label for="filterEdificioSelect">Edificio</label>
+                  <select id="filterEdificioSelect">
+                    <option value="">Todos</option>
+                  </select>
+                  <label for="filterVistaSelect">Vista</label>
+                  <select id="filterVistaSelect">
+                    <option value="">Todas</option>
+                  </select>
+                  <label for="filterAsignacionSelect">Asignación</label>
+                  <select id="filterAsignacionSelect">
+                    <option value="">Todas</option>
+                  </select>
+                </div>
               </div>
               <div id="unitAssignmentBox" class="unit-assignment hidden">
                 <p class="assign-title">Assign Unit to Founders List</p>
@@ -624,6 +659,10 @@
         showAllUnits: false,
         selectedWhisperRowId: '',
         selectedAdvisorEmail: '',
+        selectedRecamarasFilter: '',
+        selectedEdificioFilter: '',
+        selectedVistaFilter: '',
+        selectedAsignacionFilter: '',
         selectedFloorRows: [],
         currentEmail: '',
         isGerente: false,
@@ -647,6 +686,10 @@
         advisorFilterSelect: document.getElementById('advisorFilterSelect'),
         clientFilterSelect: document.getElementById('clientFilterSelect'),
         clearClientFilterBtn: document.getElementById('clearClientFilterBtn'),
+        filterRecamarasSelect: document.getElementById('filterRecamarasSelect'),
+        filterEdificioSelect: document.getElementById('filterEdificioSelect'),
+        filterVistaSelect: document.getElementById('filterVistaSelect'),
+        filterAsignacionSelect: document.getElementById('filterAsignacionSelect'),
         refreshViewBtn: document.getElementById('refreshViewBtn'),
         unitsTableBody: document.getElementById('unitsTableBody'),
         floorTabs: document.getElementById('floorTabs'),
@@ -707,6 +750,10 @@
         state.showAllOnMap = state.showAllUnits;
         state.selectedAdvisorEmail = String(route.get('advisor') || '').trim().toLowerCase();
         state.selectedWhisperRowId = String(route.get('client') || '').trim();
+        state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
+        state.selectedEdificioFilter = String(route.get('zone_building') || '').trim();
+        state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
+        state.selectedAsignacionFilter = String(route.get('zone_assignment') || '').trim();
       }
 
       function persistRouteState() {
@@ -723,6 +770,10 @@
         if (state.showAllUnits) route.set('all', '1'); else route.delete('all');
         setOrDelete('advisor', state.selectedAdvisorEmail);
         setOrDelete('client', state.selectedWhisperRowId);
+        setOrDelete('zone_rec', state.selectedRecamarasFilter);
+        setOrDelete('zone_building', state.selectedEdificioFilter);
+        setOrDelete('zone_view', state.selectedVistaFilter);
+        setOrDelete('zone_assignment', state.selectedAsignacionFilter);
         const next = window.location.pathname + (route.toString() ? ('?' + route.toString()) : '');
         window.history.replaceState({}, '', next);
       }
@@ -938,8 +989,10 @@
         const m2 = row && row.m2 != null ? row.m2 : (row && row.metros2 != null ? row.metros2 : null);
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
         const vista = String((row && (row.vista || row.view)) || '').trim();
+        const edificio = String((row && (row.edificio || row.building || row.torre || row.phase)) || '').trim();
         const price = row && row.price != null ? row.price : (row && row.precio != null ? row.precio : null);
         const planLink = String((row && (row.planLink || row.link || row.plano || row.urlPlano)) || '').trim() || getTipologiaImageUrl(tipologia);
+        const asignacion = String((row && (row.asignacion || row.assignment || row.asesor || row.broker)) || zone.asesorAsignado || '').trim();
         const whisperAssignment = getWhisperAssignmentDetails(u);
         return {
           unidad: u,
@@ -947,11 +1000,13 @@
           tipKey: norm(tipologia),
           recamaras: rec,
           status: status,
+          edificio: edificio,
           m2: m2,
           sqft: sqft,
           vista: vista,
           price: price,
           planLink: planLink,
+          asignacion: asignacion,
           asesorAsignado: String(zone && zone.asesorAsignado || '').trim(),
           asesorAsignadoCorreo: String(zone && zone.asesorAsignadoCorreo || '').trim().toLowerCase(),
           whisperOption: whisperAssignment.length ? whisperAssignment[0].optionKey : '',
@@ -1066,6 +1121,40 @@
           const exists = visibleRows.some(function (row) { return String(row && row.id || '') === currentRowId; });
           if (!exists) state.selectedWhisperRowId = '';
           els.clientFilterSelect.value = String(state.selectedWhisperRowId || '');
+        }
+      }
+
+      function renderZoneAttributeFilters() {
+        const infoRows = [];
+        state.floors.forEach(function (floor) {
+          (Array.isArray(floor && floor.zones) ? floor.zones : []).forEach(function (zone) {
+            infoRows.push(resolveZoneInfo(zone));
+          });
+        });
+        const buildOptions = function (values, emptyLabel) {
+          return ['<option value="">' + emptyLabel + '</option>'].concat(
+            Array.from(new Set(values.filter(Boolean)))
+              .sort(function (a, b) { return String(a).localeCompare(String(b), 'es', { sensitivity: 'base', numeric: true }); })
+              .map(function (value) {
+                return '<option value="' + esc(value) + '">' + esc(value) + '</option>';
+              })
+          ).join('');
+        };
+        if (els.filterRecamarasSelect) {
+          els.filterRecamarasSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
+          els.filterRecamarasSelect.value = String(state.selectedRecamarasFilter || '');
+        }
+        if (els.filterEdificioSelect) {
+          els.filterEdificioSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.edificio || ''; }), 'Todos');
+          els.filterEdificioSelect.value = String(state.selectedEdificioFilter || '');
+        }
+        if (els.filterVistaSelect) {
+          els.filterVistaSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.vista || ''; }), 'Todas');
+          els.filterVistaSelect.value = String(state.selectedVistaFilter || '');
+        }
+        if (els.filterAsignacionSelect) {
+          els.filterAsignacionSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.asignacion || ''; }), 'Todas');
+          els.filterAsignacionSelect.value = String(state.selectedAsignacionFilter || '');
         }
       }
 
@@ -1347,6 +1436,10 @@
           const allowedUnits = getWhisperRowOptionUnits(selectedWhisperRow);
           if (!allowedUnits.has(unitKey(info && info.unidad))) return false;
         }
+        if (state.selectedRecamarasFilter && String(info && info.recamaras || '').trim() !== String(state.selectedRecamarasFilter || '').trim()) return false;
+        if (state.selectedEdificioFilter && String(info && info.edificio || '').trim() !== String(state.selectedEdificioFilter || '').trim()) return false;
+        if (state.selectedVistaFilter && String(info && info.vista || '').trim() !== String(state.selectedVistaFilter || '').trim()) return false;
+        if (state.selectedAsignacionFilter && String(info && info.asignacion || '').trim() !== String(state.selectedAsignacionFilter || '').trim()) return false;
         if (!state.showAllUnits && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
         if (state.showAllOnMap || state.showAllUnits) return true;
         if (!state.selectedTipologia) return true;
@@ -1360,6 +1453,10 @@
           '<span class="chip">Tipologia: ' + esc((state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Cliente KPI: ' + esc((getSelectedWhisperRow() && getSelectedWhisperRow().nombreCliente) || 'TODOS') + '</span>',
+          '<span class="chip">Filtro recámaras: ' + esc(state.selectedRecamarasFilter || 'TODAS') + '</span>',
+          '<span class="chip">Filtro edificio: ' + esc(state.selectedEdificioFilter || 'TODOS') + '</span>',
+          '<span class="chip">Filtro vista: ' + esc(state.selectedVistaFilter || 'TODAS') + '</span>',
+          '<span class="chip">Filtro asignación: ' + esc(state.selectedAsignacionFilter || 'TODAS') + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
           '<span class="chip">Disponibles: ' + stats.available + '</span>',
           '<span class="chip">Vendidas: ' + stats.sold + '</span>'
@@ -1527,6 +1624,7 @@
         orderFloors();
         buildUnitIndex();
         renderWhisperFilters();
+        renderZoneAttributeFilters();
         restoreCurrentView();
       }
 
@@ -1657,12 +1755,33 @@
         els.clearClientFilterBtn.addEventListener('click', function () {
           state.selectedAdvisorEmail = '';
           state.selectedWhisperRowId = '';
+          state.selectedRecamarasFilter = '';
+          state.selectedEdificioFilter = '';
+          state.selectedVistaFilter = '';
+          state.selectedAsignacionFilter = '';
           persistRouteState();
           renderWhisperFilters();
+          renderZoneAttributeFilters();
           hideAssignmentBox();
           drawFloor();
         });
       }
+
+      [
+        ['filterRecamarasSelect', 'selectedRecamarasFilter'],
+        ['filterEdificioSelect', 'selectedEdificioFilter'],
+        ['filterVistaSelect', 'selectedVistaFilter'],
+        ['filterAsignacionSelect', 'selectedAsignacionFilter']
+      ].forEach(function (pair) {
+        const el = els[pair[0]];
+        if (!el) return;
+        el.addEventListener('change', function () {
+          state[pair[1]] = String(el.value || '').trim();
+          persistRouteState();
+          hideAssignmentBox();
+          drawFloor();
+        });
+      });
 
       if (els.refreshViewBtn) {
         els.refreshViewBtn.addEventListener('click', function () {
