@@ -320,6 +320,7 @@
         <p class="help">Importa el JSON exportado desde el Paso 1.</p>
         <div class="btn-row">
           <button id="importBtn">Importar JSON</button>
+          <button id="exportMappedJsonBtn">Exportar JSON mapeado</button>
         </div>
         <label for="projectNameInput" style="margin-top:8px;">Guardar version (nombre)</label>
         <input id="projectNameInput" type="text" placeholder="Ej: CEIBA Piso 1+2">
@@ -783,6 +784,7 @@
     const pdfFrameWidthInput = document.getElementById("pdfFrameWidthInput");
     const workspace = document.querySelector(".workspace");
     const importBtn = document.getElementById("importBtn");
+    const exportMappedJsonBtn = document.getElementById("exportMappedJsonBtn");
     const importInput = document.getElementById("importInput");
     const workspaceTop = document.getElementById("workspaceTop");
     const workspaceSplitter = document.getElementById("workspaceSplitter");
@@ -2445,6 +2447,29 @@
       URL.revokeObjectURL(link.href);
     }
 
+    function buildMappedJsonFileName() {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      return `json-mapeado-${safeFileToken(DEV)}-${stamp}.json`;
+    }
+
+    function exportMappedJson() {
+      const payloadObj = getPersistableState();
+      const floors = normalizeFloorPayload(payloadObj);
+      if (!floors.length) {
+        alert("No hay pisos cargados para exportar.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(payloadObj, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = buildMappedJsonFileName();
+      link.click();
+      URL.revokeObjectURL(link.href);
+      if (projectStatus) {
+        projectStatus.textContent = `JSON mapeado exportado: ${link.download}`;
+      }
+    }
+
     function escapeAttr(value) {
       return String(value)
         .replace(/&/g, "&amp;")
@@ -3613,6 +3638,7 @@
       }
     });
     exportBtn.addEventListener("click", exportJson);
+    exportMappedJsonBtn.addEventListener("click", exportMappedJson);
     exportPdfBtn.addEventListener("click", () => exportPdf({ previewOnly: false }));
     pdfPreviewBtn.addEventListener("click", () => exportPdf({ previewOnly: true }));
     pdfResetBtn.addEventListener("click", () => {
