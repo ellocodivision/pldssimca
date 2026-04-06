@@ -3441,6 +3441,12 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Presentaciones</h2>
           <p class="desc">Generación de presentaciones por proyecto con unidades seleccionadas.</p>
         </a>`;
+  const tablaPagosCard = `
+        <a class="card" href="/tabla-pagos">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Tabla de Pagos</h2>
+          <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.</p>
+        </a>`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -3563,6 +3569,7 @@ app.get('/', requireAuth, (req, res) => {
         </a>
         ${brokersCard}
         ${presentacionesCard}
+        ${tablaPagosCard}
         ${viceroyModuleCard}
         ${ownerServicesCard}
         ${gerenteCard}
@@ -3621,6 +3628,7 @@ app.use('/legacy', requireInternalUser);
 app.use('/generador-faes', requireInternalUser);
 app.use('/plds', requireInternalUser);
 app.use('/generador-roi', requireInternalUser);
+app.use('/tabla-pagos', requireInternalUser);
 app.use('/form', requireInternalUser);
 app.use('/form-nacional', requireInternalUser);
 app.use('/form-nacional-moral', requireInternalUser);
@@ -3719,6 +3727,10 @@ app.get('/plds/cliente-nacional-persona-moral', (req, res) => {
 
 app.get('/generador-roi', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'generador-roi.html'));
+});
+
+app.get('/tabla-pagos', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos.html'));
 });
 
 app.get('/api/roi/master-csv', (req, res) => {
