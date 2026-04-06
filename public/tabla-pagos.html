@@ -386,17 +386,6 @@
       border-bottom: none;
     }
 
-    .note {
-      margin-top: 14px;
-      padding: 14px 16px;
-      border-radius: 18px;
-      background: #fff8da;
-      border: 1px solid #ecd37e;
-      color: #5b4b16;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
     .table-wrap {
       overflow-x: auto;
     }
@@ -434,8 +423,15 @@
     }
 
     @media print {
+      @page {
+        size: landscape;
+        margin: 8mm;
+      }
+
+      html,
       body {
         background: #fff;
+        zoom: 0.9;
       }
 
       .topbar {
@@ -445,6 +441,57 @@
       .page {
         max-width: none;
         padding: 0;
+      }
+
+      .hero,
+      .summary,
+      .details {
+        gap: 8px;
+        margin: 0 0 8px;
+      }
+
+      .panel,
+      .table-shell,
+      .summary-card,
+      .detail-card {
+        border-radius: 12px;
+      }
+
+      .intro,
+      .form-panel,
+      .summary-card,
+      .detail-card,
+      .table-head,
+      .snapshot-wrap,
+      thead th,
+      tbody td,
+      tfoot td {
+        padding-top: 8px;
+        padding-bottom: 8px;
+      }
+
+      .legend {
+        margin-top: 12px;
+        gap: 6px;
+      }
+
+      h1 {
+        font-size: 28px;
+        margin: 10px 0 8px;
+      }
+
+      .intro p,
+      .panel-subtitle,
+      .table-caption {
+        font-size: 12px;
+      }
+
+      .summary-card strong {
+        font-size: 20px;
+      }
+
+      table {
+        min-width: 0;
       }
 
       .panel,
@@ -483,8 +530,6 @@
       </div>
 
       <div class="panel form-panel">
-        <h2 class="panel-title">Datos de captura</h2>
-        <p class="panel-subtitle">Todos los importes se recalculan automaticamente al cambiar cualquier campo.</p>
         <div class="grid">
           <div class="field full">
             <label for="developmentName">Nombre del desarrollo</label>
@@ -562,7 +607,6 @@
       <div class="table-head">
         <div>
           <h2 class="table-title">Desglose de pagos</h2>
-          <p class="table-caption">La tabla muestra cada etapa del plan, su porcentaje y el monto correspondiente sobre el precio final.</p>
         </div>
         <div class="totals">
           <div id="tableMetaDevelopment">Desarrollo: Sin capturar</div>
@@ -618,7 +662,6 @@
         </table>
       </div>
 
-      <div class="note" id="planNote">El esquema seleccionado suma 100% del precio final.</div>
     </section>
   </div>
 
@@ -668,7 +711,6 @@
         paymentRows: document.getElementById('paymentRows'),
         footerPercent: document.getElementById('footerPercent'),
         footerAmount: document.getElementById('footerAmount'),
-        planNote: document.getElementById('planNote'),
         printBtn: document.getElementById('printBtn')
       };
 
@@ -788,22 +830,6 @@
         els.footerPercent.textContent = formatPercent(planPercentTotal);
         els.footerAmount.textContent = formatCurrency(rowAmountTotal);
 
-        if (planPercentTotal === 100) {
-          els.planNote.textContent = 'El esquema seleccionado suma 100% del precio final.';
-          els.planNote.style.background = '#fff8da';
-          els.planNote.style.borderColor = '#ecd37e';
-          els.planNote.style.color = '#5b4b16';
-        } else if (planPercentTotal < 100) {
-          els.planNote.textContent = 'El esquema seleccionado suma ' + formatPercent(planPercentTotal) + '. Queda un ' + formatPercent(100 - planPercentTotal) + ' sin asignar dentro de la tabla.';
-          els.planNote.style.background = '#fff0eb';
-          els.planNote.style.borderColor = '#efb29b';
-          els.planNote.style.color = '#7b2d12';
-        } else {
-          els.planNote.textContent = 'El esquema seleccionado excede 100% por ' + formatPercent(planPercentTotal - 100) + '.';
-          els.planNote.style.background = '#fff0eb';
-          els.planNote.style.borderColor = '#efb29b';
-          els.planNote.style.color = '#7b2d12';
-        }
       }
 
       ['input', 'change'].forEach(function (eventName) {
