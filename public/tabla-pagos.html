@@ -433,7 +433,8 @@
 
       .subtitle,
       .helper,
-      .summary-strip {
+      .summary-strip,
+      .sidebar {
         display: none !important;
       }
 
@@ -464,7 +465,11 @@
       }
 
       .layout {
-        grid-template-columns: 310px minmax(0, 1fr);
+        grid-template-columns: 1fr;
+      }
+
+      .workspace {
+        padding-top: 6px;
       }
 
       .summary-item {
