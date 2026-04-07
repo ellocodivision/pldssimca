@@ -104,6 +104,7 @@ const SOLAR_MIDTOWN_LAYOUT_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-
 const SOLAR_MIDTOWN_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-solar-midtown-crops.json');
 const SOLAR_MIDTOWN_LAYOUT_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-crops.json');
+const VICEROY_PAYMENT_PLAN_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-payment-plan-layout.json');
 const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
 const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
 const CEIBA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-ceiba-crops.json');
@@ -1634,6 +1635,93 @@ function readSolarMidtownLayout() {
 function saveSolarMidtownLayout(layout) {
   const normalized = normalizeSolarMidtownLayout(layout);
   writeJson(SOLAR_MIDTOWN_LAYOUT_PATH, normalized);
+  return normalized;
+}
+
+function defaultViceroyPaymentPlanLayout() {
+  return {
+    version: 1,
+    printScale: 0.92,
+    pageMarginMm: 6,
+    heroPaddingTop: 18,
+    heroPaddingSides: 18,
+    heroPaddingBottom: 14,
+    contentPaddingTop: 10,
+    contentPaddingSides: 14,
+    contentPaddingBottom: 14,
+    contentGap: 10,
+    headlineSize: 15,
+    summaryHeaderSize: 9,
+    summaryValueSize: 16,
+    paymentsTitleSize: 15,
+    paymentsHeaderSize: 9,
+    paymentsBodySize: 11,
+    summaryRowPaddingY: 8,
+    paymentRowPaddingY: 6,
+    oliveLineColor: '#9b9b8b',
+    oliveLineWidth: 1,
+    shellBorderColor: '#d6d0c2',
+    shellBorderWidth: 1,
+    showHeroInPrint: true,
+    showLogosInPrint: false,
+    showSummaryInPrint: true,
+    showPaymentsInPrint: true,
+    summaryColUnit: 14,
+    summaryColPlan: 26,
+    summaryColList: 20,
+    summaryColDiscount: 20,
+    summaryColPromo: 20
+  };
+}
+
+function normalizeViceroyPaymentPlanLayout(input) {
+  const base = defaultViceroyPaymentPlanLayout();
+  const src = input && typeof input === 'object' ? input : {};
+  const out = {
+    ...base,
+    ...src
+  };
+  out.version = 1;
+  out.printScale = clampNumber(out.printScale, base.printScale, 0.65, 1.15);
+  out.pageMarginMm = clampNumber(out.pageMarginMm, base.pageMarginMm, 0, 20);
+  out.heroPaddingTop = clampNumber(out.heroPaddingTop, base.heroPaddingTop, 0, 60);
+  out.heroPaddingSides = clampNumber(out.heroPaddingSides, base.heroPaddingSides, 0, 60);
+  out.heroPaddingBottom = clampNumber(out.heroPaddingBottom, base.heroPaddingBottom, 0, 60);
+  out.contentPaddingTop = clampNumber(out.contentPaddingTop, base.contentPaddingTop, 0, 40);
+  out.contentPaddingSides = clampNumber(out.contentPaddingSides, base.contentPaddingSides, 0, 40);
+  out.contentPaddingBottom = clampNumber(out.contentPaddingBottom, base.contentPaddingBottom, 0, 40);
+  out.contentGap = clampNumber(out.contentGap, base.contentGap, 0, 32);
+  out.headlineSize = clampNumber(out.headlineSize, base.headlineSize, 10, 28);
+  out.summaryHeaderSize = clampNumber(out.summaryHeaderSize, base.summaryHeaderSize, 7, 16);
+  out.summaryValueSize = clampNumber(out.summaryValueSize, base.summaryValueSize, 10, 30);
+  out.paymentsTitleSize = clampNumber(out.paymentsTitleSize, base.paymentsTitleSize, 10, 26);
+  out.paymentsHeaderSize = clampNumber(out.paymentsHeaderSize, base.paymentsHeaderSize, 7, 16);
+  out.paymentsBodySize = clampNumber(out.paymentsBodySize, base.paymentsBodySize, 8, 18);
+  out.summaryRowPaddingY = clampNumber(out.summaryRowPaddingY, base.summaryRowPaddingY, 2, 20);
+  out.paymentRowPaddingY = clampNumber(out.paymentRowPaddingY, base.paymentRowPaddingY, 2, 20);
+  out.oliveLineWidth = clampNumber(out.oliveLineWidth, base.oliveLineWidth, 0, 4);
+  out.shellBorderWidth = clampNumber(out.shellBorderWidth, base.shellBorderWidth, 0, 4);
+  out.showHeroInPrint = Boolean(out.showHeroInPrint);
+  out.showLogosInPrint = Boolean(out.showLogosInPrint);
+  out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
+  out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+  out.summaryColUnit = clampNumber(out.summaryColUnit, base.summaryColUnit, 8, 40);
+  out.summaryColPlan = clampNumber(out.summaryColPlan, base.summaryColPlan, 12, 45);
+  out.summaryColList = clampNumber(out.summaryColList, base.summaryColList, 10, 35);
+  out.summaryColDiscount = clampNumber(out.summaryColDiscount, base.summaryColDiscount, 10, 35);
+  out.summaryColPromo = clampNumber(out.summaryColPromo, base.summaryColPromo, 10, 35);
+  if (typeof out.oliveLineColor !== 'string') out.oliveLineColor = base.oliveLineColor;
+  if (typeof out.shellBorderColor !== 'string') out.shellBorderColor = base.shellBorderColor;
+  return out;
+}
+
+function readViceroyPaymentPlanLayout() {
+  return normalizeViceroyPaymentPlanLayout(readJson(VICEROY_PAYMENT_PLAN_LAYOUT_PATH, null));
+}
+
+function saveViceroyPaymentPlanLayout(layout) {
+  const normalized = normalizeViceroyPaymentPlanLayout(layout);
+  writeJson(VICEROY_PAYMENT_PLAN_LAYOUT_PATH, normalized);
   return normalized;
 }
 
@@ -3737,6 +3825,27 @@ app.get('/viceroy/tabla-pagos', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-viceroy.html'));
 });
 
+app.get('/viceroy/tabla-pagos/editor', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-viceroy-editor.html'));
+});
+
+app.get('/api/viceroy/tabla-pagos/layout', (req, res) => {
+  return res.json({ ok: true, layout: readViceroyPaymentPlanLayout() });
+});
+
+app.post('/api/viceroy/tabla-pagos/layout', (req, res) => {
+  try {
+    const incoming = req.body && req.body.layout ? req.body.layout : req.body;
+    const saved = saveViceroyPaymentPlanLayout(incoming);
+    return res.json({ ok: true, layout: saved });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar el layout de tabla de pagos Viceroy',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.get('/api/roi/master-csv', (req, res) => {
   if (!fs.existsSync(ROI_MASTER_CSV_PATH)) {
     return res.status(404).json({ error: 'CSV maestro no configurado' });
@@ -4992,6 +5101,11 @@ app.get('/viceroy', (req, res) => {
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pago Viceroy</h2>
           <p class="desc">Versión comercial Viceroy basada en acuerdos de RELATED.</p>
+        </a>
+        <a class="card" href="/viceroy/tabla-pagos/editor">
+          <span class="tag">Editor</span>
+          <h2 class="name">Editor PDF Viceroy</h2>
+          <p class="desc">Ajusta márgenes, escalas, líneas y orden visual de la hoja final.</p>
         </a>`;
   const inventoryCard = showInventoryCard ? `
         <a class="card" href="/viceroy-piloto">

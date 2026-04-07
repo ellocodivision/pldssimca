@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editor PDF · Tabla de Pago Viceroy</title>
+  <style>
+    :root {
+      --bg: #f4f1e8;
+      --card: #fffdf9;
+      --line: #d8d1c1;
+      --ink: #1f1f1a;
+      --muted: #666459;
+      --olive: #9b9b8b;
+      --olive-deep: #878775;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, sans-serif;
+    }
+
+    .wrap {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px 16px 32px;
+    }
+
+    .head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      max-width: 780px;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid #bdb8a9;
+      border-radius: 999px;
+      background: #fff;
+      color: #111;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      border-color: var(--olive-deep);
+      background: var(--olive);
+      color: #fff;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 430px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel,
+    .preview-panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .panel {
+      position: sticky;
+      top: 14px;
+    }
+
+    .section + .section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e7e1d4;
+    }
+
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .grid-1 {
+      display: grid;
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #615f56;
+    }
+
+    input[type="number"],
+    input[type="color"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid #cbc3b4;
+      border-radius: 10px;
+      padding: 0 10px;
+      background: #fff;
+      font-size: 14px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 10px;
+      border: 1px solid #cbc3b4;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      color: #3a3934;
+    }
+
+    .check input {
+      accent-color: var(--olive-deep);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: 1000px;
+      border: 1px solid #d8d1c1;
+      border-radius: 16px;
+      background: #fff;
+    }
+
+    .mini-note {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        position: static;
+      }
+
+      .preview-frame {
+        height: 820px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="head">
+      <div>
+        <h1>Editor PDF · Tabla de Pago Viceroy</h1>
+        <p class="sub">Ajusta el formato de impresión con controles visuales y revisa la hoja final en vivo. Lo que guardes aquí se aplica al módulo Viceroy al imprimir o guardar PDF.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy/tabla-pagos">Volver a tabla de pagos</a>
+        <button class="btn" type="button" id="resetBtn">Restaurar default</button>
+        <button class="btn primary" type="button" id="saveBtn">Guardar layout</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="section">
+          <h2>Hoja</h2>
+          <div class="grid">
+            <label>Escala impresión
+              <input id="printScale" type="number" min="0.65" max="1.15" step="0.01">
+            </label>
+            <label>Margen hoja (mm)
+              <input id="pageMarginMm" type="number" min="0" max="20" step="1">
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Encabezado</h2>
+          <div class="grid">
+            <label>Padding superior
+              <input id="heroPaddingTop" type="number" min="0" max="60" step="1">
+            </label>
+            <label>Padding lateral
+              <input id="heroPaddingSides" type="number" min="0" max="60" step="1">
+            </label>
+            <label>Padding inferior
+              <input id="heroPaddingBottom" type="number" min="0" max="60" step="1">
+            </label>
+            <label>Tamaño subtítulo
+              <input id="headlineSize" type="number" min="10" max="28" step="1">
+            </label>
+          </div>
+          <div class="grid-1" style="margin-top:10px;">
+            <label class="check"><input id="showHeroInPrint" type="checkbox"> Mostrar encabezado en PDF</label>
+            <label class="check"><input id="showLogosInPrint" type="checkbox"> Mostrar logos en PDF</label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Cuerpo</h2>
+          <div class="grid">
+            <label>Padding superior
+              <input id="contentPaddingTop" type="number" min="0" max="40" step="1">
+            </label>
+            <label>Padding lateral
+              <input id="contentPaddingSides" type="number" min="0" max="40" step="1">
+            </label>
+            <label>Padding inferior
+              <input id="contentPaddingBottom" type="number" min="0" max="40" step="1">
+            </label>
+            <label>Separación bloques
+              <input id="contentGap" type="number" min="0" max="32" step="1">
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Tabla Resumen</h2>
+          <div class="grid">
+            <label>Header tamaño
+              <input id="summaryHeaderSize" type="number" min="7" max="16" step="1">
+            </label>
+            <label>Valores tamaño
+              <input id="summaryValueSize" type="number" min="10" max="30" step="1">
+            </label>
+            <label>Padding vertical
+              <input id="summaryRowPaddingY" type="number" min="2" max="20" step="1">
+            </label>
+            <label>Borde color
+              <input id="shellBorderColor" type="color">
+            </label>
+            <label>Borde grosor
+              <input id="shellBorderWidth" type="number" min="0" max="4" step="0.5">
+            </label>
+            <label class="check"><input id="showSummaryInPrint" type="checkbox"> Mostrar resumen en PDF</label>
+          </div>
+          <div class="grid" style="margin-top:10px;">
+            <label>% Unidad
+              <input id="summaryColUnit" type="number" min="8" max="40" step="1">
+            </label>
+            <label>% Forma de pago
+              <input id="summaryColPlan" type="number" min="12" max="45" step="1">
+            </label>
+            <label>% Precio lista
+              <input id="summaryColList" type="number" min="10" max="35" step="1">
+            </label>
+            <label>% Descuento
+              <input id="summaryColDiscount" type="number" min="10" max="35" step="1">
+            </label>
+            <label>% Precio promo
+              <input id="summaryColPromo" type="number" min="10" max="35" step="1">
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Desglose</h2>
+          <div class="grid">
+            <label>Título tamaño
+              <input id="paymentsTitleSize" type="number" min="10" max="26" step="1">
+            </label>
+            <label>Header tamaño
+              <input id="paymentsHeaderSize" type="number" min="7" max="16" step="1">
+            </label>
+            <label>Filas tamaño
+              <input id="paymentsBodySize" type="number" min="8" max="18" step="1">
+            </label>
+            <label>Padding vertical
+              <input id="paymentRowPaddingY" type="number" min="2" max="20" step="1">
+            </label>
+            <label>Línea oliva color
+              <input id="oliveLineColor" type="color">
+            </label>
+            <label>Línea oliva grosor
+              <input id="oliveLineWidth" type="number" min="0" max="4" step="0.5">
+            </label>
+            <label class="check"><input id="showPaymentsInPrint" type="checkbox"> Mostrar desglose en PDF</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview-panel">
+        <div class="toolbar">
+          <div>
+            <strong>Vista previa real</strong>
+            <div class="status">La hoja usa el mismo módulo de Viceroy en modo preview de impresión.</div>
+          </div>
+          <div class="status" id="status">Cargando layout...</div>
+        </div>
+        <iframe id="previewFrame" class="preview-frame" src="/viceroy/tabla-pagos?editorPreview=1"></iframe>
+        <p class="mini-note">Tip: si quieres afinar una sola hoja, empieza bajando escala, padding y tamaños de tabla. Luego guarda y prueba “Imprimir / Guardar PDF” en el módulo final.</p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const defaultLayout = {
+        version: 1,
+        printScale: 0.92,
+        pageMarginMm: 6,
+        heroPaddingTop: 18,
+        heroPaddingSides: 18,
+        heroPaddingBottom: 14,
+        contentPaddingTop: 10,
+        contentPaddingSides: 14,
+        contentPaddingBottom: 14,
+        contentGap: 10,
+        headlineSize: 15,
+        summaryHeaderSize: 9,
+        summaryValueSize: 16,
+        paymentsTitleSize: 15,
+        paymentsHeaderSize: 9,
+        paymentsBodySize: 11,
+        summaryRowPaddingY: 8,
+        paymentRowPaddingY: 6,
+        oliveLineColor: '#9b9b8b',
+        oliveLineWidth: 1,
+        shellBorderColor: '#d6d0c2',
+        shellBorderWidth: 1,
+        showHeroInPrint: true,
+        showLogosInPrint: false,
+        showSummaryInPrint: true,
+        showPaymentsInPrint: true,
+        summaryColUnit: 14,
+        summaryColPlan: 26,
+        summaryColList: 20,
+        summaryColDiscount: 20,
+        summaryColPromo: 20
+      };
+
+      const els = {
+        saveBtn: document.getElementById('saveBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        status: document.getElementById('status'),
+        previewFrame: document.getElementById('previewFrame'),
+        printScale: document.getElementById('printScale'),
+        pageMarginMm: document.getElementById('pageMarginMm'),
+        heroPaddingTop: document.getElementById('heroPaddingTop'),
+        heroPaddingSides: document.getElementById('heroPaddingSides'),
+        heroPaddingBottom: document.getElementById('heroPaddingBottom'),
+        headlineSize: document.getElementById('headlineSize'),
+        showHeroInPrint: document.getElementById('showHeroInPrint'),
+        showLogosInPrint: document.getElementById('showLogosInPrint'),
+        contentPaddingTop: document.getElementById('contentPaddingTop'),
+        contentPaddingSides: document.getElementById('contentPaddingSides'),
+        contentPaddingBottom: document.getElementById('contentPaddingBottom'),
+        contentGap: document.getElementById('contentGap'),
+        summaryHeaderSize: document.getElementById('summaryHeaderSize'),
+        summaryValueSize: document.getElementById('summaryValueSize'),
+        summaryRowPaddingY: document.getElementById('summaryRowPaddingY'),
+        shellBorderColor: document.getElementById('shellBorderColor'),
+        shellBorderWidth: document.getElementById('shellBorderWidth'),
+        showSummaryInPrint: document.getElementById('showSummaryInPrint'),
+        summaryColUnit: document.getElementById('summaryColUnit'),
+        summaryColPlan: document.getElementById('summaryColPlan'),
+        summaryColList: document.getElementById('summaryColList'),
+        summaryColDiscount: document.getElementById('summaryColDiscount'),
+        summaryColPromo: document.getElementById('summaryColPromo'),
+        paymentsTitleSize: document.getElementById('paymentsTitleSize'),
+        paymentsHeaderSize: document.getElementById('paymentsHeaderSize'),
+        paymentsBodySize: document.getElementById('paymentsBodySize'),
+        paymentRowPaddingY: document.getElementById('paymentRowPaddingY'),
+        oliveLineColor: document.getElementById('oliveLineColor'),
+        oliveLineWidth: document.getElementById('oliveLineWidth'),
+        showPaymentsInPrint: document.getElementById('showPaymentsInPrint')
+      };
+
+      const fieldNames = Object.keys(els).filter(function (key) {
+        return !['saveBtn', 'resetBtn', 'status', 'previewFrame'].includes(key);
+      });
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function normalizeLayout(input) {
+        const src = input && typeof input === 'object' ? input : {};
+        const out = Object.assign({}, defaultLayout, src);
+        out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
+        out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
+        out.heroPaddingTop = clamp(Number(out.heroPaddingTop) || defaultLayout.heroPaddingTop, 0, 60);
+        out.heroPaddingSides = clamp(Number(out.heroPaddingSides) || defaultLayout.heroPaddingSides, 0, 60);
+        out.heroPaddingBottom = clamp(Number(out.heroPaddingBottom) || defaultLayout.heroPaddingBottom, 0, 60);
+        out.contentPaddingTop = clamp(Number(out.contentPaddingTop) || defaultLayout.contentPaddingTop, 0, 40);
+        out.contentPaddingSides = clamp(Number(out.contentPaddingSides) || defaultLayout.contentPaddingSides, 0, 40);
+        out.contentPaddingBottom = clamp(Number(out.contentPaddingBottom) || defaultLayout.contentPaddingBottom, 0, 40);
+        out.contentGap = clamp(Number(out.contentGap) || defaultLayout.contentGap, 0, 32);
+        out.headlineSize = clamp(Number(out.headlineSize) || defaultLayout.headlineSize, 10, 28);
+        out.summaryHeaderSize = clamp(Number(out.summaryHeaderSize) || defaultLayout.summaryHeaderSize, 7, 16);
+        out.summaryValueSize = clamp(Number(out.summaryValueSize) || defaultLayout.summaryValueSize, 10, 30);
+        out.paymentsTitleSize = clamp(Number(out.paymentsTitleSize) || defaultLayout.paymentsTitleSize, 10, 26);
+        out.paymentsHeaderSize = clamp(Number(out.paymentsHeaderSize) || defaultLayout.paymentsHeaderSize, 7, 16);
+        out.paymentsBodySize = clamp(Number(out.paymentsBodySize) || defaultLayout.paymentsBodySize, 8, 18);
+        out.summaryRowPaddingY = clamp(Number(out.summaryRowPaddingY) || defaultLayout.summaryRowPaddingY, 2, 20);
+        out.paymentRowPaddingY = clamp(Number(out.paymentRowPaddingY) || defaultLayout.paymentRowPaddingY, 2, 20);
+        out.oliveLineWidth = clamp(Number(out.oliveLineWidth) || defaultLayout.oliveLineWidth, 0, 4);
+        out.shellBorderWidth = clamp(Number(out.shellBorderWidth) || defaultLayout.shellBorderWidth, 0, 4);
+        out.summaryColUnit = clamp(Number(out.summaryColUnit) || defaultLayout.summaryColUnit, 8, 40);
+        out.summaryColPlan = clamp(Number(out.summaryColPlan) || defaultLayout.summaryColPlan, 12, 45);
+        out.summaryColList = clamp(Number(out.summaryColList) || defaultLayout.summaryColList, 10, 35);
+        out.summaryColDiscount = clamp(Number(out.summaryColDiscount) || defaultLayout.summaryColDiscount, 10, 35);
+        out.summaryColPromo = clamp(Number(out.summaryColPromo) || defaultLayout.summaryColPromo, 10, 35);
+        out.showHeroInPrint = Boolean(out.showHeroInPrint);
+        out.showLogosInPrint = Boolean(out.showLogosInPrint);
+        out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
+        out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+        return out;
+      }
+
+      function setForm(layoutInput) {
+        const layout = normalizeLayout(layoutInput);
+        fieldNames.forEach(function (name) {
+          const el = els[name];
+          if (!el) return;
+          if (el.type === 'checkbox') {
+            el.checked = Boolean(layout[name]);
+          } else {
+            el.value = String(layout[name]);
+          }
+        });
+      }
+
+      function getFormLayout() {
+        const out = {};
+        fieldNames.forEach(function (name) {
+          const el = els[name];
+          if (!el) return;
+          out[name] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+        return normalizeLayout(out);
+      }
+
+      function pushPreview() {
+        const frame = els.previewFrame;
+        const layout = getFormLayout();
+        if (!frame || !frame.contentWindow) return;
+        frame.contentWindow.postMessage({
+          type: 'viceroy-payment-plan-layout-preview',
+          layout: layout
+        }, window.location.origin);
+      }
+
+      async function loadLayout() {
+        els.status.textContent = 'Cargando layout...';
+        try {
+          const res = await fetch('/api/viceroy/tabla-pagos/layout', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          const layout = res.ok && data && data.ok && data.layout ? data.layout : defaultLayout;
+          setForm(layout);
+          els.status.textContent = 'Layout listo.';
+          pushPreview();
+        } catch {
+          setForm(defaultLayout);
+          els.status.textContent = 'No se pudo cargar layout. Se usó default.';
+          pushPreview();
+        }
+      }
+
+      async function saveLayout() {
+        const layout = getFormLayout();
+        els.status.textContent = 'Guardando layout...';
+        try {
+          const res = await fetch('/api/viceroy/tabla-pagos/layout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ layout: layout })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            els.status.textContent = data.error || 'No se pudo guardar.';
+            return;
+          }
+          setForm(data.layout || layout);
+          els.status.textContent = 'Layout guardado.';
+          pushPreview();
+        } catch {
+          els.status.textContent = 'Error de red guardando layout.';
+        }
+      }
+
+      fieldNames.forEach(function (name) {
+        const el = els[name];
+        el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', pushPreview);
+      });
+
+      els.previewFrame.addEventListener('load', pushPreview);
+      els.resetBtn.addEventListener('click', function () {
+        setForm(defaultLayout);
+        els.status.textContent = 'Valores default restaurados. Falta guardar si quieres dejarlos fijos.';
+        pushPreview();
+      });
+      els.saveBtn.addEventListener('click', saveLayout);
+
+      loadLayout();
+    })();
+  </script>
+</body>
+</html>

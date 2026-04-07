@@ -10,12 +10,37 @@
       --paper: #fffdf9;
       --olive: #9b9b8b;
       --olive-deep: #878775;
-      --olive-soft: #f2eee3;
       --ink: #373732;
       --muted: #747468;
       --line: #d6d0c2;
       --line-strong: #bcb4a1;
       --shadow: 0 28px 64px rgba(82, 72, 49, 0.08);
+      --print-scale: 0.92;
+      --print-margin-mm: 6;
+      --hero-padding-top: 18px;
+      --hero-padding-sides: 18px;
+      --hero-padding-bottom: 14px;
+      --content-padding-top: 10px;
+      --content-padding-sides: 14px;
+      --content-padding-bottom: 14px;
+      --content-gap: 10px;
+      --headline-size: 15px;
+      --summary-header-size: 9px;
+      --summary-value-size: 16px;
+      --payments-title-size: 15px;
+      --payments-header-size: 9px;
+      --payments-body-size: 11px;
+      --summary-row-padding-y: 8px;
+      --payment-row-padding-y: 6px;
+      --olive-line-color: #9b9b8b;
+      --olive-line-width: 1px;
+      --shell-border-color: #d6d0c2;
+      --shell-border-width: 1px;
+      --summary-col-unit: 14%;
+      --summary-col-plan: 26%;
+      --summary-col-list: 20%;
+      --summary-col-discount: 20%;
+      --summary-col-promo: 20%;
     }
 
     * { box-sizing: border-box; }
@@ -28,10 +53,19 @@
       font-family: Georgia, "Times New Roman", serif;
     }
 
+    body.preview-mode {
+      background: #fff;
+    }
+
     .page {
       max-width: 1180px;
       margin: 0 auto;
       padding: 22px 18px 36px;
+    }
+
+    body.preview-mode .page {
+      max-width: 1120px;
+      padding: 0;
     }
 
     .topbar {
@@ -46,11 +80,13 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
     .back,
     .lang-btn,
-    .print-btn {
+    .print-btn,
+    .editor-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -82,6 +118,11 @@
       border: 1px solid rgba(187, 180, 162, 0.9);
       box-shadow: var(--shadow);
       overflow: hidden;
+    }
+
+    body.preview-mode .sheet {
+      border: none;
+      box-shadow: none;
     }
 
     .hero {
@@ -149,7 +190,7 @@
     }
 
     .capture-grid.discount-on {
-      grid-template-columns: 1fr 1.2fr 1fr 0.8fr 1fr;
+      grid-template-columns: 1fr 1.2fr 1fr 0.85fr 1fr 1fr;
     }
 
     .field,
@@ -194,15 +235,18 @@
 
     .toggle-card {
       min-height: 38px;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 10px;
+      justify-content: flex-start;
+      gap: 8px;
       padding: 0 10px;
       border: 1px solid var(--line);
       background: #fff;
       font-family: Arial, sans-serif;
       font-size: 12px;
       color: #44433e;
+      max-width: 180px;
+      white-space: nowrap;
     }
 
     .toggle-card input {
@@ -219,13 +263,14 @@
 
     .summary-shell,
     .payments-shell {
-      border: 1px solid var(--line);
+      border: 1px solid var(--shell-border-color);
+      border-width: var(--shell-border-width);
       background: #fff;
       overflow: hidden;
     }
 
     .summary-shell {
-      border-top: 2px solid var(--olive);
+      border-top: var(--olive-line-width) solid var(--olive-line-color);
     }
 
     .summary-table,
@@ -255,12 +300,18 @@
       font-weight: 700;
       color: #2d2c28;
       text-align: center;
+      font-variant-numeric: tabular-nums;
     }
 
     .summary-table tbody td.amount {
       font-size: 24px;
-      font-variant-numeric: tabular-nums;
     }
+
+    .summary-table col.col-unit { width: var(--summary-col-unit); }
+    .summary-table col.col-plan { width: var(--summary-col-plan); }
+    .summary-table col.col-list { width: var(--summary-col-list); }
+    .summary-table col.col-discount { width: var(--summary-col-discount); }
+    .summary-table col.col-promo { width: var(--summary-col-promo); }
 
     .is-hidden {
       display: none;
@@ -272,7 +323,7 @@
       justify-content: space-between;
       gap: 12px;
       padding: 14px 16px;
-      border-top: 2px solid var(--olive);
+      border-top: var(--olive-line-width) solid var(--olive-line-color);
       border-bottom: 1px solid var(--line);
     }
 
@@ -348,6 +399,69 @@
       text-align: right;
     }
 
+    body.preview-mode .topbar,
+    body.preview-mode .form-section,
+    body.preview-mode .logos {
+      display: none !important;
+    }
+
+    body.preview-mode .hero {
+      padding: var(--hero-padding-top) var(--hero-padding-sides) var(--hero-padding-bottom);
+    }
+
+    body.preview-mode .headline {
+      margin-top: 8px;
+      font-size: var(--headline-size);
+    }
+
+    body.preview-mode .content {
+      padding: var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
+      gap: var(--content-gap);
+    }
+
+    body.preview-mode .summary-shell.is-hidden,
+    body.preview-mode .payments-shell.is-hidden {
+      display: none !important;
+    }
+
+    body.preview-mode.hide-hero .hero,
+    body.preview-mode.hide-logos .logos {
+      display: none !important;
+    }
+
+    body.preview-mode .summary-table thead th {
+      font-size: var(--summary-header-size);
+      padding: 6px 8px;
+    }
+
+    body.preview-mode .summary-table tbody td {
+      padding: var(--summary-row-padding-y) 8px calc(var(--summary-row-padding-y) + 2px);
+      font-size: var(--summary-value-size);
+    }
+
+    body.preview-mode .summary-table tbody td.amount {
+      font-size: var(--summary-value-size);
+    }
+
+    body.preview-mode .payments-head {
+      padding: 8px 10px 6px;
+    }
+
+    body.preview-mode .payments-head h2 {
+      font-size: var(--payments-title-size);
+    }
+
+    body.preview-mode .payments-table thead th {
+      padding: 6px 8px;
+      font-size: var(--payments-header-size);
+    }
+
+    body.preview-mode .payments-table td,
+    body.preview-mode .payments-table tfoot td {
+      padding: var(--payment-row-padding-y) 8px;
+      font-size: var(--payments-body-size);
+    }
+
     @media (max-width: 900px) {
       .capture-grid,
       .capture-grid.discount-on {
@@ -378,7 +492,7 @@
     @media print {
       @page {
         size: landscape;
-        margin: 6mm;
+        margin: calc(var(--print-margin-mm) * 1mm);
       }
 
       body {
@@ -391,9 +505,17 @@
         display: none !important;
       }
 
+      html,
+      body {
+        width: 100%;
+      }
+
       .page {
         max-width: none;
         padding: 0;
+        transform: scale(var(--print-scale));
+        transform-origin: top left;
+        width: calc(100% / var(--print-scale));
       }
 
       .sheet {
@@ -401,8 +523,15 @@
         box-shadow: none;
       }
 
+      body.hide-hero-print .hero,
+      body.hide-logos-print .logos,
+      body.hide-summary-print .summary-shell,
+      body.hide-payments-print .payments-shell {
+        display: none !important;
+      }
+
       .hero {
-        padding: 18px 18px 14px;
+        padding: var(--hero-padding-top) var(--hero-padding-sides) var(--hero-padding-bottom);
       }
 
       .brand {
@@ -419,46 +548,45 @@
 
       .headline {
         margin-top: 8px;
-        font-size: 15px;
+        font-size: var(--headline-size);
       }
 
       .content {
-        padding: 10px 14px 14px;
-        gap: 10px;
+        padding: var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
+        gap: var(--content-gap);
       }
 
-      .summary-table thead th,
-      .payments-table thead th {
+      .summary-table thead th {
         padding: 6px 8px;
-        font-size: 9px;
+        font-size: var(--summary-header-size);
       }
 
       .summary-table tbody td {
-        padding: 8px 8px 10px;
-        font-size: 16px;
+        padding: var(--summary-row-padding-y) 8px calc(var(--summary-row-padding-y) + 2px);
+        font-size: var(--summary-value-size);
       }
 
-      .summary-table tbody td.amount,
-      .payments-table td,
-      .payments-table tfoot td {
-        font-size: 11px;
+      .summary-table tbody td.amount {
+        font-size: var(--summary-value-size);
       }
 
       .payments-head {
         padding: 8px 10px 6px;
-        border-top-width: 1px;
-      }
-
-      .summary-shell {
-        border-top-width: 1px;
       }
 
       .payments-head h2 {
-        font-size: 15px;
+        font-size: var(--payments-title-size);
       }
 
-      .payments-table td {
+      .payments-table thead th {
         padding: 6px 8px;
+        font-size: var(--payments-header-size);
+      }
+
+      .payments-table td,
+      .payments-table tfoot td {
+        padding: var(--payment-row-padding-y) 8px;
+        font-size: var(--payments-body-size);
       }
     }
   </style>
@@ -468,6 +596,7 @@
     <div class="topbar">
       <a class="back" href="/viceroy" id="backBtn">Regresar a Viceroy</a>
       <div class="topbar-actions">
+        <a class="editor-btn" href="/viceroy/tabla-pagos/editor" id="editorBtn">Editor PDF</a>
         <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
         <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
       </div>
@@ -520,8 +649,15 @@
           </div>
         </section>
 
-        <section class="summary-shell">
+        <section class="summary-shell" id="summaryShell">
           <table class="summary-table">
+            <colgroup>
+              <col class="col-unit">
+              <col class="col-plan">
+              <col class="col-list">
+              <col class="col-discount discount-col">
+              <col class="col-promo discount-col">
+            </colgroup>
             <thead>
               <tr>
                 <th id="summaryHeadUnit">Unidad</th>
@@ -543,7 +679,7 @@
           </table>
         </section>
 
-        <section class="payments-shell">
+        <section class="payments-shell" id="paymentsShell">
           <div class="payments-head">
             <h2 id="paymentsTitle">Desglose de pagos</h2>
           </div>
@@ -568,7 +704,7 @@
           </table>
         </section>
 
-        <section class="logos" aria-hidden="true">
+        <section class="logos" aria-hidden="true" id="logosBlock">
           <div>Santa Fe</div>
           <div>Related</div>
           <div>SIMCA</div>
@@ -579,6 +715,9 @@
 
   <script>
     (function () {
+      const query = new URLSearchParams(window.location.search || '');
+      const isPreviewMode = query.get('editorPreview') === '1';
+      const initialLang = query.get('lang') === 'en' ? 'en' : 'es';
       const currency = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -590,6 +729,40 @@
         maximumFractionDigits: 2
       });
 
+      const defaultLayout = {
+        version: 1,
+        printScale: 0.92,
+        pageMarginMm: 6,
+        heroPaddingTop: 18,
+        heroPaddingSides: 18,
+        heroPaddingBottom: 14,
+        contentPaddingTop: 10,
+        contentPaddingSides: 14,
+        contentPaddingBottom: 14,
+        contentGap: 10,
+        headlineSize: 15,
+        summaryHeaderSize: 9,
+        summaryValueSize: 16,
+        paymentsTitleSize: 15,
+        paymentsHeaderSize: 9,
+        paymentsBodySize: 11,
+        summaryRowPaddingY: 8,
+        paymentRowPaddingY: 6,
+        oliveLineColor: '#9b9b8b',
+        oliveLineWidth: 1,
+        shellBorderColor: '#d6d0c2',
+        shellBorderWidth: 1,
+        showHeroInPrint: true,
+        showLogosInPrint: false,
+        showSummaryInPrint: true,
+        showPaymentsInPrint: true,
+        summaryColUnit: 14,
+        summaryColPlan: 26,
+        summaryColList: 20,
+        summaryColDiscount: 20,
+        summaryColPromo: 20
+      };
+
       const plans = [
         { key: '0|30|10|10|10|40', discount: 0, schedule: [30, 10, 10, 10, 40], shortLabel: '30/10/10/10/40' },
         { key: '3|50|10|10|10|20', discount: 3, schedule: [50, 10, 10, 10, 20], shortLabel: '50/10/10/10/20' },
@@ -600,6 +773,7 @@
       const translations = {
         es: {
           back: 'Regresar a Viceroy',
+          editor: 'Editor PDF',
           lang: 'English',
           langFlag: '🇺🇸',
           print: 'Imprimir / Guardar PDF',
@@ -629,6 +803,7 @@
         },
         en: {
           back: 'Back to Viceroy',
+          editor: 'PDF Editor',
           lang: 'Español',
           langFlag: '🇲🇽',
           print: 'Print / Save PDF',
@@ -660,6 +835,7 @@
 
       const els = {
         backBtn: document.getElementById('backBtn'),
+        editorBtn: document.getElementById('editorBtn'),
         langBtn: document.getElementById('langBtn'),
         langBtnText: document.getElementById('langBtnText'),
         printBtn: document.getElementById('printBtn'),
@@ -693,7 +869,6 @@
         promoFieldWrap: document.getElementById('promoFieldWrap'),
         discount: document.getElementById('discount'),
         promoPrice: document.getElementById('promoPrice'),
-        commercialRows: document.getElementById('commercialRows'),
         snapshotUnit: document.getElementById('snapshotUnit'),
         snapshotPlan: document.getElementById('snapshotPlan'),
         snapshotListPrice: document.getElementById('snapshotListPrice'),
@@ -701,10 +876,14 @@
         snapshotPromoPrice: document.getElementById('snapshotPromoPrice'),
         paymentRows: document.getElementById('paymentRows'),
         footerPercent: document.getElementById('footerPercent'),
-        footerAmount: document.getElementById('footerAmount')
+        footerAmount: document.getElementById('footerAmount'),
+        summaryShell: document.getElementById('summaryShell'),
+        paymentsShell: document.getElementById('paymentsShell'),
+        logosBlock: document.getElementById('logosBlock')
       };
 
-      let currentLang = 'es';
+      let currentLang = initialLang;
+      let currentLayout = normalizeLayout(defaultLayout);
 
       function sanitizeNumber(value) {
         const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
@@ -714,6 +893,86 @@
 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
+      }
+
+      function normalizeLayout(input) {
+        const src = input && typeof input === 'object' ? input : {};
+        const out = Object.assign({}, defaultLayout, src);
+        out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
+        out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
+        out.heroPaddingTop = clamp(Number(out.heroPaddingTop) || defaultLayout.heroPaddingTop, 0, 60);
+        out.heroPaddingSides = clamp(Number(out.heroPaddingSides) || defaultLayout.heroPaddingSides, 0, 60);
+        out.heroPaddingBottom = clamp(Number(out.heroPaddingBottom) || defaultLayout.heroPaddingBottom, 0, 60);
+        out.contentPaddingTop = clamp(Number(out.contentPaddingTop) || defaultLayout.contentPaddingTop, 0, 40);
+        out.contentPaddingSides = clamp(Number(out.contentPaddingSides) || defaultLayout.contentPaddingSides, 0, 40);
+        out.contentPaddingBottom = clamp(Number(out.contentPaddingBottom) || defaultLayout.contentPaddingBottom, 0, 40);
+        out.contentGap = clamp(Number(out.contentGap) || defaultLayout.contentGap, 0, 32);
+        out.headlineSize = clamp(Number(out.headlineSize) || defaultLayout.headlineSize, 10, 28);
+        out.summaryHeaderSize = clamp(Number(out.summaryHeaderSize) || defaultLayout.summaryHeaderSize, 7, 16);
+        out.summaryValueSize = clamp(Number(out.summaryValueSize) || defaultLayout.summaryValueSize, 10, 30);
+        out.paymentsTitleSize = clamp(Number(out.paymentsTitleSize) || defaultLayout.paymentsTitleSize, 10, 26);
+        out.paymentsHeaderSize = clamp(Number(out.paymentsHeaderSize) || defaultLayout.paymentsHeaderSize, 7, 16);
+        out.paymentsBodySize = clamp(Number(out.paymentsBodySize) || defaultLayout.paymentsBodySize, 8, 18);
+        out.summaryRowPaddingY = clamp(Number(out.summaryRowPaddingY) || defaultLayout.summaryRowPaddingY, 2, 20);
+        out.paymentRowPaddingY = clamp(Number(out.paymentRowPaddingY) || defaultLayout.paymentRowPaddingY, 2, 20);
+        out.oliveLineWidth = clamp(Number(out.oliveLineWidth) || defaultLayout.oliveLineWidth, 0, 4);
+        out.shellBorderWidth = clamp(Number(out.shellBorderWidth) || defaultLayout.shellBorderWidth, 0, 4);
+        out.summaryColUnit = clamp(Number(out.summaryColUnit) || defaultLayout.summaryColUnit, 8, 40);
+        out.summaryColPlan = clamp(Number(out.summaryColPlan) || defaultLayout.summaryColPlan, 12, 45);
+        out.summaryColList = clamp(Number(out.summaryColList) || defaultLayout.summaryColList, 10, 35);
+        out.summaryColDiscount = clamp(Number(out.summaryColDiscount) || defaultLayout.summaryColDiscount, 10, 35);
+        out.summaryColPromo = clamp(Number(out.summaryColPromo) || defaultLayout.summaryColPromo, 10, 35);
+        out.showHeroInPrint = Boolean(out.showHeroInPrint);
+        out.showLogosInPrint = Boolean(out.showLogosInPrint);
+        out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
+        out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+        if (typeof out.oliveLineColor !== 'string') out.oliveLineColor = defaultLayout.oliveLineColor;
+        if (typeof out.shellBorderColor !== 'string') out.shellBorderColor = defaultLayout.shellBorderColor;
+        return out;
+      }
+
+      function applyLayout(layoutInput) {
+        const layout = normalizeLayout(layoutInput);
+        currentLayout = layout;
+        const root = document.documentElement;
+        root.style.setProperty('--print-scale', String(layout.printScale));
+        root.style.setProperty('--print-margin-mm', String(layout.pageMarginMm));
+        root.style.setProperty('--hero-padding-top', layout.heroPaddingTop + 'px');
+        root.style.setProperty('--hero-padding-sides', layout.heroPaddingSides + 'px');
+        root.style.setProperty('--hero-padding-bottom', layout.heroPaddingBottom + 'px');
+        root.style.setProperty('--content-padding-top', layout.contentPaddingTop + 'px');
+        root.style.setProperty('--content-padding-sides', layout.contentPaddingSides + 'px');
+        root.style.setProperty('--content-padding-bottom', layout.contentPaddingBottom + 'px');
+        root.style.setProperty('--content-gap', layout.contentGap + 'px');
+        root.style.setProperty('--headline-size', layout.headlineSize + 'px');
+        root.style.setProperty('--summary-header-size', layout.summaryHeaderSize + 'px');
+        root.style.setProperty('--summary-value-size', layout.summaryValueSize + 'px');
+        root.style.setProperty('--payments-title-size', layout.paymentsTitleSize + 'px');
+        root.style.setProperty('--payments-header-size', layout.paymentsHeaderSize + 'px');
+        root.style.setProperty('--payments-body-size', layout.paymentsBodySize + 'px');
+        root.style.setProperty('--summary-row-padding-y', layout.summaryRowPaddingY + 'px');
+        root.style.setProperty('--payment-row-padding-y', layout.paymentRowPaddingY + 'px');
+        root.style.setProperty('--olive-line-color', layout.oliveLineColor);
+        root.style.setProperty('--olive-line-width', layout.oliveLineWidth + 'px');
+        root.style.setProperty('--shell-border-color', layout.shellBorderColor);
+        root.style.setProperty('--shell-border-width', layout.shellBorderWidth + 'px');
+        root.style.setProperty('--summary-col-unit', layout.summaryColUnit + '%');
+        root.style.setProperty('--summary-col-plan', layout.summaryColPlan + '%');
+        root.style.setProperty('--summary-col-list', layout.summaryColList + '%');
+        root.style.setProperty('--summary-col-discount', layout.summaryColDiscount + '%');
+        root.style.setProperty('--summary-col-promo', layout.summaryColPromo + '%');
+
+        document.body.classList.toggle('hide-hero-print', !layout.showHeroInPrint);
+        document.body.classList.toggle('hide-logos-print', !layout.showLogosInPrint);
+        document.body.classList.toggle('hide-summary-print', !layout.showSummaryInPrint);
+        document.body.classList.toggle('hide-payments-print', !layout.showPaymentsInPrint);
+
+        if (isPreviewMode) {
+          document.body.classList.toggle('hide-hero', !layout.showHeroInPrint);
+          document.body.classList.toggle('hide-logos', !layout.showLogosInPrint);
+          els.summaryShell.classList.toggle('is-hidden', !layout.showSummaryInPrint);
+          els.paymentsShell.classList.toggle('is-hidden', !layout.showPaymentsInPrint);
+        }
       }
 
       function formatCurrency(value) {
@@ -742,6 +1001,7 @@
       function updateLanguage() {
         const t = translations[currentLang];
         els.backBtn.textContent = t.back;
+        els.editorBtn.textContent = t.editor;
         els.langBtn.querySelector('span').textContent = t.langFlag;
         els.langBtnText.textContent = t.lang;
         els.printBtn.textContent = t.print;
@@ -831,6 +1091,23 @@
         els.footerAmount.textContent = formatCurrency(amountTotal);
       }
 
+      async function loadLayout() {
+        try {
+          const res = await fetch('/api/viceroy/tabla-pagos/layout', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (res.ok && data && data.ok && data.layout) {
+            applyLayout(data.layout);
+            return;
+          }
+        } catch {}
+        applyLayout(defaultLayout);
+      }
+
+      window.addEventListener('message', function (event) {
+        if (!event || !event.data || event.data.type !== 'viceroy-payment-plan-layout-preview') return;
+        applyLayout(event.data.layout || defaultLayout);
+      });
+
       els.langBtn.addEventListener('click', function () {
         currentLang = currentLang === 'es' ? 'en' : 'es';
         updateLanguage();
@@ -849,9 +1126,15 @@
         window.print();
       });
 
+      if (isPreviewMode) {
+        document.body.classList.add('preview-mode');
+      }
+
+      currentLang = initialLang;
       updateLanguage();
       syncDiscountVisibility();
       update();
+      loadLayout();
     })();
   </script>
 </body>
