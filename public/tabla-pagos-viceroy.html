@@ -346,6 +346,10 @@
     .summary-table col.col-discount { width: var(--summary-col-discount); }
     .summary-table col.col-promo { width: var(--summary-col-promo); }
 
+    .summary-shell.no-discount .summary-table col.col-unit { width: 25%; }
+    .summary-shell.no-discount .summary-table col.col-plan { width: 50%; }
+    .summary-shell.no-discount .summary-table col.col-list { width: 25%; }
+
     .is-hidden {
       display: none;
     }
@@ -1155,6 +1159,7 @@
         els.discountFieldWrap.hidden = !showDiscount;
         els.promoFieldWrap.hidden = !showDiscount;
         els.captureGrid.classList.toggle('discount-on', showDiscount);
+        els.summaryShell.classList.toggle('no-discount', !showDiscount);
         document.querySelectorAll('.discount-col').forEach(function (node) {
           node.classList.toggle('is-hidden', !showDiscount);
         });
