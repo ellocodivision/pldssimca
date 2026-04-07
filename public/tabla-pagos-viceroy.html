@@ -57,6 +57,11 @@
       background: #fff;
     }
 
+    body.print-preview-mode {
+      background: #d8d8dd;
+      padding: 20px 0;
+    }
+
     .page {
       max-width: 1180px;
       margin: 0 auto;
@@ -66,6 +71,13 @@
     body.preview-mode .page {
       max-width: 1120px;
       padding: 0;
+    }
+
+    body.print-preview-mode .page {
+      width: min(816px, calc(100vw - 40px));
+      max-width: none;
+      padding: 0;
+      margin: 0 auto;
     }
 
     .topbar {
@@ -123,6 +135,13 @@
     body.preview-mode .sheet {
       border: none;
       box-shadow: none;
+    }
+
+    body.print-preview-mode .sheet {
+      border: none;
+      box-shadow: 0 0 0 1px rgba(145, 145, 145, 0.35);
+      min-height: 1056px;
+      background: #fff;
     }
 
     .hero {
@@ -400,63 +419,81 @@
     }
 
     body.preview-mode .topbar,
-    body.preview-mode .logos {
+    body.preview-mode .logos,
+    body.print-preview-mode .topbar,
+    body.print-preview-mode .form-section,
+    body.print-preview-mode .logos {
       display: none !important;
     }
 
-    body.preview-mode .hero {
+    body.preview-mode .hero,
+    body.print-preview-mode .hero {
       padding: var(--hero-padding-top) var(--hero-padding-sides) var(--hero-padding-bottom);
     }
 
-    body.preview-mode .headline {
+    body.preview-mode .headline,
+    body.print-preview-mode .headline {
       margin-top: 8px;
       font-size: var(--headline-size);
     }
 
-    body.preview-mode .content {
+    body.preview-mode .content,
+    body.print-preview-mode .content {
       padding: var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
       gap: var(--content-gap);
     }
 
     body.preview-mode .summary-shell.is-hidden,
-    body.preview-mode .payments-shell.is-hidden {
+    body.preview-mode .payments-shell.is-hidden,
+    body.print-preview-mode .summary-shell.is-hidden,
+    body.print-preview-mode .payments-shell.is-hidden {
       display: none !important;
     }
 
     body.preview-mode.hide-hero .hero,
-    body.preview-mode.hide-logos .logos {
+    body.preview-mode.hide-logos .logos,
+    body.print-preview-mode.hide-hero .hero,
+    body.print-preview-mode.hide-logos .logos {
       display: none !important;
     }
 
-    body.preview-mode .summary-table thead th {
+    body.preview-mode .summary-table thead th,
+    body.print-preview-mode .summary-table thead th {
       font-size: var(--summary-header-size);
       padding: 6px 8px;
     }
 
-    body.preview-mode .summary-table tbody td {
+    body.preview-mode .summary-table tbody td,
+    body.print-preview-mode .summary-table tbody td {
       padding: var(--summary-row-padding-y) 8px calc(var(--summary-row-padding-y) + 2px);
       font-size: var(--summary-value-size);
     }
 
-    body.preview-mode .summary-table tbody td.amount {
+    body.preview-mode .summary-table tbody td.amount,
+    body.print-preview-mode .summary-table tbody td.amount {
       font-size: var(--summary-value-size);
     }
 
-    body.preview-mode .payments-head {
+    body.preview-mode .payments-head,
+    body.print-preview-mode .payments-head {
       padding: 8px 10px 6px;
     }
 
-    body.preview-mode .payments-head h2 {
+    body.preview-mode .payments-head h2,
+    body.print-preview-mode .payments-head h2 {
       font-size: var(--payments-title-size);
     }
 
-    body.preview-mode .payments-table thead th {
+    body.preview-mode .payments-table thead th,
+    body.print-preview-mode .payments-table thead th {
       padding: 6px 8px;
       font-size: var(--payments-header-size);
     }
 
     body.preview-mode .payments-table td,
-    body.preview-mode .payments-table tfoot td {
+    body.preview-mode .payments-table tfoot td,
+    body.print-preview-mode .payments-table td,
+    body.print-preview-mode .payments-table tfoot td {
       padding: var(--payment-row-padding-y) 8px;
       font-size: var(--payments-body-size);
     }
@@ -715,7 +752,9 @@
   <script>
     (function () {
       const query = new URLSearchParams(window.location.search || '');
-      const isPreviewMode = query.get('editorPreview') === '1';
+      const previewQuery = String(query.get('editorPreview') || '').trim();
+      const isPreviewMode = previewQuery === '1' || previewQuery === 'print';
+      const isPrintPreviewMode = previewQuery === 'print';
       const initialLang = query.get('lang') === 'en' ? 'en' : 'es';
       const currency = new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -1127,6 +1166,9 @@
 
       if (isPreviewMode) {
         document.body.classList.add('preview-mode');
+      }
+      if (isPrintPreviewMode) {
+        document.body.classList.add('print-preview-mode');
       }
 
       currentLang = initialLang;
