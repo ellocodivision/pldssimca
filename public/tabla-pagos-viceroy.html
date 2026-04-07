@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tabla de pago Viceroy</title>
+  <style>
+    :root {
+      --bg: #f6f2e9;
+      --paper: #fffdf9;
+      --olive: #9b9b8b;
+      --olive-deep: #8c8d7c;
+      --olive-soft: #f3f0e6;
+      --ink: #393934;
+      --muted: #747468;
+      --line: #d6d0c2;
+      --line-strong: #bbb4a2;
+      --accent: #f7f4ea;
+      --shadow: 0 30px 70px rgba(82, 72, 49, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #faf8f2 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 22px 18px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .back,
+    .print-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .back {
+      border: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.88);
+      color: #272722;
+    }
+
+    .print-btn {
+      border: 1px solid var(--olive-deep);
+      background: var(--olive);
+      color: #fff;
+    }
+
+    .sheet {
+      background: var(--paper);
+      border: 1px solid rgba(187, 180, 162, 0.9);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero {
+      background: var(--olive);
+      color: #f7f3ea;
+      padding: 34px 28px 28px;
+      text-align: center;
+    }
+
+    .brand {
+      font-family: Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      line-height: 1.05;
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .brand small {
+      display: block;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .location {
+      margin: 8px 0 0;
+      font-size: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .headline {
+      margin: 14px 0 0;
+      font-size: 18px;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .content {
+      padding: 24px 26px 30px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      color: #58574f;
+      font-size: 18px;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .capture-grid.compact {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    label {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #6b6a61;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      background: #fff;
+      padding: 0 12px;
+      color: var(--ink);
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--olive-deep);
+      box-shadow: inset 0 0 0 1px var(--olive-deep);
+    }
+
+    .helper {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .commercial-table,
+    .payments-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .commercial-shell,
+    .payments-shell,
+    .summary-shell {
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .commercial-shell {
+      overflow: hidden;
+    }
+
+    .commercial-table thead th,
+    .payments-table thead th,
+    .summary-table thead th {
+      background: var(--olive);
+      color: #f7f3ea;
+      font-weight: 400;
+      font-size: 14px;
+      padding: 9px 10px;
+      text-align: center;
+      border-right: 1px solid rgba(255,255,255,0.28);
+    }
+
+    .commercial-table td {
+      padding: 12px 10px;
+      text-align: center;
+      border-right: 1px solid var(--line-strong);
+      font-size: 18px;
+    }
+
+    .commercial-table tbody tr:nth-child(even) td {
+      background: #fbf9f1;
+    }
+
+    .commercial-table tbody tr.active td {
+      background: #f5f2e7;
+    }
+
+    .commercial-table th:last-child,
+    .commercial-table td:last-child {
+      border-right: none;
+    }
+
+    .summary-shell {
+      overflow: hidden;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .summary-table thead th {
+      background: transparent;
+      color: #666459;
+      border-bottom: 1px solid var(--line);
+      border-right: none;
+      padding: 12px 8px 10px;
+      text-align: left;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .summary-table tbody td {
+      padding: 16px 8px 18px;
+      border-top: none;
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #2d2c28;
+    }
+
+    .summary-table tbody td.amount {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 16px;
+    }
+
+    .payments-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .payments-head h2 {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: #2e2d28;
+    }
+
+    .payments-table thead th {
+      background: transparent;
+      color: #69675e;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .payments-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #ebe4d5;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      color: #34332f;
+    }
+
+    .payments-table tbody tr.highlight td {
+      background: #f8f4ea;
+    }
+
+    .payments-table td.number,
+    .payments-table td.percent,
+    .payments-table td.amount {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .payments-table tfoot td {
+      padding: 13px 10px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      border-bottom: none;
+    }
+
+    .logos {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+      align-items: center;
+      padding-top: 8px;
+      border-top: 1px solid var(--line-strong);
+      color: var(--olive);
+      font-family: Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .logos div:nth-child(2) {
+      text-align: center;
+    }
+
+    .logos div:last-child {
+      text-align: right;
+    }
+
+    @media (max-width: 900px) {
+      .capture-grid,
+      .capture-grid.compact {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-shell,
+      .commercial-shell,
+      .payments-shell {
+        overflow-x: auto;
+      }
+
+      .summary-table,
+      .commercial-table,
+      .payments-table {
+        min-width: 760px;
+      }
+
+      .logos {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .logos div:last-child,
+      .logos div:nth-child(2) {
+        text-align: center;
+      }
+    }
+
+    @media print {
+      @page {
+        size: landscape;
+        margin: 6mm;
+      }
+
+      body {
+        background: #fff;
+      }
+
+      .topbar,
+      .helper,
+      .logos {
+        display: none !important;
+      }
+
+      .page {
+        max-width: none;
+        padding: 0;
+      }
+
+      .sheet {
+        border: none;
+        box-shadow: none;
+      }
+
+      .hero {
+        padding: 20px 18px 16px;
+      }
+
+      .brand {
+        font-size: 18px;
+      }
+
+      .brand small {
+        font-size: 11px;
+      }
+
+      .location {
+        font-size: 19px;
+      }
+
+      .headline {
+        margin-top: 8px;
+        font-size: 15px;
+      }
+
+      .content {
+        padding: 14px 16px 16px;
+        gap: 14px;
+      }
+
+      .section-title {
+        margin-bottom: 8px;
+        font-size: 16px;
+      }
+
+      .capture-grid,
+      .capture-grid.compact {
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      input,
+      select {
+        min-height: 36px;
+        font-size: 12px;
+      }
+
+      label {
+        font-size: 9px;
+      }
+
+      .summary-table thead th,
+      .payments-table thead th {
+        padding: 7px 8px;
+        font-size: 9px;
+      }
+
+      .summary-table tbody td {
+        padding: 10px 8px 12px;
+        font-size: 18px;
+      }
+
+      .summary-table tbody td.amount,
+      .payments-table td,
+      .payments-table tfoot td {
+        font-size: 12px;
+      }
+
+      .commercial-table thead th,
+      .commercial-table td {
+        padding: 8px 8px;
+        font-size: 13px;
+      }
+
+      .payments-head {
+        padding: 10px 12px;
+      }
+
+      .payments-head h2 {
+        font-size: 16px;
+      }
+
+      .payments-table td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <a class="back" href="/">Regresar al panel</a>
+      <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
+    </div>
+
+    <section class="sheet">
+      <header class="hero">
+        <h1 class="brand">Viceroy <small>Residences</small></h1>
+        <p class="location">Playa del Carmen</p>
+        <p class="headline">Tabla de pago Viceroy</p>
+      </header>
+
+      <div class="content">
+        <section>
+          <h2 class="section-title">Descuentos y Formas de Pago:</h2>
+
+          <div class="capture-grid compact">
+            <div class="field">
+              <label for="unitName">Unidad</label>
+              <input id="unitName" type="text" value="402">
+            </div>
+            <div class="field">
+              <label for="paymentPlan">Forma de pago</label>
+              <select id="paymentPlan">
+                <option value="0|30|10|10|10|40">0% - 30 / 10 / 10 / 10 / 40</option>
+                <option value="3|50|10|10|10|20">3% - 50 / 10 / 10 / 10 / 20</option>
+                <option value="5|70|10|5|5|10">5% - 70 / 10 / 5 / 5 / 10</option>
+                <option value="7|90|0|5|0|5">7% - 90 / 0 / 5 / 0 / 5</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="listPrice">Precio de lista</label>
+              <input id="listPrice" type="text" inputmode="decimal" value="0">
+            </div>
+            <div class="field">
+              <label for="discount">Descuento (%)</label>
+              <input id="discount" type="text" inputmode="decimal" value="0">
+            </div>
+            <div class="field">
+              <label for="promoPrice">Precio promo</label>
+              <input id="promoPrice" type="text" inputmode="decimal" value="0">
+            </div>
+          </div>
+
+          <p class="helper">La forma de pago toma los porcentajes del acuerdo comercial. Si ajustas descuento o precio promo, ambos se recalculan entre sí.</p>
+
+          <div class="commercial-shell">
+            <table class="commercial-table">
+              <thead>
+                <tr>
+                  <th>Descuento</th>
+                  <th>Enganche</th>
+                  <th>Mes 8</th>
+                  <th>Mes 16</th>
+                  <th>Mes 24</th>
+                  <th>Mes 30</th>
+                </tr>
+              </thead>
+              <tbody id="commercialRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="summary-shell">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>Unidad</th>
+                <th>Forma de pago</th>
+                <th>Precio lista</th>
+                <th>Descuento</th>
+                <th>Precio promo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="snapshotUnit">402</td>
+                <td id="snapshotPlan">30/10/10/10/40</td>
+                <td class="amount" id="snapshotListPrice">$0</td>
+                <td class="amount" id="snapshotDiscount">$0</td>
+                <td class="amount" id="snapshotPromoPrice">$0</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="payments-shell">
+          <div class="payments-head">
+            <h2>Desglose de pagos</h2>
+          </div>
+          <table class="payments-table">
+            <thead>
+              <tr>
+                <th>Etapa</th>
+                <th>Concepto</th>
+                <th>Referencia</th>
+                <th>Porcentaje</th>
+                <th>Monto</th>
+              </tr>
+            </thead>
+            <tbody id="paymentRows"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">Totales</td>
+                <td class="percent" id="footerPercent">100%</td>
+                <td class="amount" id="footerAmount">$0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </section>
+
+        <section class="logos" aria-hidden="true">
+          <div>Santa Fe</div>
+          <div>Related</div>
+          <div>SIMCA</div>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const currency = new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        maximumFractionDigits: 2
+      });
+
+      const percentFormat = new Intl.NumberFormat('es-MX', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      });
+
+      const plans = [
+        {
+          key: '0|30|10|10|10|40',
+          discount: 0,
+          schedule: [30, 10, 10, 10, 40],
+          shortLabel: '30/10/10/10/40'
+        },
+        {
+          key: '3|50|10|10|10|20',
+          discount: 3,
+          schedule: [50, 10, 10, 10, 20],
+          shortLabel: '50/10/10/10/20'
+        },
+        {
+          key: '5|70|10|5|5|10',
+          discount: 5,
+          schedule: [70, 10, 5, 5, 10],
+          shortLabel: '70/10/5/5/10'
+        },
+        {
+          key: '7|90|0|5|0|5',
+          discount: 7,
+          schedule: [90, 0, 5, 0, 5],
+          shortLabel: '90/0/5/0/5'
+        }
+      ];
+
+      const els = {
+        unitName: document.getElementById('unitName'),
+        paymentPlan: document.getElementById('paymentPlan'),
+        listPrice: document.getElementById('listPrice'),
+        discount: document.getElementById('discount'),
+        promoPrice: document.getElementById('promoPrice'),
+        commercialRows: document.getElementById('commercialRows'),
+        snapshotUnit: document.getElementById('snapshotUnit'),
+        snapshotPlan: document.getElementById('snapshotPlan'),
+        snapshotListPrice: document.getElementById('snapshotListPrice'),
+        snapshotDiscount: document.getElementById('snapshotDiscount'),
+        snapshotPromoPrice: document.getElementById('snapshotPromoPrice'),
+        paymentRows: document.getElementById('paymentRows'),
+        footerPercent: document.getElementById('footerPercent'),
+        footerAmount: document.getElementById('footerAmount'),
+        printBtn: document.getElementById('printBtn')
+      };
+
+      let lastEdited = 'plan';
+
+      function sanitizeNumber(value) {
+        const cleaned = String(value || '')
+          .replace(/[^\d.,-]/g, '')
+          .replace(/,/g, '');
+        const parsed = Number(cleaned);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function formatCurrency(value) {
+        return currency.format(Number(value || 0));
+      }
+
+      function formatPercent(value) {
+        return percentFormat.format(Number(value || 0)) + '%';
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function findPlan(key) {
+        return plans.find(function (plan) {
+          return plan.key === key;
+        }) || plans[0];
+      }
+
+      function renderCommercialRows(activeKey) {
+        els.commercialRows.innerHTML = plans.map(function (plan) {
+          return [
+            '<tr' + (plan.key === activeKey ? ' class="active"' : '') + '>',
+            '<td>' + formatPercent(plan.discount) + '</td>',
+            '<td>' + formatPercent(plan.schedule[0]) + '</td>',
+            '<td>' + formatPercent(plan.schedule[1]) + '</td>',
+            '<td>' + formatPercent(plan.schedule[2]) + '</td>',
+            '<td>' + formatPercent(plan.schedule[3]) + '</td>',
+            '<td>' + formatPercent(plan.schedule[4]) + '</td>',
+            '</tr>'
+          ].join('');
+        }).join('');
+      }
+
+      function getPaymentRows(schedule, promoPrice) {
+        const refs = ['Enganche', 'Mes 8', 'Mes 16', 'Mes 24', 'Mes 30'];
+        return schedule.map(function (part, index) {
+          const isFirst = index === 0;
+          const isLast = index === schedule.length - 1;
+          return {
+            stage: index + 1,
+            concept: isFirst ? 'Enganche' : (isLast ? 'Balance contra entrega' : 'Pago programado'),
+            reference: refs[index],
+            badge: refs[index].toUpperCase(),
+            percent: part,
+            amount: promoPrice * (part / 100),
+            highlight: isLast
+          };
+        });
+      }
+
+      function update(source) {
+        if (source) lastEdited = source;
+
+        const unitName = els.unitName.value.trim();
+        const plan = findPlan(els.paymentPlan.value);
+        const listPrice = Math.max(0, sanitizeNumber(els.listPrice.value));
+
+        let discountPercent = clamp(sanitizeNumber(els.discount.value), 0, 100);
+        let promoPrice = Math.max(0, sanitizeNumber(els.promoPrice.value));
+
+        if (lastEdited === 'plan') {
+          discountPercent = plan.discount;
+          promoPrice = Math.max(0, listPrice - (listPrice * discountPercent / 100));
+        } else if (lastEdited === 'promo') {
+          if (listPrice <= 0) {
+            promoPrice = 0;
+            discountPercent = 0;
+          } else {
+            promoPrice = clamp(promoPrice, 0, listPrice);
+            discountPercent = clamp(((listPrice - promoPrice) / listPrice) * 100, 0, 100);
+          }
+        } else {
+          discountPercent = clamp(discountPercent, 0, 100);
+          promoPrice = Math.max(0, listPrice - (listPrice * discountPercent / 100));
+        }
+
+        const discountAmount = Math.max(0, listPrice - promoPrice);
+        const rows = getPaymentRows(plan.schedule, promoPrice);
+        const percentTotal = plan.schedule.reduce(function (sum, item) {
+          return sum + item;
+        }, 0);
+        const amountTotal = rows.reduce(function (sum, row) {
+          return sum + row.amount;
+        }, 0);
+
+        els.discount.value = percentFormat.format(discountPercent);
+        els.promoPrice.value = String(Math.round(promoPrice * 100) / 100);
+
+        renderCommercialRows(plan.key);
+
+        els.snapshotUnit.textContent = unitName || 'Sin capturar';
+        els.snapshotPlan.textContent = plan.shortLabel;
+        els.snapshotListPrice.textContent = formatCurrency(listPrice);
+        els.snapshotDiscount.textContent = formatCurrency(discountAmount) + ' (' + formatPercent(discountPercent) + ')';
+        els.snapshotPromoPrice.textContent = formatCurrency(promoPrice);
+
+        els.paymentRows.innerHTML = rows.map(function (row) {
+          return [
+            '<tr' + (row.highlight ? ' class="highlight"' : '') + '>',
+            '<td class="number">' + row.stage + '</td>',
+            '<td>' + escapeHtml(row.concept) + '</td>',
+            '<td>' + escapeHtml(row.reference) + '</td>',
+            '<td class="percent">' + formatPercent(row.percent) + '</td>',
+            '<td class="amount">' + formatCurrency(row.amount) + '</td>',
+            '</tr>'
+          ].join('');
+        }).join('');
+
+        els.footerPercent.textContent = formatPercent(percentTotal);
+        els.footerAmount.textContent = formatCurrency(amountTotal);
+      }
+
+      els.paymentPlan.addEventListener('change', function () {
+        update('plan');
+      });
+
+      els.discount.addEventListener('input', function () {
+        update('discount');
+      });
+
+      els.promoPrice.addEventListener('input', function () {
+        update('promo');
+      });
+
+      [els.unitName, els.listPrice].forEach(function (element) {
+        element.addEventListener('input', function () {
+          update(lastEdited);
+        });
+      });
+
+      els.printBtn.addEventListener('click', function () {
+        window.print();
+      });
+
+      update('plan');
+    })();
+  </script>
+</body>
+</html>

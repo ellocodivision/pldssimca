@@ -3447,12 +3447,6 @@ app.get('/', requireAuth, (req, res) => {
           <h2 class="name">Tabla de Pagos</h2>
           <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.</p>
         </a>`;
-  const tablaPagosViceroyCard = `
-        <a class="card" href="/tabla-pagos-viceroy">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Tabla de Pago Viceroy</h2>
-          <p class="desc">Versión comercial Viceroy basada en acuerdos de RELATED.</p>
-        </a>`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -3576,7 +3570,6 @@ app.get('/', requireAuth, (req, res) => {
         ${brokersCard}
         ${presentacionesCard}
         ${tablaPagosCard}
-        ${tablaPagosViceroyCard}
         ${viceroyModuleCard}
         ${ownerServicesCard}
         ${gerenteCard}
@@ -3636,7 +3629,6 @@ app.use('/generador-faes', requireInternalUser);
 app.use('/plds', requireInternalUser);
 app.use('/generador-roi', requireInternalUser);
 app.use('/tabla-pagos', requireInternalUser);
-app.use('/tabla-pagos-viceroy', requireInternalUser);
 app.use('/form', requireInternalUser);
 app.use('/form-nacional', requireInternalUser);
 app.use('/form-nacional-moral', requireInternalUser);
@@ -3741,7 +3733,7 @@ app.get('/tabla-pagos', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos.html'));
 });
 
-app.get('/tabla-pagos-viceroy', (req, res) => {
+app.get('/viceroy/tabla-pagos', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-viceroy.html'));
 });
 
@@ -4995,6 +4987,12 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
 app.get('/viceroy', (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
   const showInventoryCard = currentEmail === 'martin@simca.mx';
+  const tablaPagosViceroyCard = `
+        <a class="card" href="/viceroy/tabla-pagos">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Tabla de Pago Viceroy</h2>
+          <p class="desc">Versión comercial Viceroy basada en acuerdos de RELATED.</p>
+        </a>`;
   const inventoryCard = showInventoryCard ? `
         <a class="card" href="/viceroy-piloto">
           <span class="tag">Módulo</span>
@@ -5051,6 +5049,7 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Viceroy Registros</h2>
           <p class="desc">Duplicado de Whisperlist para operación separada.</p>
         </a>
+        ${tablaPagosViceroyCard}
         ${inventoryCard}
       </div>
     </div>
