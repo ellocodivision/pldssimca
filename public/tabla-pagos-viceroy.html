@@ -400,7 +400,6 @@
     }
 
     body.preview-mode .topbar,
-    body.preview-mode .form-section,
     body.preview-mode .logos {
       display: none !important;
     }
@@ -491,7 +490,7 @@
 
     @media print {
       @page {
-        size: landscape;
+        size: portrait;
         margin: calc(var(--print-margin-mm) * 1mm);
       }
 
