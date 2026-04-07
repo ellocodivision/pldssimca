@@ -94,9 +94,12 @@
       padding: 14px;
     }
 
-    .panel {
+    .preview-panel {
       position: sticky;
       top: 14px;
+      align-self: start;
+      max-height: calc(100vh - 28px);
+      overflow: auto;
     }
 
     .section + .section {
@@ -194,6 +197,12 @@
 
       .panel {
         position: static;
+      }
+
+      .preview-panel {
+        position: static;
+        max-height: none;
+        overflow: visible;
       }
 
       .preview-frame {
