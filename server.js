@@ -1666,6 +1666,16 @@ function defaultViceroyPaymentPlanLayout() {
     showLogosInPrint: false,
     showSummaryInPrint: true,
     showPaymentsInPrint: true,
+    paymentsColStage: 10,
+    paymentsColConcept: 22,
+    paymentsColReference: 22,
+    paymentsColPercent: 18,
+    paymentsColAmount: 18,
+    paymentsAlignStage: 'right',
+    paymentsAlignConcept: 'left',
+    paymentsAlignReference: 'left',
+    paymentsAlignPercent: 'right',
+    paymentsAlignAmount: 'right',
     summaryColUnit: 14,
     summaryColPlan: 26,
     summaryColList: 20,
@@ -1705,11 +1715,22 @@ function normalizeViceroyPaymentPlanLayout(input) {
   out.showLogosInPrint = Boolean(out.showLogosInPrint);
   out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
   out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+  out.paymentsColStage = clampNumber(out.paymentsColStage, base.paymentsColStage, 6, 24);
+  out.paymentsColConcept = clampNumber(out.paymentsColConcept, base.paymentsColConcept, 10, 36);
+  out.paymentsColReference = clampNumber(out.paymentsColReference, base.paymentsColReference, 10, 36);
+  out.paymentsColPercent = clampNumber(out.paymentsColPercent, base.paymentsColPercent, 8, 30);
+  out.paymentsColAmount = clampNumber(out.paymentsColAmount, base.paymentsColAmount, 8, 30);
   out.summaryColUnit = clampNumber(out.summaryColUnit, base.summaryColUnit, 8, 40);
   out.summaryColPlan = clampNumber(out.summaryColPlan, base.summaryColPlan, 12, 45);
   out.summaryColList = clampNumber(out.summaryColList, base.summaryColList, 10, 35);
   out.summaryColDiscount = clampNumber(out.summaryColDiscount, base.summaryColDiscount, 10, 35);
   out.summaryColPromo = clampNumber(out.summaryColPromo, base.summaryColPromo, 10, 35);
+  const validAlign = ['left', 'center', 'right'];
+  out.paymentsAlignStage = validAlign.includes(String(out.paymentsAlignStage || '').toLowerCase()) ? String(out.paymentsAlignStage).toLowerCase() : base.paymentsAlignStage;
+  out.paymentsAlignConcept = validAlign.includes(String(out.paymentsAlignConcept || '').toLowerCase()) ? String(out.paymentsAlignConcept).toLowerCase() : base.paymentsAlignConcept;
+  out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : base.paymentsAlignReference;
+  out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : base.paymentsAlignPercent;
+  out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : base.paymentsAlignAmount;
   if (typeof out.oliveLineColor !== 'string') out.oliveLineColor = base.oliveLineColor;
   if (typeof out.shellBorderColor !== 'string') out.shellBorderColor = base.shellBorderColor;
   return out;

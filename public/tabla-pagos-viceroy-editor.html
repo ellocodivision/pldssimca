@@ -332,6 +332,60 @@
             </label>
             <label class="check"><input id="showPaymentsInPrint" type="checkbox"> Mostrar desglose en PDF</label>
           </div>
+          <div class="grid" style="margin-top:10px;">
+            <label>% Etapa
+              <input id="paymentsColStage" type="number" min="6" max="24" step="1">
+            </label>
+            <label>% Concepto
+              <input id="paymentsColConcept" type="number" min="10" max="36" step="1">
+            </label>
+            <label>% Referencia
+              <input id="paymentsColReference" type="number" min="10" max="36" step="1">
+            </label>
+            <label>% Porcentaje
+              <input id="paymentsColPercent" type="number" min="8" max="30" step="1">
+            </label>
+            <label>% Monto
+              <input id="paymentsColAmount" type="number" min="8" max="30" step="1">
+            </label>
+          </div>
+          <div class="grid" style="margin-top:10px;">
+            <label>Alinear Etapa
+              <select id="paymentsAlignStage">
+                <option value="left">Izquierda</option>
+                <option value="center">Centro</option>
+                <option value="right">Derecha</option>
+              </select>
+            </label>
+            <label>Alinear Concepto
+              <select id="paymentsAlignConcept">
+                <option value="left">Izquierda</option>
+                <option value="center">Centro</option>
+                <option value="right">Derecha</option>
+              </select>
+            </label>
+            <label>Alinear Referencia
+              <select id="paymentsAlignReference">
+                <option value="left">Izquierda</option>
+                <option value="center">Centro</option>
+                <option value="right">Derecha</option>
+              </select>
+            </label>
+            <label>Alinear Porcentaje
+              <select id="paymentsAlignPercent">
+                <option value="left">Izquierda</option>
+                <option value="center">Centro</option>
+                <option value="right">Derecha</option>
+              </select>
+            </label>
+            <label>Alinear Monto
+              <select id="paymentsAlignAmount">
+                <option value="left">Izquierda</option>
+                <option value="center">Centro</option>
+                <option value="right">Derecha</option>
+              </select>
+            </label>
+          </div>
         </div>
       </section>
 
@@ -378,6 +432,16 @@
         showLogosInPrint: false,
         showSummaryInPrint: true,
         showPaymentsInPrint: true,
+        paymentsColStage: 10,
+        paymentsColConcept: 22,
+        paymentsColReference: 22,
+        paymentsColPercent: 18,
+        paymentsColAmount: 18,
+        paymentsAlignStage: 'right',
+        paymentsAlignConcept: 'left',
+        paymentsAlignReference: 'left',
+        paymentsAlignPercent: 'right',
+        paymentsAlignAmount: 'right',
         summaryColUnit: 14,
         summaryColPlan: 26,
         summaryColList: 20,
@@ -419,7 +483,17 @@
         paymentRowPaddingY: document.getElementById('paymentRowPaddingY'),
         oliveLineColor: document.getElementById('oliveLineColor'),
         oliveLineWidth: document.getElementById('oliveLineWidth'),
-        showPaymentsInPrint: document.getElementById('showPaymentsInPrint')
+        showPaymentsInPrint: document.getElementById('showPaymentsInPrint'),
+        paymentsColStage: document.getElementById('paymentsColStage'),
+        paymentsColConcept: document.getElementById('paymentsColConcept'),
+        paymentsColReference: document.getElementById('paymentsColReference'),
+        paymentsColPercent: document.getElementById('paymentsColPercent'),
+        paymentsColAmount: document.getElementById('paymentsColAmount'),
+        paymentsAlignStage: document.getElementById('paymentsAlignStage'),
+        paymentsAlignConcept: document.getElementById('paymentsAlignConcept'),
+        paymentsAlignReference: document.getElementById('paymentsAlignReference'),
+        paymentsAlignPercent: document.getElementById('paymentsAlignPercent'),
+        paymentsAlignAmount: document.getElementById('paymentsAlignAmount')
       };
 
       const fieldNames = Object.keys(els).filter(function (key) {
@@ -452,11 +526,22 @@
         out.paymentRowPaddingY = clamp(Number(out.paymentRowPaddingY) || defaultLayout.paymentRowPaddingY, 2, 20);
         out.oliveLineWidth = clamp(Number(out.oliveLineWidth) || defaultLayout.oliveLineWidth, 0, 4);
         out.shellBorderWidth = clamp(Number(out.shellBorderWidth) || defaultLayout.shellBorderWidth, 0, 4);
+        out.paymentsColStage = clamp(Number(out.paymentsColStage) || defaultLayout.paymentsColStage, 6, 24);
+        out.paymentsColConcept = clamp(Number(out.paymentsColConcept) || defaultLayout.paymentsColConcept, 10, 36);
+        out.paymentsColReference = clamp(Number(out.paymentsColReference) || defaultLayout.paymentsColReference, 10, 36);
+        out.paymentsColPercent = clamp(Number(out.paymentsColPercent) || defaultLayout.paymentsColPercent, 8, 30);
+        out.paymentsColAmount = clamp(Number(out.paymentsColAmount) || defaultLayout.paymentsColAmount, 8, 30);
         out.summaryColUnit = clamp(Number(out.summaryColUnit) || defaultLayout.summaryColUnit, 8, 40);
         out.summaryColPlan = clamp(Number(out.summaryColPlan) || defaultLayout.summaryColPlan, 12, 45);
         out.summaryColList = clamp(Number(out.summaryColList) || defaultLayout.summaryColList, 10, 35);
         out.summaryColDiscount = clamp(Number(out.summaryColDiscount) || defaultLayout.summaryColDiscount, 10, 35);
         out.summaryColPromo = clamp(Number(out.summaryColPromo) || defaultLayout.summaryColPromo, 10, 35);
+        var validAlign = ['left', 'center', 'right'];
+        out.paymentsAlignStage = validAlign.includes(String(out.paymentsAlignStage || '').toLowerCase()) ? String(out.paymentsAlignStage).toLowerCase() : defaultLayout.paymentsAlignStage;
+        out.paymentsAlignConcept = validAlign.includes(String(out.paymentsAlignConcept || '').toLowerCase()) ? String(out.paymentsAlignConcept).toLowerCase() : defaultLayout.paymentsAlignConcept;
+        out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : defaultLayout.paymentsAlignReference;
+        out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : defaultLayout.paymentsAlignPercent;
+        out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : defaultLayout.paymentsAlignAmount;
         out.showHeroInPrint = Boolean(out.showHeroInPrint);
         out.showLogosInPrint = Boolean(out.showLogosInPrint);
         out.showSummaryInPrint = Boolean(out.showSummaryInPrint);

@@ -36,6 +36,16 @@
       --olive-line-width: 1px;
       --shell-border-color: #d6d0c2;
       --shell-border-width: 1px;
+      --payments-col-stage: 10%;
+      --payments-col-concept: 22%;
+      --payments-col-reference: 22%;
+      --payments-col-percent: 18%;
+      --payments-col-amount: 18%;
+      --payments-align-stage: right;
+      --payments-align-concept: left;
+      --payments-align-reference: left;
+      --payments-align-percent: right;
+      --payments-align-amount: right;
       --summary-col-unit: 14%;
       --summary-col-plan: 26%;
       --summary-col-list: 20%;
@@ -51,6 +61,8 @@
       background: linear-gradient(180deg, #faf8f2 0%, var(--bg) 100%);
       color: var(--ink);
       font-family: Georgia, "Times New Roman", serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     body.preview-mode {
@@ -149,6 +161,8 @@
       color: #f7f3ea;
       padding: 32px 28px 24px;
       text-align: center;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     .brand {
@@ -376,14 +390,46 @@
       color: #34332f;
     }
 
+    .payments-table col.col-stage { width: var(--payments-col-stage); }
+    .payments-table col.col-concept { width: var(--payments-col-concept); }
+    .payments-table col.col-reference { width: var(--payments-col-reference); }
+    .payments-table col.col-percent { width: var(--payments-col-percent); }
+    .payments-table col.col-amount { width: var(--payments-col-amount); }
+
+    .payments-table thead th.col-stage,
+    .payments-table tbody td.col-stage {
+      text-align: var(--payments-align-stage);
+    }
+
+    .payments-table thead th.col-concept,
+    .payments-table tbody td.col-concept {
+      text-align: var(--payments-align-concept);
+    }
+
+    .payments-table thead th.col-reference,
+    .payments-table tbody td.col-reference {
+      text-align: var(--payments-align-reference);
+    }
+
+    .payments-table thead th.col-percent,
+    .payments-table tbody td.col-percent {
+      text-align: var(--payments-align-percent);
+    }
+
+    .payments-table thead th.col-amount,
+    .payments-table tbody td.col-amount {
+      text-align: var(--payments-align-amount);
+    }
+
     .payments-table tbody tr.highlight td {
       background: #f8f4ea;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     .payments-table td.number,
     .payments-table td.percent,
     .payments-table td.amount {
-      text-align: right;
       font-variant-numeric: tabular-nums;
     }
 
@@ -720,13 +766,20 @@
             <h2 id="paymentsTitle">Desglose de pagos</h2>
           </div>
           <table class="payments-table">
+            <colgroup>
+              <col class="col-stage">
+              <col class="col-concept">
+              <col class="col-reference">
+              <col class="col-percent">
+              <col class="col-amount">
+            </colgroup>
             <thead>
               <tr>
-                <th id="headStage">Etapa</th>
-                <th id="headConcept">Concepto</th>
-                <th id="headReference">Referencia</th>
-                <th id="headPercent">Porcentaje</th>
-                <th id="headAmount">Monto</th>
+                <th class="col-stage" id="headStage">Etapa</th>
+                <th class="col-concept" id="headConcept">Concepto</th>
+                <th class="col-reference" id="headReference">Referencia</th>
+                <th class="col-percent" id="headPercent">Porcentaje</th>
+                <th class="col-amount" id="headAmount">Monto</th>
               </tr>
             </thead>
             <tbody id="paymentRows"></tbody>
@@ -794,6 +847,16 @@
         showLogosInPrint: false,
         showSummaryInPrint: true,
         showPaymentsInPrint: true,
+        paymentsColStage: 10,
+        paymentsColConcept: 22,
+        paymentsColReference: 22,
+        paymentsColPercent: 18,
+        paymentsColAmount: 18,
+        paymentsAlignStage: 'right',
+        paymentsAlignConcept: 'left',
+        paymentsAlignReference: 'left',
+        paymentsAlignPercent: 'right',
+        paymentsAlignAmount: 'right',
         summaryColUnit: 14,
         summaryColPlan: 26,
         summaryColList: 20,
@@ -955,11 +1018,22 @@
         out.paymentRowPaddingY = clamp(Number(out.paymentRowPaddingY) || defaultLayout.paymentRowPaddingY, 2, 20);
         out.oliveLineWidth = clamp(Number(out.oliveLineWidth) || defaultLayout.oliveLineWidth, 0, 4);
         out.shellBorderWidth = clamp(Number(out.shellBorderWidth) || defaultLayout.shellBorderWidth, 0, 4);
+        out.paymentsColStage = clamp(Number(out.paymentsColStage) || defaultLayout.paymentsColStage, 6, 24);
+        out.paymentsColConcept = clamp(Number(out.paymentsColConcept) || defaultLayout.paymentsColConcept, 10, 36);
+        out.paymentsColReference = clamp(Number(out.paymentsColReference) || defaultLayout.paymentsColReference, 10, 36);
+        out.paymentsColPercent = clamp(Number(out.paymentsColPercent) || defaultLayout.paymentsColPercent, 8, 30);
+        out.paymentsColAmount = clamp(Number(out.paymentsColAmount) || defaultLayout.paymentsColAmount, 8, 30);
         out.summaryColUnit = clamp(Number(out.summaryColUnit) || defaultLayout.summaryColUnit, 8, 40);
         out.summaryColPlan = clamp(Number(out.summaryColPlan) || defaultLayout.summaryColPlan, 12, 45);
         out.summaryColList = clamp(Number(out.summaryColList) || defaultLayout.summaryColList, 10, 35);
         out.summaryColDiscount = clamp(Number(out.summaryColDiscount) || defaultLayout.summaryColDiscount, 10, 35);
         out.summaryColPromo = clamp(Number(out.summaryColPromo) || defaultLayout.summaryColPromo, 10, 35);
+        var validAlign = ['left', 'center', 'right'];
+        out.paymentsAlignStage = validAlign.includes(String(out.paymentsAlignStage || '').toLowerCase()) ? String(out.paymentsAlignStage).toLowerCase() : defaultLayout.paymentsAlignStage;
+        out.paymentsAlignConcept = validAlign.includes(String(out.paymentsAlignConcept || '').toLowerCase()) ? String(out.paymentsAlignConcept).toLowerCase() : defaultLayout.paymentsAlignConcept;
+        out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : defaultLayout.paymentsAlignReference;
+        out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : defaultLayout.paymentsAlignPercent;
+        out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : defaultLayout.paymentsAlignAmount;
         out.showHeroInPrint = Boolean(out.showHeroInPrint);
         out.showLogosInPrint = Boolean(out.showLogosInPrint);
         out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
@@ -994,6 +1068,16 @@
         root.style.setProperty('--olive-line-width', layout.oliveLineWidth + 'px');
         root.style.setProperty('--shell-border-color', layout.shellBorderColor);
         root.style.setProperty('--shell-border-width', layout.shellBorderWidth + 'px');
+        root.style.setProperty('--payments-col-stage', layout.paymentsColStage + '%');
+        root.style.setProperty('--payments-col-concept', layout.paymentsColConcept + '%');
+        root.style.setProperty('--payments-col-reference', layout.paymentsColReference + '%');
+        root.style.setProperty('--payments-col-percent', layout.paymentsColPercent + '%');
+        root.style.setProperty('--payments-col-amount', layout.paymentsColAmount + '%');
+        root.style.setProperty('--payments-align-stage', layout.paymentsAlignStage);
+        root.style.setProperty('--payments-align-concept', layout.paymentsAlignConcept);
+        root.style.setProperty('--payments-align-reference', layout.paymentsAlignReference);
+        root.style.setProperty('--payments-align-percent', layout.paymentsAlignPercent);
+        root.style.setProperty('--payments-align-amount', layout.paymentsAlignAmount);
         root.style.setProperty('--summary-col-unit', layout.summaryColUnit + '%');
         root.style.setProperty('--summary-col-plan', layout.summaryColPlan + '%');
         root.style.setProperty('--summary-col-list', layout.summaryColList + '%');
@@ -1116,11 +1200,11 @@
         els.paymentRows.innerHTML = rows.map(function (row) {
           return [
             '<tr' + (row.highlight ? ' class="highlight"' : '') + '>',
-            '<td class="number">' + row.stage + '</td>',
-            '<td>' + escapeHtml(row.concept) + '</td>',
-            '<td>' + escapeHtml(row.reference) + '</td>',
-            '<td class="percent">' + formatPercent(row.percent) + '</td>',
-            '<td class="amount">' + formatCurrency(row.amount) + '</td>',
+            '<td class="number col-stage">' + row.stage + '</td>',
+            '<td class="col-concept">' + escapeHtml(row.concept) + '</td>',
+            '<td class="col-reference">' + escapeHtml(row.reference) + '</td>',
+            '<td class="percent col-percent">' + formatPercent(row.percent) + '</td>',
+            '<td class="amount col-amount">' + formatCurrency(row.amount) + '</td>',
             '</tr>'
           ].join('');
         }).join('');
