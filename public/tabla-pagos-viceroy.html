@@ -9,14 +9,13 @@
       --bg: #f6f2e9;
       --paper: #fffdf9;
       --olive: #9b9b8b;
-      --olive-deep: #8c8d7c;
-      --olive-soft: #f3f0e6;
-      --ink: #393934;
+      --olive-deep: #878775;
+      --olive-soft: #f2eee3;
+      --ink: #373732;
       --muted: #747468;
       --line: #d6d0c2;
-      --line-strong: #bbb4a2;
-      --accent: #f7f4ea;
-      --shadow: 0 30px 70px rgba(82, 72, 49, 0.08);
+      --line-strong: #bcb4a1;
+      --shadow: 0 28px 64px rgba(82, 72, 49, 0.08);
     }
 
     * { box-sizing: border-box; }
@@ -32,7 +31,7 @@
     .page {
       max-width: 1180px;
       margin: 0 auto;
-      padding: 22px 18px 40px;
+      padding: 22px 18px 36px;
     }
 
     .topbar {
@@ -43,7 +42,14 @@
       margin-bottom: 14px;
     }
 
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
     .back,
+    .lang-btn,
     .print-btn {
       display: inline-flex;
       align-items: center;
@@ -56,16 +62,17 @@
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
-    }
-
-    .back {
       border: 1px solid var(--line-strong);
       background: rgba(255, 255, 255, 0.88);
       color: #272722;
     }
 
+    .lang-btn {
+      gap: 8px;
+    }
+
     .print-btn {
-      border: 1px solid var(--olive-deep);
+      border-color: var(--olive-deep);
       background: var(--olive);
       color: #fff;
     }
@@ -80,26 +87,26 @@
     .hero {
       background: var(--olive);
       color: #f7f3ea;
-      padding: 34px 28px 28px;
+      padding: 32px 28px 24px;
       text-align: center;
     }
 
     .brand {
+      margin: 0;
       font-family: Arial, sans-serif;
       text-transform: uppercase;
       letter-spacing: 0.14em;
       line-height: 1.05;
-      margin: 0;
       font-size: 22px;
       font-weight: 700;
     }
 
     .brand small {
       display: block;
-      font-size: 14px;
-      letter-spacing: 0.18em;
       margin-top: 4px;
+      font-size: 14px;
       font-weight: 500;
+      letter-spacing: 0.18em;
     }
 
     .location {
@@ -109,46 +116,44 @@
     }
 
     .headline {
-      margin: 14px 0 0;
+      margin: 12px 0 0;
       font-size: 18px;
       font-style: italic;
       font-weight: 400;
     }
 
     .content {
-      padding: 24px 26px 30px;
+      padding: 22px 24px 28px;
       display: grid;
-      gap: 24px;
+      gap: 18px;
     }
 
     .form-section {
-      position: relative;
-    }
-
-    .form-section::after {
-      content: "";
-      display: block;
-      height: 1px;
-      margin-top: 18px;
-      background: linear-gradient(90deg, rgba(155, 155, 139, 0.95), rgba(155, 155, 139, 0.22));
+      border-bottom: 1px solid rgba(155, 155, 139, 0.35);
+      padding-bottom: 18px;
     }
 
     .section-title {
       margin: 0 0 12px;
-      color: #58574f;
+      color: #59584f;
       font-size: 18px;
       font-style: italic;
       font-weight: 400;
     }
 
-    .capture-grid.compact {
+    .capture-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: 1fr 1.2fr 1fr;
       gap: 12px;
-      margin-bottom: 14px;
+      align-items: end;
     }
 
-    .field {
+    .capture-grid.discount-on {
+      grid-template-columns: 1fr 1.2fr 1fr 0.8fr 1fr;
+    }
+
+    .field,
+    .field-toggle {
       display: grid;
       gap: 6px;
     }
@@ -182,80 +187,59 @@
       box-shadow: inset 0 0 0 1px var(--olive-deep);
     }
 
-    .helper {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
+    input[readonly] {
+      background: #faf8f1;
+      color: #5a584f;
     }
 
-    .commercial-table,
-    .payments-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .commercial-shell,
-    .payments-shell,
-    .summary-shell {
+    .toggle-card {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
       border: 1px solid var(--line);
       background: #fff;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: #44433e;
     }
 
-    .commercial-shell {
+    .toggle-card input {
+      width: 18px;
+      height: 18px;
+      min-height: 18px;
+      margin: 0;
+      accent-color: var(--olive-deep);
+    }
+
+    .discount-fields[hidden] {
+      display: none !important;
+    }
+
+    .summary-shell,
+    .payments-shell {
+      border: 1px solid var(--line);
+      background: #fff;
       overflow: hidden;
-    }
-
-    .commercial-table thead th,
-    .payments-table thead th,
-    .summary-table thead th {
-      background: var(--olive);
-      color: #f7f3ea;
-      font-weight: 400;
-      font-size: 14px;
-      padding: 9px 10px;
-      text-align: center;
-      border-right: 1px solid rgba(255,255,255,0.28);
-    }
-
-    .commercial-table td {
-      padding: 12px 10px;
-      text-align: center;
-      border-right: 1px solid var(--line-strong);
-      font-size: 18px;
-    }
-
-    .commercial-table tbody tr:nth-child(even) td {
-      background: #fbf9f1;
-    }
-
-    .commercial-table tbody tr.active td {
-      background: #f5f2e7;
-    }
-
-    .commercial-table th:last-child,
-    .commercial-table td:last-child {
-      border-right: none;
     }
 
     .summary-shell {
-      overflow: hidden;
-      position: relative;
       border-top: 2px solid var(--olive);
     }
 
-    .summary-table {
+    .summary-table,
+    .payments-table {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
     }
 
     .summary-table thead th {
+      padding: 12px 8px 10px;
+      border-bottom: 1px solid var(--line);
       background: transparent;
       color: #666459;
-      border-bottom: 1px solid var(--line);
-      border-right: none;
-      padding: 12px 8px 10px;
       text-align: left;
       font-family: Arial, sans-serif;
       font-size: 10px;
@@ -266,7 +250,6 @@
 
     .summary-table tbody td {
       padding: 16px 8px 18px;
-      border-top: none;
       font-family: Arial, sans-serif;
       font-size: 24px;
       font-weight: 700;
@@ -275,8 +258,12 @@
 
     .summary-table tbody td.amount {
       text-align: right;
-      font-variant-numeric: tabular-nums;
       font-size: 16px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .is-hidden {
+      display: none;
     }
 
     .payments-head {
@@ -285,8 +272,8 @@
       justify-content: space-between;
       gap: 12px;
       padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
       border-top: 2px solid var(--olive);
+      border-bottom: 1px solid var(--line);
     }
 
     .payments-head h2 {
@@ -298,11 +285,11 @@
     }
 
     .payments-table thead th {
-      background: transparent;
-      color: #69675e;
+      padding: 9px 10px;
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
-      padding: 9px 10px;
+      background: transparent;
+      color: #69675e;
       text-align: left;
       font-family: Arial, sans-serif;
       font-size: 10px;
@@ -363,18 +350,16 @@
 
     @media (max-width: 900px) {
       .capture-grid,
-      .capture-grid.compact {
+      .capture-grid.discount-on {
         grid-template-columns: 1fr;
       }
 
       .summary-shell,
-      .commercial-shell,
       .payments-shell {
         overflow-x: auto;
       }
 
       .summary-table,
-      .commercial-table,
       .payments-table {
         min-width: 760px;
       }
@@ -401,7 +386,6 @@
       }
 
       .topbar,
-      .helper,
       .form-section,
       .logos {
         display: none !important;
@@ -418,7 +402,7 @@
       }
 
       .hero {
-        padding: 20px 18px 16px;
+        padding: 18px 18px 14px;
       }
 
       .brand {
@@ -443,27 +427,6 @@
         gap: 10px;
       }
 
-      .section-title {
-        margin-bottom: 8px;
-        font-size: 16px;
-      }
-
-      .capture-grid,
-      .capture-grid.compact {
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-
-      input,
-      select {
-        min-height: 36px;
-        font-size: 12px;
-      }
-
-      label {
-        font-size: 9px;
-      }
-
       .summary-table thead th,
       .payments-table thead th {
         padding: 6px 8px;
@@ -481,14 +444,13 @@
         font-size: 11px;
       }
 
-      .commercial-table thead th,
-      .commercial-table td {
-        padding: 8px 8px;
-        font-size: 13px;
-      }
-
       .payments-head {
         padding: 8px 10px 6px;
+        border-top-width: 1px;
+      }
+
+      .summary-shell {
+        border-top-width: 1px;
       }
 
       .payments-head h2 {
@@ -498,76 +460,63 @@
       .payments-table td {
         padding: 6px 8px;
       }
-
-      .summary-shell,
-      .payments-head {
-        border-top-width: 1px;
-      }
     }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="topbar">
-      <a class="back" href="/">Regresar al panel</a>
-      <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
+      <a class="back" href="/viceroy" id="backBtn">Regresar a Viceroy</a>
+      <div class="topbar-actions">
+        <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
+        <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
+      </div>
     </div>
 
     <section class="sheet">
       <header class="hero">
         <h1 class="brand">Viceroy <small>Residences</small></h1>
         <p class="location">Playa del Carmen</p>
-        <p class="headline">Tabla de pago Viceroy</p>
+        <p class="headline" id="headline">Tabla de pago Viceroy</p>
       </header>
 
       <div class="content">
         <section class="form-section">
-          <h2 class="section-title">Descuentos y Formas de Pago:</h2>
+          <h2 class="section-title" id="sectionTitle">Formas de Pago:</h2>
 
-          <div class="capture-grid compact">
+          <div class="capture-grid" id="captureGrid">
             <div class="field">
-              <label for="unitName">Unidad</label>
+              <label for="unitName" id="labelUnit">Unidad</label>
               <input id="unitName" type="text" value="402">
             </div>
             <div class="field">
-              <label for="paymentPlan">Forma de pago</label>
+              <label for="paymentPlan" id="labelPlan">Forma de pago</label>
               <select id="paymentPlan">
-                <option value="0|30|10|10|10|40">0% - 30 / 10 / 10 / 10 / 40</option>
-                <option value="3|50|10|10|10|20">3% - 50 / 10 / 10 / 10 / 20</option>
-                <option value="5|70|10|5|5|10">5% - 70 / 10 / 5 / 5 / 10</option>
-                <option value="7|90|0|5|0|5">7% - 90 / 0 / 5 / 0 / 5</option>
+                <option value="0|30|10|10|10|40">30 / 10 / 10 / 10 / 40</option>
+                <option value="3|50|10|10|10|20">50 / 10 / 10 / 10 / 20</option>
+                <option value="5|70|10|5|5|10">70 / 10 / 5 / 5 / 10</option>
+                <option value="7|90|0|5|0|5">90 / 0 / 5 / 0 / 5</option>
               </select>
             </div>
             <div class="field">
-              <label for="listPrice">Precio de lista</label>
+              <label for="listPrice" id="labelListPrice">Precio de lista</label>
               <input id="listPrice" type="text" inputmode="decimal" value="0">
             </div>
-            <div class="field">
-              <label for="discount">Descuento (%)</label>
-              <input id="discount" type="text" inputmode="decimal" value="0">
+            <div class="field-toggle discount-fields" id="discountToggleWrap">
+              <label id="labelApplyDiscount">Descuento</label>
+              <label class="toggle-card" for="applyDiscount">
+                <input id="applyDiscount" type="checkbox">
+                <span id="applyDiscountText">Aplica descuento</span>
+              </label>
             </div>
-            <div class="field">
-              <label for="promoPrice">Precio promo</label>
-              <input id="promoPrice" type="text" inputmode="decimal" value="0">
+            <div class="field discount-fields" id="discountFieldWrap" hidden>
+              <label for="discount" id="labelDiscount">Descuento (%)</label>
+              <input id="discount" type="text" inputmode="decimal" value="0" readonly>
             </div>
-          </div>
-
-          <p class="helper">La forma de pago toma los porcentajes del acuerdo comercial. Si ajustas descuento o precio promo, ambos se recalculan entre sí.</p>
-
-          <div class="commercial-shell">
-            <table class="commercial-table">
-              <thead>
-                <tr>
-                  <th>Descuento</th>
-                  <th>Enganche</th>
-                  <th>Mes 8</th>
-                  <th>Mes 16</th>
-                  <th>Mes 24</th>
-                  <th>Mes 30</th>
-                </tr>
-              </thead>
-              <tbody id="commercialRows"></tbody>
-            </table>
+            <div class="field discount-fields" id="promoFieldWrap" hidden>
+              <label for="promoPrice" id="labelPromoPrice">Precio promo</label>
+              <input id="promoPrice" type="text" inputmode="decimal" value="0" readonly>
+            </div>
           </div>
         </section>
 
@@ -575,11 +524,11 @@
           <table class="summary-table">
             <thead>
               <tr>
-                <th>Unidad</th>
-                <th>Forma de pago</th>
-                <th>Precio lista</th>
-                <th>Descuento</th>
-                <th>Precio promo</th>
+                <th id="summaryHeadUnit">Unidad</th>
+                <th id="summaryHeadPlan">Forma de pago</th>
+                <th id="summaryHeadList">Precio lista</th>
+                <th class="discount-col" id="summaryHeadDiscount">Descuento</th>
+                <th class="discount-col" id="summaryHeadPromo">Precio promo</th>
               </tr>
             </thead>
             <tbody>
@@ -587,8 +536,8 @@
                 <td id="snapshotUnit">402</td>
                 <td id="snapshotPlan">30/10/10/10/40</td>
                 <td class="amount" id="snapshotListPrice">$0</td>
-                <td class="amount" id="snapshotDiscount">$0</td>
-                <td class="amount" id="snapshotPromoPrice">$0</td>
+                <td class="amount discount-col" id="snapshotDiscount">$0</td>
+                <td class="amount discount-col" id="snapshotPromoPrice">$0</td>
               </tr>
             </tbody>
           </table>
@@ -596,22 +545,22 @@
 
         <section class="payments-shell">
           <div class="payments-head">
-            <h2>Desglose de pagos</h2>
+            <h2 id="paymentsTitle">Desglose de pagos</h2>
           </div>
           <table class="payments-table">
             <thead>
               <tr>
-                <th>Etapa</th>
-                <th>Concepto</th>
-                <th>Referencia</th>
-                <th>Porcentaje</th>
-                <th>Monto</th>
+                <th id="headStage">Etapa</th>
+                <th id="headConcept">Concepto</th>
+                <th id="headReference">Referencia</th>
+                <th id="headPercent">Porcentaje</th>
+                <th id="headAmount">Monto</th>
               </tr>
             </thead>
             <tbody id="paymentRows"></tbody>
             <tfoot>
               <tr>
-                <td colspan="3">Totales</td>
+                <td colspan="3" id="footerLabel">Totales</td>
                 <td class="percent" id="footerPercent">100%</td>
                 <td class="amount" id="footerAmount">$0</td>
               </tr>
@@ -630,48 +579,116 @@
 
   <script>
     (function () {
-      const currency = new Intl.NumberFormat('es-MX', {
+      const currency = new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'MXN',
+        currency: 'USD',
         maximumFractionDigits: 2
       });
 
-      const percentFormat = new Intl.NumberFormat('es-MX', {
+      const percentFormat = new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
       });
 
       const plans = [
-        {
-          key: '0|30|10|10|10|40',
-          discount: 0,
-          schedule: [30, 10, 10, 10, 40],
-          shortLabel: '30/10/10/10/40'
-        },
-        {
-          key: '3|50|10|10|10|20',
-          discount: 3,
-          schedule: [50, 10, 10, 10, 20],
-          shortLabel: '50/10/10/10/20'
-        },
-        {
-          key: '5|70|10|5|5|10',
-          discount: 5,
-          schedule: [70, 10, 5, 5, 10],
-          shortLabel: '70/10/5/5/10'
-        },
-        {
-          key: '7|90|0|5|0|5',
-          discount: 7,
-          schedule: [90, 0, 5, 0, 5],
-          shortLabel: '90/0/5/0/5'
-        }
+        { key: '0|30|10|10|10|40', discount: 0, schedule: [30, 10, 10, 10, 40], shortLabel: '30/10/10/10/40' },
+        { key: '3|50|10|10|10|20', discount: 3, schedule: [50, 10, 10, 10, 20], shortLabel: '50/10/10/10/20' },
+        { key: '5|70|10|5|5|10', discount: 5, schedule: [70, 10, 5, 5, 10], shortLabel: '70/10/5/5/10' },
+        { key: '7|90|0|5|0|5', discount: 7, schedule: [90, 0, 5, 0, 5], shortLabel: '90/0/5/0/5' }
       ];
 
+      const translations = {
+        es: {
+          back: 'Regresar a Viceroy',
+          lang: 'English',
+          print: 'Imprimir / Guardar PDF',
+          headline: 'Tabla de pago Viceroy',
+          section: 'Formas de Pago:',
+          unit: 'Unidad',
+          paymentPlan: 'Forma de pago',
+          listPrice: 'Precio de lista',
+          discountToggle: 'Descuento',
+          applyDiscount: 'Aplica descuento',
+          discount: 'Descuento (%)',
+          promoPrice: 'Precio promo',
+          summaryUnit: 'Unidad',
+          summaryPlan: 'Forma de pago',
+          summaryList: 'Precio lista',
+          summaryDiscount: 'Descuento',
+          summaryPromo: 'Precio promo',
+          paymentsTitle: 'Desglose de pagos',
+          stage: 'Etapa',
+          concept: 'Concepto',
+          reference: 'Referencia',
+          percent: 'Porcentaje',
+          amount: 'Monto',
+          totals: 'Totales',
+          rowConcepts: ['Enganche', 'Pago programado', 'Balance contra entrega'],
+          refs: ['Enganche', 'Mes 8', 'Mes 16', 'Mes 24', 'Mes 30']
+        },
+        en: {
+          back: 'Back to Viceroy',
+          lang: 'Español',
+          print: 'Print / Save PDF',
+          headline: 'Viceroy payment table',
+          section: 'Payment Structures:',
+          unit: 'Unit',
+          paymentPlan: 'Payment plan',
+          listPrice: 'List price',
+          discountToggle: 'Discount',
+          applyDiscount: 'Apply discount',
+          discount: 'Discount (%)',
+          promoPrice: 'Promo price',
+          summaryUnit: 'Unit',
+          summaryPlan: 'Payment plan',
+          summaryList: 'List price',
+          summaryDiscount: 'Discount',
+          summaryPromo: 'Promo price',
+          paymentsTitle: 'Payment breakdown',
+          stage: 'Stage',
+          concept: 'Concept',
+          reference: 'Reference',
+          percent: 'Percent',
+          amount: 'Amount',
+          totals: 'Totals',
+          rowConcepts: ['Down payment', 'Scheduled payment', 'Balance at delivery'],
+          refs: ['Down payment', 'Month 8', 'Month 16', 'Month 24', 'Month 30']
+        }
+      };
+
       const els = {
+        backBtn: document.getElementById('backBtn'),
+        langBtn: document.getElementById('langBtn'),
+        langBtnText: document.getElementById('langBtnText'),
+        printBtn: document.getElementById('printBtn'),
+        headline: document.getElementById('headline'),
+        sectionTitle: document.getElementById('sectionTitle'),
+        labelUnit: document.getElementById('labelUnit'),
+        labelPlan: document.getElementById('labelPlan'),
+        labelListPrice: document.getElementById('labelListPrice'),
+        labelApplyDiscount: document.getElementById('labelApplyDiscount'),
+        applyDiscountText: document.getElementById('applyDiscountText'),
+        labelDiscount: document.getElementById('labelDiscount'),
+        labelPromoPrice: document.getElementById('labelPromoPrice'),
+        summaryHeadUnit: document.getElementById('summaryHeadUnit'),
+        summaryHeadPlan: document.getElementById('summaryHeadPlan'),
+        summaryHeadList: document.getElementById('summaryHeadList'),
+        summaryHeadDiscount: document.getElementById('summaryHeadDiscount'),
+        summaryHeadPromo: document.getElementById('summaryHeadPromo'),
+        paymentsTitle: document.getElementById('paymentsTitle'),
+        headStage: document.getElementById('headStage'),
+        headConcept: document.getElementById('headConcept'),
+        headReference: document.getElementById('headReference'),
+        headPercent: document.getElementById('headPercent'),
+        headAmount: document.getElementById('headAmount'),
+        footerLabel: document.getElementById('footerLabel'),
+        captureGrid: document.getElementById('captureGrid'),
         unitName: document.getElementById('unitName'),
         paymentPlan: document.getElementById('paymentPlan'),
         listPrice: document.getElementById('listPrice'),
+        applyDiscount: document.getElementById('applyDiscount'),
+        discountFieldWrap: document.getElementById('discountFieldWrap'),
+        promoFieldWrap: document.getElementById('promoFieldWrap'),
         discount: document.getElementById('discount'),
         promoPrice: document.getElementById('promoPrice'),
         commercialRows: document.getElementById('commercialRows'),
@@ -682,16 +699,13 @@
         snapshotPromoPrice: document.getElementById('snapshotPromoPrice'),
         paymentRows: document.getElementById('paymentRows'),
         footerPercent: document.getElementById('footerPercent'),
-        footerAmount: document.getElementById('footerAmount'),
-        printBtn: document.getElementById('printBtn')
+        footerAmount: document.getElementById('footerAmount')
       };
 
-      let lastEdited = 'plan';
+      let currentLang = 'es';
 
       function sanitizeNumber(value) {
-        const cleaned = String(value || '')
-          .replace(/[^\d.,-]/g, '')
-          .replace(/,/g, '');
+        const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
         const parsed = Number(cleaned);
         return Number.isFinite(parsed) ? parsed : 0;
       }
@@ -723,79 +737,76 @@
         }) || plans[0];
       }
 
-      function renderCommercialRows(activeKey) {
-        els.commercialRows.innerHTML = plans.map(function (plan) {
-          return [
-            '<tr' + (plan.key === activeKey ? ' class="active"' : '') + '>',
-            '<td>' + formatPercent(plan.discount) + '</td>',
-            '<td>' + formatPercent(plan.schedule[0]) + '</td>',
-            '<td>' + formatPercent(plan.schedule[1]) + '</td>',
-            '<td>' + formatPercent(plan.schedule[2]) + '</td>',
-            '<td>' + formatPercent(plan.schedule[3]) + '</td>',
-            '<td>' + formatPercent(plan.schedule[4]) + '</td>',
-            '</tr>'
-          ].join('');
-        }).join('');
+      function updateLanguage() {
+        const t = translations[currentLang];
+        els.backBtn.textContent = t.back;
+        els.langBtnText.textContent = t.lang;
+        els.printBtn.textContent = t.print;
+        els.headline.textContent = t.headline;
+        els.sectionTitle.textContent = t.section;
+        els.labelUnit.textContent = t.unit;
+        els.labelPlan.textContent = t.paymentPlan;
+        els.labelListPrice.textContent = t.listPrice;
+        els.labelApplyDiscount.textContent = t.discountToggle;
+        els.applyDiscountText.textContent = t.applyDiscount;
+        els.labelDiscount.textContent = t.discount;
+        els.labelPromoPrice.textContent = t.promoPrice;
+        els.summaryHeadUnit.textContent = t.summaryUnit;
+        els.summaryHeadPlan.textContent = t.summaryPlan;
+        els.summaryHeadList.textContent = t.summaryList;
+        els.summaryHeadDiscount.textContent = t.summaryDiscount;
+        els.summaryHeadPromo.textContent = t.summaryPromo;
+        els.paymentsTitle.textContent = t.paymentsTitle;
+        els.headStage.textContent = t.stage;
+        els.headConcept.textContent = t.concept;
+        els.headReference.textContent = t.reference;
+        els.headPercent.textContent = t.percent;
+        els.headAmount.textContent = t.amount;
+        els.footerLabel.textContent = t.totals;
       }
 
-      function getPaymentRows(schedule, promoPrice) {
-        const refs = ['Enganche', 'Mes 8', 'Mes 16', 'Mes 24', 'Mes 30'];
+      function syncDiscountVisibility() {
+        const showDiscount = els.applyDiscount.checked;
+        els.discountFieldWrap.hidden = !showDiscount;
+        els.promoFieldWrap.hidden = !showDiscount;
+        els.captureGrid.classList.toggle('discount-on', showDiscount);
+        document.querySelectorAll('.discount-col').forEach(function (node) {
+          node.classList.toggle('is-hidden', !showDiscount);
+        });
+      }
+
+      function getPaymentRows(schedule, finalPrice) {
+        const t = translations[currentLang];
         return schedule.map(function (part, index) {
           const isFirst = index === 0;
           const isLast = index === schedule.length - 1;
           return {
             stage: index + 1,
-            concept: isFirst ? 'Enganche' : (isLast ? 'Balance contra entrega' : 'Pago programado'),
-            reference: refs[index],
-            badge: refs[index].toUpperCase(),
+            concept: isFirst ? t.rowConcepts[0] : (isLast ? t.rowConcepts[2] : t.rowConcepts[1]),
+            reference: t.refs[index],
             percent: part,
-            amount: promoPrice * (part / 100),
+            amount: finalPrice * (part / 100),
             highlight: isLast
           };
         });
       }
 
-      function update(source) {
-        if (source) lastEdited = source;
-
-        const unitName = els.unitName.value.trim();
+      function update() {
         const plan = findPlan(els.paymentPlan.value);
         const listPrice = Math.max(0, sanitizeNumber(els.listPrice.value));
-
-        let discountPercent = clamp(sanitizeNumber(els.discount.value), 0, 100);
-        let promoPrice = Math.max(0, sanitizeNumber(els.promoPrice.value));
-
-        if (lastEdited === 'plan') {
-          discountPercent = plan.discount;
-          promoPrice = Math.max(0, listPrice - (listPrice * discountPercent / 100));
-        } else if (lastEdited === 'promo') {
-          if (listPrice <= 0) {
-            promoPrice = 0;
-            discountPercent = 0;
-          } else {
-            promoPrice = clamp(promoPrice, 0, listPrice);
-            discountPercent = clamp(((listPrice - promoPrice) / listPrice) * 100, 0, 100);
-          }
-        } else {
-          discountPercent = clamp(discountPercent, 0, 100);
-          promoPrice = Math.max(0, listPrice - (listPrice * discountPercent / 100));
-        }
-
+        const unitName = els.unitName.value.trim();
+        const showDiscount = els.applyDiscount.checked;
+        const discountPercent = showDiscount ? plan.discount : 0;
+        const promoPrice = Math.max(0, listPrice - (listPrice * discountPercent / 100));
         const discountAmount = Math.max(0, listPrice - promoPrice);
         const rows = getPaymentRows(plan.schedule, promoPrice);
-        const percentTotal = plan.schedule.reduce(function (sum, item) {
-          return sum + item;
-        }, 0);
-        const amountTotal = rows.reduce(function (sum, row) {
-          return sum + row.amount;
-        }, 0);
+        const percentTotal = plan.schedule.reduce(function (sum, item) { return sum + item; }, 0);
+        const amountTotal = rows.reduce(function (sum, row) { return sum + row.amount; }, 0);
 
         els.discount.value = percentFormat.format(discountPercent);
         els.promoPrice.value = String(Math.round(promoPrice * 100) / 100);
 
-        renderCommercialRows(plan.key);
-
-        els.snapshotUnit.textContent = unitName || 'Sin capturar';
+        els.snapshotUnit.textContent = unitName || '-';
         els.snapshotPlan.textContent = plan.shortLabel;
         els.snapshotListPrice.textContent = formatCurrency(listPrice);
         els.snapshotDiscount.textContent = formatCurrency(discountAmount) + ' (' + formatPercent(discountPercent) + ')';
@@ -817,29 +828,27 @@
         els.footerAmount.textContent = formatCurrency(amountTotal);
       }
 
-      els.paymentPlan.addEventListener('change', function () {
-        update('plan');
+      els.langBtn.addEventListener('click', function () {
+        currentLang = currentLang === 'es' ? 'en' : 'es';
+        updateLanguage();
+        update();
       });
 
-      els.discount.addEventListener('input', function () {
-        update('discount');
-      });
-
-      els.promoPrice.addEventListener('input', function () {
-        update('promo');
-      });
-
-      [els.unitName, els.listPrice].forEach(function (element) {
-        element.addEventListener('input', function () {
-          update(lastEdited);
-        });
+      els.paymentPlan.addEventListener('change', update);
+      els.unitName.addEventListener('input', update);
+      els.listPrice.addEventListener('input', update);
+      els.applyDiscount.addEventListener('change', function () {
+        syncDiscountVisibility();
+        update();
       });
 
       els.printBtn.addEventListener('click', function () {
         window.print();
       });
 
-      update('plan');
+      updateLanguage();
+      syncDiscountVisibility();
+      update();
     })();
   </script>
 </body>
