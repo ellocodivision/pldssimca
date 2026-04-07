@@ -121,6 +121,18 @@
       gap: 24px;
     }
 
+    .form-section {
+      position: relative;
+    }
+
+    .form-section::after {
+      content: "";
+      display: block;
+      height: 1px;
+      margin-top: 18px;
+      background: linear-gradient(90deg, rgba(155, 155, 139, 0.95), rgba(155, 155, 139, 0.22));
+    }
+
     .section-title {
       margin: 0 0 12px;
       color: #58574f;
@@ -228,6 +240,8 @@
 
     .summary-shell {
       overflow: hidden;
+      position: relative;
+      border-top: 2px solid var(--olive);
     }
 
     .summary-table {
@@ -272,6 +286,7 @@
       gap: 12px;
       padding: 14px 16px;
       border-bottom: 1px solid var(--line);
+      border-top: 2px solid var(--olive);
     }
 
     .payments-head h2 {
@@ -387,6 +402,7 @@
 
       .topbar,
       .helper,
+      .form-section,
       .logos {
         display: none !important;
       }
@@ -423,8 +439,8 @@
       }
 
       .content {
-        padding: 14px 16px 16px;
-        gap: 14px;
+        padding: 10px 14px 14px;
+        gap: 10px;
       }
 
       .section-title {
@@ -450,19 +466,19 @@
 
       .summary-table thead th,
       .payments-table thead th {
-        padding: 7px 8px;
+        padding: 6px 8px;
         font-size: 9px;
       }
 
       .summary-table tbody td {
-        padding: 10px 8px 12px;
-        font-size: 18px;
+        padding: 8px 8px 10px;
+        font-size: 16px;
       }
 
       .summary-table tbody td.amount,
       .payments-table td,
       .payments-table tfoot td {
-        font-size: 12px;
+        font-size: 11px;
       }
 
       .commercial-table thead th,
@@ -472,15 +488,20 @@
       }
 
       .payments-head {
-        padding: 10px 12px;
+        padding: 8px 10px 6px;
       }
 
       .payments-head h2 {
-        font-size: 16px;
+        font-size: 15px;
       }
 
       .payments-table td {
-        padding: 8px;
+        padding: 6px 8px;
+      }
+
+      .summary-shell,
+      .payments-head {
+        border-top-width: 1px;
       }
     }
   </style>
@@ -500,7 +521,7 @@
       </header>
 
       <div class="content">
-        <section>
+        <section class="form-section">
           <h2 class="section-title">Descuentos y Formas de Pago:</h2>
 
           <div class="capture-grid compact">
