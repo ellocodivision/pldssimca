@@ -6,19 +6,29 @@
   <title>Tabla de Pagos</title>
   <style>
     :root {
-      --bg: #f2ecdf;
+      --surface: #e8e4da;
       --paper: #fffdf8;
       --paper-soft: #f8f2e6;
       --ink: #1d1c18;
+      --title-color: #1d1c18;
       --muted: #6f6859;
       --line: #ddd1bb;
       --line-strong: #c7b89d;
       --accent: #f0c419;
-      --accent-soft: #fbefb5;
+      --accent-soft: #f9efbe;
+      --rail-accent: #ffdb16;
+      --rail-text: #1d1c18;
       --shadow: 0 24px 54px rgba(78, 54, 17, 0.08);
-      --print-scale: 0.83;
+      --print-scale: 0.74;
       --print-margin-mm: 6;
+      --brand-top-height: 226px;
+      --logo-width: 480px;
+      --logo-height: 120px;
+      --logo-offset-x: 0px;
+      --logo-offset-y: 0px;
+      --rail-text-size: 18px;
       --title-size: 28px;
+      --subtitle-size: 14px;
       --header-padding-top: 12px;
       --header-padding-sides: 14px;
       --header-padding-bottom: 10px;
@@ -26,6 +36,8 @@
       --content-padding-sides: 12px;
       --content-padding-bottom: 12px;
       --content-gap: 14px;
+      --title-offset-x: 0px;
+      --title-offset-y: 0px;
       --summary-header-size: 9px;
       --summary-body-size: 12px;
       --payment-header-size: 9px;
@@ -47,18 +59,24 @@
       --payments-align-reference: left;
       --payments-align-percent: right;
       --payments-align-amount: right;
+      --font-body: Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
+      --font-table: Arial, sans-serif;
     }
 
     * { box-sizing: border-box; }
 
+    html, body {
+      min-height: 100%;
+    }
+
     body {
       margin: 0;
-      min-height: 100vh;
-      font-family: Arial, sans-serif;
       color: var(--ink);
+      font-family: var(--font-body);
       background:
         radial-gradient(circle at top center, rgba(240, 196, 25, 0.18), transparent 30%),
-        linear-gradient(180deg, #f8f4ea 0%, var(--bg) 100%);
+        linear-gradient(180deg, #f8f4ea 0%, #f2ecdf 100%);
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -79,12 +97,12 @@
     }
 
     body.preview-mode .page {
-      max-width: 1120px;
+      max-width: 1240px;
       padding: 0;
     }
 
     body.print-preview-mode .page {
-      width: min(1120px, calc(100vw - 40px));
+      width: min(1240px, calc(100vw - 40px));
       max-width: none;
       padding: 0;
       margin: 0 auto;
@@ -135,25 +153,22 @@
     }
 
     .sheet {
-      background: rgba(255, 253, 248, 0.92);
-      border: 1px solid rgba(199, 184, 157, 0.92);
-      border-radius: 0;
+      background: var(--surface);
+      border: 1px solid rgba(141, 135, 119, 0.9);
       box-shadow: var(--shadow);
       overflow: hidden;
-      backdrop-filter: blur(8px);
     }
 
     body.preview-mode .sheet {
       border: none;
       box-shadow: none;
-      border-radius: 0;
     }
 
     body.print-preview-mode .sheet {
       min-height: 816px;
       border: none;
       box-shadow: 0 0 0 1px rgba(145, 145, 145, 0.35);
-      background: #fff;
+      background: var(--surface);
     }
 
     .brand-frame {
@@ -161,29 +176,29 @@
       grid-template-columns: 88px minmax(0, 1fr);
       min-height: 100%;
       background:
-        linear-gradient(#8d8777, #8d8777) left 87px top/1px 100% no-repeat,
-        linear-gradient(#8d8777, #8d8777) left top 218px/calc(100% - 88px) 1px no-repeat,
-        #e8e4da;
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left 87px top/1px 100% no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/calc(100% - 88px) 1px no-repeat,
+        var(--surface);
     }
 
     .brand-rail {
       position: relative;
-      background: #e8e4da;
       min-height: 100%;
+      background: var(--surface);
     }
 
     .brand-rail-accent {
       position: absolute;
       left: 0;
-      top: 218px;
+      top: var(--brand-top-height);
       width: 88px;
       height: 278px;
-      background: #ffdb16;
+      background: var(--rail-accent);
       display: flex;
       align-items: center;
       justify-content: center;
-      border-top: 1px solid #8d8777;
-      border-bottom: 1px solid #8d8777;
+      border-top: 1px solid rgba(141, 135, 119, 0.92);
+      border-bottom: 1px solid rgba(141, 135, 119, 0.92);
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -191,54 +206,46 @@
     .brand-rail-accent span {
       writing-mode: vertical-rl;
       text-orientation: mixed;
-      font-size: 18px;
+      font-size: var(--rail-text-size);
       letter-spacing: 0.02em;
-      color: #1d1c18;
+      color: var(--rail-text);
     }
 
     .brand-main {
       display: grid;
-      grid-template-rows: 218px minmax(0, 1fr);
+      grid-template-rows: var(--brand-top-height) minmax(0, 1fr);
       min-width: 0;
-      background: #e8e4da;
+      background: var(--surface);
     }
 
     .brand-top {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 28px 24px;
+      overflow: hidden;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
 
-    .brand-mark {
-      display: inline-flex;
+    .brand-logo-wrap {
+      width: min(100%, var(--logo-width));
+      height: var(--logo-height);
+      display: flex;
       align-items: center;
-      gap: 26px;
-      color: #403b37;
-      text-transform: uppercase;
+      justify-content: center;
+      transform: translate(var(--logo-offset-x), var(--logo-offset-y));
     }
 
-    .brand-word {
-      font-size: 96px;
-      line-height: 0.9;
-      letter-spacing: 0.06em;
-      font-weight: 800;
-    }
-
-    .brand-years {
-      font-size: 72px;
-      line-height: 0.9;
-      letter-spacing: 0.06em;
-      font-weight: 800;
+    .brand-logo-wrap.is-empty {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .brand-logo {
-      width: 112px;
-      height: 112px;
+      max-width: 100%;
+      max-height: 100%;
       object-fit: contain;
-      filter: grayscale(1) contrast(1.15) brightness(0.42);
+      display: block;
     }
 
     .content-shell {
@@ -254,6 +261,7 @@
       padding: 0 0 18px;
       border-bottom: 1px solid var(--line);
       background: transparent;
+      transform: translate(var(--title-offset-x), var(--title-offset-y));
     }
 
     .title {
@@ -261,11 +269,13 @@
       font-size: 56px;
       line-height: 0.95;
       letter-spacing: -0.04em;
+      color: var(--title-color);
+      font-family: var(--font-heading);
     }
 
     .subtitle {
       margin: 8px 0 0;
-      font-size: 14px;
+      font-size: var(--subtitle-size);
       line-height: 1.5;
       color: var(--muted);
       max-width: 48ch;
@@ -291,13 +301,13 @@
       display: grid;
       grid-template-columns: 360px minmax(0, 1fr);
       gap: 0;
-      background: rgba(255, 253, 248, 0.92);
+      background: rgba(255, 253, 248, 0.28);
       border: 1px solid rgba(199, 184, 157, 0.92);
     }
 
     .sidebar {
       padding: 22px;
-      background: linear-gradient(180deg, rgba(249, 242, 227, 0.9), rgba(255, 253, 248, 0.95));
+      background: linear-gradient(180deg, rgba(249, 242, 227, 0.82), rgba(255, 253, 248, 0.9));
       border-right: 1px solid var(--line);
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -347,6 +357,7 @@
       color: var(--ink);
       font-size: 15px;
       outline: none;
+      font-family: var(--font-body);
     }
 
     .helper {
@@ -383,6 +394,7 @@
       font-size: 24px;
       line-height: 1.05;
       letter-spacing: -0.03em;
+      font-family: var(--font-heading);
     }
 
     .summary-item small {
@@ -409,6 +421,7 @@
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
+      font-family: var(--font-table);
     }
 
     .summary-table col.col-development { width: var(--summary-col-development); }
@@ -465,6 +478,7 @@
       margin: 0;
       font-size: 20px;
       letter-spacing: -0.03em;
+      font-family: var(--font-heading);
     }
 
     .payments-head p {
@@ -561,33 +575,8 @@
     }
 
     body.preview-mode .topbar,
-    body.preview-mode .sidebar,
-    body.print-preview-mode .topbar,
-    body.print-preview-mode .sidebar,
-    body.print-preview-mode .subtitle,
-    body.print-preview-mode .scheme-badge,
-    body.print-preview-mode .payments-head p,
-    body.print-preview-mode .payments-total {
+    body.print-preview-mode .topbar {
       display: none !important;
-    }
-
-    body.print-preview-mode .header {
-      grid-template-columns: 1fr;
-      justify-items: start;
-      padding: 0 0 var(--header-padding-bottom);
-    }
-
-    body.print-preview-mode .title {
-      font-size: var(--title-size);
-    }
-
-    body.print-preview-mode .layout {
-      grid-template-columns: 1fr;
-    }
-
-    body.print-preview-mode .workspace {
-      padding: var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
-      gap: var(--content-gap);
     }
 
     body.print-preview-mode.hide-header .header,
@@ -624,20 +613,29 @@
     @media (max-width: 1080px) {
       .brand-frame {
         grid-template-columns: 1fr;
-        background: #e8e4da;
+        background: var(--surface);
       }
+
       .brand-rail {
         display: none;
       }
+
       .brand-main {
         grid-template-rows: auto minmax(0, 1fr);
       }
+
+      .brand-top {
+        min-height: 140px;
+      }
+
       .content-shell {
         padding: 32px 18px 18px;
       }
+
       .layout {
         grid-template-columns: 1fr;
       }
+
       .sidebar {
         border-right: none;
         border-bottom: 1px solid var(--line);
@@ -648,9 +646,11 @@
       .page {
         padding: 16px 12px 26px;
       }
+
       .title {
         font-size: 40px;
       }
+
       .topbar,
       .header,
       .payments-head,
@@ -659,6 +659,7 @@
         flex-direction: column;
         align-items: stretch;
       }
+
       .summary-table,
       .payments-table {
         min-width: 760px;
@@ -676,12 +677,7 @@
         width: 100%;
       }
 
-      .topbar,
-      .sidebar,
-      .subtitle,
-      .scheme-badge,
-      .payments-head p,
-      .payments-total {
+      .topbar {
         display: none !important;
       }
 
@@ -700,7 +696,6 @@
       }
 
       .sheet {
-        border-radius: 0;
         border: none;
       }
 
@@ -708,25 +703,6 @@
       body.hide-summary-print .summary-table-wrap,
       body.hide-payments-print .payments-wrap {
         display: none !important;
-      }
-
-      .header {
-        grid-template-columns: 1fr;
-        justify-items: start;
-        padding: var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
-      }
-
-      .title {
-        font-size: var(--title-size);
-      }
-
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .workspace {
-        padding: var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
-        gap: var(--content-gap);
       }
 
       .summary-table thead th {
@@ -769,14 +745,12 @@
     <section class="sheet">
       <div class="brand-frame">
         <aside class="brand-rail" aria-hidden="true">
-          <div class="brand-rail-accent"><span>simca.mx</span></div>
+          <div class="brand-rail-accent"><span id="railText">simca.mx</span></div>
         </aside>
         <div class="brand-main">
           <div class="brand-top" aria-hidden="true">
-            <div class="brand-mark">
-              <span class="brand-word">SIMCA</span>
-              <img class="brand-logo" src="/assets/watermark.png" alt="">
-              <span class="brand-years">AÑOS</span>
+            <div class="brand-logo-wrap is-empty" id="brandLogoWrap">
+              <img class="brand-logo" id="brandLogo" alt="">
             </div>
           </div>
           <div class="content-shell">
@@ -790,130 +764,131 @@
 
             <div class="layout">
               <aside class="sidebar">
-          <p class="section-label">Datos de operación</p>
-          <div class="form-grid">
-            <div class="field">
-              <label for="developmentName">Nombre del desarrollo</label>
-              <input id="developmentName" type="text" placeholder="Ej. Viceroy Residences">
-            </div>
-            <div class="field-row">
-              <div class="field">
-                <label for="unitName">Unidad</label>
-                <input id="unitName" type="text" placeholder="Ej. T-402">
-              </div>
-              <div class="field">
-                <label for="paymentPlan">Forma de pago</label>
-                <select id="paymentPlan">
-                  <option value="30/70">30/70</option>
-                  <option value="50/50">50/50</option>
-                  <option value="80/20">80/20</option>
-                  <option value="30/10/10/50">30/10/10/50</option>
-                  <option value="50/10/10/30">50/10/10/30</option>
-                </select>
-              </div>
-            </div>
-            <div class="field">
-              <label for="listPrice">Precio de lista</label>
-              <input id="listPrice" type="text" inputmode="decimal" value="0">
-            </div>
-            <div class="field-row">
-              <div class="field">
-                <label for="discount">Descuento (%)</label>
-                <input id="discount" type="text" inputmode="decimal" value="0">
-              </div>
-              <div class="field">
-                <label for="promoPrice">Precio promo</label>
-                <input id="promoPrice" type="text" inputmode="decimal" value="0">
-              </div>
-            </div>
-          </div>
-          <p class="helper">Si cambias el descuento, se recalcula el precio promo. Si capturas un precio promo, se recalcula el descuento.</p>
-          <div class="summary-strip">
-            <div class="summary-item">
-              <span>Descuento aplicado</span>
-              <strong id="summaryDiscountPercent">0%</strong>
-              <small id="summaryDiscountAmount">$0</small>
-            </div>
-            <div class="summary-item">
-              <span>Precio promo final</span>
-              <strong id="summaryPromoPrice">$0</strong>
-              <small id="summaryPlanTotal">Distribución 100%</small>
-            </div>
-          </div>
+                <p class="section-label">Datos de operación</p>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="developmentName">Nombre del desarrollo</label>
+                    <input id="developmentName" type="text" placeholder="Ej. Viceroy Residences">
+                  </div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="unitName">Unidad</label>
+                      <input id="unitName" type="text" placeholder="Ej. T-402">
+                    </div>
+                    <div class="field">
+                      <label for="paymentPlan">Forma de pago</label>
+                      <select id="paymentPlan">
+                        <option value="30/70">30/70</option>
+                        <option value="50/50">50/50</option>
+                        <option value="80/20">80/20</option>
+                        <option value="30/10/10/50">30/10/10/50</option>
+                        <option value="50/10/10/30">50/10/10/30</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="listPrice">Precio de lista</label>
+                    <input id="listPrice" type="text" inputmode="decimal" value="0">
+                  </div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="discount">Descuento (%)</label>
+                      <input id="discount" type="text" inputmode="decimal" value="0">
+                    </div>
+                    <div class="field">
+                      <label for="promoPrice">Precio promo</label>
+                      <input id="promoPrice" type="text" inputmode="decimal" value="0">
+                    </div>
+                  </div>
+                </div>
+                <p class="helper">Si cambias el descuento, se recalcula el precio promo. Si capturas un precio promo, se recalcula el descuento.</p>
+                <div class="summary-strip">
+                  <div class="summary-item">
+                    <span>Descuento aplicado</span>
+                    <strong id="summaryDiscountPercent">0%</strong>
+                    <small id="summaryDiscountAmount">$0</small>
+                  </div>
+                  <div class="summary-item">
+                    <span>Precio promo final</span>
+                    <strong id="summaryPromoPrice">$0</strong>
+                    <small id="summaryPlanTotal">Distribución 100%</small>
+                  </div>
+                </div>
               </aside>
 
               <main class="workspace">
-          <div class="summary-table-wrap" id="summaryShell">
-            <table class="summary-table">
-              <colgroup>
-                <col class="col-development">
-                <col class="col-unit">
-                <col class="col-plan">
-                <col class="col-list">
-                <col class="col-discount">
-                <col class="col-promo">
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Nombre del desarrollo</th>
-                  <th>Unidad</th>
-                  <th>Forma de pago</th>
-                  <th>Precio lista</th>
-                  <th>Descuento</th>
-                  <th>Precio promo</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="key" id="snapshotDevelopment">Sin capturar</td>
-                  <td class="key" id="snapshotUnit">Sin capturar</td>
-                  <td class="key" id="snapshotPlan">30/70</td>
-                  <td class="amount" id="snapshotListPrice">$0</td>
-                  <td class="amount" id="snapshotDiscount">$0</td>
-                  <td class="amount" id="snapshotPromoPrice">$0</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                <div class="summary-table-wrap" id="summaryShell">
+                  <table class="summary-table">
+                    <colgroup>
+                      <col class="col-development">
+                      <col class="col-unit">
+                      <col class="col-plan">
+                      <col class="col-list">
+                      <col class="col-discount">
+                      <col class="col-promo">
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>Nombre del desarrollo</th>
+                        <th>Unidad</th>
+                        <th>Forma de pago</th>
+                        <th>Precio lista</th>
+                        <th>Descuento</th>
+                        <th>Precio promo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="key" id="snapshotDevelopment">Sin capturar</td>
+                        <td class="key" id="snapshotUnit">Sin capturar</td>
+                        <td class="key" id="snapshotPlan">30/70</td>
+                        <td class="amount" id="snapshotListPrice">$0</td>
+                        <td class="amount" id="snapshotDiscount">$0</td>
+                        <td class="amount" id="snapshotPromoPrice">$0</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
-          <div class="payments-wrap" id="paymentsShell">
-            <div class="payments-head">
-              <div>
-                <h2>Desglose de pagos</h2>
-                <p>Enganche, pagos semestrales y balance contra entrega.</p>
-              </div>
-              <div class="payments-total">
-                <div id="tableMetaDevelopment">Desarrollo: Sin capturar</div>
-                <div id="tableMetaUnit">Unidad: Sin capturar</div>
-              </div>
-            </div>
+                <div class="payments-wrap" id="paymentsShell">
+                  <div class="payments-head">
+                    <div>
+                      <h2>Desglose de pagos</h2>
+                      <p>Enganche, pagos semestrales y balance contra entrega.</p>
+                    </div>
+                    <div class="payments-total">
+                      <div id="tableMetaDevelopment">Desarrollo: Sin capturar</div>
+                      <div id="tableMetaUnit">Unidad: Sin capturar</div>
+                    </div>
+                  </div>
 
-            <table class="payments-table">
-              <colgroup>
-                <col class="col-stage">
-                <col class="col-concept">
-                <col class="col-reference">
-                <col class="col-percent">
-                <col class="col-amount">
-              </colgroup>
-              <thead>
-                <tr>
-                  <th class="col-stage">Etapa</th>
-                  <th class="col-concept">Concepto</th>
-                  <th class="col-reference">Referencia</th>
-                  <th class="col-percent">Porcentaje</th>
-                  <th class="col-amount">Monto</th>
-                </tr>
-              </thead>
-              <tbody id="paymentRows"></tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="3">Totales</td>
-                  <td class="percent col-percent" id="footerPercent">100%</td>
-                  <td class="amount col-amount" id="footerAmount">$0</td>
-                </tr>
-              </tfoot>
-            </table>
+                  <table class="payments-table">
+                    <colgroup>
+                      <col class="col-stage">
+                      <col class="col-concept">
+                      <col class="col-reference">
+                      <col class="col-percent">
+                      <col class="col-amount">
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th class="col-stage">Etapa</th>
+                        <th class="col-concept">Concepto</th>
+                        <th class="col-reference">Referencia</th>
+                        <th class="col-percent">Porcentaje</th>
+                        <th class="col-amount">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody id="paymentRows"></tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="3">Totales</td>
+                        <td class="percent col-percent" id="footerPercent">100%</td>
+                        <td class="amount col-amount" id="footerAmount">$0</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </main>
             </div>
           </div>
@@ -949,10 +924,19 @@
       };
 
       const defaultLayout = {
-        version: 1,
-        printScale: 0.83,
+        version: 2,
+        printScale: 0.74,
         pageMarginMm: 6,
+        brandTopHeight: 226,
+        logoDataUrl: '',
+        logoWidth: 480,
+        logoHeight: 120,
+        logoOffsetX: 0,
+        logoOffsetY: 0,
+        railText: 'simca.mx',
+        railTextSize: 18,
         titleSize: 28,
+        subtitleSize: 14,
         headerPaddingTop: 12,
         headerPaddingSides: 14,
         headerPaddingBottom: 10,
@@ -960,13 +944,25 @@
         contentPaddingSides: 12,
         contentPaddingBottom: 12,
         contentGap: 14,
+        titleOffsetX: 0,
+        titleOffsetY: 0,
         showHeaderInPrint: true,
         showSummaryInPrint: true,
         showPaymentsInPrint: true,
+        surfaceColor: '#e8e4da',
+        paperColor: '#fffdf8',
+        textColor: '#1d1c18',
+        titleColor: '#1d1c18',
+        mutedColor: '#6f6859',
         accentColor: '#f0c419',
+        railAccentColor: '#ffdb16',
+        railTextColor: '#1d1c18',
         lineColor: '#ddd1bb',
         lineStrongColor: '#c7b89d',
         highlightRowColor: '#f9efbe',
+        bodyFontFamily: 'Arial, sans-serif',
+        headingFontFamily: 'Arial, sans-serif',
+        tableFontFamily: 'Arial, sans-serif',
         summaryHeaderSize: 9,
         summaryBodySize: 12,
         paymentHeaderSize: 9,
@@ -1014,8 +1010,9 @@
         footerPercent: document.getElementById('footerPercent'),
         footerAmount: document.getElementById('footerAmount'),
         printBtn: document.getElementById('printBtn'),
-        summaryShell: document.getElementById('summaryShell'),
-        paymentsShell: document.getElementById('paymentsShell')
+        railText: document.getElementById('railText'),
+        brandLogoWrap: document.getElementById('brandLogoWrap'),
+        brandLogo: document.getElementById('brandLogo')
       };
 
       let lastEdited = 'discount';
@@ -1050,9 +1047,18 @@
       function normalizeLayout(input) {
         const src = input && typeof input === 'object' ? input : {};
         const out = Object.assign({}, defaultLayout, src);
+        const validAlign = ['left', 'center', 'right'];
+
         out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
         out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
+        out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);
+        out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
+        out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
+        out.logoOffsetX = clamp(Number(out.logoOffsetX) || defaultLayout.logoOffsetX, -240, 240);
+        out.logoOffsetY = clamp(Number(out.logoOffsetY) || defaultLayout.logoOffsetY, -140, 140);
+        out.railTextSize = clamp(Number(out.railTextSize) || defaultLayout.railTextSize, 10, 28);
         out.titleSize = clamp(Number(out.titleSize) || defaultLayout.titleSize, 16, 40);
+        out.subtitleSize = clamp(Number(out.subtitleSize) || defaultLayout.subtitleSize, 10, 22);
         out.headerPaddingTop = clamp(Number(out.headerPaddingTop) || defaultLayout.headerPaddingTop, 0, 40);
         out.headerPaddingSides = clamp(Number(out.headerPaddingSides) || defaultLayout.headerPaddingSides, 0, 40);
         out.headerPaddingBottom = clamp(Number(out.headerPaddingBottom) || defaultLayout.headerPaddingBottom, 0, 40);
@@ -1060,6 +1066,8 @@
         out.contentPaddingSides = clamp(Number(out.contentPaddingSides) || defaultLayout.contentPaddingSides, 0, 40);
         out.contentPaddingBottom = clamp(Number(out.contentPaddingBottom) || defaultLayout.contentPaddingBottom, 0, 40);
         out.contentGap = clamp(Number(out.contentGap) || defaultLayout.contentGap, 0, 32);
+        out.titleOffsetX = clamp(Number(out.titleOffsetX) || defaultLayout.titleOffsetX, -240, 240);
+        out.titleOffsetY = clamp(Number(out.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120);
         out.summaryHeaderSize = clamp(Number(out.summaryHeaderSize) || defaultLayout.summaryHeaderSize, 7, 16);
         out.summaryBodySize = clamp(Number(out.summaryBodySize) || defaultLayout.summaryBodySize, 9, 20);
         out.paymentHeaderSize = clamp(Number(out.paymentHeaderSize) || defaultLayout.paymentHeaderSize, 7, 16);
@@ -1076,7 +1084,6 @@
         out.paymentsColReference = clamp(Number(out.paymentsColReference) || defaultLayout.paymentsColReference, 12, 40);
         out.paymentsColPercent = clamp(Number(out.paymentsColPercent) || defaultLayout.paymentsColPercent, 8, 30);
         out.paymentsColAmount = clamp(Number(out.paymentsColAmount) || defaultLayout.paymentsColAmount, 10, 30);
-        const validAlign = ['left', 'center', 'right'];
         out.paymentsAlignStage = validAlign.includes(String(out.paymentsAlignStage || '').toLowerCase()) ? String(out.paymentsAlignStage).toLowerCase() : defaultLayout.paymentsAlignStage;
         out.paymentsAlignConcept = validAlign.includes(String(out.paymentsAlignConcept || '').toLowerCase()) ? String(out.paymentsAlignConcept).toLowerCase() : defaultLayout.paymentsAlignConcept;
         out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : defaultLayout.paymentsAlignReference;
@@ -1085,19 +1092,28 @@
         out.showHeaderInPrint = Boolean(out.showHeaderInPrint);
         out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
         out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
-        if (typeof out.accentColor !== 'string') out.accentColor = defaultLayout.accentColor;
-        if (typeof out.lineColor !== 'string') out.lineColor = defaultLayout.lineColor;
-        if (typeof out.lineStrongColor !== 'string') out.lineStrongColor = defaultLayout.lineStrongColor;
-        if (typeof out.highlightRowColor !== 'string') out.highlightRowColor = defaultLayout.highlightRowColor;
+
+        ['logoDataUrl', 'railText', 'surfaceColor', 'paperColor', 'textColor', 'titleColor', 'mutedColor', 'accentColor', 'railAccentColor', 'railTextColor', 'lineColor', 'lineStrongColor', 'highlightRowColor', 'bodyFontFamily', 'headingFontFamily', 'tableFontFamily'].forEach(function (key) {
+          if (typeof out[key] !== 'string') out[key] = defaultLayout[key];
+        });
+
         return out;
       }
 
       function applyLayout(layoutInput) {
         const layout = normalizeLayout(layoutInput);
         const root = document.documentElement;
+
         root.style.setProperty('--print-scale', String(layout.printScale));
         root.style.setProperty('--print-margin-mm', String(layout.pageMarginMm));
+        root.style.setProperty('--brand-top-height', layout.brandTopHeight + 'px');
+        root.style.setProperty('--logo-width', layout.logoWidth + 'px');
+        root.style.setProperty('--logo-height', layout.logoHeight + 'px');
+        root.style.setProperty('--logo-offset-x', layout.logoOffsetX + 'px');
+        root.style.setProperty('--logo-offset-y', layout.logoOffsetY + 'px');
+        root.style.setProperty('--rail-text-size', layout.railTextSize + 'px');
         root.style.setProperty('--title-size', layout.titleSize + 'px');
+        root.style.setProperty('--subtitle-size', layout.subtitleSize + 'px');
         root.style.setProperty('--header-padding-top', layout.headerPaddingTop + 'px');
         root.style.setProperty('--header-padding-sides', layout.headerPaddingSides + 'px');
         root.style.setProperty('--header-padding-bottom', layout.headerPaddingBottom + 'px');
@@ -1105,10 +1121,23 @@
         root.style.setProperty('--content-padding-sides', layout.contentPaddingSides + 'px');
         root.style.setProperty('--content-padding-bottom', layout.contentPaddingBottom + 'px');
         root.style.setProperty('--content-gap', layout.contentGap + 'px');
+        root.style.setProperty('--title-offset-x', layout.titleOffsetX + 'px');
+        root.style.setProperty('--title-offset-y', layout.titleOffsetY + 'px');
+        root.style.setProperty('--surface', layout.surfaceColor);
+        root.style.setProperty('--paper', layout.paperColor);
+        root.style.setProperty('--paper-soft', layout.paperColor);
+        root.style.setProperty('--ink', layout.textColor);
+        root.style.setProperty('--title-color', layout.titleColor);
+        root.style.setProperty('--muted', layout.mutedColor);
         root.style.setProperty('--accent', layout.accentColor);
+        root.style.setProperty('--accent-soft', layout.highlightRowColor);
+        root.style.setProperty('--rail-accent', layout.railAccentColor);
+        root.style.setProperty('--rail-text', layout.railTextColor);
         root.style.setProperty('--line', layout.lineColor);
         root.style.setProperty('--line-strong', layout.lineStrongColor);
-        root.style.setProperty('--accent-soft', layout.highlightRowColor);
+        root.style.setProperty('--font-body', layout.bodyFontFamily);
+        root.style.setProperty('--font-heading', layout.headingFontFamily);
+        root.style.setProperty('--font-table', layout.tableFontFamily);
         root.style.setProperty('--summary-header-size', layout.summaryHeaderSize + 'px');
         root.style.setProperty('--summary-body-size', layout.summaryBodySize + 'px');
         root.style.setProperty('--payment-header-size', layout.paymentHeaderSize + 'px');
@@ -1131,6 +1160,16 @@
         root.style.setProperty('--payments-align-percent', layout.paymentsAlignPercent);
         root.style.setProperty('--payments-align-amount', layout.paymentsAlignAmount);
 
+        els.railText.textContent = layout.railText || 'simca.mx';
+
+        if (layout.logoDataUrl) {
+          els.brandLogo.src = layout.logoDataUrl;
+          els.brandLogoWrap.classList.remove('is-empty');
+        } else {
+          els.brandLogo.removeAttribute('src');
+          els.brandLogoWrap.classList.add('is-empty');
+        }
+
         document.body.classList.toggle('hide-header-print', !layout.showHeaderInPrint);
         document.body.classList.toggle('hide-summary-print', !layout.showSummaryInPrint);
         document.body.classList.toggle('hide-payments-print', !layout.showPaymentsInPrint);
@@ -1149,6 +1188,7 @@
           let concept = 'Pago programado';
           let reference = '-';
           let tag = 'Programado';
+
           if (isFirst) {
             concept = 'Enganche';
             reference = 'Pago inicial';
@@ -1162,6 +1202,7 @@
             reference = (index * 6) + ' meses';
             tag = 'Semestral';
           }
+
           return {
             stage: index + 1,
             concept: concept,

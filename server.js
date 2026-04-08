@@ -1641,10 +1641,19 @@ function saveSolarMidtownLayout(layout) {
 
 function defaultTablaPagosLayout() {
   return {
-    version: 1,
-    printScale: 0.83,
+    version: 2,
+    printScale: 0.74,
     pageMarginMm: 6,
+    brandTopHeight: 226,
+    logoDataUrl: '',
+    logoWidth: 480,
+    logoHeight: 120,
+    logoOffsetX: 0,
+    logoOffsetY: 0,
+    railText: 'simca.mx',
+    railTextSize: 18,
     titleSize: 28,
+    subtitleSize: 14,
     headerPaddingTop: 12,
     headerPaddingSides: 14,
     headerPaddingBottom: 10,
@@ -1652,13 +1661,25 @@ function defaultTablaPagosLayout() {
     contentPaddingSides: 12,
     contentPaddingBottom: 12,
     contentGap: 14,
+    titleOffsetX: 0,
+    titleOffsetY: 0,
     showHeaderInPrint: true,
     showSummaryInPrint: true,
     showPaymentsInPrint: true,
+    surfaceColor: '#e8e4da',
+    paperColor: '#fffdf8',
+    textColor: '#1d1c18',
+    titleColor: '#1d1c18',
+    mutedColor: '#6f6859',
     accentColor: '#f0c419',
+    railAccentColor: '#ffdb16',
+    railTextColor: '#1d1c18',
     lineColor: '#ddd1bb',
     lineStrongColor: '#c7b89d',
     highlightRowColor: '#f9efbe',
+    bodyFontFamily: 'Arial, sans-serif',
+    headingFontFamily: 'Arial, sans-serif',
+    tableFontFamily: 'Arial, sans-serif',
     summaryHeaderSize: 9,
     summaryBodySize: 12,
     paymentHeaderSize: 9,
@@ -1690,10 +1711,17 @@ function normalizeTablaPagosLayout(input) {
     ...base,
     ...src
   };
-  out.version = 1;
+  out.version = 2;
   out.printScale = clampNumber(out.printScale, base.printScale, 0.65, 1.15);
   out.pageMarginMm = clampNumber(out.pageMarginMm, base.pageMarginMm, 0, 20);
+  out.brandTopHeight = clampNumber(out.brandTopHeight, base.brandTopHeight, 120, 320);
+  out.logoWidth = clampNumber(out.logoWidth, base.logoWidth, 80, 900);
+  out.logoHeight = clampNumber(out.logoHeight, base.logoHeight, 40, 260);
+  out.logoOffsetX = clampNumber(out.logoOffsetX, base.logoOffsetX, -240, 240);
+  out.logoOffsetY = clampNumber(out.logoOffsetY, base.logoOffsetY, -140, 140);
+  out.railTextSize = clampNumber(out.railTextSize, base.railTextSize, 10, 28);
   out.titleSize = clampNumber(out.titleSize, base.titleSize, 16, 40);
+  out.subtitleSize = clampNumber(out.subtitleSize, base.subtitleSize, 10, 22);
   out.headerPaddingTop = clampNumber(out.headerPaddingTop, base.headerPaddingTop, 0, 40);
   out.headerPaddingSides = clampNumber(out.headerPaddingSides, base.headerPaddingSides, 0, 40);
   out.headerPaddingBottom = clampNumber(out.headerPaddingBottom, base.headerPaddingBottom, 0, 40);
@@ -1701,6 +1729,8 @@ function normalizeTablaPagosLayout(input) {
   out.contentPaddingSides = clampNumber(out.contentPaddingSides, base.contentPaddingSides, 0, 40);
   out.contentPaddingBottom = clampNumber(out.contentPaddingBottom, base.contentPaddingBottom, 0, 40);
   out.contentGap = clampNumber(out.contentGap, base.contentGap, 0, 32);
+  out.titleOffsetX = clampNumber(out.titleOffsetX, base.titleOffsetX, -240, 240);
+  out.titleOffsetY = clampNumber(out.titleOffsetY, base.titleOffsetY, -120, 120);
   out.summaryHeaderSize = clampNumber(out.summaryHeaderSize, base.summaryHeaderSize, 7, 16);
   out.summaryBodySize = clampNumber(out.summaryBodySize, base.summaryBodySize, 9, 20);
   out.paymentHeaderSize = clampNumber(out.paymentHeaderSize, base.paymentHeaderSize, 7, 16);
@@ -1726,10 +1756,22 @@ function normalizeTablaPagosLayout(input) {
   out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : base.paymentsAlignReference;
   out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : base.paymentsAlignPercent;
   out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : base.paymentsAlignAmount;
+  if (typeof out.logoDataUrl !== 'string') out.logoDataUrl = base.logoDataUrl;
+  if (typeof out.railText !== 'string') out.railText = base.railText;
+  if (typeof out.surfaceColor !== 'string') out.surfaceColor = base.surfaceColor;
+  if (typeof out.paperColor !== 'string') out.paperColor = base.paperColor;
+  if (typeof out.textColor !== 'string') out.textColor = base.textColor;
+  if (typeof out.titleColor !== 'string') out.titleColor = base.titleColor;
+  if (typeof out.mutedColor !== 'string') out.mutedColor = base.mutedColor;
   if (typeof out.accentColor !== 'string') out.accentColor = base.accentColor;
+  if (typeof out.railAccentColor !== 'string') out.railAccentColor = base.railAccentColor;
+  if (typeof out.railTextColor !== 'string') out.railTextColor = base.railTextColor;
   if (typeof out.lineColor !== 'string') out.lineColor = base.lineColor;
   if (typeof out.lineStrongColor !== 'string') out.lineStrongColor = base.lineStrongColor;
   if (typeof out.highlightRowColor !== 'string') out.highlightRowColor = base.highlightRowColor;
+  if (typeof out.bodyFontFamily !== 'string') out.bodyFontFamily = base.bodyFontFamily;
+  if (typeof out.headingFontFamily !== 'string') out.headingFontFamily = base.headingFontFamily;
+  if (typeof out.tableFontFamily !== 'string') out.tableFontFamily = base.tableFontFamily;
   return out;
 }
 
