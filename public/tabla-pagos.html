@@ -950,8 +950,7 @@
     <div class="topbar">
       <a class="back" href="/simca">Regresar a SIMCA</a>
       <div class="topbar-actions">
-        <a class="editor-btn" href="/tabla-pagos/editor">Editor PDF</a>
-        <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
+        <a class="editor-btn" href="/tabla-pagos/editor">Editor PDF Martin SIMCA</a>
         <button class="print-btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
       </div>
     </div>
@@ -1251,7 +1250,6 @@
         paymentRows: document.getElementById('paymentRows'),
         footerPercent: document.getElementById('footerPercent'),
         footerAmount: document.getElementById('footerAmount'),
-        printBtn: document.getElementById('printBtn'),
         downloadPdfBtn: document.getElementById('downloadPdfBtn'),
         railText: document.getElementById('railText'),
         brandLogoWrap: document.getElementById('brandLogoWrap'),
@@ -1800,7 +1798,6 @@
       });
       els.discount.addEventListener('change', function () { update('discount'); });
       els.promoPrice.addEventListener('change', function () { update('promoPrice'); });
-      els.printBtn.addEventListener('click', function () { window.print(); });
       els.downloadPdfBtn.addEventListener('click', function () {
         downloadServerPdf().catch(function (err) {
           window.alert(err && err.message ? err.message : 'No se pudo generar el PDF.');
