@@ -23,6 +23,8 @@
       --print-scale: 0.92;
       --print-margin-mm: 6;
       --brand-top-height: 226px;
+      --rail-offset-y: 226px;
+      --rail-height: 278px;
       --logo-width: 480px;
       --logo-height: 120px;
       --logo-offset-x: 0px;
@@ -187,7 +189,8 @@
       left: 0;
       top: var(--brand-top-height);
       width: var(--rail-width);
-      height: 278px;
+      top: var(--rail-offset-y);
+      height: var(--rail-height);
       background: var(--rail-accent);
       display: flex;
       align-items: center;
@@ -589,7 +592,7 @@
       background:
         linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left calc(var(--rail-width) - 1px) top/1px 100% no-repeat,
         linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/100% 1px no-repeat,
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top calc(var(--brand-top-height) + 278px)/var(--rail-width) 1px no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top calc(var(--rail-offset-y) + var(--rail-height))/var(--rail-width) 1px no-repeat,
         var(--surface);
     }
 
@@ -779,7 +782,7 @@
         background:
           linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left calc(var(--rail-width) - 1px) top/1px 100% no-repeat,
           linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/100% 1px no-repeat,
-          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top calc(var(--brand-top-height) + 278px)/var(--rail-width) 1px no-repeat,
+          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top calc(var(--rail-offset-y) + var(--rail-height))/var(--rail-width) 1px no-repeat,
           var(--surface);
       }
 
@@ -1067,6 +1070,8 @@
         printScale: 0.92,
         pageMarginMm: 6,
         brandTopHeight: 226,
+        railOffsetY: 226,
+        railHeight: 278,
         logoDataUrl: '',
         logoWidth: 480,
         logoHeight: 120,
@@ -1197,6 +1202,8 @@
         out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
         out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
         out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);
+        out.railOffsetY = clamp(Number(out.railOffsetY) || defaultLayout.railOffsetY, 0, 500);
+        out.railHeight = clamp(Number(out.railHeight) || defaultLayout.railHeight, 40, 500);
         out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
         out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
         out.logoOffsetX = clamp(Number(out.logoOffsetX) || defaultLayout.logoOffsetX, -240, 240);
@@ -1239,12 +1246,21 @@
         out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
         out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map(function (line, index) {
           const srcLine = line && typeof line === 'object' ? line : {};
+          var orientation = String(srcLine.orientation || 'horizontal').toLowerCase() === 'vertical' ? 'vertical' : 'horizontal';
+          var x = clamp(Number(srcLine.x) || Number(srcLine.x1) || 0, 0, 100);
+          var y = clamp(Number(srcLine.y) || Number(srcLine.y1) || 0, 0, 100);
+          var length = Number(srcLine.length);
+          if (!Number.isFinite(length)) {
+            length = orientation === 'vertical'
+              ? Math.max(0, (Number(srcLine.y2) || y) - y)
+              : Math.max(0, (Number(srcLine.x2) || x) - x);
+          }
           return {
             id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : 'line-' + (index + 1),
-            x1: clamp(Number(srcLine.x1) || 0, 0, 100),
-            y1: clamp(Number(srcLine.y1) || 0, 0, 100),
-            x2: clamp(Number(srcLine.x2) || 100, 0, 100),
-            y2: clamp(Number(srcLine.y2) || 0, 0, 100),
+            orientation: orientation,
+            x: x,
+            y: y,
+            length: clamp(length || 0, 0, 100),
             width: clamp(Number(srcLine.width) || 1, 1, 12),
             color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : defaultLayout.lineStrongColor,
             opacity: clamp(Number(srcLine.opacity) || 1, 0.1, 1)
@@ -1260,12 +1276,16 @@
 
       function renderOverlayLines(lines) {
         els.sheetOverlay.innerHTML = (lines || []).map(function (line) {
+          var x1 = line.x;
+          var y1 = line.y;
+          var x2 = line.orientation === 'vertical' ? line.x : clamp(line.x + line.length, 0, 100);
+          var y2 = line.orientation === 'vertical' ? clamp(line.y + line.length, 0, 100) : line.y;
           return [
             '<line',
-            ' x1="', line.x1, '%"',
-            ' y1="', line.y1, '%"',
-            ' x2="', line.x2, '%"',
-            ' y2="', line.y2, '%"',
+            ' x1="', x1, '%"',
+            ' y1="', y1, '%"',
+            ' x2="', x2, '%"',
+            ' y2="', y2, '%"',
             ' stroke="', escapeHtml(line.color), '"',
             ' stroke-width="', line.width, '"',
             ' stroke-opacity="', line.opacity, '"',
@@ -1283,6 +1303,8 @@
         root.style.setProperty('--print-scale', String(layout.printScale));
         root.style.setProperty('--print-margin-mm', String(layout.pageMarginMm));
         root.style.setProperty('--brand-top-height', layout.brandTopHeight + 'px');
+        root.style.setProperty('--rail-offset-y', layout.railOffsetY + 'px');
+        root.style.setProperty('--rail-height', layout.railHeight + 'px');
         root.style.setProperty('--logo-width', layout.logoWidth + 'px');
         root.style.setProperty('--logo-height', layout.logoHeight + 'px');
         root.style.setProperty('--logo-offset-x', layout.logoOffsetX + 'px');

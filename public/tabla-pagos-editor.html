@@ -185,6 +185,8 @@
                 <label>Texto barra izquierda<input id="railText" type="text"></label>
                 <label>Tamaño texto barra<input id="railTextSize" type="number" min="10" max="28" step="1"></label>
                 <label>Altura franja superior<input id="brandTopHeight" type="number" min="120" max="320" step="1"></label>
+                <label>Cuadro amarillo Y<input id="railOffsetY" type="number" min="0" max="500" step="1"></label>
+                <label>Cuadro amarillo alto<input id="railHeight" type="number" min="40" max="500" step="1"></label>
                 <label>Logo ancho<input id="logoWidth" type="number" min="80" max="900" step="1"></label>
                 <label>Logo alto<input id="logoHeight" type="number" min="40" max="260" step="1"></label>
                 <label>Logo mover X<input id="logoOffsetX" type="number" min="-240" max="240" step="1"></label>
@@ -337,6 +339,8 @@
         printScale: 0.92,
         pageMarginMm: 6,
         brandTopHeight: 226,
+        railOffsetY: 226,
+        railHeight: 278,
         logoDataUrl: '',
         logoWidth: 480,
         logoHeight: 120,
@@ -408,6 +412,8 @@
         printScale: document.getElementById('printScale'),
         pageMarginMm: document.getElementById('pageMarginMm'),
         brandTopHeight: document.getElementById('brandTopHeight'),
+        railOffsetY: document.getElementById('railOffsetY'),
+        railHeight: document.getElementById('railHeight'),
         logoWidth: document.getElementById('logoWidth'),
         logoHeight: document.getElementById('logoHeight'),
         logoOffsetX: document.getElementById('logoOffsetX'),
@@ -488,6 +494,8 @@
         out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
         out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
         out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);
+        out.railOffsetY = clamp(Number(out.railOffsetY) || defaultLayout.railOffsetY, 0, 500);
+        out.railHeight = clamp(Number(out.railHeight) || defaultLayout.railHeight, 40, 500);
         out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
         out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
         out.logoOffsetX = clamp(Number(out.logoOffsetX) || defaultLayout.logoOffsetX, -240, 240);
@@ -531,12 +539,24 @@
         out.logoDataUrl = typeof out.logoDataUrl === 'string' ? out.logoDataUrl : '';
         out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map(function (line, index) {
           const srcLine = line && typeof line === 'object' ? line : {};
+          const orientation = String(srcLine.orientation || '').toLowerCase() === 'vertical' ? 'vertical' : 'horizontal';
+          const x = clamp(Number(srcLine.x) || Number(srcLine.x1) || 0, 0, 100);
+          const y = clamp(Number(srcLine.y) || Number(srcLine.y1) || 0, 0, 100);
+          const length = clamp(
+            Number(srcLine.length) || (
+              orientation === 'vertical'
+                ? Math.max(0, (Number(srcLine.y2) || y) - y)
+                : Math.max(0, (Number(srcLine.x2) || x) - x)
+            ),
+            0,
+            100
+          );
           return {
             id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : 'line-' + (index + 1),
-            x1: clamp(Number(srcLine.x1) || 0, 0, 100),
-            y1: clamp(Number(srcLine.y1) || 0, 0, 100),
-            x2: clamp(Number(srcLine.x2) || 100, 0, 100),
-            y2: clamp(Number(srcLine.y2) || 0, 0, 100),
+            orientation: orientation,
+            x: x,
+            y: y,
+            length: length,
             width: clamp(Number(srcLine.width) || 1, 1, 12),
             color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : defaultLayout.lineStrongColor,
             opacity: clamp(Number(srcLine.opacity) || 1, 0.1, 1)
@@ -554,10 +574,10 @@
             '<button class="line-remove" type="button" data-remove-line="' + line.id + '">Quitar</button>',
             '</div>',
             '<div class="grid">',
-            '<label>X1 %<input type="number" min="0" max="100" step="0.1" data-line-field="x1" data-line-id="' + line.id + '" value="' + line.x1 + '"></label>',
-            '<label>Y1 %<input type="number" min="0" max="100" step="0.1" data-line-field="y1" data-line-id="' + line.id + '" value="' + line.y1 + '"></label>',
-            '<label>X2 %<input type="number" min="0" max="100" step="0.1" data-line-field="x2" data-line-id="' + line.id + '" value="' + line.x2 + '"></label>',
-            '<label>Y2 %<input type="number" min="0" max="100" step="0.1" data-line-field="y2" data-line-id="' + line.id + '" value="' + line.y2 + '"></label>',
+            '<label>Orientación<select data-line-field="orientation" data-line-id="' + line.id + '"><option value="horizontal"' + (line.orientation === 'horizontal' ? ' selected' : '') + '>Horizontal</option><option value="vertical"' + (line.orientation === 'vertical' ? ' selected' : '') + '>Vertical</option></select></label>',
+            '<label>X %<input type="number" min="0" max="100" step="0.1" data-line-field="x" data-line-id="' + line.id + '" value="' + line.x + '"></label>',
+            '<label>Y %<input type="number" min="0" max="100" step="0.1" data-line-field="y" data-line-id="' + line.id + '" value="' + line.y + '"></label>',
+            '<label>Largo %<input type="number" min="0" max="100" step="0.1" data-line-field="length" data-line-id="' + line.id + '" value="' + line.length + '"></label>',
             '<label>Grosor<input type="number" min="1" max="12" step="0.1" data-line-field="width" data-line-id="' + line.id + '" value="' + line.width + '"></label>',
             '<label>Opacidad<input type="number" min="0.1" max="1" step="0.1" data-line-field="opacity" data-line-id="' + line.id + '" value="' + line.opacity + '"></label>',
             '<label>Color<input type="color" data-line-field="color" data-line-id="' + line.id + '" value="' + line.color + '"></label>',
@@ -653,10 +673,10 @@
       function addLine() {
         const next = {
           id: 'line-' + Date.now(),
-          x1: 6,
-          y1: 6,
-          x2: 94,
-          y2: 6,
+          orientation: 'horizontal',
+          x: 6,
+          y: 6,
+          length: 88,
           width: 1,
           color: '#8d8777',
           opacity: 1
@@ -671,7 +691,8 @@
         currentLines = currentLines.map(function (line) {
           if (line.id !== id) return line;
           const next = Object.assign({}, line);
-          if (field === 'color') next.color = String(value || '#8d8777');
+          if (field === 'orientation') next.orientation = value === 'vertical' ? 'vertical' : 'horizontal';
+          else if (field === 'color') next.color = String(value || '#8d8777');
           else if (field === 'opacity') next.opacity = clamp(Number(value) || 1, 0.1, 1);
           else if (field === 'width') next.width = clamp(Number(value) || 1, 1, 12);
           else next[field] = clamp(Number(value) || 0, 0, 100);

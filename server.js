@@ -1645,6 +1645,8 @@ function defaultTablaPagosLayout() {
     printScale: 0.92,
     pageMarginMm: 6,
     brandTopHeight: 226,
+    railOffsetY: 226,
+    railHeight: 278,
     logoDataUrl: '',
     logoWidth: 480,
     logoHeight: 120,
@@ -1720,6 +1722,8 @@ function normalizeTablaPagosLayout(input) {
   out.printScale = clampNumber(out.printScale, base.printScale, 0.65, 1.15);
   out.pageMarginMm = clampNumber(out.pageMarginMm, base.pageMarginMm, 0, 20);
   out.brandTopHeight = clampNumber(out.brandTopHeight, base.brandTopHeight, 120, 320);
+  out.railOffsetY = clampNumber(out.railOffsetY, base.railOffsetY, 0, 500);
+  out.railHeight = clampNumber(out.railHeight, base.railHeight, 40, 500);
   out.logoWidth = clampNumber(out.logoWidth, base.logoWidth, 80, 900);
   out.logoHeight = clampNumber(out.logoHeight, base.logoHeight, 40, 260);
   out.logoOffsetX = clampNumber(out.logoOffsetX, base.logoOffsetX, -240, 240);
@@ -1782,10 +1786,12 @@ function normalizeTablaPagosLayout(input) {
         const srcLine = line && typeof line === 'object' ? line : {};
         return {
           id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : `line-${index + 1}`,
-          x1: clampNumber(srcLine.x1, 0, 0, 100),
-          y1: clampNumber(srcLine.y1, 0, 0, 100),
-          x2: clampNumber(srcLine.x2, 100, 0, 100),
-          y2: clampNumber(srcLine.y2, 0, 0, 100),
+          orientation: String(srcLine.orientation || 'horizontal').toLowerCase() === 'vertical' ? 'vertical' : 'horizontal',
+          x: clampNumber(srcLine.x, srcLine.x1, 0, 100),
+          y: clampNumber(srcLine.y, srcLine.y1, 0, 100),
+          length: clampNumber(srcLine.length, String(srcLine.orientation || 'horizontal').toLowerCase() === 'vertical'
+            ? Math.max(0, (Number(srcLine.y2) || 0) - (Number(srcLine.y1) || 0))
+            : Math.max(0, (Number(srcLine.x2) || 100) - (Number(srcLine.x1) || 0)), 0, 100),
           width: clampNumber(srcLine.width, 1, 1, 12),
           color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : base.lineStrongColor,
           opacity: clampNumber(srcLine.opacity, 1, 0.1, 1)
