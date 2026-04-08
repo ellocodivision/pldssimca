@@ -350,6 +350,48 @@
       gap: 12px;
     }
 
+    .field-stack {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid rgba(199, 184, 157, 0.8);
+      border-radius: 16px;
+      background: rgba(255, 253, 248, 0.72);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .field-stack[hidden] {
+      display: none !important;
+    }
+
+    .special-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .special-payments {
+      display: grid;
+      gap: 10px;
+    }
+
+    .special-payment-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 110px 120px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .special-payment-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
     label {
       font-size: 11px;
       font-weight: 700;
@@ -575,6 +617,27 @@
       letter-spacing: 0.08em;
       white-space: nowrap;
       text-transform: uppercase;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .reference-entry {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .payment-date-input {
+      width: 140px;
+      min-height: 32px;
+      border: 1px solid #d5cbb6;
+      border-radius: 999px;
+      padding: 0 10px;
+      background: #fffdf8;
+      color: var(--ink);
+      font: inherit;
+      font-size: 12px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -937,6 +1000,26 @@
                       </select>
                     </div>
                   </div>
+                  <div class="field-stack">
+                    <label class="check"><input id="specialPlanToggle" type="checkbox"> Forma de pago especial</label>
+                    <div id="specialPlanFields" hidden>
+                      <div class="special-grid">
+                        <div class="field">
+                          <label for="specialPaymentCount">Cuántos pagos</label>
+                          <select id="specialPaymentCount">
+                            <option value="2">2 pagos</option>
+                            <option value="3">3 pagos</option>
+                            <option value="4" selected>4 pagos</option>
+                            <option value="5">5 pagos</option>
+                            <option value="6">6 pagos</option>
+                            <option value="7">7 pagos</option>
+                            <option value="8">8 pagos</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="special-payments" id="specialPayments"></div>
+                    </div>
+                  </div>
                   <div class="field">
                     <label for="listPrice">Precio de lista</label>
                     <input id="listPrice" type="text" inputmode="decimal" value="0">
@@ -1145,6 +1228,10 @@
         developmentName: document.getElementById('developmentName'),
         unitName: document.getElementById('unitName'),
         paymentPlan: document.getElementById('paymentPlan'),
+        specialPlanToggle: document.getElementById('specialPlanToggle'),
+        specialPlanFields: document.getElementById('specialPlanFields'),
+        specialPaymentCount: document.getElementById('specialPaymentCount'),
+        specialPayments: document.getElementById('specialPayments'),
         listPrice: document.getElementById('listPrice'),
         discount: document.getElementById('discount'),
         promoPrice: document.getElementById('promoPrice'),
@@ -1173,6 +1260,8 @@
       };
 
       let lastEdited = 'discount';
+      let specialPaymentPercents = [30, 10, 10, 50];
+      let paymentDates = [];
 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
@@ -1322,6 +1411,51 @@
         }).join('');
       }
 
+      function getSpecialPaymentLabel(index, count) {
+        if (index === 0) return 'Enganche';
+        if (index === count - 1) return 'Entrega';
+        return 'Pago ' + (index + 1);
+      }
+
+      function ensureSpecialPercents(count) {
+        const next = [];
+        for (let index = 0; index < count; index += 1) {
+          next.push(Number(specialPaymentPercents[index]) || 0);
+        }
+        if (count === 2 && next.every(function (item) { return item === 0; })) {
+          next[0] = 30;
+          next[1] = 70;
+        }
+        if (count > 2 && next.every(function (item) { return item === 0; })) {
+          next[0] = 30;
+          next[count - 1] = 70;
+        }
+        specialPaymentPercents = next;
+      }
+
+      function ensurePaymentDates(count) {
+        paymentDates = Array.from({ length: count }, function (_, index) {
+          return paymentDates[index] || '';
+        });
+      }
+
+      function renderSpecialPaymentInputs() {
+        const count = Math.max(2, Number(els.specialPaymentCount.value) || 2);
+        ensureSpecialPercents(count);
+        ensurePaymentDates(count);
+        els.specialPayments.innerHTML = specialPaymentPercents.map(function (percent, index) {
+          const label = getSpecialPaymentLabel(index, count);
+          const amount = Math.max(0, sanitizeNumber(els.promoPrice.value)) * ((Number(percent) || 0) / 100);
+          return [
+            '<div class="special-payment-row">',
+            '<div class="special-payment-label">', escapeHtml(label), '</div>',
+            '<div class="field"><label>Porcentaje<input type="number" min="0" max="100" step="0.01" data-special-percent="', index, '" value="', percent, '"></label></div>',
+            '<div class="field"><label>Monto<input type="text" value="', escapeHtml(formatCurrency(amount)), '" readonly></label></div>',
+            '</div>'
+          ].join('');
+        }).join('');
+      }
+
       function applyLayout(layoutInput) {
         const layout = normalizeLayout(layoutInput);
         const root = document.documentElement;
@@ -1411,28 +1545,24 @@
           const isFirst = index === 0;
           const isLast = index === planParts.length - 1;
           let concept = 'Pago programado';
-          let reference = '-';
           let tag = 'Programado';
 
           if (isFirst) {
             concept = 'Enganche';
-            reference = 'Pago inicial';
             tag = 'Enganche';
           } else if (isLast) {
             concept = 'Balance contra entrega';
-            reference = 'Entrega';
             tag = 'Entrega';
           } else {
             concept = 'Pago semestral';
-            reference = (index * 6) + ' meses';
             tag = 'Semestral';
           }
 
           return {
             stage: index + 1,
             concept: concept,
-            reference: reference,
             tag: tag,
+            date: paymentDates[index] || '',
             percent: part,
             amount: promoPrice * (part / 100),
             highlight: isLast
@@ -1444,8 +1574,17 @@
         if (source) lastEdited = source;
         const developmentName = els.developmentName.value.trim();
         const unitName = els.unitName.value.trim();
+        const isSpecialPlan = Boolean(els.specialPlanToggle.checked);
         const planKey = els.paymentPlan.value;
-        const planParts = plans[planKey] || [30, 70];
+        const standardPlanParts = plans[planKey] || [30, 70];
+        const specialCount = Math.max(2, Number(els.specialPaymentCount.value) || 2);
+        if (isSpecialPlan) {
+          ensureSpecialPercents(specialCount);
+          ensurePaymentDates(specialCount);
+        } else {
+          ensurePaymentDates(standardPlanParts.length);
+        }
+        const planParts = isSpecialPlan ? specialPaymentPercents.slice(0, specialCount) : standardPlanParts;
         const listPrice = Math.max(0, sanitizeNumber(els.listPrice.value));
 
         let discountPercent = clamp(sanitizeNumber(els.discount.value), 0, 100);
@@ -1468,17 +1607,19 @@
         const rows = getRows(planParts, promoPrice);
         const planPercentTotal = planParts.reduce(function (sum, item) { return sum + item; }, 0);
         const rowAmountTotal = rows.reduce(function (sum, row) { return sum + row.amount; }, 0);
+        const planLabel = isSpecialPlan ? ('Especial ' + planParts.join('/')) : planKey;
 
         els.discount.value = percentFormat.format(discountPercent);
         els.promoPrice.value = String(Math.round(promoPrice * 100) / 100);
-        els.summaryPlan.textContent = planKey;
+        renderSpecialPaymentInputs();
+        els.summaryPlan.textContent = planLabel;
         els.summaryDiscountPercent.textContent = formatPercent(discountPercent);
         els.summaryDiscountAmount.textContent = formatCurrency(discountAmount);
         els.summaryPromoPrice.textContent = formatCurrency(promoPrice);
         els.summaryPlanTotal.textContent = 'Distribución ' + formatPercent(planPercentTotal);
         els.snapshotDevelopment.textContent = developmentName || 'Sin capturar';
         els.snapshotUnit.textContent = unitName || 'Sin capturar';
-        els.snapshotPlan.textContent = planKey;
+        els.snapshotPlan.textContent = planLabel;
         els.snapshotListPrice.textContent = formatCurrency(listPrice);
         els.snapshotDiscount.textContent = formatCurrency(discountAmount) + ' (' + formatPercent(discountPercent) + ')';
         els.snapshotPromoPrice.textContent = formatCurrency(promoPrice);
@@ -1490,7 +1631,7 @@
             '<tr' + (row.highlight ? ' class="highlight"' : '') + '>',
             '<td class="number col-stage">' + row.stage + '</td>',
             '<td class="col-concept">' + escapeHtml(row.concept) + '</td>',
-            '<td class="col-reference"><span class="pill">' + escapeHtml(row.tag) + '</span> ' + escapeHtml(row.reference) + '</td>',
+            '<td class="col-reference"><div class="reference-entry"><span class="pill">' + escapeHtml(row.tag) + '</span><input class="payment-date-input" type="date" data-payment-date="' + (row.stage - 1) + '" value="' + escapeHtml(row.date) + '"></div></td>',
             '<td class="percent col-percent">' + formatPercent(row.percent) + '</td>',
             '<td class="amount col-amount">' + formatCurrency(row.amount) + '</td>',
             '</tr>'
@@ -1565,6 +1706,29 @@
         applyLayout(event.data.layout || defaultLayout);
       });
 
+      els.specialPlanToggle.addEventListener('change', function () {
+        els.specialPlanFields.hidden = !els.specialPlanToggle.checked;
+        update(lastEdited);
+      });
+      els.specialPaymentCount.addEventListener('change', function () {
+        renderSpecialPaymentInputs();
+        update(lastEdited);
+      });
+      els.specialPayments.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset || target.dataset.specialPercent == null) return;
+        const index = Number(target.dataset.specialPercent);
+        if (!Number.isFinite(index)) return;
+        specialPaymentPercents[index] = clamp(sanitizeNumber(target.value), 0, 100);
+        update(lastEdited);
+      });
+      els.paymentRows.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset || target.dataset.paymentDate == null) return;
+        const index = Number(target.dataset.paymentDate);
+        if (!Number.isFinite(index)) return;
+        paymentDates[index] = String(target.value || '');
+      });
       els.discount.addEventListener('input', function () { update('discount'); });
       els.promoPrice.addEventListener('input', function () { update('promoPrice'); });
       [els.developmentName, els.unitName, els.paymentPlan, els.listPrice].forEach(function (element) {
