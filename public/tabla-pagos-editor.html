@@ -333,8 +333,8 @@
   <script>
     (function () {
       const defaultLayout = {
-        version: 2,
-        printScale: 0.74,
+        version: 3,
+        printScale: 0.92,
         pageMarginMm: 6,
         brandTopHeight: 226,
         logoDataUrl: '',
@@ -481,6 +481,10 @@
         const out = Object.assign({}, defaultLayout, src);
         const validAlign = ['left', 'center', 'right'];
 
+        var srcVersion = Number(src.version) || 0;
+        if (srcVersion < 3 && (!Number.isFinite(Number(src.printScale)) || Math.abs(Number(src.printScale) - 0.74) < 0.001)) {
+          out.printScale = defaultLayout.printScale;
+        }
         out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
         out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
         out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);

@@ -1641,8 +1641,8 @@ function saveSolarMidtownLayout(layout) {
 
 function defaultTablaPagosLayout() {
   return {
-    version: 2,
-    printScale: 0.74,
+    version: 3,
+    printScale: 0.92,
     pageMarginMm: 6,
     brandTopHeight: 226,
     logoDataUrl: '',
@@ -1712,7 +1712,11 @@ function normalizeTablaPagosLayout(input) {
     ...base,
     ...src
   };
-  out.version = 2;
+  const srcVersion = Number(src.version) || 0;
+  out.version = 3;
+  if (srcVersion < 3 && (!Number.isFinite(Number(src.printScale)) || Math.abs(Number(src.printScale) - 0.74) < 0.001)) {
+    out.printScale = base.printScale;
+  }
   out.printScale = clampNumber(out.printScale, base.printScale, 0.65, 1.15);
   out.pageMarginMm = clampNumber(out.pageMarginMm, base.pageMarginMm, 0, 20);
   out.brandTopHeight = clampNumber(out.brandTopHeight, base.brandTopHeight, 120, 320);
