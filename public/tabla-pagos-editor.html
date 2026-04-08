@@ -255,7 +255,7 @@
             <div class="section">
               <h2>Posición y Espacios</h2>
               <div class="grid">
-                <label>Padding superior header<input id="headerPaddingTop" type="number" min="0" max="40" step="1"></label>
+                <label>Padding superior header<input id="headerPaddingTop" type="number" min="0" max="160" step="1"></label>
                 <label>Padding lateral header<input id="headerPaddingSides" type="number" min="0" max="40" step="1"></label>
                 <label>Padding inferior header<input id="headerPaddingBottom" type="number" min="0" max="40" step="1"></label>
                 <label>Título mover X<input id="titleOffsetX" type="number" min="-240" max="240" step="1"></label>
@@ -529,7 +529,7 @@
         out.railTextSize = clamp(Number(out.railTextSize) || defaultLayout.railTextSize, 10, 28);
         out.titleSize = clamp(Number(out.titleSize) || defaultLayout.titleSize, 16, 40);
         out.subtitleSize = clamp(Number(out.subtitleSize) || defaultLayout.subtitleSize, 10, 22);
-        out.headerPaddingTop = clamp(Number(out.headerPaddingTop) || defaultLayout.headerPaddingTop, 0, 40);
+        out.headerPaddingTop = clamp(Number(out.headerPaddingTop) || defaultLayout.headerPaddingTop, 0, 160);
         out.headerPaddingSides = clamp(Number(out.headerPaddingSides) || defaultLayout.headerPaddingSides, 0, 40);
         out.headerPaddingBottom = clamp(Number(out.headerPaddingBottom) || defaultLayout.headerPaddingBottom, 0, 40);
         out.contentPaddingTop = clamp(Number(out.contentPaddingTop) || defaultLayout.contentPaddingTop, 0, 40);
