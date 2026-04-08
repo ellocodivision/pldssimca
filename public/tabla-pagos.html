@@ -103,7 +103,7 @@
     }
 
     body.print-preview-mode .page {
-      width: min(1240px, calc(100vw - 40px));
+      width: min(860px, calc(100vw - 40px));
       max-width: none;
       padding: 0;
       margin: 0 auto;
@@ -166,7 +166,7 @@
     }
 
     body.print-preview-mode .sheet {
-      min-height: 1004px;
+      min-height: 1320px;
       border: none;
       box-shadow: 0 0 0 1px rgba(145, 145, 145, 0.35);
     }
@@ -601,7 +601,7 @@
 
     body.print-preview-mode .content-shell {
       padding: 56px 32px 32px;
-      min-height: calc(1004px - var(--brand-top-height));
+      min-height: calc(1320px - var(--brand-top-height));
     }
 
     body.print-preview-mode .layout {
@@ -705,13 +705,14 @@
 
     @media print {
       @page {
-        size: landscape;
+        size: portrait;
         margin: calc(var(--print-margin-mm) * 1mm);
       }
 
       html, body {
-        background: #fff;
+        background: var(--surface);
         width: 100%;
+        min-height: 100%;
       }
 
       .topbar {
@@ -724,6 +725,8 @@
         transform: scale(var(--print-scale));
         transform-origin: top left;
         width: calc(100% / var(--print-scale));
+        min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
+        background: var(--surface);
       }
 
       .sheet,
@@ -734,6 +737,8 @@
 
       .sheet {
         border: none;
+        min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
+        background: var(--surface);
       }
 
       .brand-frame {
@@ -765,7 +770,7 @@
 
       .content-shell {
         padding: 56px 32px 32px;
-        min-height: calc(100vh - (var(--print-margin-mm) * 2mm) - 2px - var(--brand-top-height));
+        min-height: calc(((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale)) - var(--brand-top-height));
       }
 
       body.hide-header-print .header,
