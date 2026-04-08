@@ -891,6 +891,7 @@
       <div class="topbar-actions">
         <a class="editor-btn" href="/tabla-pagos/editor">Editor PDF</a>
         <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
+        <button class="print-btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
       </div>
     </div>
 
@@ -1166,6 +1167,7 @@
         footerPercent: document.getElementById('footerPercent'),
         footerAmount: document.getElementById('footerAmount'),
         printBtn: document.getElementById('printBtn'),
+        downloadPdfBtn: document.getElementById('downloadPdfBtn'),
         railText: document.getElementById('railText'),
         brandLogoWrap: document.getElementById('brandLogoWrap'),
         brandLogo: document.getElementById('brandLogo'),
@@ -1190,6 +1192,18 @@
 
       function formatPercent(value) {
         return percentFormat.format(Number(value || 0)) + '%';
+      }
+
+      function slugifyFilePart(value, fallback) {
+        var cleaned = String(value || '')
+          .trim()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^\w\- ]+/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+        return cleaned || fallback;
       }
 
       function escapeHtml(value) {
@@ -1489,6 +1503,53 @@
         els.footerAmount.textContent = formatCurrency(rowAmountTotal);
       }
 
+      function buildPdfSnapshotHtml() {
+        var clone = document.documentElement.cloneNode(true);
+        var body = clone.querySelector('body');
+        if (body) {
+          body.classList.remove('preview-mode', 'print-preview-mode');
+        }
+        clone.querySelectorAll('script').forEach(function (node) { node.remove(); });
+        return '<!doctype html>\n' + clone.outerHTML;
+      }
+
+      async function downloadServerPdf() {
+        var originalLabel = els.downloadPdfBtn.textContent;
+        els.downloadPdfBtn.disabled = true;
+        els.downloadPdfBtn.textContent = 'Generando PDF...';
+        try {
+          var development = slugifyFilePart(els.developmentName.value, 'desarrollo');
+          var unit = slugifyFilePart(els.unitName.value, 'unidad');
+          var plan = slugifyFilePart(els.paymentPlan.value, 'plan');
+          var fileNamePrefix = 'tabla-pagos-simca-' + development + '-' + unit + '-' + plan;
+          var res = await fetch('/api/tabla-pagos/render-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              html: buildPdfSnapshotHtml(),
+              fileNamePrefix: fileNamePrefix
+            })
+          });
+          if (!res.ok) {
+            var data = await res.json().catch(function () { return {}; });
+            throw new Error(data.error || 'No se pudo generar el PDF');
+          }
+          var blob = await res.blob();
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.href = url;
+          link.download = fileNamePrefix + '.pdf';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        } finally {
+          els.downloadPdfBtn.disabled = false;
+          els.downloadPdfBtn.textContent = originalLabel;
+        }
+      }
+
       async function loadLayout() {
         try {
           const res = await fetch('/api/tabla-pagos/layout', { credentials: 'same-origin' });
@@ -1515,6 +1576,11 @@
       els.discount.addEventListener('change', function () { update('discount'); });
       els.promoPrice.addEventListener('change', function () { update('promoPrice'); });
       els.printBtn.addEventListener('click', function () { window.print(); });
+      els.downloadPdfBtn.addEventListener('click', function () {
+        downloadServerPdf().catch(function (err) {
+          window.alert(err && err.message ? err.message : 'No se pudo generar el PDF.');
+        });
+      });
 
       if (isPreviewMode) document.body.classList.add('preview-mode');
       if (isPrintPreviewMode) document.body.classList.add('print-preview-mode');
