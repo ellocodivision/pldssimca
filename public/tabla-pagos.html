@@ -153,38 +153,31 @@
     }
 
     .sheet {
-      background: var(--surface);
-      border: 1px solid rgba(141, 135, 119, 0.9);
-      box-shadow: var(--shadow);
+      background: transparent;
+      border: none;
+      box-shadow: none;
       overflow: hidden;
     }
 
-    body.preview-mode .sheet {
-      border: none;
-      box-shadow: none;
+    body.preview-mode .sheet,
+    body.print-preview-mode .sheet {
+      background: var(--surface);
     }
 
     body.print-preview-mode .sheet {
       min-height: 816px;
       border: none;
       box-shadow: 0 0 0 1px rgba(145, 145, 145, 0.35);
-      background: var(--surface);
     }
 
     .brand-frame {
-      display: grid;
-      grid-template-columns: 88px minmax(0, 1fr);
+      display: block;
       min-height: 100%;
-      background:
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left 87px top/1px 100% no-repeat,
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/calc(100% - 88px) 1px no-repeat,
-        var(--surface);
+      background: transparent;
     }
 
     .brand-rail {
-      position: relative;
-      min-height: 100%;
-      background: var(--surface);
+      display: none;
     }
 
     .brand-rail-accent {
@@ -212,14 +205,13 @@
     }
 
     .brand-main {
-      display: grid;
-      grid-template-rows: var(--brand-top-height) minmax(0, 1fr);
+      display: block;
       min-width: 0;
-      background: var(--surface);
+      background: transparent;
     }
 
     .brand-top {
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       overflow: hidden;
@@ -249,7 +241,7 @@
     }
 
     .content-shell {
-      padding: 56px 32px 32px;
+      padding: 0;
       min-width: 0;
     }
 
@@ -579,6 +571,44 @@
       display: none !important;
     }
 
+    body.print-preview-mode .brand-frame {
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr);
+      background:
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left 87px top/1px 100% no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/calc(100% - 88px) 1px no-repeat,
+        var(--surface);
+    }
+
+    body.print-preview-mode .brand-rail {
+      display: block;
+      position: relative;
+      min-height: 100%;
+      background: var(--surface);
+    }
+
+    body.print-preview-mode .brand-main {
+      display: grid;
+      grid-template-rows: var(--brand-top-height) minmax(0, 1fr);
+      background: var(--surface);
+    }
+
+    body.print-preview-mode .brand-top {
+      display: flex;
+    }
+
+    body.print-preview-mode .content-shell {
+      padding: 56px 32px 32px;
+    }
+
+    body.print-preview-mode .layout {
+      grid-template-columns: 1fr;
+    }
+
+    body.print-preview-mode .sidebar {
+      display: none !important;
+    }
+
     body.print-preview-mode.hide-header .header,
     body.print-preview-mode.hide-summary .summary-table-wrap,
     body.print-preview-mode.hide-payments .payments-wrap {
@@ -613,7 +643,7 @@
     @media (max-width: 1080px) {
       .brand-frame {
         grid-template-columns: 1fr;
-        background: var(--surface);
+        background: transparent;
       }
 
       .brand-rail {
@@ -699,6 +729,36 @@
         border: none;
       }
 
+      .brand-frame {
+        display: grid;
+        grid-template-columns: 88px minmax(0, 1fr);
+        background:
+          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left 87px top/1px 100% no-repeat,
+          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/calc(100% - 88px) 1px no-repeat,
+          var(--surface);
+      }
+
+      .brand-rail {
+        display: block;
+        position: relative;
+        min-height: 100%;
+        background: var(--surface);
+      }
+
+      .brand-main {
+        display: grid;
+        grid-template-rows: var(--brand-top-height) minmax(0, 1fr);
+        background: var(--surface);
+      }
+
+      .brand-top {
+        display: flex;
+      }
+
+      .content-shell {
+        padding: 56px 32px 32px;
+      }
+
       body.hide-header-print .header,
       body.hide-summary-print .summary-table-wrap,
       body.hide-payments-print .payments-wrap {
@@ -717,6 +777,14 @@
 
       .payments-head h2 {
         font-size: var(--payment-title-size);
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none !important;
       }
 
       .payments-table th {
