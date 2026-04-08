@@ -81,12 +81,27 @@
     }
     .toolbar { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:10px; }
     .status { color:var(--muted); font-size:13px; }
-    .preview-frame {
+    .preview-stage {
       width: 100%;
-      height: 1280px;
+      overflow: auto;
       border:1px solid #d8d1c1;
       border-radius:16px;
+      background:#d9dbe2;
+      padding: 24px 12px;
+    }
+    .preview-shell {
+      width: 816px;
+      height: 1056px;
+      margin: 0 auto;
+      transform-origin: top center;
+    }
+    .preview-frame {
+      width: 816px;
+      height: 1056px;
+      border:0;
       background:#fff;
+      display:block;
+      box-shadow: 0 0 0 1px rgba(160, 166, 176, 0.75), 0 8px 24px rgba(36, 39, 46, 0.12);
     }
     .mini-note { margin:10px 0 0; color:var(--muted); font-size:13px; line-height:1.45; }
     .actions-inline { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
@@ -134,7 +149,7 @@
       .wrap { padding:20px 14px 28px; }
       .layout { grid-template-columns:1fr; }
       .preview-panel { position:static; max-height:none; overflow:visible; }
-      .preview-frame { height:980px; }
+      .preview-stage { padding: 16px 8px; }
     }
   </style>
 </head>
@@ -324,7 +339,11 @@
               </div>
               <div class="status" id="status">Cargando layout...</div>
             </div>
-            <iframe id="previewFrame" class="preview-frame" src="/tabla-pagos?editorPreview=print"></iframe>
+            <div class="preview-stage" id="previewStage">
+              <div class="preview-shell" id="previewShell">
+                <iframe id="previewFrame" class="preview-frame" src="/tabla-pagos?editorPreview=print"></iframe>
+              </div>
+            </div>
             <p class="mini-note">El preview se queda visible mientras editas. Todo lo que cambias aquí se refleja en la hoja de la derecha y luego en impresión/PDF.</p>
           </section>
         </div>
@@ -408,6 +427,8 @@
         logoFile: document.getElementById('logoFile'),
         lineList: document.getElementById('lineList'),
         status: document.getElementById('status'),
+        previewStage: document.getElementById('previewStage'),
+        previewShell: document.getElementById('previewShell'),
         previewFrame: document.getElementById('previewFrame'),
         printScale: document.getElementById('printScale'),
         pageMarginMm: document.getElementById('pageMarginMm'),
@@ -472,11 +493,13 @@
       };
 
       const fieldNames = Object.keys(els).filter(function (key) {
-        return !['saveBtn', 'resetBtn', 'addLineBtn', 'removeLogoBtn', 'logoFile', 'lineList', 'status', 'previewFrame'].includes(key);
+        return !['saveBtn', 'resetBtn', 'addLineBtn', 'removeLogoBtn', 'logoFile', 'lineList', 'status', 'previewStage', 'previewShell', 'previewFrame'].includes(key);
       });
 
       let currentLogoDataUrl = '';
       let currentLines = [];
+      const previewPaperWidth = 816;
+      const previewPaperHeight = 1056;
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -618,6 +641,14 @@
         }, window.location.origin);
       }
 
+      function updatePreviewScale() {
+        if (!els.previewStage || !els.previewShell) return;
+        const stageWidth = Math.max(320, els.previewStage.clientWidth - 24);
+        const scale = Math.min(stageWidth / previewPaperWidth, 1);
+        els.previewShell.style.transform = 'scale(' + scale + ')';
+        els.previewStage.style.minHeight = Math.ceil(previewPaperHeight * scale + 48) + 'px';
+      }
+
       async function loadLayout() {
         els.status.textContent = 'Cargando layout...';
         try {
@@ -742,7 +773,11 @@
         pushPreview();
       });
 
-      els.previewFrame.addEventListener('load', pushPreview);
+      els.previewFrame.addEventListener('load', function () {
+        updatePreviewScale();
+        pushPreview();
+      });
+      window.addEventListener('resize', updatePreviewScale);
       els.resetBtn.addEventListener('click', function () {
         currentLogoDataUrl = defaultLayout.logoDataUrl || '';
         currentLines = defaultLayout.lines.slice();
@@ -754,6 +789,7 @@
       els.saveBtn.addEventListener('click', saveLayout);
 
       loadLayout();
+      updatePreviewScale();
     })();
   </script>
 </body>
