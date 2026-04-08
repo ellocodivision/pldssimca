@@ -6,6 +6,7 @@
   <title>Tabla de Pagos</title>
   <style>
     :root {
+      --rail-width: 54px;
       --surface: #e8e4da;
       --paper: #fffdf8;
       --paper-soft: #f8f2e6;
@@ -165,7 +166,7 @@
     }
 
     body.print-preview-mode .sheet {
-      min-height: 816px;
+      min-height: 1004px;
       border: none;
       box-shadow: 0 0 0 1px rgba(145, 145, 145, 0.35);
     }
@@ -184,7 +185,7 @@
       position: absolute;
       left: 0;
       top: var(--brand-top-height);
-      width: 88px;
+      width: var(--rail-width);
       height: 278px;
       background: var(--rail-accent);
       display: flex;
@@ -573,10 +574,11 @@
 
     body.print-preview-mode .brand-frame {
       display: grid;
-      grid-template-columns: 88px minmax(0, 1fr);
+      grid-template-columns: var(--rail-width) minmax(0, 1fr);
       background:
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left 87px top/1px 100% no-repeat,
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/calc(100% - 88px) 1px no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left calc(var(--rail-width) - 1px) top/1px 100% no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/100% 1px no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top calc(var(--brand-top-height) + 278px)/var(--rail-width) 1px no-repeat,
         var(--surface);
     }
 
@@ -599,6 +601,7 @@
 
     body.print-preview-mode .content-shell {
       padding: 56px 32px 32px;
+      min-height: calc(1004px - var(--brand-top-height));
     }
 
     body.print-preview-mode .layout {
@@ -606,6 +609,10 @@
     }
 
     body.print-preview-mode .sidebar {
+      display: none !important;
+    }
+
+    body.print-preview-mode .subtitle {
       display: none !important;
     }
 
@@ -731,10 +738,11 @@
 
       .brand-frame {
         display: grid;
-        grid-template-columns: 88px minmax(0, 1fr);
+        grid-template-columns: var(--rail-width) minmax(0, 1fr);
         background:
-          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left 87px top/1px 100% no-repeat,
-          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/calc(100% - 88px) 1px no-repeat,
+          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left calc(var(--rail-width) - 1px) top/1px 100% no-repeat,
+          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top var(--brand-top-height)/100% 1px no-repeat,
+          linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top calc(var(--brand-top-height) + 278px)/var(--rail-width) 1px no-repeat,
           var(--surface);
       }
 
@@ -757,6 +765,7 @@
 
       .content-shell {
         padding: 56px 32px 32px;
+        min-height: calc(100vh - (var(--print-margin-mm) * 2mm) - 2px - var(--brand-top-height));
       }
 
       body.hide-header-print .header,
@@ -784,6 +793,10 @@
       }
 
       .sidebar {
+        display: none !important;
+      }
+
+      .subtitle {
         display: none !important;
       }
 
