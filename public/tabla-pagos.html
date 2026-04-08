@@ -137,7 +137,7 @@
     .sheet {
       background: rgba(255, 253, 248, 0.92);
       border: 1px solid rgba(199, 184, 157, 0.92);
-      border-radius: 28px;
+      border-radius: 0;
       box-shadow: var(--shadow);
       overflow: hidden;
       backdrop-filter: blur(8px);
@@ -151,10 +151,99 @@
 
     body.print-preview-mode .sheet {
       min-height: 816px;
-      border-radius: 0;
       border: none;
       box-shadow: 0 0 0 1px rgba(145, 145, 145, 0.35);
       background: #fff;
+    }
+
+    .brand-frame {
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr);
+      min-height: 100%;
+      background:
+        linear-gradient(#8d8777, #8d8777) left 87px top/1px 100% no-repeat,
+        linear-gradient(#8d8777, #8d8777) left top 218px/calc(100% - 88px) 1px no-repeat,
+        #e8e4da;
+    }
+
+    .brand-rail {
+      position: relative;
+      background: #e8e4da;
+      min-height: 100%;
+    }
+
+    .brand-rail-accent {
+      position: absolute;
+      left: 0;
+      top: 218px;
+      width: 88px;
+      height: 278px;
+      background: #ffdb16;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top: 1px solid #8d8777;
+      border-bottom: 1px solid #8d8777;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .brand-rail-accent span {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+      color: #1d1c18;
+    }
+
+    .brand-main {
+      display: grid;
+      grid-template-rows: 218px minmax(0, 1fr);
+      min-width: 0;
+      background: #e8e4da;
+    }
+
+    .brand-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 24px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 26px;
+      color: #403b37;
+      text-transform: uppercase;
+    }
+
+    .brand-word {
+      font-size: 96px;
+      line-height: 0.9;
+      letter-spacing: 0.06em;
+      font-weight: 800;
+    }
+
+    .brand-years {
+      font-size: 72px;
+      line-height: 0.9;
+      letter-spacing: 0.06em;
+      font-weight: 800;
+    }
+
+    .brand-logo {
+      width: 112px;
+      height: 112px;
+      object-fit: contain;
+      filter: grayscale(1) contrast(1.15) brightness(0.42);
+    }
+
+    .content-shell {
+      padding: 56px 32px 32px;
+      min-width: 0;
     }
 
     .header {
@@ -162,17 +251,14 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 20px;
       align-items: end;
-      padding: 22px 24px 18px;
+      padding: 0 0 18px;
       border-bottom: 1px solid var(--line);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 243, 231, 0.98));
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      background: transparent;
     }
 
     .title {
       margin: 0;
-      font-size: 40px;
+      font-size: 56px;
       line-height: 0.95;
       letter-spacing: -0.04em;
     }
@@ -205,6 +291,8 @@
       display: grid;
       grid-template-columns: 360px minmax(0, 1fr);
       gap: 0;
+      background: rgba(255, 253, 248, 0.92);
+      border: 1px solid rgba(199, 184, 157, 0.92);
     }
 
     .sidebar {
@@ -486,7 +574,7 @@
     body.print-preview-mode .header {
       grid-template-columns: 1fr;
       justify-items: start;
-      padding: var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
+      padding: 0 0 var(--header-padding-bottom);
     }
 
     body.print-preview-mode .title {
@@ -534,6 +622,19 @@
     }
 
     @media (max-width: 1080px) {
+      .brand-frame {
+        grid-template-columns: 1fr;
+        background: #e8e4da;
+      }
+      .brand-rail {
+        display: none;
+      }
+      .brand-main {
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+      .content-shell {
+        padding: 32px 18px 18px;
+      }
       .layout {
         grid-template-columns: 1fr;
       }
@@ -548,7 +649,7 @@
         padding: 16px 12px 26px;
       }
       .title {
-        font-size: 32px;
+        font-size: 40px;
       }
       .topbar,
       .header,
@@ -666,16 +767,29 @@
     </div>
 
     <section class="sheet">
-      <header class="header">
-        <div>
-          <h1 class="title">Tabla de pagos</h1>
-          <p class="subtitle">Captura el desarrollo, unidad y condiciones comerciales para generar el desglose de pagos por esquema.</p>
-        </div>
-        <div class="scheme-badge">Esquema <span id="summaryPlan">30/70</span></div>
-      </header>
+      <div class="brand-frame">
+        <aside class="brand-rail" aria-hidden="true">
+          <div class="brand-rail-accent"><span>simca.mx</span></div>
+        </aside>
+        <div class="brand-main">
+          <div class="brand-top" aria-hidden="true">
+            <div class="brand-mark">
+              <span class="brand-word">SIMCA</span>
+              <img class="brand-logo" src="/assets/watermark.png" alt="">
+              <span class="brand-years">AÑOS</span>
+            </div>
+          </div>
+          <div class="content-shell">
+            <header class="header">
+              <div>
+                <h1 class="title">Tabla de pagos</h1>
+                <p class="subtitle">Captura el desarrollo, unidad y condiciones comerciales para generar el desglose de pagos por esquema.</p>
+              </div>
+              <div class="scheme-badge">Esquema <span id="summaryPlan">30/70</span></div>
+            </header>
 
-      <div class="layout">
-        <aside class="sidebar">
+            <div class="layout">
+              <aside class="sidebar">
           <p class="section-label">Datos de operación</p>
           <div class="form-grid">
             <div class="field">
@@ -726,9 +840,9 @@
               <small id="summaryPlanTotal">Distribución 100%</small>
             </div>
           </div>
-        </aside>
+              </aside>
 
-        <main class="workspace">
+              <main class="workspace">
           <div class="summary-table-wrap" id="summaryShell">
             <table class="summary-table">
               <colgroup>
@@ -800,8 +914,10 @@
                 </tr>
               </tfoot>
             </table>
+              </main>
+            </div>
           </div>
-        </main>
+        </div>
       </div>
     </section>
   </div>
