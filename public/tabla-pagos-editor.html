@@ -81,15 +81,12 @@
     }
     .toolbar { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:10px; }
     .status { color:var(--muted); font-size:13px; }
-    .preview-shell { display:flex; justify-content:center; }
     .preview-frame {
-      width:min(816px, 100%);
-      aspect-ratio: 8.5 / 11;
-      height:auto;
+      width: 100%;
+      height: 1280px;
       border:1px solid #d8d1c1;
       border-radius:16px;
       background:#fff;
-      display:block;
     }
     .mini-note { margin:10px 0 0; color:var(--muted); font-size:13px; line-height:1.45; }
     .actions-inline { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
@@ -137,7 +134,7 @@
       .wrap { padding:20px 14px 28px; }
       .layout { grid-template-columns:1fr; }
       .preview-panel { position:static; max-height:none; overflow:visible; }
-      .preview-frame { width:100%; }
+      .preview-frame { height:980px; }
     }
   </style>
 </head>
@@ -325,9 +322,7 @@
               </div>
               <div class="status" id="status">Cargando layout...</div>
             </div>
-            <div class="preview-shell">
-              <iframe id="previewFrame" class="preview-frame" src="/tabla-pagos?editorPreview=print"></iframe>
-            </div>
+            <iframe id="previewFrame" class="preview-frame" src="/tabla-pagos?editorPreview=print"></iframe>
             <p class="mini-note">El preview se queda visible mientras editas. Todo lo que cambias aquí se refleja en la hoja de la derecha y luego en impresión/PDF.</p>
           </section>
         </div>

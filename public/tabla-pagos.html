@@ -103,16 +103,10 @@
     }
 
     body.print-preview-mode .page {
-      width: min(860px, calc(100vw - 40px));
+      width: min(816px, calc(100vw - 40px));
       max-width: none;
       padding: 0;
       margin: 0 auto;
-      transform: none;
-      zoom: var(--print-scale);
-      width: calc(100% / var(--print-scale));
-      min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
-      background: var(--surface);
-      overflow: hidden;
     }
 
     .topbar {
@@ -173,10 +167,9 @@
     }
 
     body.print-preview-mode .sheet {
-      min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
+      min-height: 1056px;
       border: none;
       box-shadow: 0 0 0 1px rgba(145, 145, 145, 0.35);
-      overflow: hidden;
     }
 
     .brand-frame {
@@ -619,7 +612,7 @@
 
     body.print-preview-mode .content-shell {
       padding: 56px 32px 32px;
-      min-height: calc(((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale)) - var(--brand-top-height));
+      min-height: calc(1056px - var(--brand-top-height));
     }
 
     body.print-preview-mode .layout {
