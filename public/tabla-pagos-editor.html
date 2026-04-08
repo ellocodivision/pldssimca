@@ -6,6 +6,7 @@
   <title>Editor PDF · Tabla de Pagos · Martin SIMCA</title>
   <style>
     :root {
+      --rail-width: 88px;
       --bg: #eee9df;
       --card: #fffdf9;
       --line: #d8d1c1;
@@ -21,14 +22,14 @@
       color: var(--ink);
       font-family: Arial, sans-serif;
       background:
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left 87px top/1px 100% no-repeat,
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top 218px/calc(100% - 88px) 1px no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left calc(var(--rail-width) - 1px) top/1px 100% no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top 218px/calc(100% - var(--rail-width)) 1px no-repeat,
         var(--surface);
     }
-    .brand-frame { display:grid; grid-template-columns:88px minmax(0,1fr); min-height:100vh; }
+    .brand-frame { display:grid; grid-template-columns:var(--rail-width) minmax(0,1fr); min-height:100vh; }
     .brand-rail { position:relative; background:var(--surface); }
     .brand-rail-accent {
-      position:absolute; left:0; top:218px; width:88px; height:278px;
+      position:absolute; left:0; top:218px; width:var(--rail-width); height:278px;
       background:var(--rail); border-top:1px solid rgba(141, 135, 119, 0.92); border-bottom:1px solid rgba(141, 135, 119, 0.92);
       display:flex; align-items:center; justify-content:center;
     }
@@ -198,6 +199,7 @@
               </div>
               <div class="grid" style="margin-top:10px;">
                 <label>Texto barra izquierda<input id="railText" type="text"></label>
+                <label>Ancho cuadro amarillo<input id="railWidth" type="number" min="36" max="180" step="1"></label>
                 <label>Tamaño texto barra<input id="railTextSize" type="number" min="10" max="28" step="1"></label>
                 <label>Altura franja superior<input id="brandTopHeight" type="number" min="120" max="320" step="1"></label>
                 <label>Cuadro amarillo Y<input id="railOffsetY" type="number" min="0" max="500" step="1"></label>
@@ -360,6 +362,7 @@
         brandTopHeight: 226,
         railOffsetY: 226,
         railHeight: 278,
+        railWidth: 88,
         logoDataUrl: '',
         logoWidth: 480,
         logoHeight: 120,
@@ -435,6 +438,7 @@
         brandTopHeight: document.getElementById('brandTopHeight'),
         railOffsetY: document.getElementById('railOffsetY'),
         railHeight: document.getElementById('railHeight'),
+        railWidth: document.getElementById('railWidth'),
         logoWidth: document.getElementById('logoWidth'),
         logoHeight: document.getElementById('logoHeight'),
         logoOffsetX: document.getElementById('logoOffsetX'),
@@ -522,6 +526,7 @@
         out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);
         out.railOffsetY = clamp(Number(out.railOffsetY) || defaultLayout.railOffsetY, 0, 500);
         out.railHeight = clamp(Number(out.railHeight) || defaultLayout.railHeight, 40, 500);
+        out.railWidth = clamp(Number(out.railWidth) || defaultLayout.railWidth, 36, 180);
         out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
         out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
         out.logoOffsetX = clamp(Number(out.logoOffsetX) || defaultLayout.logoOffsetX, -240, 240);
@@ -615,6 +620,7 @@
 
       function setForm(layoutInput) {
         const layout = normalizeLayout(layoutInput);
+        document.documentElement.style.setProperty('--rail-width', layout.railWidth + 'px');
         currentLogoDataUrl = layout.logoDataUrl || '';
         currentLines = layout.lines.slice();
         fieldNames.forEach(function (name) {
@@ -637,6 +643,7 @@
       }
 
       function pushPreview() {
+        document.documentElement.style.setProperty('--rail-width', String(getFormLayout().railWidth) + 'px');
         if (!els.previewFrame.contentWindow) return;
         els.previewFrame.contentWindow.postMessage({
           type: 'tabla-pagos-layout-preview',

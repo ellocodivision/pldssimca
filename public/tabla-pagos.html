@@ -1164,6 +1164,7 @@
         brandTopHeight: 226,
         railOffsetY: 226,
         railHeight: 278,
+        railWidth: 54,
         logoDataUrl: '',
         logoWidth: 480,
         logoHeight: 120,
@@ -1317,6 +1318,7 @@
         out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);
         out.railOffsetY = clamp(Number(out.railOffsetY) || defaultLayout.railOffsetY, 0, 500);
         out.railHeight = clamp(Number(out.railHeight) || defaultLayout.railHeight, 40, 500);
+        out.railWidth = clamp(Number(out.railWidth) || defaultLayout.railWidth, 36, 180);
         out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
         out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
         out.logoOffsetX = clamp(Number(out.logoOffsetX) || defaultLayout.logoOffsetX, -240, 240);
@@ -1484,6 +1486,7 @@
         root.style.setProperty('--brand-top-height', layout.brandTopHeight + 'px');
         root.style.setProperty('--rail-offset-y', layout.railOffsetY + 'px');
         root.style.setProperty('--rail-height', layout.railHeight + 'px');
+        root.style.setProperty('--rail-width', layout.railWidth + 'px');
         root.style.setProperty('--logo-width', layout.logoWidth + 'px');
         root.style.setProperty('--logo-height', layout.logoHeight + 'px');
         root.style.setProperty('--logo-offset-x', layout.logoOffsetX + 'px');

@@ -1647,6 +1647,7 @@ function defaultTablaPagosLayout() {
     brandTopHeight: 226,
     railOffsetY: 226,
     railHeight: 278,
+    railWidth: 54,
     logoDataUrl: '',
     logoWidth: 480,
     logoHeight: 120,
@@ -1727,6 +1728,7 @@ function normalizeTablaPagosLayout(input) {
   out.brandTopHeight = clampNumber(out.brandTopHeight, base.brandTopHeight, 120, 320);
   out.railOffsetY = clampNumber(out.railOffsetY, base.railOffsetY, 0, 500);
   out.railHeight = clampNumber(out.railHeight, base.railHeight, 40, 500);
+  out.railWidth = clampNumber(out.railWidth, base.railWidth, 36, 180);
   out.logoWidth = clampNumber(out.logoWidth, base.logoWidth, 80, 900);
   out.logoHeight = clampNumber(out.logoHeight, base.logoHeight, 40, 260);
   out.logoOffsetX = clampNumber(out.logoOffsetX, base.logoOffsetX, -240, 240);
