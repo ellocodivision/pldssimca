@@ -765,8 +765,10 @@
         max-width: none;
         padding: 0;
         transform: scale(var(--print-scale));
-        transform-origin: top left;
-        width: calc(100% / var(--print-scale));
+        transform-origin: top center;
+        width: calc(816px / var(--print-scale));
+        min-height: calc(1056px / var(--print-scale));
+        margin: 0 auto;
         background: var(--surface);
         overflow: hidden;
       }
