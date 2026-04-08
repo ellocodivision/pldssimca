@@ -158,6 +158,7 @@
       border: none;
       box-shadow: none;
       overflow: hidden;
+      position: relative;
     }
 
     body.preview-mode .sheet,
@@ -239,6 +240,16 @@
       max-height: 100%;
       object-fit: contain;
       display: block;
+    }
+
+    .sheet-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
     }
 
     .content-shell {
@@ -616,6 +627,10 @@
       display: none !important;
     }
 
+    body.print-preview-mode .sheet-overlay {
+      display: block;
+    }
+
     body.print-preview-mode.hide-header .header,
     body.print-preview-mode.hide-summary .summary-table-wrap,
     body.print-preview-mode.hide-payments .payments-wrap {
@@ -722,11 +737,12 @@
       .page {
         max-width: none;
         padding: 0;
-        transform: scale(var(--print-scale));
-        transform-origin: top left;
+        transform: none;
+        zoom: var(--print-scale);
         width: calc(100% / var(--print-scale));
         min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
         background: var(--surface);
+        overflow: hidden;
       }
 
       .sheet,
@@ -739,6 +755,7 @@
         border: none;
         min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
         background: var(--surface);
+        overflow: hidden;
       }
 
       .brand-frame {
@@ -803,6 +820,10 @@
 
       .subtitle {
         display: none !important;
+      }
+
+      .sheet-overlay {
+        display: block;
       }
 
       .payments-table th {
@@ -980,6 +1001,7 @@
           </div>
         </div>
       </div>
+      <svg class="sheet-overlay" id="sheetOverlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
     </section>
   </div>
 
@@ -1069,7 +1091,8 @@
         paymentsAlignConcept: 'left',
         paymentsAlignReference: 'left',
         paymentsAlignPercent: 'right',
-        paymentsAlignAmount: 'right'
+        paymentsAlignAmount: 'right',
+        lines: []
       };
 
       const els = {
@@ -1098,7 +1121,8 @@
         printBtn: document.getElementById('printBtn'),
         railText: document.getElementById('railText'),
         brandLogoWrap: document.getElementById('brandLogoWrap'),
-        brandLogo: document.getElementById('brandLogo')
+        brandLogo: document.getElementById('brandLogo'),
+        sheetOverlay: document.getElementById('sheetOverlay')
       };
 
       let lastEdited = 'discount';
@@ -1178,12 +1202,43 @@
         out.showHeaderInPrint = Boolean(out.showHeaderInPrint);
         out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
         out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+        out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map(function (line, index) {
+          const srcLine = line && typeof line === 'object' ? line : {};
+          return {
+            id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : 'line-' + (index + 1),
+            x1: clamp(Number(srcLine.x1) || 0, 0, 100),
+            y1: clamp(Number(srcLine.y1) || 0, 0, 100),
+            x2: clamp(Number(srcLine.x2) || 100, 0, 100),
+            y2: clamp(Number(srcLine.y2) || 0, 0, 100),
+            width: clamp(Number(srcLine.width) || 1, 1, 12),
+            color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : defaultLayout.lineStrongColor,
+            opacity: clamp(Number(srcLine.opacity) || 1, 0.1, 1)
+          };
+        }) : [];
 
         ['logoDataUrl', 'railText', 'surfaceColor', 'paperColor', 'textColor', 'titleColor', 'mutedColor', 'accentColor', 'railAccentColor', 'railTextColor', 'lineColor', 'lineStrongColor', 'highlightRowColor', 'bodyFontFamily', 'headingFontFamily', 'tableFontFamily'].forEach(function (key) {
           if (typeof out[key] !== 'string') out[key] = defaultLayout[key];
         });
 
         return out;
+      }
+
+      function renderOverlayLines(lines) {
+        els.sheetOverlay.innerHTML = (lines || []).map(function (line) {
+          return [
+            '<line',
+            ' x1="', line.x1, '%"',
+            ' y1="', line.y1, '%"',
+            ' x2="', line.x2, '%"',
+            ' y2="', line.y2, '%"',
+            ' stroke="', escapeHtml(line.color), '"',
+            ' stroke-width="', line.width, '"',
+            ' stroke-opacity="', line.opacity, '"',
+            ' vector-effect="non-scaling-stroke"',
+            ' stroke-linecap="square"',
+            ' />'
+          ].join('');
+        }).join('');
       }
 
       function applyLayout(layoutInput) {
@@ -1245,6 +1300,7 @@
         root.style.setProperty('--payments-align-reference', layout.paymentsAlignReference);
         root.style.setProperty('--payments-align-percent', layout.paymentsAlignPercent);
         root.style.setProperty('--payments-align-amount', layout.paymentsAlignAmount);
+        renderOverlayLines(layout.lines || []);
 
         els.railText.textContent = layout.railText || 'simca.mx';
 

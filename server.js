@@ -1700,7 +1700,8 @@ function defaultTablaPagosLayout() {
     paymentsAlignConcept: 'left',
     paymentsAlignReference: 'left',
     paymentsAlignPercent: 'right',
-    paymentsAlignAmount: 'right'
+    paymentsAlignAmount: 'right',
+    lines: []
   };
 }
 
@@ -1772,6 +1773,21 @@ function normalizeTablaPagosLayout(input) {
   if (typeof out.bodyFontFamily !== 'string') out.bodyFontFamily = base.bodyFontFamily;
   if (typeof out.headingFontFamily !== 'string') out.headingFontFamily = base.headingFontFamily;
   if (typeof out.tableFontFamily !== 'string') out.tableFontFamily = base.tableFontFamily;
+  out.lines = Array.isArray(out.lines)
+    ? out.lines.slice(0, 24).map((line, index) => {
+        const srcLine = line && typeof line === 'object' ? line : {};
+        return {
+          id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : `line-${index + 1}`,
+          x1: clampNumber(srcLine.x1, 0, 0, 100),
+          y1: clampNumber(srcLine.y1, 0, 0, 100),
+          x2: clampNumber(srcLine.x2, 100, 0, 100),
+          y2: clampNumber(srcLine.y2, 0, 0, 100),
+          width: clampNumber(srcLine.width, 1, 1, 12),
+          color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : base.lineStrongColor,
+          opacity: clampNumber(srcLine.opacity, 1, 0.1, 1)
+        };
+      })
+    : [];
   return out;
 }
 

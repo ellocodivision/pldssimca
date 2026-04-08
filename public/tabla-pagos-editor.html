@@ -81,7 +81,16 @@
     }
     .toolbar { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:10px; }
     .status { color:var(--muted); font-size:13px; }
-    .preview-frame { width:100%; height:1080px; border:1px solid #d8d1c1; border-radius:16px; background:#fff; }
+    .preview-shell { display:flex; justify-content:center; }
+    .preview-frame {
+      width:min(816px, 100%);
+      aspect-ratio: 8.5 / 11;
+      height:auto;
+      border:1px solid #d8d1c1;
+      border-radius:16px;
+      background:#fff;
+      display:block;
+    }
     .mini-note { margin:10px 0 0; color:var(--muted); font-size:13px; line-height:1.45; }
     .actions-inline { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .small-btn {
@@ -95,6 +104,31 @@
       cursor:pointer;
     }
     .hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .line-list { display:grid; gap:12px; margin-top:10px; }
+    .line-item {
+      border:1px solid #ddd5c7;
+      border-radius:14px;
+      padding:12px;
+      background:#fffdfa;
+    }
+    .line-item-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .line-title { font-size:13px; font-weight:700; color:#3d3a32; }
+    .line-remove {
+      min-height:30px;
+      padding:0 10px;
+      border:1px solid #d6ccbc;
+      border-radius:999px;
+      background:#fff;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
     @media (max-width: 1180px) {
       .brand-frame { grid-template-columns:1fr; background:var(--surface); }
       .brand-rail { display:none; }
@@ -103,7 +137,7 @@
       .wrap { padding:20px 14px 28px; }
       .layout { grid-template-columns:1fr; }
       .preview-panel { position:static; max-height:none; overflow:visible; }
-      .preview-frame { height:900px; }
+      .preview-frame { width:100%; }
     }
   </style>
 </head>
@@ -233,6 +267,15 @@
             </div>
 
             <div class="section">
+              <h2>Líneas libres</h2>
+              <div class="actions-inline">
+                <button class="small-btn" type="button" id="addLineBtn">Agregar línea</button>
+                <span class="hint">Define una línea de punto a punto en porcentajes de la hoja. También sale en el PDF.</span>
+              </div>
+              <div class="line-list" id="lineList"></div>
+            </div>
+
+            <div class="section">
               <h2>Tabla Resumen</h2>
               <div class="grid">
                 <label>Header tamaño<input id="summaryHeaderSize" type="number" min="7" max="16" step="1"></label>
@@ -282,7 +325,9 @@
               </div>
               <div class="status" id="status">Cargando layout...</div>
             </div>
-            <iframe id="previewFrame" class="preview-frame" src="/tabla-pagos?editorPreview=print"></iframe>
+            <div class="preview-shell">
+              <iframe id="previewFrame" class="preview-frame" src="/tabla-pagos?editorPreview=print"></iframe>
+            </div>
             <p class="mini-note">El preview se queda visible mientras editas. Todo lo que cambias aquí se refleja en la hoja de la derecha y luego en impresión/PDF.</p>
           </section>
         </div>
@@ -352,14 +397,17 @@
         paymentsAlignConcept: 'left',
         paymentsAlignReference: 'left',
         paymentsAlignPercent: 'right',
-        paymentsAlignAmount: 'right'
+        paymentsAlignAmount: 'right',
+        lines: []
       };
 
       const els = {
         saveBtn: document.getElementById('saveBtn'),
         resetBtn: document.getElementById('resetBtn'),
+        addLineBtn: document.getElementById('addLineBtn'),
         removeLogoBtn: document.getElementById('removeLogoBtn'),
         logoFile: document.getElementById('logoFile'),
+        lineList: document.getElementById('lineList'),
         status: document.getElementById('status'),
         previewFrame: document.getElementById('previewFrame'),
         printScale: document.getElementById('printScale'),
@@ -423,10 +471,11 @@
       };
 
       const fieldNames = Object.keys(els).filter(function (key) {
-        return !['saveBtn', 'resetBtn', 'removeLogoBtn', 'logoFile', 'status', 'previewFrame'].includes(key);
+        return !['saveBtn', 'resetBtn', 'addLineBtn', 'removeLogoBtn', 'logoFile', 'lineList', 'status', 'previewFrame'].includes(key);
       });
 
       let currentLogoDataUrl = '';
+      let currentLines = [];
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -481,26 +530,64 @@
         out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
         out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
         out.logoDataUrl = typeof out.logoDataUrl === 'string' ? out.logoDataUrl : '';
+        out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map(function (line, index) {
+          const srcLine = line && typeof line === 'object' ? line : {};
+          return {
+            id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : 'line-' + (index + 1),
+            x1: clamp(Number(srcLine.x1) || 0, 0, 100),
+            y1: clamp(Number(srcLine.y1) || 0, 0, 100),
+            x2: clamp(Number(srcLine.x2) || 100, 0, 100),
+            y2: clamp(Number(srcLine.y2) || 0, 0, 100),
+            width: clamp(Number(srcLine.width) || 1, 1, 12),
+            color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : defaultLayout.lineStrongColor,
+            opacity: clamp(Number(srcLine.opacity) || 1, 0.1, 1)
+          };
+        }) : [];
         return out;
+      }
+
+      function renderLinesEditor() {
+        els.lineList.innerHTML = currentLines.map(function (line, index) {
+          return [
+            '<div class="line-item" data-line-id="' + line.id + '">',
+            '<div class="line-item-head">',
+            '<div class="line-title">Linea ' + (index + 1) + '</div>',
+            '<button class="line-remove" type="button" data-remove-line="' + line.id + '">Quitar</button>',
+            '</div>',
+            '<div class="grid">',
+            '<label>X1 %<input type="number" min="0" max="100" step="0.1" data-line-field="x1" data-line-id="' + line.id + '" value="' + line.x1 + '"></label>',
+            '<label>Y1 %<input type="number" min="0" max="100" step="0.1" data-line-field="y1" data-line-id="' + line.id + '" value="' + line.y1 + '"></label>',
+            '<label>X2 %<input type="number" min="0" max="100" step="0.1" data-line-field="x2" data-line-id="' + line.id + '" value="' + line.x2 + '"></label>',
+            '<label>Y2 %<input type="number" min="0" max="100" step="0.1" data-line-field="y2" data-line-id="' + line.id + '" value="' + line.y2 + '"></label>',
+            '<label>Grosor<input type="number" min="1" max="12" step="0.1" data-line-field="width" data-line-id="' + line.id + '" value="' + line.width + '"></label>',
+            '<label>Opacidad<input type="number" min="0.1" max="1" step="0.1" data-line-field="opacity" data-line-id="' + line.id + '" value="' + line.opacity + '"></label>',
+            '<label>Color<input type="color" data-line-field="color" data-line-id="' + line.id + '" value="' + line.color + '"></label>',
+            '</div>',
+            '</div>'
+          ].join('');
+        }).join('');
       }
 
       function setForm(layoutInput) {
         const layout = normalizeLayout(layoutInput);
         currentLogoDataUrl = layout.logoDataUrl || '';
+        currentLines = layout.lines.slice();
         fieldNames.forEach(function (name) {
           const el = els[name];
           if (el.type === 'checkbox') el.checked = Boolean(layout[name]);
           else el.value = String(layout[name]);
         });
+        renderLinesEditor();
       }
 
       function getFormLayout() {
-        const out = { logoDataUrl: currentLogoDataUrl };
+        const out = { logoDataUrl: currentLogoDataUrl, lines: currentLines.slice() };
         fieldNames.forEach(function (name) {
           const el = els[name];
           out[name] = el.type === 'checkbox' ? el.checked : el.value;
         });
         out.logoDataUrl = currentLogoDataUrl;
+        out.lines = currentLines.slice();
         return normalizeLayout(out);
       }
 
@@ -564,6 +651,43 @@
         reader.readAsDataURL(file);
       }
 
+      function addLine() {
+        const next = {
+          id: 'line-' + Date.now(),
+          x1: 6,
+          y1: 6,
+          x2: 94,
+          y2: 6,
+          width: 1,
+          color: '#8d8777',
+          opacity: 1
+        };
+        currentLines = currentLines.concat([next]);
+        renderLinesEditor();
+        els.status.textContent = 'Linea agregada al preview. Guarda layout si quieres dejarla fija.';
+        pushPreview();
+      }
+
+      function updateLine(id, field, value) {
+        currentLines = currentLines.map(function (line) {
+          if (line.id !== id) return line;
+          const next = Object.assign({}, line);
+          if (field === 'color') next.color = String(value || '#8d8777');
+          else if (field === 'opacity') next.opacity = clamp(Number(value) || 1, 0.1, 1);
+          else if (field === 'width') next.width = clamp(Number(value) || 1, 1, 12);
+          else next[field] = clamp(Number(value) || 0, 0, 100);
+          return next;
+        });
+        pushPreview();
+      }
+
+      function removeLine(id) {
+        currentLines = currentLines.filter(function (line) { return line.id !== id; });
+        renderLinesEditor();
+        els.status.textContent = 'Linea eliminada del preview. Guarda layout si quieres dejar el cambio fijo.';
+        pushPreview();
+      }
+
       fieldNames.forEach(function (name) {
         const el = els[name];
         el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', pushPreview);
@@ -571,6 +695,24 @@
 
       els.logoFile.addEventListener('change', function () {
         loadLogoFile(els.logoFile.files && els.logoFile.files[0]);
+      });
+
+      els.addLineBtn.addEventListener('click', addLine);
+
+      els.lineList.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset) return;
+        const lineId = target.dataset.lineId;
+        const field = target.dataset.lineField;
+        if (!lineId || !field) return;
+        updateLine(lineId, field, target.value);
+      });
+
+      els.lineList.addEventListener('click', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset) return;
+        if (!target.dataset.removeLine) return;
+        removeLine(target.dataset.removeLine);
       });
 
       els.removeLogoBtn.addEventListener('click', function () {
@@ -583,6 +725,7 @@
       els.previewFrame.addEventListener('load', pushPreview);
       els.resetBtn.addEventListener('click', function () {
         currentLogoDataUrl = defaultLayout.logoDataUrl || '';
+        currentLines = defaultLayout.lines.slice();
         els.logoFile.value = '';
         setForm(defaultLayout);
         els.status.textContent = 'Valores default restaurados. Falta guardar si quieres dejarlos fijos.';
