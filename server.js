@@ -104,6 +104,7 @@ const SOLAR_MIDTOWN_LAYOUT_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-
 const SOLAR_MIDTOWN_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-solar-midtown-crops.json');
 const SOLAR_MIDTOWN_LAYOUT_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-crops.json');
+const TABLA_PAGOS_LAYOUT_PATH = path.join(DATA_DIR, 'tabla-pagos-layout.json');
 const VICEROY_PAYMENT_PLAN_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-payment-plan-layout.json');
 const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
 const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
@@ -1635,6 +1636,110 @@ function readSolarMidtownLayout() {
 function saveSolarMidtownLayout(layout) {
   const normalized = normalizeSolarMidtownLayout(layout);
   writeJson(SOLAR_MIDTOWN_LAYOUT_PATH, normalized);
+  return normalized;
+}
+
+function defaultTablaPagosLayout() {
+  return {
+    version: 1,
+    printScale: 0.83,
+    pageMarginMm: 6,
+    titleSize: 28,
+    headerPaddingTop: 12,
+    headerPaddingSides: 14,
+    headerPaddingBottom: 10,
+    contentPaddingTop: 6,
+    contentPaddingSides: 12,
+    contentPaddingBottom: 12,
+    contentGap: 14,
+    showHeaderInPrint: true,
+    showSummaryInPrint: true,
+    showPaymentsInPrint: true,
+    accentColor: '#f0c419',
+    lineColor: '#ddd1bb',
+    lineStrongColor: '#c7b89d',
+    highlightRowColor: '#f9efbe',
+    summaryHeaderSize: 9,
+    summaryBodySize: 12,
+    paymentHeaderSize: 9,
+    paymentBodySize: 12,
+    paymentTitleSize: 20,
+    summaryColDevelopment: 20,
+    summaryColUnit: 12,
+    summaryColPlan: 16,
+    summaryColList: 17,
+    summaryColDiscount: 17,
+    summaryColPromo: 18,
+    paymentsColStage: 10,
+    paymentsColConcept: 22,
+    paymentsColReference: 28,
+    paymentsColPercent: 16,
+    paymentsColAmount: 24,
+    paymentsAlignStage: 'right',
+    paymentsAlignConcept: 'left',
+    paymentsAlignReference: 'left',
+    paymentsAlignPercent: 'right',
+    paymentsAlignAmount: 'right'
+  };
+}
+
+function normalizeTablaPagosLayout(input) {
+  const base = defaultTablaPagosLayout();
+  const src = input && typeof input === 'object' ? input : {};
+  const out = {
+    ...base,
+    ...src
+  };
+  out.version = 1;
+  out.printScale = clampNumber(out.printScale, base.printScale, 0.65, 1.15);
+  out.pageMarginMm = clampNumber(out.pageMarginMm, base.pageMarginMm, 0, 20);
+  out.titleSize = clampNumber(out.titleSize, base.titleSize, 16, 40);
+  out.headerPaddingTop = clampNumber(out.headerPaddingTop, base.headerPaddingTop, 0, 40);
+  out.headerPaddingSides = clampNumber(out.headerPaddingSides, base.headerPaddingSides, 0, 40);
+  out.headerPaddingBottom = clampNumber(out.headerPaddingBottom, base.headerPaddingBottom, 0, 40);
+  out.contentPaddingTop = clampNumber(out.contentPaddingTop, base.contentPaddingTop, 0, 40);
+  out.contentPaddingSides = clampNumber(out.contentPaddingSides, base.contentPaddingSides, 0, 40);
+  out.contentPaddingBottom = clampNumber(out.contentPaddingBottom, base.contentPaddingBottom, 0, 40);
+  out.contentGap = clampNumber(out.contentGap, base.contentGap, 0, 32);
+  out.summaryHeaderSize = clampNumber(out.summaryHeaderSize, base.summaryHeaderSize, 7, 16);
+  out.summaryBodySize = clampNumber(out.summaryBodySize, base.summaryBodySize, 9, 20);
+  out.paymentHeaderSize = clampNumber(out.paymentHeaderSize, base.paymentHeaderSize, 7, 16);
+  out.paymentBodySize = clampNumber(out.paymentBodySize, base.paymentBodySize, 9, 20);
+  out.paymentTitleSize = clampNumber(out.paymentTitleSize, base.paymentTitleSize, 12, 30);
+  out.showHeaderInPrint = Boolean(out.showHeaderInPrint);
+  out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
+  out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+  out.summaryColDevelopment = clampNumber(out.summaryColDevelopment, base.summaryColDevelopment, 10, 35);
+  out.summaryColUnit = clampNumber(out.summaryColUnit, base.summaryColUnit, 8, 25);
+  out.summaryColPlan = clampNumber(out.summaryColPlan, base.summaryColPlan, 10, 30);
+  out.summaryColList = clampNumber(out.summaryColList, base.summaryColList, 10, 30);
+  out.summaryColDiscount = clampNumber(out.summaryColDiscount, base.summaryColDiscount, 10, 30);
+  out.summaryColPromo = clampNumber(out.summaryColPromo, base.summaryColPromo, 10, 30);
+  out.paymentsColStage = clampNumber(out.paymentsColStage, base.paymentsColStage, 6, 24);
+  out.paymentsColConcept = clampNumber(out.paymentsColConcept, base.paymentsColConcept, 10, 36);
+  out.paymentsColReference = clampNumber(out.paymentsColReference, base.paymentsColReference, 12, 40);
+  out.paymentsColPercent = clampNumber(out.paymentsColPercent, base.paymentsColPercent, 8, 30);
+  out.paymentsColAmount = clampNumber(out.paymentsColAmount, base.paymentsColAmount, 10, 30);
+  const validAlign = ['left', 'center', 'right'];
+  out.paymentsAlignStage = validAlign.includes(String(out.paymentsAlignStage || '').toLowerCase()) ? String(out.paymentsAlignStage).toLowerCase() : base.paymentsAlignStage;
+  out.paymentsAlignConcept = validAlign.includes(String(out.paymentsAlignConcept || '').toLowerCase()) ? String(out.paymentsAlignConcept).toLowerCase() : base.paymentsAlignConcept;
+  out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : base.paymentsAlignReference;
+  out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : base.paymentsAlignPercent;
+  out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : base.paymentsAlignAmount;
+  if (typeof out.accentColor !== 'string') out.accentColor = base.accentColor;
+  if (typeof out.lineColor !== 'string') out.lineColor = base.lineColor;
+  if (typeof out.lineStrongColor !== 'string') out.lineStrongColor = base.lineStrongColor;
+  if (typeof out.highlightRowColor !== 'string') out.highlightRowColor = base.highlightRowColor;
+  return out;
+}
+
+function readTablaPagosLayout() {
+  return normalizeTablaPagosLayout(readJson(TABLA_PAGOS_LAYOUT_PATH, null));
+}
+
+function saveTablaPagosLayout(layout) {
+  const normalized = normalizeTablaPagosLayout(layout);
+  writeJson(TABLA_PAGOS_LAYOUT_PATH, normalized);
   return normalized;
 }
 
@@ -3520,23 +3625,18 @@ app.get('/logout', (req, res, next) => {
   });
 });
 
-app.get('/', requireAuth, (req, res) => {
+function renderSimcaHome(req, res, options) {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
   const isInternalUser = isInternalUserEmail(currentEmail);
   if (!isInternalUser) return res.redirect('/viceroy');
   const isGerente = currentEmail === GERENTE_EMAIL;
-  const showViceroyModuleCard = true;
+  const titleText = options && options.titleText ? String(options.titleText) : 'SIMCA';
+  const subtitleText = options && options.subtitleText ? String(options.subtitleText) : 'Módulos internos de SIMCA.';
   const ownerServicesCard = isGerente ? `
         <a class="card" href="/owner-services">
           <span class="tag">Módulo</span>
           <h2 class="name">Owner Services</h2>
           <p class="desc">Prioriza entregas y coordina obra, jurídico y finanzas.</p>
-        </a>` : '';
-  const viceroyModuleCard = showViceroyModuleCard ? `
-        <a class="card" href="/viceroy">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy</h2>
-          <p class="desc">Acceso a Viceroy Whisperlist, Viceroy Registros y Edición Viceroy Inventario.</p>
         </a>` : '';
   const gerenteCard = isGerente ? `
         <a class="card" href="/gerente-ventas">
@@ -3555,6 +3655,11 @@ app.get('/', requireAuth, (req, res) => {
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pagos</h2>
           <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.</p>
+        </a>
+        <a class="card" href="/tabla-pagos/editor">
+          <span class="tag">Editor</span>
+          <h2 class="name">Editor PDF Tabla de Pagos</h2>
+          <p class="desc">Ajusta formato, columnas y layout de impresión del módulo Tabla de Pagos.</p>
         </a>`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
@@ -3571,15 +3676,15 @@ app.get('/', requireAuth, (req, res) => {
         </div>
         <p id="roiMasterCsvStatus" class="master-status"></p>
       </section>` : '';
-  res.send(`<!doctype html>
+  return res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Backend SIMCA</title>
+  <title>${escapeHtml(titleText)}</title>
   <style>
     :root{--bg:#f4f1e8;--card:#ffffff;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;--line:#d8d1c1;}
     *{box-sizing:border-box}
     body{font-family: Arial, sans-serif; margin:0; background:var(--bg); color:var(--ink);}
-    .wrap{max-width:1000px; margin:0 auto; padding:32px 20px 60px;}
+    .wrap{max-width:1100px; margin:0 auto; padding:32px 20px 60px;}
     h1{margin:0 0 6px; font-size:30px;}
     .sub{margin:0 0 26px; color:var(--muted);}
     .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
@@ -3619,7 +3724,6 @@ app.get('/', requireAuth, (req, res) => {
     .master-box-mini .master-row input{font-size:10px;}
     .master-box-mini .master-row button{padding:5px 8px;font-size:10px;border-radius:8px;}
     .master-box-mini .master-status{min-height:12px;margin:5px 0 0;font-size:10px;line-height:1.2;}
-    .master-note{margin:0 0 8px;color:#5f5f5f;font-size:12px;}
     .master-row{display:flex;gap:8px;align-items:center;}
     .master-row input{flex:1;min-width:0;}
     .master-row button{padding:8px 12px;border:1px solid #111;border-radius:10px;background:#ffe816;color:#111;font-weight:700;cursor:pointer;}
@@ -3648,8 +3752,8 @@ app.get('/', requireAuth, (req, res) => {
     <div class="wrap">
       <div class="top">
         <div class="left-head">
-          <h1>Backend SIMCA</h1>
-          <p class="sub">Panel principal de módulos.</p>
+          <h1>${escapeHtml(titleText)}</h1>
+          <p class="sub">${escapeHtml(subtitleText)}</p>
         </div>
         <div style="text-align:right;">
           <div class="user">${String(req.user && req.user.email || '')}</div>
@@ -3679,7 +3783,6 @@ app.get('/', requireAuth, (req, res) => {
         ${brokersCard}
         ${presentacionesCard}
         ${tablaPagosCard}
-        ${viceroyModuleCard}
         ${ownerServicesCard}
         ${gerenteCard}
       </div>
@@ -3731,6 +3834,66 @@ app.get('/', requireAuth, (req, res) => {
       })();
     </script>
   </body></html>`);
+}
+
+app.get('/', requireAuth, (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').toLowerCase();
+  const isInternalUser = isInternalUserEmail(currentEmail);
+  if (!isInternalUser) return res.redirect('/viceroy');
+  return res.send(`<!doctype html>
+  <html lang="es"><head><meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Backend Martin Barroso</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#ffffff;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816;--line:#d8d1c1;}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:980px;margin:0 auto;padding:32px 20px 60px;}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:26px;}
+    h1{margin:0 0 6px;font-size:30px;}
+    .sub{margin:0;color:var(--muted);}
+    .user{font-size:13px;color:#5f5f5f;text-align:right;}
+    .logout{display:inline-block;margin-top:8px;padding:8px 10px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:600;}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:16px;}
+    .card{display:block;background:var(--card);border:1px solid #dcd7cb;border-radius:18px;padding:22px;text-decoration:none;color:inherit;min-height:200px;}
+    .card:hover{border-color:#b9b39f}
+    .tag{display:inline-block;font-size:12px;font-weight:700;background:var(--accent);padding:4px 8px;border-radius:999px;margin-bottom:12px}
+    .name{font-size:34px;margin:0 0 10px}
+    .desc{margin:0;color:var(--muted);font-size:16px;line-height:1.45}
+    @media (max-width:760px){.wrap{padding:20px 14px 36px}.grid{grid-template-columns:1fr}h1{font-size:24px}.name{font-size:28px}}
+  </style></head><body>
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <h1>Backend Martin Barroso</h1>
+          <p class="sub">Selecciona un entorno para entrar a los módulos.</p>
+        </div>
+        <div class="user">
+          <div>${escapeHtml(String(req.user && req.user.email || ''))}</div>
+          <a class="logout" href="/logout">Cerrar sesión</a>
+        </div>
+      </div>
+      <div class="grid">
+        <a class="card" href="/simca">
+          <span class="tag">Módulo</span>
+          <h2 class="name">SIMCA</h2>
+          <p class="desc">Acceso a FAES, ROI, Brokers, Presentaciones, Tabla de Pagos, Owner Services y herramientas comerciales.</p>
+        </a>
+        <a class="card" href="/viceroy">
+          <span class="tag">Módulo</span>
+          <h2 class="name">VICEROY</h2>
+          <p class="desc">Acceso a Whisperlist, Registros, Tabla de Pago Viceroy, editor PDF y módulos internos de Viceroy.</p>
+        </a>
+      </div>
+    </div>
+  </body></html>`);
+});
+
+app.get('/simca', requireAuth, (req, res) => {
+  return renderSimcaHome(req, res, {
+    titleText: 'SIMCA',
+    subtitleText: 'Módulos internos de SIMCA.'
+  });
 });
 
 app.use('/legacy', requireInternalUser);
@@ -3749,6 +3912,7 @@ app.use('/format-extranjera-moral', requireInternalUser);
 app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
+app.use('/api/tabla-pagos', requireInternalUser);
 app.use('/brokers.simca.mx', requireGerente);
 app.use('/api/brokers-simca-mx', requireGerente);
 app.use('/presentaciones', requireInternalUser);
@@ -3840,6 +4004,27 @@ app.get('/generador-roi', (req, res) => {
 
 app.get('/tabla-pagos', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos.html'));
+});
+
+app.get('/tabla-pagos/editor', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-editor.html'));
+});
+
+app.get('/api/tabla-pagos/layout', (req, res) => {
+  return res.json({ ok: true, layout: readTablaPagosLayout() });
+});
+
+app.post('/api/tabla-pagos/layout', (req, res) => {
+  try {
+    const incoming = req.body && req.body.layout ? req.body.layout : req.body;
+    const saved = saveTablaPagosLayout(incoming);
+    return res.json({ ok: true, layout: saved });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar el layout de Tabla de Pagos',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/viceroy/tabla-pagos', (req, res) => {
