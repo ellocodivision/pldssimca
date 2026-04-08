@@ -1456,6 +1456,27 @@
         }).join('');
       }
 
+      function addMonthsToIsoDate(dateValue, months) {
+        if (!dateValue) return '';
+        const parts = String(dateValue).split('-').map(Number);
+        if (parts.length !== 3 || parts.some(function (item) { return !Number.isFinite(item); })) return '';
+        const year = parts[0];
+        const month = parts[1];
+        const day = parts[2];
+        const baseDate = new Date(year, month - 1, day);
+        if (Number.isNaN(baseDate.getTime())) return '';
+        const targetMonth = baseDate.getMonth() + months;
+        const targetYear = baseDate.getFullYear() + Math.floor(targetMonth / 12);
+        const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+        const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+        const safeDay = Math.min(day, lastDay);
+        const finalDate = new Date(targetYear, normalizedMonth, safeDay);
+        const yyyy = finalDate.getFullYear();
+        const mm = String(finalDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(finalDate.getDate()).padStart(2, '0');
+        return yyyy + '-' + mm + '-' + dd;
+      }
+
       function applyLayout(layoutInput) {
         const layout = normalizeLayout(layoutInput);
         const root = document.documentElement;
@@ -1540,12 +1561,15 @@
         }
       }
 
-      function getRows(planParts, promoPrice) {
+      function getRows(planParts, promoPrice, isSpecialPlan) {
+        const engancheDate = paymentDates[0] || '';
         return planParts.map(function (part, index) {
           const isFirst = index === 0;
           const isLast = index === planParts.length - 1;
           let concept = 'Pago programado';
           let tag = 'Programado';
+          let date = paymentDates[index] || '';
+          let dateIsAuto = false;
 
           if (isFirst) {
             concept = 'Enganche';
@@ -1556,13 +1580,18 @@
           } else {
             concept = 'Pago semestral';
             tag = 'Semestral';
+            if (!isSpecialPlan) {
+              date = addMonthsToIsoDate(engancheDate, index * 6);
+              dateIsAuto = Boolean(date);
+            }
           }
 
           return {
             stage: index + 1,
             concept: concept,
             tag: tag,
-            date: paymentDates[index] || '',
+            date: date,
+            dateIsAuto: dateIsAuto,
             percent: part,
             amount: promoPrice * (part / 100),
             highlight: isLast
@@ -1604,7 +1633,7 @@
         }
 
         const discountAmount = Math.max(0, listPrice - promoPrice);
-        const rows = getRows(planParts, promoPrice);
+        const rows = getRows(planParts, promoPrice, isSpecialPlan);
         const planPercentTotal = planParts.reduce(function (sum, item) { return sum + item; }, 0);
         const rowAmountTotal = rows.reduce(function (sum, row) { return sum + row.amount; }, 0);
         const planLabel = isSpecialPlan ? ('Especial ' + planParts.join('/')) : planKey;
@@ -1631,7 +1660,7 @@
             '<tr' + (row.highlight ? ' class="highlight"' : '') + '>',
             '<td class="number col-stage">' + row.stage + '</td>',
             '<td class="col-concept">' + escapeHtml(row.concept) + '</td>',
-            '<td class="col-reference"><div class="reference-entry"><span class="pill">' + escapeHtml(row.tag) + '</span><input class="payment-date-input" type="date" data-payment-date="' + (row.stage - 1) + '" value="' + escapeHtml(row.date) + '"></div></td>',
+            '<td class="col-reference"><div class="reference-entry"><span class="pill">' + escapeHtml(row.tag) + '</span><input class="payment-date-input" type="date" data-payment-date="' + (row.stage - 1) + '" value="' + escapeHtml(row.date) + '"' + (row.dateIsAuto ? ' readonly' : '') + '></div></td>',
             '<td class="percent col-percent">' + formatPercent(row.percent) + '</td>',
             '<td class="amount col-amount">' + formatCurrency(row.amount) + '</td>',
             '</tr>'
@@ -1648,6 +1677,37 @@
         if (body) {
           body.classList.remove('preview-mode', 'print-preview-mode');
         }
+        document.querySelectorAll('input, textarea, select').forEach(function (sourceElement) {
+          var selector = sourceElement.id
+            ? ('#' + CSS.escape(sourceElement.id))
+            : (sourceElement.name
+              ? (sourceElement.tagName.toLowerCase() + '[name="' + CSS.escape(sourceElement.name) + '"]')
+              : null);
+          if (!selector) return;
+          var targetElement = clone.querySelector(selector);
+          if (!targetElement) return;
+          if (sourceElement.tagName === 'TEXTAREA') {
+            targetElement.textContent = sourceElement.value;
+            return;
+          }
+          if (sourceElement.tagName === 'SELECT') {
+            Array.from(targetElement.options).forEach(function (option, index) {
+              option.selected = sourceElement.options[index] ? sourceElement.options[index].selected : false;
+            });
+            return;
+          }
+          if (sourceElement.type === 'checkbox' || sourceElement.type === 'radio') {
+            if (sourceElement.checked) targetElement.setAttribute('checked', 'checked');
+            else targetElement.removeAttribute('checked');
+            return;
+          }
+          targetElement.setAttribute('value', sourceElement.value || '');
+        });
+        document.querySelectorAll('[data-payment-date]').forEach(function (sourceElement, index) {
+          var targetElement = clone.querySelectorAll('[data-payment-date]')[index];
+          if (!targetElement) return;
+          targetElement.setAttribute('value', sourceElement.value || '');
+        });
         clone.querySelectorAll('script').forEach(function (node) { node.remove(); });
         return '<!doctype html>\n' + clone.outerHTML;
       }
@@ -1722,13 +1782,16 @@
         specialPaymentPercents[index] = clamp(sanitizeNumber(target.value), 0, 100);
         update(lastEdited);
       });
-      els.paymentRows.addEventListener('input', function (event) {
+      function handlePaymentDateChange(event) {
         const target = event.target;
         if (!target || !target.dataset || target.dataset.paymentDate == null) return;
         const index = Number(target.dataset.paymentDate);
         if (!Number.isFinite(index)) return;
         paymentDates[index] = String(target.value || '');
-      });
+        update(lastEdited);
+      }
+      els.paymentRows.addEventListener('input', handlePaymentDateChange);
+      els.paymentRows.addEventListener('change', handlePaymentDateChange);
       els.discount.addEventListener('input', function () { update('discount'); });
       els.promoPrice.addEventListener('input', function () { update('promoPrice'); });
       [els.developmentName, els.unitName, els.paymentPlan, els.listPrice].forEach(function (element) {
