@@ -611,8 +611,25 @@
     }
 
     body.print-preview-mode .content-shell {
-      padding: 56px 32px 32px;
+      padding: 24px 14px 16px;
       min-height: calc(1056px - var(--brand-top-height));
+    }
+
+    body.print-preview-mode .header {
+      padding: var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
+      gap: 10px;
+      align-items: center;
+    }
+
+    body.print-preview-mode .title {
+      font-size: var(--title-size);
+      line-height: 1;
+    }
+
+    body.print-preview-mode .scheme-badge {
+      padding: 8px 10px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
     }
 
     body.print-preview-mode .layout {
@@ -639,11 +656,11 @@
 
     body.print-preview-mode .summary-table thead th {
       font-size: var(--summary-header-size);
-      padding: 8px 9px;
+      padding: 6px 7px;
     }
 
     body.print-preview-mode .summary-table tbody td {
-      padding: 8px 9px;
+      padding: 6px 7px;
       font-size: var(--summary-body-size);
     }
 
@@ -653,12 +670,12 @@
 
     body.print-preview-mode .payments-table th {
       font-size: var(--payment-header-size);
-      padding: 8px 9px;
+      padding: 6px 7px;
     }
 
     body.print-preview-mode .payments-table td,
     body.print-preview-mode .payments-table tfoot td {
-      padding: 8px 9px;
+      padding: 6px 7px;
       font-size: var(--payment-body-size);
     }
 
@@ -786,8 +803,25 @@
       }
 
       .content-shell {
-        padding: 56px 32px 32px;
+        padding: 24px 14px 16px;
         min-height: calc(((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale)) - var(--brand-top-height));
+      }
+
+      .header {
+        padding: var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
+        gap: 10px;
+        align-items: center;
+      }
+
+      .title {
+        font-size: var(--title-size);
+        line-height: 1;
+      }
+
+      .scheme-badge {
+        padding: 8px 10px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
       }
 
       body.hide-header-print .header,
@@ -798,11 +832,11 @@
 
       .summary-table thead th {
         font-size: var(--summary-header-size);
-        padding: 8px 9px;
+        padding: 6px 7px;
       }
 
       .summary-table tbody td {
-        padding: 8px 9px;
+        padding: 6px 7px;
         font-size: var(--summary-body-size);
       }
 
@@ -828,12 +862,12 @@
 
       .payments-table th {
         font-size: var(--payment-header-size);
-        padding: 8px 9px;
+        padding: 6px 7px;
       }
 
       .payments-table td,
       .payments-table tfoot td {
-        padding: 8px 9px;
+        padding: 6px 7px;
         font-size: var(--payment-body-size);
       }
     }
