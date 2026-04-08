@@ -754,10 +754,9 @@
       .page {
         max-width: none;
         padding: 0;
-        transform: none;
-        zoom: var(--print-scale);
+        transform: scale(var(--print-scale));
+        transform-origin: top left;
         width: calc(100% / var(--print-scale));
-        min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
         background: var(--surface);
         overflow: hidden;
       }
@@ -770,7 +769,6 @@
 
       .sheet {
         border: none;
-        min-height: calc((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
         background: var(--surface);
         overflow: hidden;
       }
@@ -804,7 +802,6 @@
 
       .content-shell {
         padding: 24px 14px 16px;
-        min-height: calc(((11in - (var(--print-margin-mm) * 2mm)) / var(--print-scale)) - var(--brand-top-height));
       }
 
       .header {
