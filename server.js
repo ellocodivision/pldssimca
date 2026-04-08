@@ -1734,7 +1734,7 @@ function normalizeTablaPagosLayout(input) {
   out.railTextSize = clampNumber(out.railTextSize, base.railTextSize, 10, 28);
   out.titleSize = clampNumber(out.titleSize, base.titleSize, 16, 40);
   out.subtitleSize = clampNumber(out.subtitleSize, base.subtitleSize, 10, 22);
-  out.headerPaddingTop = clampNumber(out.headerPaddingTop, base.headerPaddingTop, 0, 160);
+  out.headerPaddingTop = clampNumber(out.headerPaddingTop, base.headerPaddingTop, -160, 160);
   out.headerPaddingSides = clampNumber(out.headerPaddingSides, base.headerPaddingSides, 0, 40);
   out.headerPaddingBottom = clampNumber(out.headerPaddingBottom, base.headerPaddingBottom, 0, 40);
   out.contentPaddingTop = clampNumber(out.contentPaddingTop, base.contentPaddingTop, 0, 40);

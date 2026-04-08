@@ -1324,7 +1324,7 @@
         out.railTextSize = clamp(Number(out.railTextSize) || defaultLayout.railTextSize, 10, 28);
         out.titleSize = clamp(Number(out.titleSize) || defaultLayout.titleSize, 16, 40);
         out.subtitleSize = clamp(Number(out.subtitleSize) || defaultLayout.subtitleSize, 10, 22);
-        out.headerPaddingTop = clamp(Number(out.headerPaddingTop) || defaultLayout.headerPaddingTop, 0, 160);
+        out.headerPaddingTop = clamp(Number(out.headerPaddingTop) || defaultLayout.headerPaddingTop, -160, 160);
         out.headerPaddingSides = clamp(Number(out.headerPaddingSides) || defaultLayout.headerPaddingSides, 0, 40);
         out.headerPaddingBottom = clamp(Number(out.headerPaddingBottom) || defaultLayout.headerPaddingBottom, 0, 40);
         out.contentPaddingTop = clamp(Number(out.contentPaddingTop) || defaultLayout.contentPaddingTop, 0, 40);
