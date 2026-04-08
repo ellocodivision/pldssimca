@@ -1641,9 +1641,9 @@ function saveSolarMidtownLayout(layout) {
 
 function defaultTablaPagosLayout() {
   return {
-    version: 3,
+    version: 4,
     printScale: 0.92,
-    pageMarginMm: 6,
+    pageMarginMm: 0,
     brandTopHeight: 226,
     railOffsetY: 226,
     railHeight: 278,
@@ -1715,9 +1715,12 @@ function normalizeTablaPagosLayout(input) {
     ...src
   };
   const srcVersion = Number(src.version) || 0;
-  out.version = 3;
+  out.version = 4;
   if (srcVersion < 3 && (!Number.isFinite(Number(src.printScale)) || Math.abs(Number(src.printScale) - 0.74) < 0.001)) {
     out.printScale = base.printScale;
+  }
+  if (srcVersion < 4 && (!Number.isFinite(Number(src.pageMarginMm)) || Math.abs(Number(src.pageMarginMm) - 6) < 0.001)) {
+    out.pageMarginMm = base.pageMarginMm;
   }
   out.printScale = clampNumber(out.printScale, base.printScale, 0.65, 1.15);
   out.pageMarginMm = clampNumber(out.pageMarginMm, base.pageMarginMm, 0, 20);
