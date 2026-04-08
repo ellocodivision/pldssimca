@@ -7741,12 +7741,13 @@ app.post('/format-extranjera-moral/:id/pdf', async (req, res) => {
 });
 
 async function startServer() {
-  try {
-    await ensureWhisperlistStorageReady();
-  } catch (err) {
-    log(`Fallo inicializando Whisperlist storage: ${err && err.stack ? err.stack : err}`);
-    process.exit(1);
-  }
+  ensureWhisperlistStorageReady()
+    .then(() => {
+      log('Whisperlist storage listo');
+    })
+    .catch((err) => {
+      log(`Fallo inicializando Whisperlist storage: ${err && err.stack ? err.stack : err}`);
+    });
   const server = app.listen(PORT, HOST, () => {
     log(`Servidor listo en http://${HOST}:${PORT}`);
   });
