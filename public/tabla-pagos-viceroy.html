@@ -415,6 +415,30 @@
       color: #34332f;
     }
 
+    .reference-entry {
+      display: grid;
+      gap: 8px;
+      justify-items: start;
+    }
+
+    .reference-date-input {
+      width: 168px;
+      max-width: 100%;
+      min-height: 38px;
+      border: 1px solid #d8cfbb;
+      border-radius: 999px;
+      padding: 0 14px;
+      background: #fffdfa;
+      color: #2e2d28;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+    }
+
+    .reference-date-input[readonly] {
+      background: #f7f2e8;
+      color: #5f5b52;
+    }
+
     .payments-table col.col-stage { width: var(--payments-col-stage); }
     .payments-table col.col-concept { width: var(--payments-col-concept); }
     .payments-table col.col-reference { width: var(--payments-col-reference); }
@@ -899,6 +923,10 @@
         { key: '7|90|0|5|0|5', discount: 7, schedule: [90, 0, 5, 0, 5], shortLabel: '90/0/5/0/5' }
       ];
 
+      plans.forEach(function (plan) {
+        plan.monthOffsets = [0, 8, 16, 24, 30].slice(0, plan.schedule.length);
+      });
+
       const translations = {
         es: {
           back: 'Regresar a Viceroy',
@@ -1013,6 +1041,7 @@
 
       let currentLang = initialLang;
       let currentLayout = normalizeLayout(defaultLayout);
+      let paymentDates = [];
 
       function sanitizeNumber(value) {
         const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
@@ -1154,6 +1183,30 @@
         }) || plans[0];
       }
 
+      function ensurePaymentDates(count) {
+        paymentDates = Array.from({ length: count }, function (_, index) {
+          return paymentDates[index] || '';
+        });
+      }
+
+      function addMonthsToIsoDate(dateValue, months) {
+        if (!dateValue) return '';
+        const parts = String(dateValue).split('-').map(Number);
+        if (parts.length !== 3 || parts.some(function (item) { return !Number.isFinite(item); })) return '';
+        const baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (Number.isNaN(baseDate.getTime())) return '';
+        const targetMonth = baseDate.getMonth() + months;
+        const targetYear = baseDate.getFullYear() + Math.floor(targetMonth / 12);
+        const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+        const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+        const safeDay = Math.min(parts[2], lastDay);
+        const finalDate = new Date(targetYear, normalizedMonth, safeDay);
+        const yyyy = finalDate.getFullYear();
+        const mm = String(finalDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(finalDate.getDate()).padStart(2, '0');
+        return yyyy + '-' + mm + '-' + dd;
+      }
+
       function updateLanguage() {
         const t = translations[currentLang];
         els.backBtn.textContent = t.back;
@@ -1195,15 +1248,22 @@
         });
       }
 
-      function getPaymentRows(schedule, finalPrice) {
+      function getPaymentRows(plan, finalPrice) {
         const t = translations[currentLang];
-        return schedule.map(function (part, index) {
+        ensurePaymentDates(plan.schedule.length);
+        const engancheDate = paymentDates[0] || '';
+        return plan.schedule.map(function (part, index) {
           const isFirst = index === 0;
-          const isLast = index === schedule.length - 1;
+          const isLast = index === plan.schedule.length - 1;
+          const date = isFirst
+            ? (paymentDates[0] || '')
+            : addMonthsToIsoDate(engancheDate, Number(plan.monthOffsets[index]) || 0);
           return {
             stage: index + 1,
             concept: isFirst ? t.rowConcepts[0] : (isLast ? t.rowConcepts[2] : t.rowConcepts[1]),
             reference: t.refs[index],
+            date: date,
+            dateReadonly: !isFirst,
             percent: part,
             amount: finalPrice * (part / 100),
             highlight: isLast
@@ -1219,7 +1279,7 @@
         const discountPercent = showDiscount ? plan.discount : 0;
         const promoPrice = Math.max(0, listPrice - (listPrice * discountPercent / 100));
         const discountAmount = Math.max(0, listPrice - promoPrice);
-        const rows = getPaymentRows(plan.schedule, promoPrice);
+        const rows = getPaymentRows(plan, promoPrice);
         const percentTotal = plan.schedule.reduce(function (sum, item) { return sum + item; }, 0);
         const amountTotal = rows.reduce(function (sum, row) { return sum + row.amount; }, 0);
 
@@ -1237,7 +1297,7 @@
             '<tr' + (row.highlight ? ' class="highlight"' : '') + '>',
             '<td class="number col-stage">' + row.stage + '</td>',
             '<td class="col-concept">' + escapeHtml(row.concept) + '</td>',
-            '<td class="col-reference">' + escapeHtml(row.reference) + '</td>',
+            '<td class="col-reference"><div class="reference-entry"><span>' + escapeHtml(row.reference) + '</span><input class="reference-date-input" type="date" data-payment-date="' + (row.stage - 1) + '" value="' + escapeHtml(row.date) + '"' + (row.dateReadonly ? ' readonly' : '') + '></div></td>',
             '<td class="percent col-percent">' + formatPercent(row.percent) + '</td>',
             '<td class="amount col-amount">' + formatCurrency(row.amount) + '</td>',
             '</tr>'
@@ -1282,6 +1342,22 @@
       els.paymentPlan.addEventListener('change', update);
       els.unitName.addEventListener('input', update);
       els.listPrice.addEventListener('input', update);
+      els.paymentRows.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset || target.dataset.paymentDate == null) return;
+        const index = Number(target.dataset.paymentDate);
+        if (!Number.isFinite(index) || index !== 0) return;
+        paymentDates[0] = String(target.value || '');
+        update();
+      });
+      els.paymentRows.addEventListener('change', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset || target.dataset.paymentDate == null) return;
+        const index = Number(target.dataset.paymentDate);
+        if (!Number.isFinite(index) || index !== 0) return;
+        paymentDates[0] = String(target.value || '');
+        update();
+      });
       els.applyDiscount.addEventListener('change', function () {
         syncDiscountVisibility();
         update();
