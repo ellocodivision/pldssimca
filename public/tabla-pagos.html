@@ -1611,6 +1611,12 @@
       function renderSpecialPaymentInputs() {
         const t = translations[currentLang];
         const count = Math.max(2, Number(els.specialPaymentCount.value) || 2);
+        const activeElement = document.activeElement;
+        const activePercentIndex = activeElement && activeElement.dataset ? activeElement.dataset.specialPercent : null;
+        const activeAmountIndex = activeElement && activeElement.dataset ? activeElement.dataset.specialAmount : null;
+        const activeValue = activeElement && typeof activeElement.value === 'string' ? activeElement.value : null;
+        const activeSelectionStart = activeElement && typeof activeElement.selectionStart === 'number' ? activeElement.selectionStart : null;
+        const activeSelectionEnd = activeElement && typeof activeElement.selectionEnd === 'number' ? activeElement.selectionEnd : null;
         ensureSpecialPercents(count);
         ensurePaymentDates(count);
         Array.from(els.specialPaymentCount.options).forEach(function (option) {
@@ -1628,6 +1634,24 @@
             '</div>'
           ].join('');
         }).join('');
+
+        var restoreSelector = null;
+        if (activePercentIndex != null) restoreSelector = '[data-special-percent="' + activePercentIndex + '"]';
+        if (activeAmountIndex != null) restoreSelector = '[data-special-amount="' + activeAmountIndex + '"]';
+        if (restoreSelector) {
+          var nextInput = els.specialPayments.querySelector(restoreSelector);
+          if (nextInput) {
+            nextInput.focus({ preventScroll: true });
+            if (activeAmountIndex != null && activeValue != null && document.activeElement === nextInput) {
+              nextInput.value = activeValue;
+            }
+            if (activeSelectionStart != null && activeSelectionEnd != null && typeof nextInput.setSelectionRange === 'function') {
+              var safeStart = Math.min(activeSelectionStart, nextInput.value.length);
+              var safeEnd = Math.min(activeSelectionEnd, nextInput.value.length);
+              nextInput.setSelectionRange(safeStart, safeEnd);
+            }
+          }
+        }
       }
 
       function addMonthsToIsoDate(dateValue, months) {
