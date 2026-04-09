@@ -128,6 +128,7 @@
     }
 
     .back,
+    .lang-btn,
     .print-btn,
     .editor-btn {
       display: inline-flex;
@@ -143,10 +144,15 @@
     }
 
     .back,
+    .lang-btn,
     .editor-btn {
       border: 1px solid var(--line-strong);
       background: rgba(255, 255, 255, 0.85);
       color: var(--ink);
+    }
+
+    .lang-btn {
+      gap: 8px;
     }
 
     .print-btn {
@@ -313,8 +319,8 @@
       display: grid;
       grid-template-columns: 360px minmax(0, 1fr);
       gap: 0;
-      background: rgba(255, 253, 248, 0.28);
-      border: 1px solid rgba(199, 184, 157, 0.92);
+      background: transparent;
+      border: none;
     }
 
     .sidebar {
@@ -948,9 +954,10 @@
 <body>
   <div class="page">
     <div class="topbar">
-      <a class="back" href="/simca">Regresar a SIMCA</a>
+      <a class="back" href="/simca" id="backBtn">Regresar a SIMCA</a>
       <div class="topbar-actions">
-        <a class="editor-btn" href="/tabla-pagos/editor">Editor PDF Martin SIMCA</a>
+        <a class="editor-btn" href="/tabla-pagos/editor" id="editorBtn">Editor PDF Martin SIMCA</a>
+        <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
         <button class="print-btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
       </div>
     </div>
@@ -969,27 +976,27 @@
           <div class="content-shell">
             <header class="header">
               <div>
-                <h1 class="title">Tabla de pagos</h1>
-                <p class="subtitle">Captura el desarrollo, unidad y condiciones comerciales para generar el desglose de pagos por esquema.</p>
+                <h1 class="title" id="titleText">Tabla de pagos</h1>
+                <p class="subtitle" id="subtitleText">Captura el desarrollo, unidad y condiciones comerciales para generar el desglose de pagos por esquema.</p>
               </div>
-              <div class="scheme-badge">Esquema <span id="summaryPlan">30/70</span></div>
+              <div class="scheme-badge"><span id="schemeLabel">Esquema</span> <span id="summaryPlan">30/70</span></div>
             </header>
 
             <div class="layout">
               <aside class="sidebar">
-                <p class="section-label">Datos de operación</p>
+                <p class="section-label" id="sectionLabel">Datos de operación</p>
                 <div class="form-grid">
                   <div class="field">
-                    <label for="developmentName">Nombre del desarrollo</label>
+                    <label for="developmentName" id="labelDevelopmentName">Nombre del desarrollo</label>
                     <input id="developmentName" type="text" placeholder="Ej. Viceroy Residences">
                   </div>
                   <div class="field-row">
                     <div class="field">
-                      <label for="unitName">Unidad</label>
+                      <label for="unitName" id="labelUnitName">Unidad</label>
                       <input id="unitName" type="text" placeholder="Ej. T-402">
                     </div>
                     <div class="field">
-                      <label for="paymentPlan">Forma de pago</label>
+                      <label for="paymentPlan" id="labelPaymentPlan">Forma de pago</label>
                       <select id="paymentPlan">
                         <option value="30/70">30/70</option>
                         <option value="50/50">50/50</option>
@@ -1000,11 +1007,11 @@
                     </div>
                   </div>
                   <div class="field-stack">
-                    <label class="check"><input id="specialPlanToggle" type="checkbox"> Forma de pago especial</label>
+                    <label class="check"><input id="specialPlanToggle" type="checkbox"> <span id="specialPlanToggleText">Forma de pago especial</span></label>
                     <div id="specialPlanFields" hidden>
                       <div class="special-grid">
                         <div class="field">
-                          <label for="specialPaymentCount">Cuántos pagos</label>
+                          <label for="specialPaymentCount" id="labelSpecialPaymentCount">Cuántos pagos</label>
                           <select id="specialPaymentCount">
                             <option value="2">2 pagos</option>
                             <option value="3">3 pagos</option>
@@ -1020,29 +1027,29 @@
                     </div>
                   </div>
                   <div class="field">
-                    <label for="listPrice">Precio de lista</label>
+                    <label for="listPrice" id="labelListPrice">Precio de lista</label>
                     <input id="listPrice" type="text" inputmode="decimal" value="0">
                   </div>
                   <div class="field-row">
                     <div class="field">
-                      <label for="discount">Descuento (%)</label>
+                      <label for="discount" id="labelDiscount">Descuento (%)</label>
                       <input id="discount" type="text" inputmode="decimal" value="0">
                     </div>
                     <div class="field">
-                      <label for="promoPrice">Precio promo</label>
+                      <label for="promoPrice" id="labelPromoPrice">Precio promo</label>
                       <input id="promoPrice" type="text" inputmode="decimal" value="0">
                     </div>
                   </div>
                 </div>
-                <p class="helper">Si cambias el descuento, se recalcula el precio promo. Si capturas un precio promo, se recalcula el descuento.</p>
+                <p class="helper" id="helperText">Si cambias el descuento, se recalcula el precio promo. Si capturas un precio promo, se recalcula el descuento.</p>
                 <div class="summary-strip">
                   <div class="summary-item">
-                    <span>Descuento aplicado</span>
+                    <span id="summaryDiscountLabel">Descuento aplicado</span>
                     <strong id="summaryDiscountPercent">0%</strong>
                     <small id="summaryDiscountAmount">$0</small>
                   </div>
                   <div class="summary-item">
-                    <span>Precio promo final</span>
+                    <span id="summaryPromoLabel">Precio promo final</span>
                     <strong id="summaryPromoPrice">$0</strong>
                     <small id="summaryPlanTotal">Distribución 100%</small>
                   </div>
@@ -1062,12 +1069,12 @@
                     </colgroup>
                     <thead>
                       <tr>
-                        <th>Nombre del desarrollo</th>
-                        <th>Unidad</th>
-                        <th>Forma de pago</th>
-                        <th>Precio lista</th>
-                        <th>Descuento</th>
-                        <th>Precio promo</th>
+                        <th id="headDevelopment">Nombre del desarrollo</th>
+                        <th id="headUnit">Unidad</th>
+                        <th id="headPlan">Forma de pago</th>
+                        <th id="headList">Precio lista</th>
+                        <th id="headDiscount">Descuento</th>
+                        <th id="headPromo">Precio promo</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1086,8 +1093,8 @@
                 <div class="payments-wrap" id="paymentsShell">
                   <div class="payments-head">
                     <div>
-                      <h2>Desglose de pagos</h2>
-                      <p>Enganche, pagos semestrales y balance contra entrega.</p>
+                      <h2 id="paymentsTitle">Desglose de pagos</h2>
+                      <p id="paymentsSubtitle">Enganche, pagos semestrales y balance contra entrega.</p>
                     </div>
                     <div class="payments-total">
                       <div id="tableMetaDevelopment">Desarrollo: Sin capturar</div>
@@ -1105,17 +1112,17 @@
                     </colgroup>
                     <thead>
                       <tr>
-                        <th class="col-stage">Etapa</th>
-                        <th class="col-concept">Concepto</th>
-                        <th class="col-reference">Referencia</th>
-                        <th class="col-percent">Porcentaje</th>
-                        <th class="col-amount">Monto</th>
+                        <th class="col-stage" id="paymentsHeadStage">Etapa</th>
+                        <th class="col-concept" id="paymentsHeadConcept">Concepto</th>
+                        <th class="col-reference" id="paymentsHeadReference">Referencia</th>
+                        <th class="col-percent" id="paymentsHeadPercent">Porcentaje</th>
+                        <th class="col-amount" id="paymentsHeadAmount">Monto</th>
                       </tr>
                     </thead>
                     <tbody id="paymentRows"></tbody>
                     <tfoot>
                       <tr>
-                        <td colspan="3">Totales</td>
+                        <td colspan="3" id="paymentsFooterLabel">Totales</td>
                         <td class="percent col-percent" id="footerPercent">100%</td>
                         <td class="amount col-amount" id="footerAmount">$0</td>
                       </tr>
@@ -1137,17 +1144,7 @@
       const previewQuery = String(query.get('editorPreview') || '').trim();
       const isPreviewMode = previewQuery === '1' || previewQuery === 'print';
       const isPrintPreviewMode = previewQuery === 'print';
-
-      const currency = new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-        maximumFractionDigits: 2
-      });
-
-      const percentFormat = new Intl.NumberFormat('es-MX', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      });
+      let currentLang = query.get('lang') === 'en' ? 'en' : 'es';
 
       const plans = {
         '30/70': [30, 70],
@@ -1156,6 +1153,120 @@
         '30/10/10/50': [30, 10, 10, 50],
         '50/10/10/30': [50, 10, 10, 30]
       };
+
+      const translations = {
+        es: {
+          back: 'Regresar a SIMCA',
+          editor: 'Editor PDF Martin SIMCA',
+          lang: 'English',
+          langFlag: '🇺🇸',
+          download: 'Descargar PDF exacto',
+          title: 'Tabla de pagos',
+          subtitle: 'Captura el desarrollo, unidad y condiciones comerciales para generar el desglose de pagos por esquema.',
+          scheme: 'Esquema',
+          section: 'Datos de operación',
+          development: 'Nombre del desarrollo',
+          unit: 'Unidad',
+          paymentPlan: 'Forma de pago',
+          specialPlan: 'Forma de pago especial',
+          paymentCount: 'Cuántos pagos',
+          listPrice: 'Precio de lista',
+          discount: 'Descuento (%)',
+          promoPrice: 'Precio promo',
+          helper: 'Si cambias el descuento, se recalcula el precio promo. Si capturas un precio promo, se recalcula el descuento.',
+          discountApplied: 'Descuento aplicado',
+          promoFinal: 'Precio promo final',
+          distribution: 'Distribución',
+          headDevelopment: 'Nombre del desarrollo',
+          headUnit: 'Unidad',
+          headPlan: 'Forma de pago',
+          headList: 'Precio lista',
+          headDiscount: 'Descuento',
+          headPromo: 'Precio promo',
+          paymentsTitle: 'Desglose de pagos',
+          paymentsSubtitle: 'Enganche, pagos semestrales y balance contra entrega.',
+          stage: 'Etapa',
+          concept: 'Concepto',
+          reference: 'Referencia',
+          percent: 'Porcentaje',
+          amount: 'Monto',
+          totals: 'Totales',
+          developmentPrefix: 'Desarrollo:',
+          unitPrefix: 'Unidad:',
+          noCapture: 'Sin capturar',
+          conceptDown: 'Enganche',
+          conceptScheduled: 'Pago semestral',
+          conceptFinal: 'Balance contra entrega',
+          tagDown: 'Enganche',
+          tagScheduled: 'Semestral',
+          tagFinal: 'Entrega',
+          specialRow: 'Pago',
+          paymentsLabel: 'pagos'
+        },
+        en: {
+          back: 'Back to SIMCA',
+          editor: 'Martin SIMCA PDF Editor',
+          lang: 'Español',
+          langFlag: '🇲🇽',
+          download: 'Download exact PDF',
+          title: 'Payment table',
+          subtitle: 'Capture the development, unit, and commercial conditions to generate the payment breakdown by plan.',
+          scheme: 'Plan',
+          section: 'Operation details',
+          development: 'Development name',
+          unit: 'Unit',
+          paymentPlan: 'Payment plan',
+          specialPlan: 'Special payment plan',
+          paymentCount: 'How many payments',
+          listPrice: 'List price',
+          discount: 'Discount (%)',
+          promoPrice: 'Promo price',
+          helper: 'If you change the discount, the promo price is recalculated. If you enter a promo price, the discount is recalculated.',
+          discountApplied: 'Applied discount',
+          promoFinal: 'Final promo price',
+          distribution: 'Distribution',
+          headDevelopment: 'Development name',
+          headUnit: 'Unit',
+          headPlan: 'Payment plan',
+          headList: 'List price',
+          headDiscount: 'Discount',
+          headPromo: 'Promo price',
+          paymentsTitle: 'Payment breakdown',
+          paymentsSubtitle: 'Down payment, semiannual payments and balance at delivery.',
+          stage: 'Stage',
+          concept: 'Concept',
+          reference: 'Reference',
+          percent: 'Percent',
+          amount: 'Amount',
+          totals: 'Totals',
+          developmentPrefix: 'Development:',
+          unitPrefix: 'Unit:',
+          noCapture: 'Not captured',
+          conceptDown: 'Down payment',
+          conceptScheduled: 'Semiannual payment',
+          conceptFinal: 'Balance at delivery',
+          tagDown: 'Down payment',
+          tagScheduled: 'Semiannual',
+          tagFinal: 'Delivery',
+          specialRow: 'Payment',
+          paymentsLabel: 'payments'
+        }
+      };
+
+      function getCurrencyFormatter() {
+        return new Intl.NumberFormat(currentLang === 'en' ? 'en-US' : 'es-MX', {
+          style: 'currency',
+          currency: currentLang === 'en' ? 'USD' : 'MXN',
+          maximumFractionDigits: 2
+        });
+      }
+
+      function getPercentFormatter() {
+        return new Intl.NumberFormat(currentLang === 'en' ? 'en-US' : 'es-MX', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        });
+      }
 
       const defaultLayout = {
         version: 4,
@@ -1228,6 +1339,39 @@
         developmentName: document.getElementById('developmentName'),
         unitName: document.getElementById('unitName'),
         paymentPlan: document.getElementById('paymentPlan'),
+        backBtn: document.getElementById('backBtn'),
+        editorBtn: document.getElementById('editorBtn'),
+        langBtn: document.getElementById('langBtn'),
+        langBtnText: document.getElementById('langBtnText'),
+        titleText: document.getElementById('titleText'),
+        subtitleText: document.getElementById('subtitleText'),
+        schemeLabel: document.getElementById('schemeLabel'),
+        sectionLabel: document.getElementById('sectionLabel'),
+        labelDevelopmentName: document.getElementById('labelDevelopmentName'),
+        labelUnitName: document.getElementById('labelUnitName'),
+        labelPaymentPlan: document.getElementById('labelPaymentPlan'),
+        specialPlanToggleText: document.getElementById('specialPlanToggleText'),
+        labelSpecialPaymentCount: document.getElementById('labelSpecialPaymentCount'),
+        labelListPrice: document.getElementById('labelListPrice'),
+        labelDiscount: document.getElementById('labelDiscount'),
+        labelPromoPrice: document.getElementById('labelPromoPrice'),
+        helperText: document.getElementById('helperText'),
+        summaryDiscountLabel: document.getElementById('summaryDiscountLabel'),
+        summaryPromoLabel: document.getElementById('summaryPromoLabel'),
+        headDevelopment: document.getElementById('headDevelopment'),
+        headUnit: document.getElementById('headUnit'),
+        headPlan: document.getElementById('headPlan'),
+        headList: document.getElementById('headList'),
+        headDiscount: document.getElementById('headDiscount'),
+        headPromo: document.getElementById('headPromo'),
+        paymentsTitle: document.getElementById('paymentsTitle'),
+        paymentsSubtitle: document.getElementById('paymentsSubtitle'),
+        paymentsHeadStage: document.getElementById('paymentsHeadStage'),
+        paymentsHeadConcept: document.getElementById('paymentsHeadConcept'),
+        paymentsHeadReference: document.getElementById('paymentsHeadReference'),
+        paymentsHeadPercent: document.getElementById('paymentsHeadPercent'),
+        paymentsHeadAmount: document.getElementById('paymentsHeadAmount'),
+        paymentsFooterLabel: document.getElementById('paymentsFooterLabel'),
         specialPlanToggle: document.getElementById('specialPlanToggle'),
         specialPlanFields: document.getElementById('specialPlanFields'),
         specialPaymentCount: document.getElementById('specialPaymentCount'),
@@ -1273,11 +1417,11 @@
       }
 
       function formatCurrency(value) {
-        return currency.format(Number(value || 0));
+        return getCurrencyFormatter().format(Number(value || 0));
       }
 
       function formatPercent(value) {
-        return percentFormat.format(Number(value || 0)) + '%';
+        return getPercentFormatter().format(Number(value || 0)) + '%';
       }
 
       function slugifyFilePart(value, fallback) {
@@ -1412,9 +1556,10 @@
       }
 
       function getSpecialPaymentLabel(index, count) {
-        if (index === 0) return 'Enganche';
-        if (index === count - 1) return 'Entrega';
-        return 'Pago ' + (index + 1);
+        const t = translations[currentLang];
+        if (index === 0) return t.tagDown;
+        if (index === count - 1) return t.tagFinal;
+        return t.specialRow + ' ' + (index + 1);
       }
 
       function ensureSpecialPercents(count) {
@@ -1440,17 +1585,21 @@
       }
 
       function renderSpecialPaymentInputs() {
+        const t = translations[currentLang];
         const count = Math.max(2, Number(els.specialPaymentCount.value) || 2);
         ensureSpecialPercents(count);
         ensurePaymentDates(count);
+        Array.from(els.specialPaymentCount.options).forEach(function (option) {
+          option.textContent = option.value + ' ' + t.paymentsLabel;
+        });
         els.specialPayments.innerHTML = specialPaymentPercents.map(function (percent, index) {
           const label = getSpecialPaymentLabel(index, count);
           const amount = Math.max(0, sanitizeNumber(els.promoPrice.value)) * ((Number(percent) || 0) / 100);
           return [
             '<div class="special-payment-row">',
             '<div class="special-payment-label">', escapeHtml(label), '</div>',
-            '<div class="field"><label>Porcentaje<input type="number" min="0" max="100" step="0.01" data-special-percent="', index, '" value="', percent, '"></label></div>',
-            '<div class="field"><label>Monto<input type="text" value="', escapeHtml(formatCurrency(amount)), '" readonly></label></div>',
+            '<div class="field"><label>', escapeHtml(t.percent), '<input type="number" min="0" max="100" step="0.01" data-special-percent="', index, '" value="', percent, '"></label></div>',
+            '<div class="field"><label>', escapeHtml(t.amount), '<input type="text" value="', escapeHtml(formatCurrency(amount)), '" readonly></label></div>',
             '</div>'
           ].join('');
         }).join('');
@@ -1563,24 +1712,25 @@
       }
 
       function getRows(planParts, promoPrice, isSpecialPlan) {
+        const t = translations[currentLang];
         const engancheDate = paymentDates[0] || '';
         return planParts.map(function (part, index) {
           const isFirst = index === 0;
           const isLast = index === planParts.length - 1;
-          let concept = 'Pago programado';
-          let tag = 'Programado';
+          let concept = t.conceptScheduled;
+          let tag = t.tagScheduled;
           let date = paymentDates[index] || '';
           let dateIsAuto = false;
 
           if (isFirst) {
-            concept = 'Enganche';
-            tag = 'Enganche';
+            concept = t.conceptDown;
+            tag = t.tagDown;
           } else if (isLast) {
-            concept = 'Balance contra entrega';
-            tag = 'Entrega';
+            concept = t.conceptFinal;
+            tag = t.tagFinal;
           } else {
-            concept = 'Pago semestral';
-            tag = 'Semestral';
+            concept = t.conceptScheduled;
+            tag = t.tagScheduled;
             if (!isSpecialPlan) {
               date = addMonthsToIsoDate(engancheDate, index * 6);
               dateIsAuto = Boolean(date);
@@ -1638,23 +1788,24 @@
         const planPercentTotal = planParts.reduce(function (sum, item) { return sum + item; }, 0);
         const rowAmountTotal = rows.reduce(function (sum, row) { return sum + row.amount; }, 0);
         const planLabel = isSpecialPlan ? ('Especial ' + planParts.join('/')) : planKey;
+        const t = translations[currentLang];
 
-        els.discount.value = percentFormat.format(discountPercent);
+        els.discount.value = getPercentFormatter().format(discountPercent);
         els.promoPrice.value = String(Math.round(promoPrice * 100) / 100);
         renderSpecialPaymentInputs();
         els.summaryPlan.textContent = planLabel;
         els.summaryDiscountPercent.textContent = formatPercent(discountPercent);
         els.summaryDiscountAmount.textContent = formatCurrency(discountAmount);
         els.summaryPromoPrice.textContent = formatCurrency(promoPrice);
-        els.summaryPlanTotal.textContent = 'Distribución ' + formatPercent(planPercentTotal);
-        els.snapshotDevelopment.textContent = developmentName || 'Sin capturar';
-        els.snapshotUnit.textContent = unitName || 'Sin capturar';
+        els.summaryPlanTotal.textContent = t.distribution + ' ' + formatPercent(planPercentTotal);
+        els.snapshotDevelopment.textContent = developmentName || t.noCapture;
+        els.snapshotUnit.textContent = unitName || t.noCapture;
         els.snapshotPlan.textContent = planLabel;
         els.snapshotListPrice.textContent = formatCurrency(listPrice);
         els.snapshotDiscount.textContent = formatCurrency(discountAmount) + ' (' + formatPercent(discountPercent) + ')';
         els.snapshotPromoPrice.textContent = formatCurrency(promoPrice);
-        els.tableMetaDevelopment.textContent = 'Desarrollo: ' + (developmentName || 'Sin capturar');
-        els.tableMetaUnit.textContent = 'Unidad: ' + (unitName || 'Sin capturar');
+        els.tableMetaDevelopment.textContent = t.developmentPrefix + ' ' + (developmentName || t.noCapture);
+        els.tableMetaUnit.textContent = t.unitPrefix + ' ' + (unitName || t.noCapture);
 
         els.paymentRows.innerHTML = rows.map(function (row) {
           return [
@@ -1711,6 +1862,45 @@
         });
         clone.querySelectorAll('script').forEach(function (node) { node.remove(); });
         return '<!doctype html>\n' + clone.outerHTML;
+      }
+
+      function updateLanguage() {
+        const t = translations[currentLang];
+        document.documentElement.lang = currentLang;
+        els.backBtn.textContent = t.back;
+        els.editorBtn.textContent = t.editor;
+        els.langBtn.querySelector('span').textContent = t.langFlag;
+        els.langBtnText.textContent = t.lang;
+        els.downloadPdfBtn.textContent = t.download;
+        els.titleText.textContent = t.title;
+        els.subtitleText.textContent = t.subtitle;
+        els.schemeLabel.textContent = t.scheme;
+        els.sectionLabel.textContent = t.section;
+        els.labelDevelopmentName.textContent = t.development;
+        els.labelUnitName.textContent = t.unit;
+        els.labelPaymentPlan.textContent = t.paymentPlan;
+        els.specialPlanToggleText.textContent = t.specialPlan;
+        els.labelSpecialPaymentCount.textContent = t.paymentCount;
+        els.labelListPrice.textContent = t.listPrice;
+        els.labelDiscount.textContent = t.discount;
+        els.labelPromoPrice.textContent = t.promoPrice;
+        els.helperText.textContent = t.helper;
+        els.summaryDiscountLabel.textContent = t.discountApplied;
+        els.summaryPromoLabel.textContent = t.promoFinal;
+        els.headDevelopment.textContent = t.headDevelopment;
+        els.headUnit.textContent = t.headUnit;
+        els.headPlan.textContent = t.headPlan;
+        els.headList.textContent = t.headList;
+        els.headDiscount.textContent = t.headDiscount;
+        els.headPromo.textContent = t.headPromo;
+        els.paymentsTitle.textContent = t.paymentsTitle;
+        els.paymentsSubtitle.textContent = t.paymentsSubtitle;
+        els.paymentsHeadStage.textContent = t.stage;
+        els.paymentsHeadConcept.textContent = t.concept;
+        els.paymentsHeadReference.textContent = t.reference;
+        els.paymentsHeadPercent.textContent = t.percent;
+        els.paymentsHeadAmount.textContent = t.amount;
+        els.paymentsFooterLabel.textContent = t.totals;
       }
 
       async function downloadServerPdf() {
@@ -1771,6 +1961,11 @@
         els.specialPlanFields.hidden = !els.specialPlanToggle.checked;
         update(lastEdited);
       });
+      els.langBtn.addEventListener('click', function () {
+        currentLang = currentLang === 'es' ? 'en' : 'es';
+        updateLanguage();
+        update(lastEdited);
+      });
       els.specialPaymentCount.addEventListener('change', function () {
         renderSpecialPaymentInputs();
         update(lastEdited);
@@ -1810,6 +2005,7 @@
       if (isPreviewMode) document.body.classList.add('preview-mode');
       if (isPrintPreviewMode) document.body.classList.add('print-preview-mode');
 
+      updateLanguage();
       update('discount');
       loadLayout();
     })();
