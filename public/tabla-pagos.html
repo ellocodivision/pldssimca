@@ -1418,15 +1418,19 @@
       let specialPaymentPercents = [30, 10, 10, 50];
       let paymentDates = [];
 
+      function roundToTwoDecimals(value) {
+        return Math.round((Number(value) || 0) * 100) / 100;
+      }
+
       function rebalanceSpecialPercents() {
         if (!specialPaymentPercents.length) return;
         const lastIndex = specialPaymentPercents.length - 1;
         let runningTotal = 0;
         for (let index = 0; index < lastIndex; index += 1) {
-          specialPaymentPercents[index] = clamp(Number(specialPaymentPercents[index]) || 0, 0, 100);
+          specialPaymentPercents[index] = roundToTwoDecimals(clamp(Number(specialPaymentPercents[index]) || 0, 0, 100));
           runningTotal += specialPaymentPercents[index];
         }
-        specialPaymentPercents[lastIndex] = clamp(100 - runningTotal, 0, 100);
+        specialPaymentPercents[lastIndex] = roundToTwoDecimals(clamp(100 - runningTotal, 0, 100));
       }
 
       function clamp(value, min, max) {
@@ -1626,10 +1630,11 @@
           const label = getSpecialPaymentLabel(index, count);
           const amount = Math.max(0, sanitizeNumber(els.promoPrice.value)) * ((Number(percent) || 0) / 100);
           const isLast = index === count - 1;
+          const percentValue = roundToTwoDecimals(percent);
           return [
             '<div class="special-payment-row">',
             '<div class="special-payment-label">', escapeHtml(label), '</div>',
-            '<div class="field"><label>', escapeHtml(t.percent), '<input type="number" min="0" max="100" step="0.01" data-special-percent="', index, '" value="', percent, '"', (isLast ? ' readonly' : ''), '></label></div>',
+            '<div class="field"><label>', escapeHtml(t.percent), '<input type="number" min="0" max="100" step="0.01" data-special-percent="', index, '" value="', percentValue.toFixed(2), '"', (isLast ? ' readonly' : ''), '></label></div>',
             '<div class="field"><label>', escapeHtml(isLast ? t.amount : t.amountEditable), '<input type="text" inputmode="decimal" data-special-amount="', index, '" value="', escapeHtml(String(Math.round(amount * 100) / 100)), '"', (isLast ? ' readonly' : ''), '></label></div>',
             '</div>'
           ].join('');
@@ -2026,13 +2031,13 @@
         if (target.dataset.specialPercent != null) {
           const index = Number(target.dataset.specialPercent);
           if (!Number.isFinite(index) || index >= specialPaymentPercents.length - 1) return;
-          specialPaymentPercents[index] = clamp(sanitizeNumber(target.value), 0, 100);
+          specialPaymentPercents[index] = roundToTwoDecimals(clamp(sanitizeNumber(target.value), 0, 100));
           rebalanceSpecialPercents();
         } else if (target.dataset.specialAmount != null) {
           const index = Number(target.dataset.specialAmount);
           if (!Number.isFinite(index) || index >= specialPaymentPercents.length - 1) return;
           const amount = Math.max(0, sanitizeNumber(target.value));
-          specialPaymentPercents[index] = promoPrice > 0 ? clamp((amount / promoPrice) * 100, 0, 100) : 0;
+          specialPaymentPercents[index] = promoPrice > 0 ? roundToTwoDecimals(clamp((amount / promoPrice) * 100, 0, 100)) : 0;
           rebalanceSpecialPercents();
         } else {
           return;
