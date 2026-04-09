@@ -1090,7 +1090,7 @@
                       <tr>
                         <td class="key" id="snapshotDevelopment">Sin capturar</td>
                         <td class="key" id="snapshotUnit">Sin capturar</td>
-                        <td class="key" id="snapshotPlan">30/70</td>
+                        <td class="key" id="snapshotPlan"></td>
                         <td class="amount" id="snapshotListPrice">$0</td>
                         <td class="amount" id="snapshotDiscount">$0</td>
                         <td class="amount" id="snapshotPromoPrice">$0</td>
@@ -1854,7 +1854,7 @@
         els.summaryPlanTotal.textContent = t.distribution + ' ' + formatPercent(planPercentTotal);
         els.snapshotDevelopment.textContent = developmentName || t.noCapture;
         els.snapshotUnit.textContent = unitName || t.noCapture;
-        els.snapshotPlan.textContent = planLabel;
+        els.snapshotPlan.textContent = '';
         els.snapshotListPrice.textContent = formatCurrency(listPrice);
         els.snapshotDiscount.textContent = formatCurrency(discountAmount) + ' (' + formatPercent(discountPercent) + ')';
         els.snapshotPromoPrice.textContent = formatCurrency(promoPrice);
