@@ -1671,6 +1671,7 @@ function defaultTablaPagosLayout() {
     showPaymentsInPrint: true,
     surfaceColor: '#e8e4da',
     paperColor: '#fffdf8',
+    paperSoftColor: '#f8f2e6',
     textColor: '#1d1c18',
     titleColor: '#1d1c18',
     mutedColor: '#6f6859',
@@ -1774,6 +1775,7 @@ function normalizeTablaPagosLayout(input) {
   if (typeof out.railText !== 'string') out.railText = base.railText;
   if (typeof out.surfaceColor !== 'string') out.surfaceColor = base.surfaceColor;
   if (typeof out.paperColor !== 'string') out.paperColor = base.paperColor;
+  if (typeof out.paperSoftColor !== 'string') out.paperSoftColor = base.paperSoftColor;
   if (typeof out.textColor !== 'string') out.textColor = base.textColor;
   if (typeof out.titleColor !== 'string') out.titleColor = base.titleColor;
   if (typeof out.mutedColor !== 'string') out.mutedColor = base.mutedColor;

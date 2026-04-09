@@ -185,6 +185,7 @@
                 <label>Margen hoja (mm)<input id="pageMarginMm" type="number" min="0" max="20" step="1"></label>
                 <label>Color fondo hoja<input id="surfaceColor" type="color"></label>
                 <label>Color papel tablas<input id="paperColor" type="color"></label>
+                <label>Color beige interno<input id="paperSoftColor" type="color"></label>
               </div>
             </div>
 
@@ -386,6 +387,7 @@
         showPaymentsInPrint: true,
         surfaceColor: '#e8e4da',
         paperColor: '#fffdf8',
+        paperSoftColor: '#f8f2e6',
         textColor: '#1d1c18',
         titleColor: '#1d1c18',
         mutedColor: '#6f6859',
@@ -459,6 +461,7 @@
         showHeaderInPrint: document.getElementById('showHeaderInPrint'),
         surfaceColor: document.getElementById('surfaceColor'),
         paperColor: document.getElementById('paperColor'),
+        paperSoftColor: document.getElementById('paperSoftColor'),
         textColor: document.getElementById('textColor'),
         titleColor: document.getElementById('titleColor'),
         mutedColor: document.getElementById('mutedColor'),
@@ -568,6 +571,9 @@
         out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
         out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
         out.logoDataUrl = typeof out.logoDataUrl === 'string' ? out.logoDataUrl : '';
+        out.surfaceColor = typeof out.surfaceColor === 'string' ? out.surfaceColor : defaultLayout.surfaceColor;
+        out.paperColor = typeof out.paperColor === 'string' ? out.paperColor : defaultLayout.paperColor;
+        out.paperSoftColor = typeof out.paperSoftColor === 'string' ? out.paperSoftColor : defaultLayout.paperSoftColor;
         out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map(function (line, index) {
           const srcLine = line && typeof line === 'object' ? line : {};
           const orientation = String(srcLine.orientation || '').toLowerCase() === 'vertical' ? 'vertical' : 'horizontal';
