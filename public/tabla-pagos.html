@@ -492,7 +492,6 @@
 
     .summary-table col.col-development { width: var(--summary-col-development); }
     .summary-table col.col-unit { width: var(--summary-col-unit); }
-    .summary-table col.col-plan { width: var(--summary-col-plan); }
     .summary-table col.col-list { width: var(--summary-col-list); }
     .summary-table col.col-discount { width: var(--summary-col-discount); }
     .summary-table col.col-promo { width: var(--summary-col-promo); }
@@ -1071,7 +1070,6 @@
                     <colgroup>
                       <col class="col-development">
                       <col class="col-unit">
-                      <col class="col-plan">
                       <col class="col-list">
                       <col class="col-discount">
                       <col class="col-promo">
@@ -1080,7 +1078,6 @@
                       <tr>
                         <th id="headDevelopment">Nombre del desarrollo</th>
                         <th id="headUnit">Unidad</th>
-                        <th id="headPlan">Forma de pago</th>
                         <th id="headList">Precio lista</th>
                         <th id="headDiscount">Descuento</th>
                         <th id="headPromo">Precio promo</th>
@@ -1090,7 +1087,6 @@
                       <tr>
                         <td class="key" id="snapshotDevelopment">Sin capturar</td>
                         <td class="key" id="snapshotUnit">Sin capturar</td>
-                        <td class="key" id="snapshotPlan"></td>
                         <td class="amount" id="snapshotListPrice">$0</td>
                         <td class="amount" id="snapshotDiscount">$0</td>
                         <td class="amount" id="snapshotPromoPrice">$0</td>
@@ -1188,7 +1184,6 @@
           distribution: 'Distribución',
           headDevelopment: 'Nombre del desarrollo',
           headUnit: 'Unidad',
-          headPlan: 'Forma de pago',
           headList: 'Precio lista',
           headDiscount: 'Descuento',
           headPromo: 'Precio promo',
@@ -1237,7 +1232,6 @@
           distribution: 'Distribution',
           headDevelopment: 'Development name',
           headUnit: 'Unit',
-          headPlan: 'Payment plan',
           headList: 'List price',
           headDiscount: 'Discount',
           headPromo: 'Promo price',
@@ -1372,7 +1366,6 @@
         summaryPromoLabel: document.getElementById('summaryPromoLabel'),
         headDevelopment: document.getElementById('headDevelopment'),
         headUnit: document.getElementById('headUnit'),
-        headPlan: document.getElementById('headPlan'),
         headList: document.getElementById('headList'),
         headDiscount: document.getElementById('headDiscount'),
         headPromo: document.getElementById('headPromo'),
@@ -1398,7 +1391,6 @@
         summaryPlanTotal: document.getElementById('summaryPlanTotal'),
         snapshotDevelopment: document.getElementById('snapshotDevelopment'),
         snapshotUnit: document.getElementById('snapshotUnit'),
-        snapshotPlan: document.getElementById('snapshotPlan'),
         snapshotListPrice: document.getElementById('snapshotListPrice'),
         snapshotDiscount: document.getElementById('snapshotDiscount'),
         snapshotPromoPrice: document.getElementById('snapshotPromoPrice'),
@@ -1854,7 +1846,6 @@
         els.summaryPlanTotal.textContent = t.distribution + ' ' + formatPercent(planPercentTotal);
         els.snapshotDevelopment.textContent = developmentName || t.noCapture;
         els.snapshotUnit.textContent = unitName || t.noCapture;
-        els.snapshotPlan.textContent = '';
         els.snapshotListPrice.textContent = formatCurrency(listPrice);
         els.snapshotDiscount.textContent = formatCurrency(discountAmount) + ' (' + formatPercent(discountPercent) + ')';
         els.snapshotPromoPrice.textContent = formatCurrency(promoPrice);
@@ -1943,7 +1934,6 @@
         els.summaryPromoLabel.textContent = t.promoFinal;
         els.headDevelopment.textContent = t.headDevelopment;
         els.headUnit.textContent = t.headUnit;
-        els.headPlan.textContent = t.headPlan;
         els.headList.textContent = t.headList;
         els.headDiscount.textContent = t.headDiscount;
         els.headPromo.textContent = t.headPromo;
