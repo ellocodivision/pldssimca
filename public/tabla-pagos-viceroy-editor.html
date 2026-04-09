@@ -240,6 +240,45 @@
         </div>
 
         <div class="section">
+          <h2>Tipografía</h2>
+          <div class="grid">
+            <label>Fuente cuerpo
+              <select id="bodyFontFamily">
+                <option value="&quot;Gotham&quot;, &quot;Montserrat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Gotham</option>
+                <option value="&quot;Akkurat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Akkurat</option>
+                <option value="&quot;Trim Mono&quot;, &quot;SFMono-Regular&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace">Trimono</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="&quot;Helvetica Neue&quot;, Arial, sans-serif">Helvetica Neue</option>
+                <option value="Georgia, &quot;Times New Roman&quot;, serif">Georgia</option>
+                <option value="&quot;Times New Roman&quot;, serif">Times New Roman</option>
+              </select>
+            </label>
+            <label>Fuente títulos
+              <select id="headingFontFamily">
+                <option value="&quot;Gotham&quot;, &quot;Montserrat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Gotham</option>
+                <option value="&quot;Akkurat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Akkurat</option>
+                <option value="&quot;Trim Mono&quot;, &quot;SFMono-Regular&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace">Trimono</option>
+                <option value="Georgia, &quot;Times New Roman&quot;, serif">Georgia</option>
+                <option value="&quot;Times New Roman&quot;, serif">Times New Roman</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="&quot;Helvetica Neue&quot;, Arial, sans-serif">Helvetica Neue</option>
+              </select>
+            </label>
+            <label>Fuente tablas
+              <select id="tableFontFamily">
+                <option value="&quot;Gotham&quot;, &quot;Montserrat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Gotham</option>
+                <option value="&quot;Akkurat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Akkurat</option>
+                <option value="&quot;Trim Mono&quot;, &quot;SFMono-Regular&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace">Trimono</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="&quot;Helvetica Neue&quot;, Arial, sans-serif">Helvetica Neue</option>
+                <option value="Georgia, &quot;Times New Roman&quot;, serif">Georgia</option>
+                <option value="&quot;Times New Roman&quot;, serif">Times New Roman</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
           <h2>Encabezado</h2>
           <div class="grid">
             <label>Padding superior
@@ -437,6 +476,9 @@
         oliveLineWidth: 1,
         shellBorderColor: '#d6d0c2',
         shellBorderWidth: 1,
+        bodyFontFamily: 'Arial, sans-serif',
+        headingFontFamily: 'Georgia, "Times New Roman", serif',
+        tableFontFamily: 'Arial, sans-serif',
         showHeroInPrint: true,
         showLogosInPrint: false,
         showSummaryInPrint: true,
@@ -480,6 +522,9 @@
         summaryRowPaddingY: document.getElementById('summaryRowPaddingY'),
         shellBorderColor: document.getElementById('shellBorderColor'),
         shellBorderWidth: document.getElementById('shellBorderWidth'),
+        bodyFontFamily: document.getElementById('bodyFontFamily'),
+        headingFontFamily: document.getElementById('headingFontFamily'),
+        tableFontFamily: document.getElementById('tableFontFamily'),
         showSummaryInPrint: document.getElementById('showSummaryInPrint'),
         summaryColUnit: document.getElementById('summaryColUnit'),
         summaryColPlan: document.getElementById('summaryColPlan'),
@@ -535,6 +580,9 @@
         out.paymentRowPaddingY = clamp(Number(out.paymentRowPaddingY) || defaultLayout.paymentRowPaddingY, 2, 20);
         out.oliveLineWidth = clamp(Number(out.oliveLineWidth) || defaultLayout.oliveLineWidth, 0, 4);
         out.shellBorderWidth = clamp(Number(out.shellBorderWidth) || defaultLayout.shellBorderWidth, 0, 4);
+        if (typeof out.bodyFontFamily !== 'string') out.bodyFontFamily = defaultLayout.bodyFontFamily;
+        if (typeof out.headingFontFamily !== 'string') out.headingFontFamily = defaultLayout.headingFontFamily;
+        if (typeof out.tableFontFamily !== 'string') out.tableFontFamily = defaultLayout.tableFontFamily;
         out.paymentsColStage = clamp(Number(out.paymentsColStage) || defaultLayout.paymentsColStage, 6, 24);
         out.paymentsColConcept = clamp(Number(out.paymentsColConcept) || defaultLayout.paymentsColConcept, 10, 36);
         out.paymentsColReference = clamp(Number(out.paymentsColReference) || defaultLayout.paymentsColReference, 10, 36);

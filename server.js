@@ -1842,6 +1842,9 @@ function defaultViceroyPaymentPlanLayout() {
     oliveLineWidth: 1,
     shellBorderColor: '#d6d0c2',
     shellBorderWidth: 1,
+    bodyFontFamily: 'Arial, sans-serif',
+    headingFontFamily: 'Georgia, "Times New Roman", serif',
+    tableFontFamily: 'Arial, sans-serif',
     showHeroInPrint: true,
     showLogosInPrint: false,
     showSummaryInPrint: true,
@@ -1891,6 +1894,9 @@ function normalizeViceroyPaymentPlanLayout(input) {
   out.paymentRowPaddingY = clampNumber(out.paymentRowPaddingY, base.paymentRowPaddingY, 2, 20);
   out.oliveLineWidth = clampNumber(out.oliveLineWidth, base.oliveLineWidth, 0, 4);
   out.shellBorderWidth = clampNumber(out.shellBorderWidth, base.shellBorderWidth, 0, 4);
+  if (typeof out.bodyFontFamily !== 'string') out.bodyFontFamily = base.bodyFontFamily;
+  if (typeof out.headingFontFamily !== 'string') out.headingFontFamily = base.headingFontFamily;
+  if (typeof out.tableFontFamily !== 'string') out.tableFontFamily = base.tableFontFamily;
   out.showHeroInPrint = Boolean(out.showHeroInPrint);
   out.showLogosInPrint = Boolean(out.showLogosInPrint);
   out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
@@ -3725,17 +3731,19 @@ function renderSimcaHome(req, res, options) {
           <h2 class="name">Presentaciones</h2>
           <p class="desc">Generación de presentaciones por proyecto con unidades seleccionadas.</p>
         </a>`;
+  const tablaPagosEditorCard = isGerente ? `
+        <a class="card" href="/tabla-pagos/editor">
+          <span class="tag">Editor</span>
+          <h2 class="name">Editor PDF Tabla de Pagos</h2>
+          <p class="desc">Ajusta formato, columnas y layout de impresión del módulo Tabla de Pagos.</p>
+        </a>` : '';
   const tablaPagosCard = `
         <a class="card" href="/tabla-pagos">
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pagos</h2>
           <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.</p>
         </a>
-        <a class="card" href="/tabla-pagos/editor">
-          <span class="tag">Editor</span>
-          <h2 class="name">Editor PDF Tabla de Pagos</h2>
-          <p class="desc">Ajusta formato, columnas y layout de impresión del módulo Tabla de Pagos.</p>
-        </a>`;
+        ${tablaPagosEditorCard}`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -3996,10 +4004,9 @@ app.use('/viceroy', requireAuth);
 app.use('/viceroy/reservas', requireAuth);
 app.use('/api/viceroy/reservas', requireAuth);
 app.use('/viceroy/inicio', requireGerente);
-app.use('/viceroy-piloto', requireInternalUser);
+app.use('/viceroy-piloto', requireGerente);
 app.use('/api/viceroy-piloto', (req, res, next) => {
-  if (req.path === '/public-data') return next();
-  return requireInternalUser(req, res, next);
+  return requireGerente(req, res, next);
 });
 app.use('/viceroy/registros', requireAuth);
 app.use('/api/viceroy/registros', requireAuth);
@@ -4077,11 +4084,21 @@ app.get('/generador-roi', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'generador-roi.html'));
 });
 
+app.get('/api/session-info', requireAuth, (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  return res.json({
+    ok: true,
+    email: currentEmail,
+    isGerente: currentEmail === GERENTE_EMAIL,
+    isInternalUser: isInternalUserEmail(currentEmail)
+  });
+});
+
 app.get('/tabla-pagos', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos.html'));
 });
 
-app.get('/tabla-pagos/editor', (req, res) => {
+app.get('/tabla-pagos/editor', requireGerente, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-editor.html'));
 });
 
@@ -4089,7 +4106,7 @@ app.get('/api/tabla-pagos/layout', (req, res) => {
   return res.json({ ok: true, layout: readTablaPagosLayout() });
 });
 
-app.post('/api/tabla-pagos/layout', (req, res) => {
+app.post('/api/tabla-pagos/layout', requireGerente, (req, res) => {
   try {
     const incoming = req.body && req.body.layout ? req.body.layout : req.body;
     const saved = saveTablaPagosLayout(incoming);
@@ -4150,7 +4167,7 @@ app.get('/viceroy/tabla-pagos', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-viceroy.html'));
 });
 
-app.get('/viceroy/tabla-pagos/editor', (req, res) => {
+app.get('/viceroy/tabla-pagos/editor', requireGerente, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-viceroy-editor.html'));
 });
 
@@ -4158,7 +4175,7 @@ app.get('/api/viceroy/tabla-pagos/layout', (req, res) => {
   return res.json({ ok: true, layout: readViceroyPaymentPlanLayout() });
 });
 
-app.post('/api/viceroy/tabla-pagos/layout', (req, res) => {
+app.post('/api/viceroy/tabla-pagos/layout', requireGerente, (req, res) => {
   try {
     const incoming = req.body && req.body.layout ? req.body.layout : req.body;
     const saved = saveViceroyPaymentPlanLayout(incoming);
@@ -5420,23 +5437,30 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
 
 app.get('/viceroy', (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const showInventoryCard = currentEmail === 'martin@simca.mx';
+  const showMartinCards = currentEmail === GERENTE_EMAIL;
   const tablaPagosViceroyCard = `
         <a class="card" href="/viceroy/tabla-pagos">
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pago Viceroy</h2>
           <p class="desc">Versión comercial Viceroy basada en acuerdos de RELATED.</p>
         </a>
+        ${showMartinCards ? `
         <a class="card" href="/viceroy/tabla-pagos/editor">
           <span class="tag">Editor</span>
           <h2 class="name">Editor PDF Viceroy</h2>
           <p class="desc">Ajusta márgenes, escalas, líneas y orden visual de la hoja final.</p>
-        </a>`;
-  const inventoryCard = showInventoryCard ? `
+        </a>` : ''}`;
+  const inventoryCard = showMartinCards ? `
         <a class="card" href="/viceroy-piloto">
           <span class="tag">Módulo</span>
           <h2 class="name">Edición Viceroy Inventario</h2>
           <p class="desc">Flujo visual de tipologías e inventario por piso.</p>
+        </a>` : '';
+  const inicioCard = showMartinCards ? `
+        <a class="card" href="/viceroy/inicio">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Inicio</h2>
+          <p class="desc">Acceso al módulo de presentación comercial.</p>
         </a>` : '';
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
@@ -5468,11 +5492,7 @@ app.get('/viceroy', (req, res) => {
         <a class="back" href="/">Volver al backend</a>
       </div>
       <div class="grid">
-        <a class="card" href="/viceroy/inicio">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Inicio</h2>
-          <p class="desc">Acceso al módulo de presentación comercial.</p>
-        </a>
+        ${inicioCard}
         <a class="card" href="/whisperlist">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy Whisperlist</h2>

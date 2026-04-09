@@ -963,7 +963,7 @@
     <div class="topbar">
       <a class="back" href="/simca" id="backBtn">Regresar a SIMCA</a>
       <div class="topbar-actions">
-        <a class="editor-btn" href="/tabla-pagos/editor" id="editorBtn">Editor PDF Martin SIMCA</a>
+        <a class="editor-btn" href="/tabla-pagos/editor" id="editorBtn" hidden>Editor PDF Martin SIMCA</a>
         <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
         <button class="print-btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
       </div>
@@ -2040,9 +2040,18 @@
       if (isPreviewMode) document.body.classList.add('preview-mode');
       if (isPrintPreviewMode) document.body.classList.add('print-preview-mode');
 
+      async function syncAccessControls() {
+        try {
+          const res = await fetch('/api/session-info', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          els.editorBtn.hidden = !(res.ok && data && data.ok && data.isGerente);
+        } catch {}
+      }
+
       updateLanguage();
       update('discount');
       loadLayout();
+      syncAccessControls();
     })();
   </script>
 </body>

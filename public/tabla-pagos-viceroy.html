@@ -51,6 +51,9 @@
       --summary-col-list: 20%;
       --summary-col-discount: 20%;
       --summary-col-promo: 20%;
+      --font-body: Arial, sans-serif;
+      --font-heading: Georgia, "Times New Roman", serif;
+      --font-table: Arial, sans-serif;
     }
 
     * { box-sizing: border-box; }
@@ -60,7 +63,7 @@
       min-height: 100vh;
       background: linear-gradient(180deg, #faf8f2 0%, var(--bg) 100%);
       color: var(--ink);
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: var(--font-body);
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -118,7 +121,7 @@
       padding: 0 16px;
       border-radius: 999px;
       text-decoration: none;
-      font-family: Arial, sans-serif;
+      font-family: var(--font-body);
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
@@ -213,6 +216,24 @@
       font-size: 18px;
       font-style: italic;
       font-weight: 400;
+    }
+
+    .brand,
+    .location,
+    .headline,
+    .section-title {
+      font-family: var(--font-heading);
+    }
+
+    .summary-table,
+    .payments-table {
+      font-family: var(--font-table);
+    }
+
+    .capture-grid label,
+    .capture-grid input,
+    .capture-grid select {
+      font-family: var(--font-body);
     }
 
     .capture-grid {
@@ -682,7 +703,7 @@
     <div class="topbar">
       <a class="back" href="/viceroy" id="backBtn">Regresar a Viceroy</a>
       <div class="topbar-actions">
-        <a class="editor-btn" href="/viceroy/tabla-pagos/editor" id="editorBtn">Editor PDF</a>
+        <a class="editor-btn" href="/viceroy/tabla-pagos/editor" id="editorBtn" hidden>Editor PDF</a>
         <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
         <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
       </div>
@@ -847,6 +868,9 @@
         oliveLineWidth: 1,
         shellBorderColor: '#d6d0c2',
         shellBorderWidth: 1,
+        bodyFontFamily: 'Arial, sans-serif',
+        headingFontFamily: 'Georgia, "Times New Roman", serif',
+        tableFontFamily: 'Arial, sans-serif',
         showHeroInPrint: true,
         showLogosInPrint: false,
         showSummaryInPrint: true,
@@ -1022,6 +1046,9 @@
         out.paymentRowPaddingY = clamp(Number(out.paymentRowPaddingY) || defaultLayout.paymentRowPaddingY, 2, 20);
         out.oliveLineWidth = clamp(Number(out.oliveLineWidth) || defaultLayout.oliveLineWidth, 0, 4);
         out.shellBorderWidth = clamp(Number(out.shellBorderWidth) || defaultLayout.shellBorderWidth, 0, 4);
+        if (typeof out.bodyFontFamily !== 'string') out.bodyFontFamily = defaultLayout.bodyFontFamily;
+        if (typeof out.headingFontFamily !== 'string') out.headingFontFamily = defaultLayout.headingFontFamily;
+        if (typeof out.tableFontFamily !== 'string') out.tableFontFamily = defaultLayout.tableFontFamily;
         out.paymentsColStage = clamp(Number(out.paymentsColStage) || defaultLayout.paymentsColStage, 6, 24);
         out.paymentsColConcept = clamp(Number(out.paymentsColConcept) || defaultLayout.paymentsColConcept, 10, 36);
         out.paymentsColReference = clamp(Number(out.paymentsColReference) || defaultLayout.paymentsColReference, 10, 36);
@@ -1072,6 +1099,9 @@
         root.style.setProperty('--olive-line-width', layout.oliveLineWidth + 'px');
         root.style.setProperty('--shell-border-color', layout.shellBorderColor);
         root.style.setProperty('--shell-border-width', layout.shellBorderWidth + 'px');
+        root.style.setProperty('--font-body', layout.bodyFontFamily);
+        root.style.setProperty('--font-heading', layout.headingFontFamily);
+        root.style.setProperty('--font-table', layout.tableFontFamily);
         root.style.setProperty('--payments-col-stage', layout.paymentsColStage + '%');
         root.style.setProperty('--payments-col-concept', layout.paymentsColConcept + '%');
         root.style.setProperty('--payments-col-reference', layout.paymentsColReference + '%');
@@ -1230,6 +1260,14 @@
         applyLayout(defaultLayout);
       }
 
+      async function syncAccessControls() {
+        try {
+          const res = await fetch('/api/session-info', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          els.editorBtn.hidden = !(res.ok && data && data.ok && data.isGerente);
+        } catch {}
+      }
+
       window.addEventListener('message', function (event) {
         if (!event || !event.data || event.data.type !== 'viceroy-payment-plan-layout-preview') return;
         applyLayout(event.data.layout || defaultLayout);
@@ -1265,6 +1303,7 @@
       syncDiscountVisibility();
       update();
       loadLayout();
+      syncAccessControls();
     })();
   </script>
 </body>
