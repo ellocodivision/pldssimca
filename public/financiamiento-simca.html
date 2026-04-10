@@ -260,7 +260,8 @@
   }
 
   .btn,
-  .link-btn{
+  .link-btn,
+  .lang-btn{
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -274,6 +275,10 @@
     font-size:13px;
     font-weight:700;
     cursor:pointer;
+  }
+
+  .lang-btn{
+    gap:8px;
   }
 
   .btn-primary{
@@ -867,6 +872,7 @@
       <div class="actions">
         <a class="link-btn" href="/simca" id="backBtn">Regresar a SIMCA</a>
         <a class="link-btn" href="/financiamiento-simca/editor" id="editorBtn" hidden>Editor PDF Martin SIMCA</a>
+        <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
         <button class="btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
         <button class="btn btn-primary" type="button" id="printBtn">Imprimir</button>
       </div>
@@ -895,23 +901,23 @@
                 <h2>Parámetros</h2>
                 <div class="field-grid">
                   <div class="field">
-                    <label for="developmentSelect">Desarrollo</label>
+                    <label for="developmentSelect" id="labelDevelopment">Desarrollo</label>
                     <select id="developmentSelect">
-                      <option value="">Selecciona desarrollo...</option>
+                      <option value="" id="developmentPlaceholder">Selecciona desarrollo...</option>
                     </select>
                   </div>
                   <div class="field">
-                    <label for="unitSelect">Unidad</label>
+                    <label for="unitSelect" id="labelUnit">Unidad</label>
                     <select id="unitSelect" disabled>
-                      <option value="">Selecciona unidad...</option>
+                      <option value="" id="unitPlaceholder">Selecciona unidad...</option>
                     </select>
                   </div>
                   <div class="field">
-                    <label for="downPaymentSelect">Enganche</label>
+                    <label for="downPaymentSelect" id="labelDownPayment">Enganche</label>
                     <select id="downPaymentSelect"></select>
                   </div>
                   <div class="field">
-                    <label for="termSelect">Plazo</label>
+                    <label for="termSelect" id="labelTerm">Plazo</label>
                     <select id="termSelect">
                       <option value="3">3 años</option>
                       <option value="5">5 años</option>
@@ -919,20 +925,18 @@
                     </select>
                   </div>
                   <div class="field">
-                    <label for="rateInput">Tasa anual</label>
+                    <label for="rateInput" id="labelRate">Tasa anual</label>
                     <input id="rateInput" type="text" value="9.0%" readonly>
                   </div>
                   <div class="field">
-                    <label for="startDateInput">Fecha inicio</label>
+                    <label for="startDateInput" id="labelStartDate">Fecha inicio</label>
                     <input id="startDateInput" type="text" readonly>
                   </div>
                 </div>
                 <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                   <span class="pill">USD</span>
-                  <span class="pill">Enganche mínimo 30%</span>
+                  <span class="pill" id="minimumDownPaymentPill">Enganche mínimo 30%</span>
                 </div>
-                <p class="helper" style="margin:14px 0 0;">Asumí tasa fija anual de <strong>9%</strong> porque es la que aparece en tus ejemplos y el CSV no trae un esquema homogéneo para estos 6 desarrollos.</p>
-                <p id="status" class="status" style="margin:12px 0 0;">Cargando CSV maestro...</p>
               </aside>
 
               <main class="card content">
@@ -1349,6 +1353,7 @@
   }
 
   function setStatus(message, isError) {
+    if (!statusEl) return;
     statusEl.textContent = message;
     statusEl.classList.toggle('error', Boolean(isError));
   }
