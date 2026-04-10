@@ -21,38 +21,7 @@
       margin: 0;
       color: var(--ink);
       font-family: Arial, sans-serif;
-      background:
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left calc(var(--rail-width) - 1px) top/1px 100% no-repeat,
-        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top 218px/calc(100% - var(--rail-width)) 1px no-repeat,
-        var(--surface);
-    }
-    .brand-frame { display:grid; grid-template-columns:var(--rail-width) minmax(0,1fr); min-height:100vh; }
-    .brand-rail { position:relative; background:var(--surface); }
-    .brand-rail-accent {
-      position:absolute; left:0; top:218px; width:var(--rail-width); height:278px;
-      background:var(--rail); border-top:1px solid rgba(141, 135, 119, 0.92); border-bottom:1px solid rgba(141, 135, 119, 0.92);
-      display:flex; align-items:center; justify-content:center;
-    }
-    .brand-rail-accent span {
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-      font-size: 18px;
-      color: #1d1c18;
-    }
-    .brand-main { display:grid; grid-template-rows:218px minmax(0,1fr); min-width:0; }
-    .brand-top { display:flex; align-items:center; justify-content:center; }
-    .brand-placeholder {
-      width: min(100%, 540px);
-      height: 112px;
-      border: 1px dashed rgba(64, 59, 55, 0.25);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:#7c7567;
-      font-size:14px;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      background: rgba(255,255,255,.18);
+      background: linear-gradient(180deg, #f4efe5 0%, var(--surface) 100%);
     }
     .wrap { max-width: 1480px; margin: 0 auto; padding: 28px 24px 32px; }
     .head { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
@@ -143,10 +112,6 @@
       cursor:pointer;
     }
     @media (max-width: 1180px) {
-      .brand-frame { grid-template-columns:1fr; background:var(--surface); }
-      .brand-rail { display:none; }
-      .brand-main { grid-template-rows:auto minmax(0,1fr); }
-      .brand-top { min-height:160px; padding:24px 16px; }
       .wrap { padding:20px 14px 28px; }
       .layout { grid-template-columns:1fr; }
       .preview-panel { position:static; max-height:none; overflow:visible; }
@@ -155,14 +120,6 @@
   </style>
 </head>
 <body>
-  <div class="brand-frame">
-    <aside class="brand-rail" aria-hidden="true">
-      <div class="brand-rail-accent"><span>simca.mx</span></div>
-    </aside>
-    <div class="brand-main">
-      <div class="brand-top" aria-hidden="true">
-        <div class="brand-placeholder">Tu logo en esta franja superior</div>
-      </div>
       <main class="wrap">
         <div class="head">
           <div>
@@ -360,8 +317,6 @@
           </section>
         </div>
       </main>
-    </div>
-  </div>
 
   <script>
     (function () {
