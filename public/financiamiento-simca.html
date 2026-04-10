@@ -227,11 +227,10 @@
 
   .header{
     display:grid;
-    grid-template-columns:minmax(0, 1fr) auto;
-    gap:20px;
-    align-items:end;
+    grid-template-columns:minmax(0, 1fr);
+    gap:0;
+    align-items:center;
     padding:var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
-    border-bottom:1px solid var(--line);
     background:transparent;
     transform:translate(var(--title-offset-x), var(--title-offset-y));
   }
@@ -243,30 +242,6 @@
     letter-spacing:-.04em;
     color:var(--title-color);
     font-family:var(--font-heading);
-  }
-
-  .subtitle{
-    margin:8px 0 0;
-    font-size:var(--subtitle-size);
-    line-height:1.5;
-    color:var(--muted);
-    max-width:52ch;
-  }
-
-  .scheme-badge{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding:12px 16px;
-    border-radius:20px;
-    background:#1f1d18;
-    color:#fffdf8;
-    font-size:13px;
-    font-weight:700;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    -webkit-print-color-adjust:exact;
-    print-color-adjust:exact;
   }
 
   .topbar{
@@ -690,6 +665,7 @@
   }
 
   body.print-preview-mode .title{
+    font-size:var(--title-size);
     line-height:1;
   }
 
@@ -704,6 +680,10 @@
 
   body.print-preview-mode .summary-grid{
     margin-top:0;
+  }
+
+  body.print-preview-mode .detail-grid{
+    margin-top:10px;
   }
 
   body.print-preview-mode .note-box{
