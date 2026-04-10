@@ -678,6 +678,41 @@
   body.print-preview-mode .sidebar{
     top:0;
   }
+
+  body.print-preview-mode .content-shell{
+    padding:24px 14px 16px;
+  }
+
+  body.print-preview-mode .header{
+    padding:var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
+    gap:10px;
+    align-items:center;
+  }
+
+  body.print-preview-mode .title{
+    line-height:1;
+  }
+
+  body.print-preview-mode .shell{
+    grid-template-columns:1fr;
+    padding:0;
+  }
+
+  body.print-preview-mode .sidebar{
+    display:none !important;
+  }
+
+  body.print-preview-mode .summary-grid{
+    margin-top:0;
+  }
+
+  body.print-preview-mode .note-box{
+    margin-top:0;
+  }
+
+  body.print-preview-mode .sheet-overlay{
+    display:block;
+  }
 </style>
 </head>
 <body>
@@ -1447,7 +1482,10 @@
   function buildPdfSnapshotHtml() {
     const clone = document.documentElement.cloneNode(true);
     const body = clone.querySelector('body');
-    if (body) body.classList.remove('preview-mode', 'print-preview-mode');
+    if (body) {
+      body.classList.remove('preview-mode');
+      body.classList.add('print-preview-mode');
+    }
     clone.querySelectorAll('script').forEach((node) => node.remove());
     return '<!doctype html>\n' + clone.outerHTML;
   }
