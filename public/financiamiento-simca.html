@@ -987,6 +987,7 @@
   const previewQuery = String(query.get('editorPreview') || '').trim();
   const isPreviewMode = previewQuery === '1' || previewQuery === 'print';
   const isPrintPreviewMode = previewQuery === 'print';
+  let currentLang = query.get('lang') === 'en' ? 'en' : 'es';
   const ELIGIBLE_DEVELOPMENTS = [
     'IPANA',
     'SERENADA',
@@ -1010,10 +1011,20 @@
   const editorBtn = document.getElementById('editorBtn');
   const downloadPdfBtn = document.getElementById('downloadPdfBtn');
   const printBtn = document.getElementById('printBtn');
+  const langBtn = document.getElementById('langBtn');
+  const langBtnText = document.getElementById('langBtnText');
   const sheetOverlay = document.getElementById('sheetOverlay');
   const railTextEl = document.getElementById('railText');
   const brandLogoWrap = document.getElementById('brandLogoWrap');
   const brandLogo = document.getElementById('brandLogo');
+  const backBtn = document.getElementById('backBtn');
+  const labelDevelopment = document.getElementById('labelDevelopment');
+  const labelUnit = document.getElementById('labelUnit');
+  const labelDownPayment = document.getElementById('labelDownPayment');
+  const labelTerm = document.getElementById('labelTerm');
+  const labelRate = document.getElementById('labelRate');
+  const labelStartDate = document.getElementById('labelStartDate');
+  const minimumDownPaymentPill = document.getElementById('minimumDownPaymentPill');
 
   const defaultLayout = {
     version: 4,
@@ -1087,6 +1098,89 @@
     DEVELOPMENT: 3,
     UNIT: 4,
     FINAL_PRICE: 11
+  };
+
+  const translations = {
+    es: {
+      back: 'Regresar a SIMCA',
+      editor: 'Editor PDF Martin SIMCA',
+      lang: 'English',
+      langFlag: '🇺🇸',
+      download: 'Descargar PDF exacto',
+      print: 'Imprimir',
+      development: 'Desarrollo',
+      unit: 'Unidad',
+      downPayment: 'Enganche',
+      term: 'Plazo',
+      annualRate: 'Tasa anual',
+      startDate: 'Fecha inicio',
+      minDownPayment: 'Enganche mínimo 30%',
+      selectDevelopment: 'Selecciona desarrollo...',
+      selectUnit: 'Selecciona unidad...',
+      years3: '3 años',
+      years5: '5 años',
+      years7: '7 años',
+      financingTitle: 'Financiamiento SIMCA',
+      project: 'Proyecto',
+      saleValue: 'Valor de la venta',
+      amountToFinance: 'Monto a financiar',
+      monthlyBasePayment: 'Pago mensual base',
+      termMonths: 'Plazo meses',
+      totalInterest: 'Interés total',
+      totalPaid: 'Monto total pagado',
+      avgAnnualInterest: 'Prom int anual',
+      amortizationTable: 'Tabla de amortización',
+      period: 'Periodo',
+      month: 'Mes',
+      disposition: 'Disposición',
+      balloon: 'Balloon',
+      interest: 'Interés',
+      capital: 'Capital',
+      capitalBalance: 'Saldo capital',
+      totalPayment: 'Pago total',
+      developmentFallback: 'desarrollo',
+      unitFallback: 'unidad'
+    },
+    en: {
+      back: 'Back to SIMCA',
+      editor: 'Martin SIMCA PDF Editor',
+      lang: 'Español',
+      langFlag: '🇲🇽',
+      download: 'Download exact PDF',
+      print: 'Print',
+      development: 'Development',
+      unit: 'Unit',
+      downPayment: 'Down payment',
+      term: 'Term',
+      annualRate: 'Annual rate',
+      startDate: 'Start date',
+      minDownPayment: 'Minimum down payment 30%',
+      selectDevelopment: 'Select development...',
+      selectUnit: 'Select unit...',
+      years3: '3 years',
+      years5: '5 years',
+      years7: '7 years',
+      financingTitle: 'SIMCA Financing',
+      project: 'Project',
+      saleValue: 'Sale value',
+      amountToFinance: 'Amount to finance',
+      monthlyBasePayment: 'Base monthly payment',
+      termMonths: 'Term months',
+      totalInterest: 'Total interest',
+      totalPaid: 'Total paid',
+      avgAnnualInterest: 'Avg annual interest',
+      amortizationTable: 'Amortization table',
+      period: 'Period',
+      month: 'Month',
+      disposition: 'Disposition',
+      balloon: 'Balloon',
+      interest: 'Interest',
+      capital: 'Capital',
+      capitalBalance: 'Capital balance',
+      totalPayment: 'Total payment',
+      developmentFallback: 'development',
+      unitFallback: 'unit'
+    }
   };
 
   let rows = [];
@@ -1358,12 +1452,49 @@
     statusEl.classList.toggle('error', Boolean(isError));
   }
 
+  function applyLanguage() {
+    const t = translations[currentLang];
+    document.documentElement.lang = currentLang;
+    if (backBtn) backBtn.textContent = t.back;
+    if (editorBtn) editorBtn.textContent = t.editor;
+    if (langBtn && langBtn.querySelector('span')) langBtn.querySelector('span').textContent = t.langFlag;
+    if (langBtnText) langBtnText.textContent = t.lang;
+    if (downloadPdfBtn) downloadPdfBtn.textContent = t.download;
+    if (printBtn) printBtn.textContent = t.print;
+    if (labelDevelopment) labelDevelopment.textContent = t.development;
+    if (labelUnit) labelUnit.textContent = t.unit;
+    if (labelDownPayment) labelDownPayment.textContent = t.downPayment;
+    if (labelTerm) labelTerm.textContent = t.term;
+    if (labelRate) labelRate.textContent = t.annualRate;
+    if (labelStartDate) labelStartDate.textContent = t.startDate;
+    if (minimumDownPaymentPill) minimumDownPaymentPill.textContent = t.minDownPayment;
+
+    if (!developmentSelect.value) {
+      developmentSelect.innerHTML = `<option value="">${t.selectDevelopment}</option>`;
+      updateDevelopmentOptions();
+    } else {
+      const firstOption = developmentSelect.querySelector('option[value=""]');
+      if (firstOption) firstOption.textContent = t.selectDevelopment;
+    }
+
+    const unitFirstOption = unitSelect.querySelector('option[value=""]');
+    if (unitFirstOption) unitFirstOption.textContent = t.selectUnit;
+
+    const termOptions = termSelect.querySelectorAll('option');
+    if (termOptions[0]) termOptions[0].textContent = t.years3;
+    if (termOptions[1]) termOptions[1].textContent = t.years5;
+    if (termOptions[2]) termOptions[2].textContent = t.years7;
+
+    rerender();
+  }
+
   function updateDevelopmentOptions() {
+    const t = translations[currentLang];
     const devs = [...new Set(rows.map((row) => clean(get(row, COL.DEVELOPMENT))))]
       .filter((dev) => ELIGIBLE_DEVELOPMENTS.includes(dev))
       .sort((a, b) => a.localeCompare(b, 'es'));
 
-    developmentSelect.innerHTML = '<option value="">Selecciona desarrollo...</option>';
+    developmentSelect.innerHTML = `<option value="">${t.selectDevelopment}</option>`;
     devs.forEach((dev) => {
       const option = document.createElement('option');
       option.value = dev;
@@ -1373,8 +1504,9 @@
   }
 
   function updateUnitOptions() {
+    const t = translations[currentLang];
     const selectedDev = clean(developmentSelect.value);
-    unitSelect.innerHTML = '<option value="">Selecciona unidad...</option>';
+    unitSelect.innerHTML = `<option value="">${t.selectUnit}</option>`;
     unitSelect.disabled = !selectedDev;
     if (!selectedDev) return;
 
@@ -1475,20 +1607,21 @@
   }
 
   function renderSummary(data, development, unit) {
+    const t = translations[currentLang];
     summaryGrid.innerHTML = [
-      ['Proyecto', development],
-      ['Unidad', unit],
-      ['Valor de la venta', formatMoney(data.price)],
-      ['Enganche', `${Number(downPaymentSelect.value).toFixed(0)}% · ${formatMoney(data.downPayment)}`],
-      ['Monto a financiar', formatMoney(data.financed)],
-      ['Pago mensual base', formatMoney(data.basePayment)]
+      [t.project, development],
+      [t.unit, unit],
+      [t.saleValue, formatMoney(data.price)],
+      [t.downPayment, `${Number(downPaymentSelect.value).toFixed(0)}% · ${formatMoney(data.downPayment)}`],
+      [t.amountToFinance, formatMoney(data.financed)],
+      [t.monthlyBasePayment, formatMoney(data.basePayment)]
     ].map(([key, value]) => `<div class="metric"><div class="k">${key}</div><div class="v">${value}</div></div>`).join('');
 
     detailGrid.innerHTML = [
-      ['Plazo meses', String(data.months)],
-      ['Interés total', formatMoney(data.totalInterest)],
-      ['Monto total pagado', formatMoney(data.totalPayments + data.downPayment)],
-      ['Prom int anual', formatPercent(data.averageAnnualInterest)]
+      [t.termMonths, String(data.months)],
+      [t.totalInterest, formatMoney(data.totalInterest)],
+      [t.totalPaid, formatMoney(data.totalPayments + data.downPayment)],
+      [t.avgAnnualInterest, formatPercent(data.averageAnnualInterest)]
     ].map(([key, value]) => `<div class="detail"><div class="k">${key}</div><div class="v">${value}</div></div>`).join('');
   }
 
@@ -1516,14 +1649,14 @@
       <table>
         <thead>
           <tr>
-            <th class="num">Periodo</th>
-            <th>Mes</th>
-            <th class="num">Disposición</th>
-            <th class="num">Balloon</th>
-            <th class="num">Interés</th>
-            <th class="num">Capital</th>
-            <th class="num">Saldo capital</th>
-            <th class="num">Pago total</th>
+            <th class="num">${translations[currentLang].period}</th>
+            <th>${translations[currentLang].month}</th>
+            <th class="num">${translations[currentLang].disposition}</th>
+            <th class="num">${translations[currentLang].balloon}</th>
+            <th class="num">${translations[currentLang].interest}</th>
+            <th class="num">${translations[currentLang].capital}</th>
+            <th class="num">${translations[currentLang].capitalBalance}</th>
+            <th class="num">${translations[currentLang].totalPayment}</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -1533,23 +1666,24 @@
 
   function renderEmptyState() {
     currentRow = null;
+    const t = translations[currentLang];
     summaryGrid.innerHTML = [
-      'Proyecto',
-      'Unidad',
-      'Valor de la venta',
-      'Enganche',
-      'Monto a financiar',
-      'Pago mensual base'
+      t.project,
+      t.unit,
+      t.saleValue,
+      t.downPayment,
+      t.amountToFinance,
+      t.monthlyBasePayment
     ].map((label) => `<div class="metric"><div class="k">${label}</div><div class="v">-</div></div>`).join('');
 
     detailGrid.innerHTML = [
-      'Plazo meses',
-      'Interés total',
-      'Monto total pagado',
-      'Prom int anual'
+      t.termMonths,
+      t.totalInterest,
+      t.totalPaid,
+      t.avgAnnualInterest
     ].map((label) => `<div class="detail"><div class="k">${label}</div><div class="v">-</div></div>`).join('');
 
-    tableWrap.innerHTML = '<div class="empty-state">Selecciona un desarrollo y una unidad para generar la tabla.</div>';
+    tableWrap.innerHTML = `<div class="empty-state">${currentLang === 'en' ? 'Select a development and a unit to generate the table.' : 'Selecciona un desarrollo y una unidad para generar la tabla.'}</div>`;
   }
 
   function rerender() {
@@ -1689,6 +1823,7 @@
     }
 
     const layout = activeLayout || normalizeLayout(defaultLayout);
+    const t = translations[currentLang];
     const development = clean(get(currentRow, COL.DEVELOPMENT));
     const unit = clean(get(currentRow, COL.UNIT));
     const price = toNumber(get(currentRow, COL.FINAL_PRICE));
@@ -1700,16 +1835,16 @@
     const logoHtml = layout.logoDataUrl ? `<img class="brand-logo" src="${escapeHtml(layout.logoDataUrl)}" alt="">` : '';
 
     const firstPageCards = [
-      ['Proyecto', development],
-      ['Unidad', unit],
-      ['Valor de la venta', formatMoney(data.price)],
-      ['Enganche', `${downPctValue.toFixed(0)}% · ${formatMoney(data.downPayment)}`],
-      ['Monto a financiar', formatMoney(data.financed)],
-      ['Pago mensual base', formatMoney(data.basePayment)],
-      ['Plazo meses', String(data.months)],
-      ['Interés total', formatMoney(data.totalInterest)],
-      ['Monto total pagado', formatMoney(data.totalPayments + data.downPayment)],
-      ['Prom int anual', formatPercent(data.averageAnnualInterest)]
+      [t.project, development],
+      [t.unit, unit],
+      [t.saleValue, formatMoney(data.price)],
+      [t.downPayment, `${downPctValue.toFixed(0)}% · ${formatMoney(data.downPayment)}`],
+      [t.amountToFinance, formatMoney(data.financed)],
+      [t.monthlyBasePayment, formatMoney(data.basePayment)],
+      [t.termMonths, String(data.months)],
+      [t.totalInterest, formatMoney(data.totalInterest)],
+      [t.totalPaid, formatMoney(data.totalPayments + data.downPayment)],
+      [t.avgAnnualInterest, formatPercent(data.averageAnnualInterest)]
     ].map(([key, value]) => `
       <div class="info-card">
         <div class="k">${escapeHtml(key)}</div>
@@ -1730,33 +1865,32 @@
             </div>
             <div class="pdf-body">
               ${isFirst ? `
-                <header class="pdf-header"><h1>Financiamiento SIMCA</h1></header>
+                <header class="pdf-header"><h1>${t.financingTitle}</h1></header>
                 <section class="info-grid">${firstPageCards}</section>
-                <div class="pdf-note">La mensualidad base se calcula como pago fijo amortizado. Si capturas un <strong>balloon</strong> en cualquier mes, ese monto se agrega como pago extraordinario a capital y el saldo se reajusta hacia adelante; la mensualidad base sigue igual y el último pago se reduce si el saldo se liquida antes.</div>
               ` : '<div class="page-spacer"></div>'}
               <section class="pdf-table-card">
-                ${isFirst ? `<div class="pdf-table-head"><h2>Tabla de amortización</h2><div>Edita la columna Balloon por mes.</div></div>` : ''}
+                ${isFirst ? `<div class="pdf-table-head"><h2>${t.amortizationTable}</h2></div>` : ''}
                 <table class="pdf-table">
                   <colgroup>
                     <col style="width:10%">
                     <col style="width:12%">
-                    <col style="width:16%">
                     <col style="width:14%">
                     <col style="width:12%">
-                    <col style="width:12%">
-                    <col style="width:14%">
                     <col style="width:10%">
+                    <col style="width:10%">
+                    <col style="width:18%">
+                    <col style="width:14%">
                   </colgroup>
                   <thead>
                     <tr>
-                      <th class="num">Periodo</th>
-                      <th>Mes</th>
-                      <th class="num">Disposición</th>
-                      <th class="num">Balloon</th>
-                      <th class="num">Interés</th>
-                      <th class="num">Capital</th>
-                      <th class="num">Saldo capital</th>
-                      <th class="num">Pago total</th>
+                      <th class="num">${t.period}</th>
+                      <th>${t.month}</th>
+                      <th class="num">${t.disposition}</th>
+                      <th class="num">${t.balloon}</th>
+                      <th class="num">${t.interest}</th>
+                      <th class="num">${t.capital}</th>
+                      <th class="num">${t.capitalBalance}</th>
+                      <th class="num">${t.totalPayment}</th>
                     </tr>
                   </thead>
                   <tbody>${renderExportTableRows(pageRows)}</tbody>
@@ -1832,15 +1966,15 @@
   .info-card{min-width:0;padding:14px 16px;border-radius:16px;background:var(--paper-soft);border:1px solid rgba(0,0,0,.03)}
   .info-card .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
   .info-card .v{margin-top:8px;font-size:18px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
-  .pdf-note{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px dashed #dbc35b;background:#fff9de;font-size:12px;line-height:1.5;color:#5d4f1a}
   .page-spacer{height:24px}
   .pdf-table-card{margin-top:14px;border-radius:18px;overflow:hidden;background:var(--paper);border:1px solid var(--line)}
   .pdf-table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;background:#f3eee3;border-bottom:1px solid var(--line)}
   .pdf-table-head h2{margin:0;font-size:16px;font-family:var(--font-heading)}
-  .pdf-table-head div{font-size:12px;color:var(--muted)}
   .pdf-table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:var(--font-table)}
-  .pdf-table th,.pdf-table td{padding:7px 6px;font-size:11px;border-bottom:1px solid #ece5d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pdf-table th{background:#1f1c18;color:#fffdf8;text-transform:uppercase;letter-spacing:.08em;text-align:left}
+  .pdf-table th,.pdf-table td{padding:7px 5px;font-size:11px;border-bottom:1px solid #ece5d8}
+  .pdf-table th{background:#1f1c18;color:#fffdf8;text-transform:uppercase;letter-spacing:.03em;text-align:left;font-size:8px;line-height:1.05;white-space:normal;overflow:visible;text-overflow:clip}
+  .pdf-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pdf-table th:nth-child(7), .pdf-table th:nth-child(8){font-size:7px}
   .pdf-table .num{text-align:right}
   .pdf-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 </style>
@@ -1910,6 +2044,13 @@
     applyLayout(event.data.layout || defaultLayout);
   });
 
+  if (langBtn) {
+    langBtn.addEventListener('click', () => {
+      currentLang = currentLang === 'es' ? 'en' : 'es';
+      applyLanguage();
+    });
+  }
+
   downloadPdfBtn.addEventListener('click', () => {
     downloadServerPdf().catch((err) => {
       window.alert(err && err.message ? err.message : 'No se pudo generar el PDF.');
@@ -1920,6 +2061,7 @@
   if (isPreviewMode) document.body.classList.add('preview-mode');
   if (isPrintPreviewMode) document.body.classList.add('print-preview-mode');
   renderEmptyState();
+  applyLanguage();
   loadLayout();
   syncAccessControls();
   loadMasterCsv();
