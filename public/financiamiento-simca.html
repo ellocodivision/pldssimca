@@ -246,26 +246,11 @@
 
   .topbar{
     display:flex;
-    justify-content:space-between;
+    justify-content:flex-end;
     gap:16px;
     align-items:flex-start;
     flex-wrap:wrap;
     margin-bottom:18px;
-  }
-
-  .title-wrap h1{
-    margin:0;
-    font-size:var(--title-size);
-    letter-spacing:.02em;
-    font-family:var(--font-heading);
-  }
-
-  .title-wrap p{
-    margin:8px 0 0;
-    color:var(--muted);
-    max-width:760px;
-    line-height:1.45;
-    font-size:var(--subtitle-size);
   }
 
   .actions{
@@ -698,9 +683,6 @@
 <body>
   <div class="page">
     <div class="topbar">
-      <div class="title-wrap">
-        <h1>Financiamiento SIMCA</h1>
-      </div>
       <div class="actions">
         <a class="link-btn" href="/simca" id="backBtn">Regresar a SIMCA</a>
         <a class="link-btn" href="/financiamiento-simca/editor" id="editorBtn" hidden>Editor PDF Martin SIMCA</a>
