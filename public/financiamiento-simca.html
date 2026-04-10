@@ -685,7 +685,6 @@
     <div class="topbar">
       <div class="title-wrap">
         <h1>Financiamiento SIMCA</h1>
-        <p>Cotizador con tabla de amortización para <strong>IPANA</strong>, <strong>SERENADA</strong>, <strong>GRAN TULUM</strong>, <strong>COSTA CARIBE</strong>, <strong>MARILA</strong> y <strong>SINGULAR JOY</strong>. El balloon se captura por mes y se suma como abono extraordinario a capital.</p>
       </div>
       <div class="actions">
         <a class="link-btn" href="/simca" id="backBtn">Regresar a SIMCA</a>
@@ -710,9 +709,7 @@
             <header class="header header-section">
               <div>
                 <h1 class="title">Financiamiento SIMCA</h1>
-                <p class="subtitle">Cotizador con tabla de amortización para IPANA, SERENADA, GRAN TULUM, COSTA CARIBE, MARILA y SINGULAR JOY. El balloon se captura por mes y se suma como abono extraordinario a capital.</p>
               </div>
-              <div class="scheme-badge"><span>Plan</span> <span id="summaryPlan">30% · 3Y</span></div>
             </header>
 
             <div class="shell">
@@ -794,11 +791,11 @@
                     </div>
                   </section>
                 </section>
-                <svg class="sheet-overlay" id="sheetOverlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
               </main>
             </div>
           </div>
         </div>
+        <svg class="sheet-overlay" id="sheetOverlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
       </div>
     </section>
   </div>
@@ -835,7 +832,6 @@
   const railTextEl = document.getElementById('railText');
   const brandLogoWrap = document.getElementById('brandLogoWrap');
   const brandLogo = document.getElementById('brandLogo');
-  const summaryPlan = document.getElementById('summaryPlan');
 
   const defaultLayout = {
     version: 4,
@@ -1294,7 +1290,6 @@
   }
 
   function renderSummary(data, development, unit) {
-    summaryPlan.textContent = `${Number(downPaymentSelect.value).toFixed(0)}% · ${data.years}Y`;
     summaryGrid.innerHTML = [
       ['Valor de la venta', formatMoney(data.price)],
       ['Enganche', `${Number(downPaymentSelect.value).toFixed(0)}% · ${formatMoney(data.downPayment)}`],
@@ -1353,7 +1348,6 @@
 
   function renderEmptyState() {
     currentRow = null;
-    summaryPlan.textContent = `${Number(downPaymentSelect.value || 30).toFixed(0)}% · ${Number(termSelect.value || 3)}Y`;
     summaryGrid.innerHTML = [
       'Valor de la venta',
       'Enganche',
