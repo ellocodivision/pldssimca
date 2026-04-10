@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Financiamiento SIMCA</title>
+<style>
+  :root{
+    --bg:#f3efe6;
+    --surface:#fffdf8;
+    --surface-soft:#f6f0e1;
+    --ink:#201d17;
+    --muted:#746b5d;
+    --line:#d8cfbf;
+    --line-strong:#c4b79f;
+    --accent:#f3d334;
+    --accent-ink:#1d1a13;
+    --shadow:0 22px 60px rgba(74, 57, 20, 0.09);
+    --danger:#b44d27;
+  }
+
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(243,211,52,.24), transparent 28%),
+      linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%);
+  }
+
+  .page{
+    max-width:1380px;
+    margin:0 auto;
+    padding:28px 18px 44px;
+  }
+
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+
+  .title-wrap h1{
+    margin:0;
+    font-size:30px;
+    letter-spacing:.02em;
+  }
+
+  .title-wrap p{
+    margin:8px 0 0;
+    color:var(--muted);
+    max-width:760px;
+    line-height:1.45;
+  }
+
+  .actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .btn,
+  .link-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:42px;
+    padding:0 16px;
+    border-radius:999px;
+    border:1px solid var(--line-strong);
+    background:rgba(255,255,255,.88);
+    color:var(--ink);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  .btn-primary{
+    background:var(--accent);
+    border-color:#2c2617;
+    color:var(--accent-ink);
+  }
+
+  .shell{
+    display:grid;
+    grid-template-columns:360px minmax(0, 1fr);
+    gap:16px;
+    align-items:start;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+  }
+
+  .sidebar{
+    padding:18px;
+    position:sticky;
+    top:18px;
+  }
+
+  .sidebar h2,
+  .content h2{
+    margin:0 0 14px;
+    font-size:18px;
+  }
+
+  .field-grid{
+    display:grid;
+    gap:12px;
+  }
+
+  .field label{
+    display:block;
+    margin-bottom:6px;
+    font-size:13px;
+    font-weight:700;
+  }
+
+  .field select,
+  .field input{
+    width:100%;
+    min-height:44px;
+    border-radius:14px;
+    border:1px solid var(--line);
+    background:#fff;
+    padding:0 14px;
+    font-size:15px;
+    color:var(--ink);
+  }
+
+  .field input[readonly]{
+    background:#f3efe7;
+    color:#5f5648;
+  }
+
+  .helper,
+  .status{
+    font-size:12px;
+    line-height:1.45;
+    color:var(--muted);
+  }
+
+  .status.error{
+    color:var(--danger);
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border-radius:999px;
+    background:#fbf5d7;
+    border:1px solid #ead577;
+    color:#4b3f12;
+    padding:7px 12px;
+    font-size:12px;
+    font-weight:700;
+  }
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .metric{
+    background:var(--surface-soft);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+  }
+
+  .metric .k{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+  }
+
+  .metric .v{
+    margin-top:8px;
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:-.02em;
+  }
+
+  .content{
+    padding:18px;
+  }
+
+  .detail-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .detail{
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    background:#fff;
+  }
+
+  .detail .k{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+  }
+
+  .detail .v{
+    margin-top:8px;
+    font-size:16px;
+    font-weight:700;
+  }
+
+  .table-card{
+    margin-top:16px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .table-head{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    padding:14px 16px;
+    background:#f3eee3;
+    border-bottom:1px solid var(--line);
+  }
+
+  .table-head h3{
+    margin:0;
+    font-size:16px;
+  }
+
+  .table-wrap{
+    width:100%;
+    overflow:auto;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1040px;
+  }
+
+  th,td{
+    padding:10px 10px;
+    border-bottom:1px solid #ece5d8;
+    font-size:13px;
+    white-space:nowrap;
+  }
+
+  th{
+    position:sticky;
+    top:0;
+    z-index:1;
+    background:#1f1c18;
+    color:#fffdf8;
+    text-align:left;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+
+  tbody tr:nth-child(even) td{
+    background:#fcfaf6;
+  }
+
+  td.num,
+  th.num{
+    text-align:right;
+  }
+
+  .balloon-input{
+    width:110px;
+    min-height:34px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    padding:0 10px;
+    text-align:right;
+    font-size:13px;
+  }
+
+  .note-box{
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px dashed #dbc35b;
+    background:#fff9de;
+    font-size:12px;
+    line-height:1.5;
+    color:#5d4f1a;
+  }
+
+  .empty-state{
+    padding:26px 18px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+
+  @media (max-width:1180px){
+    .shell{grid-template-columns:1fr}
+    .sidebar{position:relative;top:0}
+    .summary-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
+    .detail-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
+  }
+
+  @media (max-width:680px){
+    .page{padding:18px 12px 28px}
+    .title-wrap h1{font-size:24px}
+    .summary-grid,
+    .detail-grid{grid-template-columns:1fr}
+    .content,
+    .sidebar{padding:14px}
+  }
+
+  @media print{
+    body{background:#fff}
+    .topbar,
+    .sidebar{display:none}
+    .shell{display:block}
+    .content{padding:0;border:none;box-shadow:none}
+    .table-card{border-radius:0;border:none}
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1>Financiamiento SIMCA</h1>
+        <p>Cotizador con tabla de amortización para <strong>IPANA</strong>, <strong>SERENADA</strong>, <strong>GRAN TULUM</strong>, <strong>COSTA CARIBE</strong>, <strong>MARILA</strong> y <strong>SINGULAR JOY</strong>. El balloon se captura por mes y se suma como abono extraordinario a capital.</p>
+      </div>
+      <div class="actions">
+        <a class="link-btn" href="/simca">Regresar a SIMCA</a>
+        <button class="btn btn-primary" type="button" id="printBtn">Imprimir</button>
+      </div>
+    </div>
+
+    <div class="shell">
+      <aside class="card sidebar">
+        <h2>Parámetros</h2>
+        <div class="field-grid">
+          <div class="field">
+            <label for="developmentSelect">Desarrollo</label>
+            <select id="developmentSelect">
+              <option value="">Selecciona desarrollo...</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="unitSelect">Unidad</label>
+            <select id="unitSelect" disabled>
+              <option value="">Selecciona unidad...</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="downPaymentSelect">Enganche</label>
+            <select id="downPaymentSelect"></select>
+          </div>
+          <div class="field">
+            <label for="termSelect">Plazo</label>
+            <select id="termSelect">
+              <option value="3">3 años</option>
+              <option value="5">5 años</option>
+              <option value="7">7 años</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rateInput">Tasa anual</label>
+            <input id="rateInput" type="text" value="9.0%" readonly>
+          </div>
+          <div class="field">
+            <label for="startDateInput">Fecha inicio</label>
+            <input id="startDateInput" type="text" readonly>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="pill">USD</span>
+          <span class="pill">Enganche mínimo 30%</span>
+        </div>
+        <p class="helper" style="margin:14px 0 0;">Asumí tasa fija anual de <strong>9%</strong> porque es la que aparece en tus ejemplos y el CSV no trae un esquema homogéneo para estos 6 desarrollos.</p>
+        <p id="status" class="status" style="margin:12px 0 0;">Cargando CSV maestro...</p>
+      </aside>
+
+      <main class="card content">
+        <h2>Resumen</h2>
+        <div id="summaryGrid" class="summary-grid">
+          <div class="metric"><div class="k">Valor de la venta</div><div class="v">-</div></div>
+          <div class="metric"><div class="k">Enganche</div><div class="v">-</div></div>
+          <div class="metric"><div class="k">Monto a financiar</div><div class="v">-</div></div>
+          <div class="metric"><div class="k">Pago mensual base</div><div class="v">-</div></div>
+        </div>
+
+        <div id="detailGrid" class="detail-grid">
+          <div class="detail"><div class="k">Proyecto</div><div class="v">-</div></div>
+          <div class="detail"><div class="k">Unidad</div><div class="v">-</div></div>
+          <div class="detail"><div class="k">Plazo meses</div><div class="v">-</div></div>
+          <div class="detail"><div class="k">Interés total</div><div class="v">-</div></div>
+          <div class="detail"><div class="k">Monto total pagado</div><div class="v">-</div></div>
+          <div class="detail"><div class="k">Prom int anual</div><div class="v">-</div></div>
+        </div>
+
+        <div class="note-box">
+          La mensualidad base se calcula como pago fijo amortizado. Si capturas un <strong>balloon</strong> en cualquier mes, ese monto se agrega como pago extraordinario a capital y el saldo se reajusta hacia adelante; la mensualidad base sigue igual y el último pago se reduce si el saldo se liquida antes.
+        </div>
+
+        <section class="table-card">
+          <div class="table-head">
+            <h3>Tabla de amortización</h3>
+            <div class="helper">Edita la columna <strong>Balloon</strong> por mes.</div>
+          </div>
+          <div id="tableWrap" class="table-wrap">
+            <div class="empty-state">Selecciona un desarrollo y una unidad para generar la tabla.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+<script>
+  const ELIGIBLE_DEVELOPMENTS = [
+    'IPANA',
+    'SERENADA',
+    'GRAN TULUM',
+    'COSTA CARIBE',
+    'MARILA',
+    'SINGULAR JOY'
+  ];
+  const ANNUAL_RATE = 0.09;
+  const CURRENCY = 'USD';
+
+  const developmentSelect = document.getElementById('developmentSelect');
+  const unitSelect = document.getElementById('unitSelect');
+  const downPaymentSelect = document.getElementById('downPaymentSelect');
+  const termSelect = document.getElementById('termSelect');
+  const startDateInput = document.getElementById('startDateInput');
+  const statusEl = document.getElementById('status');
+  const summaryGrid = document.getElementById('summaryGrid');
+  const detailGrid = document.getElementById('detailGrid');
+  const tableWrap = document.getElementById('tableWrap');
+  const printBtn = document.getElementById('printBtn');
+
+  const COL = {
+    DEVELOPMENT: 3,
+    UNIT: 4,
+    FINAL_PRICE: 11
+  };
+
+  let rows = [];
+  let currentRow = null;
+  let balloonValues = {};
+
+  const startDate = new Date();
+  startDate.setDate(1);
+  startDateInput.value = formatDateLabel(startDate);
+
+  for (let pct = 30; pct <= 90; pct += 5) {
+    const option = document.createElement('option');
+    option.value = String(pct);
+    option.textContent = `${pct}%`;
+    if (pct === 30) option.selected = true;
+    downPaymentSelect.appendChild(option);
+  }
+
+  function parseCsvLine(line) {
+    const out = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const ch = line[i];
+      const next = line[i + 1];
+      if (ch === '"' && inQuotes && next === '"') {
+        current += '"';
+        i += 1;
+      } else if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        out.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    out.push(current);
+    return out;
+  }
+
+  function parseCsvText(text) {
+    const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
+    return lines.map(parseCsvLine);
+  }
+
+  function clean(value) {
+    return String(value || '').trim();
+  }
+
+  function normalizeText(value) {
+    return clean(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase();
+  }
+
+  function get(row, index1) {
+    return row[index1 - 1] || '';
+  }
+
+  function toNumber(value) {
+    const parsed = parseFloat(String(value || '').replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function formatMoney(value) {
+    return value.toLocaleString('en-US', {
+      style: 'currency',
+      currency: CURRENCY,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function formatMoney0(value) {
+    return value.toLocaleString('en-US', {
+      style: 'currency',
+      currency: CURRENCY,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+  }
+
+  function formatPercent(value) {
+    return `${value.toFixed(2)}%`;
+  }
+
+  function formatMonthLabel(date) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      year: '2-digit'
+    }).formatToParts(date);
+    const month = (parts.find((part) => part.type === 'month') || {}).value || '';
+    const year = (parts.find((part) => part.type === 'year') || {}).value || '';
+    return `${month.toLowerCase()}-${year}`;
+  }
+
+  function formatDateLabel(date) {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yy = String(date.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  }
+
+  function addMonths(date, months) {
+    const next = new Date(date.getTime());
+    next.setMonth(next.getMonth() + months);
+    return next;
+  }
+
+  function setStatus(message, isError) {
+    statusEl.textContent = message;
+    statusEl.classList.toggle('error', Boolean(isError));
+  }
+
+  function updateDevelopmentOptions() {
+    const devs = [...new Set(rows.map((row) => clean(get(row, COL.DEVELOPMENT))))]
+      .filter((dev) => ELIGIBLE_DEVELOPMENTS.includes(dev))
+      .sort((a, b) => a.localeCompare(b, 'es'));
+
+    developmentSelect.innerHTML = '<option value="">Selecciona desarrollo...</option>';
+    devs.forEach((dev) => {
+      const option = document.createElement('option');
+      option.value = dev;
+      option.textContent = dev;
+      developmentSelect.appendChild(option);
+    });
+  }
+
+  function updateUnitOptions() {
+    const selectedDev = clean(developmentSelect.value);
+    unitSelect.innerHTML = '<option value="">Selecciona unidad...</option>';
+    unitSelect.disabled = !selectedDev;
+    if (!selectedDev) return;
+
+    const units = rows
+      .filter((row) => clean(get(row, COL.DEVELOPMENT)) === selectedDev)
+      .map((row) => clean(get(row, COL.UNIT)))
+      .filter(Boolean);
+
+    [...new Set(units)]
+      .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+      .forEach((unit) => {
+        const option = document.createElement('option');
+        option.value = unit;
+        option.textContent = unit;
+        unitSelect.appendChild(option);
+      });
+  }
+
+  function findCurrentRow() {
+    const selectedDev = clean(developmentSelect.value);
+    const selectedUnit = clean(unitSelect.value);
+    if (!selectedDev || !selectedUnit) return null;
+    return rows.find((row) => clean(get(row, COL.DEVELOPMENT)) === selectedDev && clean(get(row, COL.UNIT)) === selectedUnit) || null;
+  }
+
+  function getBalloonValue(periodNumber) {
+    const raw = balloonValues[String(periodNumber)] || '';
+    const value = toNumber(raw);
+    return value > 0 ? value : 0;
+  }
+
+  function monthlyPayment(principal, months, monthlyRate) {
+    if (principal <= 0 || months <= 0) return 0;
+    if (monthlyRate <= 0) return principal / months;
+    return principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
+  }
+
+  function buildSchedule(price, downPct, years) {
+    const downPayment = price * downPct;
+    const financed = Math.max(0, price - downPayment);
+    const months = years * 12;
+    const monthlyRate = ANNUAL_RATE / 12;
+    const basePayment = monthlyPayment(financed, months, monthlyRate);
+    const schedule = [{
+      period: 1,
+      monthLabel: formatMonthLabel(startDate),
+      disposition: financed,
+      balloon: 0,
+      interest: 0,
+      capital: 0,
+      balance: financed,
+      totalPayment: 0
+    }];
+
+    let balance = financed;
+    let totalInterest = 0;
+    let totalPayments = 0;
+
+    for (let monthIndex = 1; monthIndex <= months; monthIndex += 1) {
+      if (balance <= 0.000001) break;
+
+      const interest = balance * monthlyRate;
+      const scheduledPayment = Math.min(basePayment, balance + interest);
+      const principalFromPayment = Math.max(0, scheduledPayment - interest);
+      const requestedBalloon = getBalloonValue(monthIndex);
+      const maxBalloon = Math.max(0, balance - principalFromPayment);
+      const actualBalloon = Math.min(requestedBalloon, maxBalloon);
+      const capital = principalFromPayment + actualBalloon;
+      balance = Math.max(0, balance - capital);
+
+      totalInterest += interest;
+      totalPayments += scheduledPayment + actualBalloon;
+
+      schedule.push({
+        period: monthIndex + 1,
+        monthLabel: formatMonthLabel(addMonths(startDate, monthIndex)),
+        disposition: 0,
+        balloon: actualBalloon,
+        interest,
+        capital,
+        balance,
+        totalPayment: scheduledPayment + actualBalloon
+      });
+    }
+
+    return {
+      price,
+      downPayment,
+      financed,
+      years,
+      months,
+      basePayment,
+      totalInterest,
+      totalPayments,
+      averageAnnualInterest: financed > 0 && years > 0 ? (totalInterest / (financed * years)) * 100 : 0,
+      schedule
+    };
+  }
+
+  function renderSummary(data, development, unit) {
+    summaryGrid.innerHTML = [
+      ['Valor de la venta', formatMoney(data.price)],
+      ['Enganche', `${Number(downPaymentSelect.value).toFixed(0)}% · ${formatMoney(data.downPayment)}`],
+      ['Monto a financiar', formatMoney(data.financed)],
+      ['Pago mensual base', formatMoney(data.basePayment)]
+    ].map(([key, value]) => `<div class="metric"><div class="k">${key}</div><div class="v">${value}</div></div>`).join('');
+
+    detailGrid.innerHTML = [
+      ['Proyecto', development],
+      ['Unidad', unit],
+      ['Plazo meses', String(data.months)],
+      ['Interés total', formatMoney(data.totalInterest)],
+      ['Monto total pagado', formatMoney(data.totalPayments + data.downPayment)],
+      ['Prom int anual', formatPercent(data.averageAnnualInterest)]
+    ].map(([key, value]) => `<div class="detail"><div class="k">${key}</div><div class="v">${value}</div></div>`).join('');
+  }
+
+  function renderTable(data) {
+    const rowsHtml = data.schedule.map((row) => {
+      const balloonEditable = row.period === 1
+        ? '-'
+        : `<input class="balloon-input" data-period="${row.period - 1}" type="text" inputmode="decimal" value="${balloonValues[String(row.period - 1)] || ''}" placeholder="0">`;
+
+      return `
+        <tr>
+          <td class="num">${row.period}</td>
+          <td>${row.monthLabel}</td>
+          <td class="num">${row.disposition ? formatMoney0(row.disposition) : '-'}</td>
+          <td class="num">${balloonEditable}</td>
+          <td class="num">${row.interest ? formatMoney0(row.interest) : '-'}</td>
+          <td class="num">${row.capital ? formatMoney0(row.capital) : '-'}</td>
+          <td class="num">${formatMoney0(row.balance)}</td>
+          <td class="num">${row.totalPayment ? formatMoney0(row.totalPayment) : '-'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    tableWrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th class="num">Periodo</th>
+            <th>Mes</th>
+            <th class="num">Disposición</th>
+            <th class="num">Balloon</th>
+            <th class="num">Interés</th>
+            <th class="num">Capital</th>
+            <th class="num">Saldo capital</th>
+            <th class="num">Pago total</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    `;
+  }
+
+  function renderEmptyState() {
+    currentRow = null;
+    summaryGrid.innerHTML = [
+      'Valor de la venta',
+      'Enganche',
+      'Monto a financiar',
+      'Pago mensual base'
+    ].map((label) => `<div class="metric"><div class="k">${label}</div><div class="v">-</div></div>`).join('');
+
+    detailGrid.innerHTML = [
+      'Proyecto',
+      'Unidad',
+      'Plazo meses',
+      'Interés total',
+      'Monto total pagado',
+      'Prom int anual'
+    ].map((label) => `<div class="detail"><div class="k">${label}</div><div class="v">-</div></div>`).join('');
+
+    tableWrap.innerHTML = '<div class="empty-state">Selecciona un desarrollo y una unidad para generar la tabla.</div>';
+  }
+
+  function rerender() {
+    currentRow = findCurrentRow();
+    if (!currentRow) {
+      renderEmptyState();
+      return;
+    }
+
+    const development = clean(get(currentRow, COL.DEVELOPMENT));
+    const unit = clean(get(currentRow, COL.UNIT));
+    const price = toNumber(get(currentRow, COL.FINAL_PRICE));
+    const downPct = Number(downPaymentSelect.value) / 100;
+    const years = Number(termSelect.value);
+    const data = buildSchedule(price, downPct, years);
+
+    renderSummary(data, development, unit);
+    renderTable(data);
+  }
+
+  function resetSelection() {
+    balloonValues = {};
+    unitSelect.value = '';
+    renderEmptyState();
+  }
+
+  async function loadMasterCsv() {
+    try {
+      const response = await fetch('/api/roi/master-csv', { credentials: 'same-origin' });
+      if (!response.ok) {
+        setStatus('No se encontró el CSV maestro. Pídele a un gerente que lo actualice desde el home de SIMCA.', true);
+        return;
+      }
+      const text = await response.text();
+      const parsed = parseCsvText(text);
+      const dataRows = parsed.slice(1).filter((row) => {
+        const development = clean(get(row, COL.DEVELOPMENT));
+        const unit = clean(get(row, COL.UNIT));
+        const finalPrice = toNumber(get(row, COL.FINAL_PRICE));
+        return ELIGIBLE_DEVELOPMENTS.includes(development) && unit && finalPrice > 0;
+      });
+
+      rows = dataRows;
+      updateDevelopmentOptions();
+      setStatus(`CSV maestro cargado. ${rows.length} unidades disponibles en los 6 desarrollos del módulo.`, false);
+    } catch (error) {
+      setStatus('No se pudo cargar el CSV maestro automáticamente.', true);
+    }
+  }
+
+  developmentSelect.addEventListener('change', () => {
+    balloonValues = {};
+    updateUnitOptions();
+    resetSelection();
+  });
+
+  unitSelect.addEventListener('change', () => {
+    balloonValues = {};
+    rerender();
+  });
+
+  downPaymentSelect.addEventListener('change', rerender);
+  termSelect.addEventListener('change', rerender);
+
+  tableWrap.addEventListener('input', (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.classList.contains('balloon-input')) return;
+    const period = input.getAttribute('data-period');
+    if (!period) return;
+    balloonValues[period] = input.value;
+    rerender();
+    const nextInput = tableWrap.querySelector(`.balloon-input[data-period="${period}"]`);
+    if (nextInput) {
+      const pos = Math.min(input.selectionStart == null ? nextInput.value.length : input.selectionStart, nextInput.value.length);
+      nextInput.focus();
+      nextInput.setSelectionRange(pos, pos);
+    }
+  });
+
+  printBtn.addEventListener('click', () => window.print());
+
+  renderEmptyState();
+  loadMasterCsv();
+</script>
+</body>
+</html>

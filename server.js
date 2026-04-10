@@ -3744,6 +3744,12 @@ function renderSimcaHome(req, res, options) {
           <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.</p>
         </a>
         ${tablaPagosEditorCard}`;
+  const financiamientoCard = `
+        <a class="card" href="/financiamiento-simca">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Financiamiento SIMCA</h2>
+          <p class="desc">Cotiza mensualidades y tabla de amortización con balloons por unidad.</p>
+        </a>`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -3863,6 +3869,7 @@ function renderSimcaHome(req, res, options) {
           <h2 class="name">Generador ROI</h2>
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
+        ${financiamientoCard}
         ${brokersCard}
         ${presentacionesCard}
         ${tablaPagosCard}
@@ -3983,6 +3990,7 @@ app.use('/legacy', requireInternalUser);
 app.use('/generador-faes', requireInternalUser);
 app.use('/plds', requireInternalUser);
 app.use('/generador-roi', requireInternalUser);
+app.use('/financiamiento-simca', requireInternalUser);
 app.use('/tabla-pagos', requireInternalUser);
 app.use('/form', requireInternalUser);
 app.use('/form-nacional', requireInternalUser);
@@ -4082,6 +4090,10 @@ app.get('/plds/cliente-nacional-persona-moral', (req, res) => {
 
 app.get('/generador-roi', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'generador-roi.html'));
+});
+
+app.get('/financiamiento-simca', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'financiamiento-simca.html'));
 });
 
 app.get('/api/session-info', requireAuth, (req, res) => {
