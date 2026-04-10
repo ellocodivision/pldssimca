@@ -1088,6 +1088,7 @@
   let rows = [];
   let currentRow = null;
   let balloonValues = {};
+  let activeLayout = null;
 
   const startDate = new Date();
   startDate.setDate(1);
@@ -1266,6 +1267,7 @@
 
   function applyLayout(layoutInput) {
     const layout = normalizeLayout(layoutInput);
+    activeLayout = layout;
     const root = document.documentElement;
     root.style.setProperty('--print-scale', String(layout.printScale));
     root.style.setProperty('--print-margin-mm', String(layout.pageMarginMm));
@@ -1469,6 +1471,8 @@
 
   function renderSummary(data, development, unit) {
     summaryGrid.innerHTML = [
+      ['Proyecto', development],
+      ['Unidad', unit],
       ['Valor de la venta', formatMoney(data.price)],
       ['Enganche', `${Number(downPaymentSelect.value).toFixed(0)}% · ${formatMoney(data.downPayment)}`],
       ['Monto a financiar', formatMoney(data.financed)],
@@ -1476,8 +1480,6 @@
     ].map(([key, value]) => `<div class="metric"><div class="k">${key}</div><div class="v">${value}</div></div>`).join('');
 
     detailGrid.innerHTML = [
-      ['Proyecto', development],
-      ['Unidad', unit],
       ['Plazo meses', String(data.months)],
       ['Interés total', formatMoney(data.totalInterest)],
       ['Monto total pagado', formatMoney(data.totalPayments + data.downPayment)],
@@ -1527,6 +1529,8 @@
   function renderEmptyState() {
     currentRow = null;
     summaryGrid.innerHTML = [
+      'Proyecto',
+      'Unidad',
       'Valor de la venta',
       'Enganche',
       'Monto a financiar',
@@ -1534,8 +1538,6 @@
     ].map((label) => `<div class="metric"><div class="k">${label}</div><div class="v">-</div></div>`).join('');
 
     detailGrid.innerHTML = [
-      'Proyecto',
-      'Unidad',
       'Plazo meses',
       'Interés total',
       'Monto total pagado',
@@ -1622,15 +1624,222 @@
     }
   });
 
+  function renderExportOverlayLines(lines) {
+    return (lines || []).map((line) => {
+      const x1 = line.x;
+      const y1 = line.y;
+      const x2 = line.orientation === 'vertical' ? line.x : clamp(line.x + line.length, 0, 100);
+      const y2 = line.orientation === 'vertical' ? clamp(line.y + line.length, 0, 100) : line.y;
+      return [
+        '<line',
+        ' x1="', x1, '%"',
+        ' y1="', y1, '%"',
+        ' x2="', x2, '%"',
+        ' y2="', y2, '%"',
+        ' stroke="', escapeHtml(line.color), '"',
+        ' stroke-width="', line.width, '"',
+        ' stroke-opacity="', line.opacity, '"',
+        ' vector-effect="non-scaling-stroke"',
+        ' stroke-linecap="square"',
+        ' />'
+      ].join('');
+    }).join('');
+  }
+
+  function chunkRows(rowsInput, firstPageCount, nextPageCount) {
+    const out = [];
+    const rows = rowsInput.slice();
+    if (!rows.length) return out;
+    out.push(rows.splice(0, firstPageCount));
+    while (rows.length) out.push(rows.splice(0, nextPageCount));
+    return out;
+  }
+
+  function renderExportTableRows(rowsInput) {
+    return rowsInput.map((row) => `
+      <tr>
+        <td class="num">${row.period}</td>
+        <td>${escapeHtml(row.monthLabel)}</td>
+        <td class="num">${row.disposition ? formatMoney0(row.disposition) : '-'}</td>
+        <td class="num">${row.balloon ? formatMoney0(row.balloon) : '-'}</td>
+        <td class="num">${row.interest ? formatMoney0(row.interest) : '-'}</td>
+        <td class="num">${row.capital ? formatMoney0(row.capital) : '-'}</td>
+        <td class="num">${formatMoney0(row.balance)}</td>
+        <td class="num">${row.totalPayment ? formatMoney0(row.totalPayment) : '-'}</td>
+      </tr>
+    `).join('');
+  }
+
   function buildPdfSnapshotHtml() {
-    const clone = document.documentElement.cloneNode(true);
-    const body = clone.querySelector('body');
-    if (body) {
-      body.classList.remove('preview-mode', 'print-preview-mode');
-      body.classList.add('pdf-export');
+    currentRow = findCurrentRow();
+    if (!currentRow) {
+      const clone = document.documentElement.cloneNode(true);
+      const body = clone.querySelector('body');
+      if (body) {
+        body.classList.remove('preview-mode', 'print-preview-mode');
+        body.classList.add('pdf-export');
+      }
+      clone.querySelectorAll('script').forEach((node) => node.remove());
+      return '<!doctype html>\n' + clone.outerHTML;
     }
-    clone.querySelectorAll('script').forEach((node) => node.remove());
-    return '<!doctype html>\n' + clone.outerHTML;
+
+    const layout = activeLayout || normalizeLayout(defaultLayout);
+    const development = clean(get(currentRow, COL.DEVELOPMENT));
+    const unit = clean(get(currentRow, COL.UNIT));
+    const price = toNumber(get(currentRow, COL.FINAL_PRICE));
+    const downPctValue = Number(downPaymentSelect.value);
+    const years = Number(termSelect.value);
+    const data = buildSchedule(price, downPctValue / 100, years);
+    const overlaySvg = renderExportOverlayLines(layout.lines || []);
+    const schedulePages = chunkRows(data.schedule, 8, 24);
+    const logoHtml = layout.logoDataUrl ? `<img class="brand-logo" src="${escapeHtml(layout.logoDataUrl)}" alt="">` : '';
+
+    const firstPageCards = [
+      ['Proyecto', development],
+      ['Unidad', unit],
+      ['Valor de la venta', formatMoney(data.price)],
+      ['Enganche', `${downPctValue.toFixed(0)}% · ${formatMoney(data.downPayment)}`],
+      ['Monto a financiar', formatMoney(data.financed)],
+      ['Pago mensual base', formatMoney(data.basePayment)],
+      ['Plazo meses', String(data.months)],
+      ['Interés total', formatMoney(data.totalInterest)],
+      ['Monto total pagado', formatMoney(data.totalPayments + data.downPayment)],
+      ['Prom int anual', formatPercent(data.averageAnnualInterest)]
+    ].map(([key, value]) => `
+      <div class="info-card">
+        <div class="k">${escapeHtml(key)}</div>
+        <div class="v">${escapeHtml(value)}</div>
+      </div>
+    `).join('');
+
+    const pagesHtml = schedulePages.map((pageRows, index) => {
+      const isFirst = index === 0;
+      return `
+        <section class="pdf-page">
+          <aside class="pdf-rail">
+            <div class="pdf-rail-accent"><span>${escapeHtml(layout.railText || 'simca.mx')}</span></div>
+          </aside>
+          <div class="pdf-main">
+            <div class="pdf-top">
+              <div class="pdf-logo-wrap ${layout.logoDataUrl ? '' : 'is-empty'}">${logoHtml}</div>
+            </div>
+            <div class="pdf-body">
+              ${isFirst ? `
+                <header class="pdf-header"><h1>Financiamiento SIMCA</h1></header>
+                <section class="info-grid">${firstPageCards}</section>
+                <div class="pdf-note">La mensualidad base se calcula como pago fijo amortizado. Si capturas un <strong>balloon</strong> en cualquier mes, ese monto se agrega como pago extraordinario a capital y el saldo se reajusta hacia adelante; la mensualidad base sigue igual y el último pago se reduce si el saldo se liquida antes.</div>
+              ` : '<div class="page-spacer"></div>'}
+              <section class="pdf-table-card">
+                ${isFirst ? `<div class="pdf-table-head"><h2>Tabla de amortización</h2><div>Edita la columna Balloon por mes.</div></div>` : ''}
+                <table class="pdf-table">
+                  <colgroup>
+                    <col style="width:10%">
+                    <col style="width:12%">
+                    <col style="width:16%">
+                    <col style="width:14%">
+                    <col style="width:12%">
+                    <col style="width:12%">
+                    <col style="width:14%">
+                    <col style="width:10%">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th class="num">Periodo</th>
+                      <th>Mes</th>
+                      <th class="num">Disposición</th>
+                      <th class="num">Balloon</th>
+                      <th class="num">Interés</th>
+                      <th class="num">Capital</th>
+                      <th class="num">Saldo capital</th>
+                      <th class="num">Pago total</th>
+                    </tr>
+                  </thead>
+                  <tbody>${renderExportTableRows(pageRows)}</tbody>
+                </table>
+              </section>
+            </div>
+          </div>
+          <svg class="pdf-overlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">${overlaySvg}</svg>
+        </section>
+      `;
+    }).join('');
+
+    return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Financiamiento SIMCA PDF</title>
+<style>
+  :root{
+    --page-width:816px;
+    --page-height:1056px;
+    --rail-width:${layout.railWidth}px;
+    --brand-top-height:${layout.brandTopHeight}px;
+    --rail-offset-y:${layout.railOffsetY}px;
+    --rail-height:${layout.railHeight}px;
+    --logo-width:${layout.logoWidth}px;
+    --logo-height:${layout.logoHeight}px;
+    --logo-offset-x:${layout.logoOffsetX}px;
+    --logo-offset-y:${layout.logoOffsetY}px;
+    --surface:${layout.surfaceColor};
+    --paper:${layout.paperColor};
+    --paper-soft:${layout.paperSoftColor};
+    --ink:${layout.textColor};
+    --title-color:${layout.titleColor};
+    --muted:${layout.mutedColor};
+    --line:${layout.lineColor};
+    --rail-accent:${layout.railAccentColor};
+    --rail-text:${layout.railTextColor};
+    --font-body:${layout.bodyFontFamily};
+    --font-heading:${layout.headingFontFamily};
+    --font-table:${layout.tableFontFamily};
+    --title-size:${layout.titleSize}px;
+  }
+  *{box-sizing:border-box}
+  @page{size:portrait;margin:0}
+  html,body{margin:0;padding:0;background:#fff;font-family:var(--font-body);color:var(--ink)}
+  .pdf-page{
+    width:var(--page-width);
+    min-height:var(--page-height);
+    display:grid;
+    grid-template-columns:var(--rail-width) minmax(0, 1fr);
+    position:relative;
+    overflow:hidden;
+    background:var(--surface);
+    page-break-after:always;
+  }
+  .pdf-page:last-child{page-break-after:auto}
+  .pdf-rail{position:relative;background:var(--surface);min-height:var(--page-height)}
+  .pdf-rail::after{content:"";position:absolute;top:0;right:0;width:1px;height:100%;background:rgba(141,135,119,.92)}
+  .pdf-rail-accent{position:absolute;top:var(--rail-offset-y);left:0;width:var(--rail-width);height:var(--rail-height);background:var(--rail-accent);display:flex;align-items:center;justify-content:center}
+  .pdf-rail-accent span{writing-mode:vertical-rl;text-orientation:mixed;font-size:${layout.railTextSize}px;color:var(--rail-text)}
+  .pdf-main{display:grid;grid-template-rows:var(--brand-top-height) minmax(0,1fr);min-height:var(--page-height);background:var(--surface)}
+  .pdf-top{display:flex;align-items:center;justify-content:center;background:var(--paper);position:relative}
+  .pdf-top::before{content:"";position:absolute;left:0;right:0;top:var(--rail-offset-y);height:1px;background:rgba(141,135,119,.92)}
+  .pdf-logo-wrap{width:min(100%, var(--logo-width));height:var(--logo-height);display:flex;align-items:center;justify-content:center;transform:translate(var(--logo-offset-x), var(--logo-offset-y))}
+  .pdf-logo-wrap.is-empty{opacity:0}
+  .brand-logo{max-width:100%;max-height:100%;object-fit:contain;display:block}
+  .pdf-body{background:var(--paper);padding:24px 18px 18px;overflow:hidden}
+  .pdf-header h1{margin:0 0 18px;font-family:var(--font-heading);font-size:var(--title-size);line-height:1;color:var(--title-color)}
+  .info-grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+  .info-card{min-width:0;padding:14px 16px;border-radius:16px;background:var(--paper-soft);border:1px solid rgba(0,0,0,.03)}
+  .info-card .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .info-card .v{margin-top:8px;font-size:18px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+  .pdf-note{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px dashed #dbc35b;background:#fff9de;font-size:12px;line-height:1.5;color:#5d4f1a}
+  .page-spacer{height:24px}
+  .pdf-table-card{margin-top:14px;border-radius:18px;overflow:hidden;background:var(--paper);border:1px solid var(--line)}
+  .pdf-table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;background:#f3eee3;border-bottom:1px solid var(--line)}
+  .pdf-table-head h2{margin:0;font-size:16px;font-family:var(--font-heading)}
+  .pdf-table-head div{font-size:12px;color:var(--muted)}
+  .pdf-table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:var(--font-table)}
+  .pdf-table th,.pdf-table td{padding:7px 6px;font-size:11px;border-bottom:1px solid #ece5d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pdf-table th{background:#1f1c18;color:#fffdf8;text-transform:uppercase;letter-spacing:.08em;text-align:left}
+  .pdf-table .num{text-align:right}
+  .pdf-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+</style>
+</head>
+<body>${pagesHtml}</body>
+</html>`;
   }
 
   async function downloadServerPdf() {
