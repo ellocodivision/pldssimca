@@ -284,7 +284,7 @@
 
   .shell{
     display:grid;
-    grid-template-columns:minmax(300px, 360px) minmax(0, 1fr);
+    grid-template-columns:minmax(280px, 340px) minmax(0, 1fr);
     gap:0;
     align-items:start;
     padding:var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
@@ -407,6 +407,14 @@
     gap:var(--content-gap);
     min-width:0;
     overflow:hidden;
+  }
+
+  .summary-section,
+  .payments-section,
+  .table-card,
+  .note-box{
+    min-width:0;
+    max-width:100%;
   }
 
   .detail-grid{
@@ -587,7 +595,7 @@
       padding:0;
       margin:0 auto;
       background:var(--surface);
-      overflow:visible;
+      overflow:hidden;
     }
     .sheet{
       min-height:1056px;
@@ -656,6 +664,7 @@
     .sidebar{top:0}
     th{position:static}
     tr, td, th{break-inside:avoid; page-break-inside:avoid}
+    .sheet-overlay{display:block}
   }
 
   body.preview-mode .card,
@@ -1496,10 +1505,7 @@
   function buildPdfSnapshotHtml() {
     const clone = document.documentElement.cloneNode(true);
     const body = clone.querySelector('body');
-    if (body) {
-      body.classList.remove('preview-mode');
-      body.classList.add('print-preview-mode');
-    }
+    if (body) body.classList.remove('preview-mode', 'print-preview-mode');
     clone.querySelectorAll('script').forEach((node) => node.remove());
     return '<!doctype html>\n' + clone.outerHTML;
   }
