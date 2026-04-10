@@ -89,7 +89,7 @@
     background:transparent;
     border:none;
     box-shadow:none;
-    overflow:hidden;
+    overflow:visible;
     position:relative;
   }
 
@@ -101,6 +101,48 @@
   body.print-preview-mode .sheet{
     min-height:1056px;
     box-shadow:0 0 0 1px rgba(145,145,145,.35);
+  }
+
+  body.preview-mode .brand-frame,
+  body.print-preview-mode .brand-frame{
+    display:grid;
+    grid-template-columns:var(--rail-width) minmax(0, 1fr);
+    background:var(--surface);
+  }
+
+  body.print-preview-mode .brand-frame{
+    min-height:1056px;
+  }
+
+  body.preview-mode .brand-rail,
+  body.print-preview-mode .brand-rail{
+    display:block;
+    position:relative;
+    background:var(--surface);
+  }
+
+  body.print-preview-mode .brand-rail{
+    min-height:1056px;
+  }
+
+  body.preview-mode .brand-main,
+  body.print-preview-mode .brand-main{
+    display:grid;
+    grid-template-rows:var(--brand-top-height) minmax(0, 1fr);
+    min-height:100%;
+    background:var(--surface);
+    margin-left:0;
+  }
+
+  body.preview-mode .brand-top,
+  body.print-preview-mode .brand-top{
+    display:flex;
+  }
+
+  body.preview-mode .content-shell,
+  body.print-preview-mode .content-shell{
+    min-height:calc(1056px - var(--brand-top-height));
+    background:var(--paper);
   }
 
   .brand-frame{
@@ -128,8 +170,6 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    border-top:1px solid rgba(141,135,119,.92);
-    border-bottom:1px solid rgba(141,135,119,.92);
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
@@ -155,7 +195,6 @@
     overflow:hidden;
     height:var(--brand-top-height);
     background:var(--paper);
-    border-bottom:1px solid var(--line);
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
@@ -559,39 +598,74 @@
   }
 
   @media print{
+    @page{
+      size:portrait;
+      margin:calc(var(--print-margin-mm) * 1mm);
+    }
+    html, body{
+      background:var(--surface);
+      width:100%;
+      min-height:100%;
+    }
     body{background:#fff}
     .topbar{display:none}
-    .shell{display:block;padding:0}
-    .content{padding:0;border:none;box-shadow:none}
-    .table-card{border-radius:0;border:none}
-    .brand-rail{display:block}
+    .page{
+      max-width:none;
+      width:816px;
+      min-height:1056px;
+      padding:0;
+      margin:0 auto;
+      background:var(--surface);
+      overflow:visible;
+    }
+    .sheet{
+      min-height:auto;
+      background:var(--surface);
+      overflow:visible;
+      box-shadow:none;
+    }
+    .brand-frame{
+      display:grid;
+      grid-template-columns:var(--rail-width) minmax(0, 1fr);
+      min-height:auto;
+      background:var(--surface);
+      overflow:visible;
+    }
+    .brand-rail{
+      display:block;
+      position:relative;
+      background:var(--surface);
+    }
+    .brand-main{
+      display:grid;
+      grid-template-rows:var(--brand-top-height) minmax(0, 1fr);
+      min-height:auto;
+      background:var(--surface);
+      margin-left:0;
+      overflow:visible;
+    }
     .brand-top{display:flex}
-    .brand-main{margin-left:var(--rail-width);min-height:100%}
-    .content-shell{min-height:calc(1056px - var(--brand-top-height));background:var(--paper)}
+    .content-shell{
+      min-height:auto;
+      background:var(--paper);
+      overflow:visible;
+    }
+    .shell{
+      display:grid;
+      padding:var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
+    }
+    .content{
+      padding:18px 22px 22px;
+      border:none;
+      box-shadow:none;
+      overflow:visible;
+    }
+    .table-card{border-radius:0;border:none}
+    .table-wrap{overflow:visible}
     .card{border-radius:0;box-shadow:none}
     .sidebar{top:0}
-  }
-
-  body.preview-mode .brand-rail,
-  body.print-preview-mode .brand-rail{
-    display:block;
-  }
-
-  body.preview-mode .brand-top,
-  body.print-preview-mode .brand-top{
-    display:flex;
-  }
-
-  body.preview-mode .brand-main,
-  body.print-preview-mode .brand-main{
-    margin-left:var(--rail-width);
-    min-height:100%;
-  }
-
-  body.preview-mode .content-shell,
-  body.print-preview-mode .content-shell{
-    min-height:calc(1056px - var(--brand-top-height));
-    background:var(--paper);
+    th{position:static}
+    tr, td, th{break-inside:avoid; page-break-inside:avoid}
   }
 
   body.preview-mode .card,
