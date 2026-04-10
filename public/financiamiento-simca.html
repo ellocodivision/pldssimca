@@ -19,17 +19,31 @@
     --rail-text-size:18px;
     --title-size:30px;
     --subtitle-size:14px;
+    --header-padding-top:12px;
+    --header-padding-sides:14px;
+    --header-padding-bottom:10px;
+    --content-padding-top:6px;
+    --content-padding-sides:12px;
+    --content-padding-bottom:12px;
+    --content-gap:14px;
+    --title-offset-x:0px;
+    --title-offset-y:0px;
     --font-body:Arial, sans-serif;
     --font-heading:Arial, sans-serif;
     --font-table:Arial, sans-serif;
     --bg:#f3efe6;
     --surface:#fffdf8;
+    --paper:#fffdf8;
     --surface-soft:#f6f0e1;
     --ink:#201d17;
+    --title-color:#201d17;
     --muted:#746b5d;
     --line:#d8cfbf;
     --line-strong:#c4b79f;
     --accent:#f3d334;
+    --accent-soft:#f9efbe;
+    --rail-accent:#ffdb16;
+    --rail-text:#1d1c18;
     --accent-ink:#1d1a13;
     --shadow:0 22px 60px rgba(74, 57, 20, 0.09);
     --danger:#b44d27;
@@ -69,6 +83,151 @@
     max-width:1380px;
     margin:0 auto;
     padding:28px 18px 44px;
+  }
+
+  .sheet{
+    background:transparent;
+    border:none;
+    box-shadow:none;
+    overflow:hidden;
+    position:relative;
+  }
+
+  body.preview-mode .sheet,
+  body.print-preview-mode .sheet{
+    background:var(--surface);
+  }
+
+  body.print-preview-mode .sheet{
+    min-height:1056px;
+    box-shadow:0 0 0 1px rgba(145,145,145,.35);
+  }
+
+  .brand-frame{
+    display:block;
+    min-height:100%;
+    background:transparent;
+    position:relative;
+  }
+
+  body.print-preview-mode .brand-frame{
+    min-height:1056px;
+  }
+
+  .brand-rail{
+    display:none;
+  }
+
+  .brand-rail-accent{
+    position:absolute;
+    left:0;
+    top:var(--rail-offset-y);
+    width:var(--rail-width);
+    height:var(--rail-height);
+    background:var(--rail-accent);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-top:1px solid rgba(141,135,119,.92);
+    border-bottom:1px solid rgba(141,135,119,.92);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  .brand-rail-accent span{
+    writing-mode:vertical-rl;
+    text-orientation:mixed;
+    font-size:var(--rail-text-size);
+    letter-spacing:.02em;
+    color:var(--rail-text);
+  }
+
+  .brand-main{
+    display:block;
+    min-width:0;
+    background:transparent;
+  }
+
+  .brand-top{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    height:var(--brand-top-height);
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  .brand-logo-wrap{
+    width:min(100%, var(--logo-width));
+    height:var(--logo-height);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform:translate(var(--logo-offset-x), var(--logo-offset-y));
+  }
+
+  .brand-logo-wrap.is-empty{
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .brand-logo{
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    display:block;
+  }
+
+  .content-shell{
+    padding:0;
+    min-width:0;
+  }
+
+  .header{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    gap:20px;
+    align-items:end;
+    padding:var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
+    border-bottom:1px solid var(--line);
+    background:transparent;
+    transform:translate(var(--title-offset-x), var(--title-offset-y));
+  }
+
+  .title{
+    margin:0;
+    font-size:var(--title-size);
+    line-height:.95;
+    letter-spacing:-.04em;
+    color:var(--title-color);
+    font-family:var(--font-heading);
+  }
+
+  .subtitle{
+    margin:8px 0 0;
+    font-size:var(--subtitle-size);
+    line-height:1.5;
+    color:var(--muted);
+    max-width:52ch;
+  }
+
+  .scheme-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:12px 16px;
+    border-radius:20px;
+    background:#1f1d18;
+    color:#fffdf8;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
   }
 
   .topbar{
@@ -127,21 +286,28 @@
   .shell{
     display:grid;
     grid-template-columns:360px minmax(0, 1fr);
-    gap:16px;
+    gap:0;
     align-items:start;
+    padding:var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
   }
 
   .card{
-    background:var(--surface);
+    background:var(--paper);
     border:1px solid var(--line);
     border-radius:20px;
     box-shadow:var(--shadow);
   }
 
   .sidebar{
-    padding:18px;
+    padding:22px;
     position:sticky;
     top:18px;
+    background:linear-gradient(180deg, rgba(249,242,227,.82), rgba(255,253,248,.9));
+    border-right:1px solid var(--line);
+    border-top-right-radius:0;
+    border-bottom-right-radius:0;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
   }
 
   .sidebar h2,
@@ -232,8 +398,12 @@
   }
 
   .content{
-    padding:18px;
+    padding:18px 22px 22px;
     position:relative;
+    border-top-left-radius:0;
+    border-bottom-left-radius:0;
+    display:grid;
+    gap:var(--content-gap);
   }
 
   .detail-grid{
@@ -264,11 +434,10 @@
   }
 
   .table-card{
-    margin-top:16px;
     border:1px solid var(--line);
     border-radius:18px;
     overflow:hidden;
-    background:#fff;
+    background:var(--paper);
   }
 
   .table-head{
@@ -362,8 +531,8 @@
     overflow:visible;
   }
 
-  body.hide-header .header-section,
-  body.hide-header-print .header-section,
+  body.hide-header .header,
+  body.hide-header-print .header,
   body.hide-summary .summary-section,
   body.hide-summary-print .summary-section,
   body.hide-payments .payments-section,
@@ -374,6 +543,8 @@
   @media (max-width:1180px){
     .shell{grid-template-columns:1fr}
     .sidebar{position:relative;top:0}
+    .content{border-top-left-radius:20px;border-bottom-left-radius:20px}
+    .sidebar{border-right:none;border-top-right-radius:20px;border-bottom-right-radius:20px}
     .summary-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
     .detail-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
   }
@@ -389,11 +560,49 @@
 
   @media print{
     body{background:#fff}
-    .topbar,
-    .sidebar{display:none}
-    .shell{display:block}
+    .topbar{display:none}
+    .shell{display:block;padding:0}
     .content{padding:0;border:none;box-shadow:none}
     .table-card{border-radius:0;border:none}
+    .brand-rail{display:block}
+    .brand-top{display:flex}
+    .brand-main{margin-left:var(--rail-width);min-height:100%}
+    .content-shell{min-height:calc(1056px - var(--brand-top-height));background:var(--paper)}
+    .card{border-radius:0;box-shadow:none}
+    .sidebar{top:0}
+  }
+
+  body.preview-mode .brand-rail,
+  body.print-preview-mode .brand-rail{
+    display:block;
+  }
+
+  body.preview-mode .brand-top,
+  body.print-preview-mode .brand-top{
+    display:flex;
+  }
+
+  body.preview-mode .brand-main,
+  body.print-preview-mode .brand-main{
+    margin-left:var(--rail-width);
+    min-height:100%;
+  }
+
+  body.preview-mode .content-shell,
+  body.print-preview-mode .content-shell{
+    min-height:calc(1056px - var(--brand-top-height));
+    background:var(--paper);
+  }
+
+  body.preview-mode .card,
+  body.print-preview-mode .card{
+    border-radius:0;
+    box-shadow:none;
+  }
+
+  body.preview-mode .sidebar,
+  body.print-preview-mode .sidebar{
+    top:0;
   }
 </style>
 </head>
@@ -412,92 +621,112 @@
       </div>
     </div>
 
-    <div class="shell">
-      <aside class="card sidebar">
-        <h2>Parámetros</h2>
-        <div class="field-grid">
-          <div class="field">
-            <label for="developmentSelect">Desarrollo</label>
-            <select id="developmentSelect">
-              <option value="">Selecciona desarrollo...</option>
-            </select>
+    <section class="sheet">
+      <div class="brand-frame">
+        <aside class="brand-rail" aria-hidden="true">
+          <div class="brand-rail-accent"><span id="railText">simca.mx</span></div>
+        </aside>
+        <div class="brand-main">
+          <div class="brand-top" aria-hidden="true">
+            <div class="brand-logo-wrap is-empty" id="brandLogoWrap">
+              <img class="brand-logo" id="brandLogo" alt="">
+            </div>
           </div>
-          <div class="field">
-            <label for="unitSelect">Unidad</label>
-            <select id="unitSelect" disabled>
-              <option value="">Selecciona unidad...</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="downPaymentSelect">Enganche</label>
-            <select id="downPaymentSelect"></select>
-          </div>
-          <div class="field">
-            <label for="termSelect">Plazo</label>
-            <select id="termSelect">
-              <option value="3">3 años</option>
-              <option value="5">5 años</option>
-              <option value="7">7 años</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="rateInput">Tasa anual</label>
-            <input id="rateInput" type="text" value="9.0%" readonly>
-          </div>
-          <div class="field">
-            <label for="startDateInput">Fecha inicio</label>
-            <input id="startDateInput" type="text" readonly>
+          <div class="content-shell">
+            <header class="header header-section">
+              <div>
+                <h1 class="title">Financiamiento SIMCA</h1>
+                <p class="subtitle">Cotizador con tabla de amortización para IPANA, SERENADA, GRAN TULUM, COSTA CARIBE, MARILA y SINGULAR JOY. El balloon se captura por mes y se suma como abono extraordinario a capital.</p>
+              </div>
+              <div class="scheme-badge"><span>Plan</span> <span id="summaryPlan">30% · 3Y</span></div>
+            </header>
+
+            <div class="shell">
+              <aside class="card sidebar">
+                <h2>Parámetros</h2>
+                <div class="field-grid">
+                  <div class="field">
+                    <label for="developmentSelect">Desarrollo</label>
+                    <select id="developmentSelect">
+                      <option value="">Selecciona desarrollo...</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="unitSelect">Unidad</label>
+                    <select id="unitSelect" disabled>
+                      <option value="">Selecciona unidad...</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="downPaymentSelect">Enganche</label>
+                    <select id="downPaymentSelect"></select>
+                  </div>
+                  <div class="field">
+                    <label for="termSelect">Plazo</label>
+                    <select id="termSelect">
+                      <option value="3">3 años</option>
+                      <option value="5">5 años</option>
+                      <option value="7">7 años</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="rateInput">Tasa anual</label>
+                    <input id="rateInput" type="text" value="9.0%" readonly>
+                  </div>
+                  <div class="field">
+                    <label for="startDateInput">Fecha inicio</label>
+                    <input id="startDateInput" type="text" readonly>
+                  </div>
+                </div>
+                <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                  <span class="pill">USD</span>
+                  <span class="pill">Enganche mínimo 30%</span>
+                </div>
+                <p class="helper" style="margin:14px 0 0;">Asumí tasa fija anual de <strong>9%</strong> porque es la que aparece en tus ejemplos y el CSV no trae un esquema homogéneo para estos 6 desarrollos.</p>
+                <p id="status" class="status" style="margin:12px 0 0;">Cargando CSV maestro...</p>
+              </aside>
+
+              <main class="card content">
+                <section class="summary-section">
+                  <div id="summaryGrid" class="summary-grid">
+                    <div class="metric"><div class="k">Valor de la venta</div><div class="v">-</div></div>
+                    <div class="metric"><div class="k">Enganche</div><div class="v">-</div></div>
+                    <div class="metric"><div class="k">Monto a financiar</div><div class="v">-</div></div>
+                    <div class="metric"><div class="k">Pago mensual base</div><div class="v">-</div></div>
+                  </div>
+
+                  <div id="detailGrid" class="detail-grid">
+                    <div class="detail"><div class="k">Proyecto</div><div class="v">-</div></div>
+                    <div class="detail"><div class="k">Unidad</div><div class="v">-</div></div>
+                    <div class="detail"><div class="k">Plazo meses</div><div class="v">-</div></div>
+                    <div class="detail"><div class="k">Interés total</div><div class="v">-</div></div>
+                    <div class="detail"><div class="k">Monto total pagado</div><div class="v">-</div></div>
+                    <div class="detail"><div class="k">Prom int anual</div><div class="v">-</div></div>
+                  </div>
+                </section>
+
+                <section class="payments-section">
+                  <div class="note-box">
+                    La mensualidad base se calcula como pago fijo amortizado. Si capturas un <strong>balloon</strong> en cualquier mes, ese monto se agrega como pago extraordinario a capital y el saldo se reajusta hacia adelante; la mensualidad base sigue igual y el último pago se reduce si el saldo se liquida antes.
+                  </div>
+
+                  <section class="table-card">
+                    <div class="table-head">
+                      <h3>Tabla de amortización</h3>
+                      <div class="helper">Edita la columna <strong>Balloon</strong> por mes.</div>
+                    </div>
+                    <div id="tableWrap" class="table-wrap">
+                      <div class="empty-state">Selecciona un desarrollo y una unidad para generar la tabla.</div>
+                    </div>
+                  </section>
+                </section>
+                <svg class="sheet-overlay" id="sheetOverlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+              </main>
+            </div>
           </div>
         </div>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <span class="pill">USD</span>
-          <span class="pill">Enganche mínimo 30%</span>
-        </div>
-        <p class="helper" style="margin:14px 0 0;">Asumí tasa fija anual de <strong>9%</strong> porque es la que aparece en tus ejemplos y el CSV no trae un esquema homogéneo para estos 6 desarrollos.</p>
-        <p id="status" class="status" style="margin:12px 0 0;">Cargando CSV maestro...</p>
-      </aside>
-
-      <main class="card content">
-        <section class="header-section">
-          <h2>Resumen</h2>
-        </section>
-
-        <section class="summary-section">
-          <div id="summaryGrid" class="summary-grid">
-            <div class="metric"><div class="k">Valor de la venta</div><div class="v">-</div></div>
-            <div class="metric"><div class="k">Enganche</div><div class="v">-</div></div>
-            <div class="metric"><div class="k">Monto a financiar</div><div class="v">-</div></div>
-            <div class="metric"><div class="k">Pago mensual base</div><div class="v">-</div></div>
-          </div>
-
-          <div id="detailGrid" class="detail-grid">
-            <div class="detail"><div class="k">Proyecto</div><div class="v">-</div></div>
-            <div class="detail"><div class="k">Unidad</div><div class="v">-</div></div>
-            <div class="detail"><div class="k">Plazo meses</div><div class="v">-</div></div>
-            <div class="detail"><div class="k">Interés total</div><div class="v">-</div></div>
-            <div class="detail"><div class="k">Monto total pagado</div><div class="v">-</div></div>
-            <div class="detail"><div class="k">Prom int anual</div><div class="v">-</div></div>
-          </div>
-        </section>
-
-        <section class="payments-section">
-          <div class="note-box">
-            La mensualidad base se calcula como pago fijo amortizado. Si capturas un <strong>balloon</strong> en cualquier mes, ese monto se agrega como pago extraordinario a capital y el saldo se reajusta hacia adelante; la mensualidad base sigue igual y el último pago se reduce si el saldo se liquida antes.
-          </div>
-
-          <section class="table-card">
-            <div class="table-head">
-              <h3>Tabla de amortización</h3>
-              <div class="helper">Edita la columna <strong>Balloon</strong> por mes.</div>
-            </div>
-            <div id="tableWrap" class="table-wrap">
-              <div class="empty-state">Selecciona un desarrollo y una unidad para generar la tabla.</div>
-            </div>
-          </section>
-        </section>
-        <svg class="sheet-overlay" id="sheetOverlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
-      </main>
-    </div>
+      </div>
+    </section>
   </div>
 
 <script>
@@ -529,6 +758,10 @@
   const downloadPdfBtn = document.getElementById('downloadPdfBtn');
   const printBtn = document.getElementById('printBtn');
   const sheetOverlay = document.getElementById('sheetOverlay');
+  const railTextEl = document.getElementById('railText');
+  const brandLogoWrap = document.getElementById('brandLogoWrap');
+  const brandLogo = document.getElementById('brandLogo');
+  const summaryPlan = document.getElementById('summaryPlan');
 
   const defaultLayout = {
     version: 4,
@@ -709,6 +942,9 @@
     const validAlign = ['left', 'center', 'right'];
     out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
     out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
+    out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);
+    out.railOffsetY = clamp(Number(out.railOffsetY) || defaultLayout.railOffsetY, 0, 500);
+    out.railHeight = clamp(Number(out.railHeight) || defaultLayout.railHeight, 40, 500);
     out.railWidth = clamp(Number(out.railWidth) || defaultLayout.railWidth, 36, 180);
     out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
     out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
@@ -717,6 +953,15 @@
     out.railTextSize = clamp(Number(out.railTextSize) || defaultLayout.railTextSize, 10, 28);
     out.titleSize = clamp(Number(out.titleSize) || defaultLayout.titleSize, 16, 40);
     out.subtitleSize = clamp(Number(out.subtitleSize) || defaultLayout.subtitleSize, 10, 22);
+    out.headerPaddingTop = clamp(Number(out.headerPaddingTop) || defaultLayout.headerPaddingTop, -160, 160);
+    out.headerPaddingSides = clamp(Number(out.headerPaddingSides) || defaultLayout.headerPaddingSides, 0, 40);
+    out.headerPaddingBottom = clamp(Number(out.headerPaddingBottom) || defaultLayout.headerPaddingBottom, 0, 40);
+    out.contentPaddingTop = clamp(Number(out.contentPaddingTop) || defaultLayout.contentPaddingTop, 0, 40);
+    out.contentPaddingSides = clamp(Number(out.contentPaddingSides) || defaultLayout.contentPaddingSides, 0, 40);
+    out.contentPaddingBottom = clamp(Number(out.contentPaddingBottom) || defaultLayout.contentPaddingBottom, 0, 40);
+    out.contentGap = clamp(Number(out.contentGap) || defaultLayout.contentGap, 0, 32);
+    out.titleOffsetX = clamp(Number(out.titleOffsetX) || defaultLayout.titleOffsetX, -240, 240);
+    out.titleOffsetY = clamp(Number(out.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120);
     out.showHeaderInPrint = Boolean(out.showHeaderInPrint);
     out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
     out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
@@ -776,6 +1021,9 @@
     const root = document.documentElement;
     root.style.setProperty('--print-scale', String(layout.printScale));
     root.style.setProperty('--print-margin-mm', String(layout.pageMarginMm));
+    root.style.setProperty('--brand-top-height', layout.brandTopHeight + 'px');
+    root.style.setProperty('--rail-offset-y', layout.railOffsetY + 'px');
+    root.style.setProperty('--rail-height', layout.railHeight + 'px');
     root.style.setProperty('--rail-width', layout.railWidth + 'px');
     root.style.setProperty('--logo-width', layout.logoWidth + 'px');
     root.style.setProperty('--logo-height', layout.logoHeight + 'px');
@@ -784,17 +1032,38 @@
     root.style.setProperty('--rail-text-size', layout.railTextSize + 'px');
     root.style.setProperty('--title-size', layout.titleSize + 'px');
     root.style.setProperty('--subtitle-size', layout.subtitleSize + 'px');
+    root.style.setProperty('--header-padding-top', layout.headerPaddingTop + 'px');
+    root.style.setProperty('--header-padding-sides', layout.headerPaddingSides + 'px');
+    root.style.setProperty('--header-padding-bottom', layout.headerPaddingBottom + 'px');
+    root.style.setProperty('--content-padding-top', layout.contentPaddingTop + 'px');
+    root.style.setProperty('--content-padding-sides', layout.contentPaddingSides + 'px');
+    root.style.setProperty('--content-padding-bottom', layout.contentPaddingBottom + 'px');
+    root.style.setProperty('--content-gap', layout.contentGap + 'px');
+    root.style.setProperty('--title-offset-x', layout.titleOffsetX + 'px');
+    root.style.setProperty('--title-offset-y', layout.titleOffsetY + 'px');
     root.style.setProperty('--surface', layout.surfaceColor);
     root.style.setProperty('--paper', layout.paperColor);
     root.style.setProperty('--paper-soft', layout.paperSoftColor);
     root.style.setProperty('--ink', layout.textColor);
+    root.style.setProperty('--title-color', layout.titleColor);
     root.style.setProperty('--muted', layout.mutedColor);
     root.style.setProperty('--accent', layout.accentColor);
+    root.style.setProperty('--accent-soft', layout.highlightRowColor);
+    root.style.setProperty('--rail-accent', layout.railAccentColor);
+    root.style.setProperty('--rail-text', layout.railTextColor);
     root.style.setProperty('--line', layout.lineColor);
     root.style.setProperty('--line-strong', layout.lineStrongColor);
     root.style.setProperty('--font-body', layout.bodyFontFamily);
     root.style.setProperty('--font-heading', layout.headingFontFamily);
     root.style.setProperty('--font-table', layout.tableFontFamily);
+    railTextEl.textContent = layout.railText || 'simca.mx';
+    if (layout.logoDataUrl) {
+      brandLogo.src = layout.logoDataUrl;
+      brandLogoWrap.classList.remove('is-empty');
+    } else {
+      brandLogo.removeAttribute('src');
+      brandLogoWrap.classList.add('is-empty');
+    }
     document.body.classList.toggle('hide-header-print', !layout.showHeaderInPrint);
     document.body.classList.toggle('hide-summary-print', !layout.showSummaryInPrint);
     document.body.classList.toggle('hide-payments-print', !layout.showPaymentsInPrint);
@@ -951,6 +1220,7 @@
   }
 
   function renderSummary(data, development, unit) {
+    summaryPlan.textContent = `${Number(downPaymentSelect.value).toFixed(0)}% · ${data.years}Y`;
     summaryGrid.innerHTML = [
       ['Valor de la venta', formatMoney(data.price)],
       ['Enganche', `${Number(downPaymentSelect.value).toFixed(0)}% · ${formatMoney(data.downPayment)}`],
@@ -1009,6 +1279,7 @@
 
   function renderEmptyState() {
     currentRow = null;
+    summaryPlan.textContent = `${Number(downPaymentSelect.value || 30).toFixed(0)}% · ${Number(termSelect.value || 3)}Y`;
     summaryGrid.innerHTML = [
       'Valor de la venta',
       'Enganche',
