@@ -284,7 +284,7 @@
 
   .shell{
     display:grid;
-    grid-template-columns:360px minmax(0, 1fr);
+    grid-template-columns:minmax(300px, 360px) minmax(0, 1fr);
     gap:0;
     align-items:start;
     padding:var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
@@ -380,6 +380,7 @@
     border:1px solid var(--line);
     border-radius:16px;
     padding:14px;
+    min-width:0;
   }
 
   .metric .k{
@@ -394,6 +395,7 @@
     font-size:22px;
     font-weight:800;
     letter-spacing:-.02em;
+    overflow-wrap:anywhere;
   }
 
   .content{
@@ -403,6 +405,8 @@
     border-bottom-left-radius:0;
     display:grid;
     gap:var(--content-gap);
+    min-width:0;
+    overflow:hidden;
   }
 
   .detail-grid{
@@ -417,6 +421,7 @@
     border-radius:16px;
     padding:14px;
     background:#fff;
+    min-width:0;
   }
 
   .detail .k{
@@ -430,6 +435,7 @@
     margin-top:8px;
     font-size:16px;
     font-weight:700;
+    overflow-wrap:anywhere;
   }
 
   .table-card{
@@ -457,6 +463,7 @@
   .table-wrap{
     width:100%;
     overflow:auto;
+    min-width:0;
   }
 
   table{
@@ -622,10 +629,28 @@
       padding:18px 22px 22px;
       border:none;
       box-shadow:none;
-      overflow:visible;
+      overflow:hidden;
+    }
+    .summary-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+      margin-top:0;
+    }
+    .detail-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+      margin-top:10px;
     }
     .table-card{border-radius:0;border:none}
-    .table-wrap{overflow:visible}
+    .table-wrap{overflow:hidden}
+    table{
+      min-width:0;
+      table-layout:fixed;
+    }
+    th, td{
+      font-size:12px;
+      padding:8px 8px;
+    }
     .card{border-radius:0;box-shadow:none}
     .sidebar{top:0}
     th{position:static}
@@ -668,15 +693,34 @@
   }
 
   body.print-preview-mode .summary-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
     margin-top:0;
   }
 
   body.print-preview-mode .detail-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
     margin-top:10px;
   }
 
   body.print-preview-mode .note-box{
     margin-top:0;
+  }
+
+  body.print-preview-mode .table-wrap{
+    overflow:hidden;
+  }
+
+  body.print-preview-mode table{
+    min-width:0;
+    table-layout:fixed;
+  }
+
+  body.print-preview-mode th,
+  body.print-preview-mode td{
+    font-size:12px;
+    padding:8px 8px;
   }
 
   body.print-preview-mode .sheet-overlay{
