@@ -370,7 +370,7 @@
 
   .summary-grid{
     display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:12px;
     margin-top:14px;
   }
@@ -411,7 +411,7 @@
 
   .detail-grid{
     display:grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:12px;
     margin-top:14px;
   }
@@ -450,6 +450,7 @@
     justify-content:space-between;
     gap:12px;
     align-items:center;
+    flex-wrap:wrap;
     padding:14px 16px;
     background:#f3eee3;
     border-bottom:1px solid var(--line);
@@ -464,6 +465,7 @@
     width:100%;
     overflow:auto;
     min-width:0;
+    max-width:100%;
   }
 
   table{
@@ -555,8 +557,6 @@
     .sidebar{position:relative;top:0}
     .content{border-top-left-radius:20px;border-bottom-left-radius:20px}
     .sidebar{border-right:none;border-top-right-radius:20px;border-bottom-right-radius:20px}
-    .summary-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
-    .detail-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
   }
 
   @media (max-width:680px){
@@ -590,36 +590,37 @@
       overflow:visible;
     }
     .sheet{
-      min-height:auto;
+      min-height:1056px;
       background:var(--surface);
-      overflow:visible;
+      overflow:hidden;
       box-shadow:none;
     }
     .brand-frame{
       display:grid;
       grid-template-columns:var(--rail-width) minmax(0, 1fr);
-      min-height:auto;
+      min-height:1056px;
       background:var(--surface);
-      overflow:visible;
+      overflow:hidden;
     }
     .brand-rail{
       display:block;
       position:relative;
+      min-height:1056px;
       background:var(--surface);
     }
     .brand-main{
       display:grid;
       grid-template-rows:var(--brand-top-height) minmax(0, 1fr);
-      min-height:auto;
+      min-height:1056px;
       background:var(--surface);
       margin-left:0;
-      overflow:visible;
+      overflow:hidden;
     }
     .brand-top{display:flex}
     .content-shell{
-      min-height:auto;
+      min-height:calc(1056px - var(--brand-top-height));
       background:var(--paper);
-      overflow:visible;
+      overflow:hidden;
     }
     .shell{
       display:grid;
@@ -642,7 +643,7 @@
       margin-top:10px;
     }
     .table-card{border-radius:0;border:none}
-    .table-wrap{overflow:hidden}
+    .table-wrap{overflow:hidden; max-width:100%}
     table{
       min-width:0;
       table-layout:fixed;
@@ -670,6 +671,8 @@
 
   body.print-preview-mode .content-shell{
     padding:24px 14px 16px;
+    min-height:calc(1056px - var(--brand-top-height));
+    overflow:hidden;
   }
 
   body.print-preview-mode .header{
@@ -710,6 +713,7 @@
 
   body.print-preview-mode .table-wrap{
     overflow:hidden;
+    max-width:100%;
   }
 
   body.print-preview-mode table{
