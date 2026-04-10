@@ -105,6 +105,7 @@ const SOLAR_MIDTOWN_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-s
 const SOLAR_MIDTOWN_LAYOUT_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-layout.json');
 const SOLAR_MIDTOWN_CROPS_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-crops.json');
 const TABLA_PAGOS_LAYOUT_PATH = path.join(DATA_DIR, 'tabla-pagos-layout.json');
+const FINANCIAMIENTO_SIMCA_LAYOUT_PATH = path.join(DATA_DIR, 'financiamiento-simca-layout.json');
 const VICEROY_PAYMENT_PLAN_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-payment-plan-layout.json');
 const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
 const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
@@ -1815,6 +1816,16 @@ function readTablaPagosLayout() {
 function saveTablaPagosLayout(layout) {
   const normalized = normalizeTablaPagosLayout(layout);
   writeJson(TABLA_PAGOS_LAYOUT_PATH, normalized);
+  return normalized;
+}
+
+function readFinanciamientoSimcaLayout() {
+  return normalizeTablaPagosLayout(readJson(FINANCIAMIENTO_SIMCA_LAYOUT_PATH, null));
+}
+
+function saveFinanciamientoSimcaLayout(layout) {
+  const normalized = normalizeTablaPagosLayout(layout);
+  writeJson(FINANCIAMIENTO_SIMCA_LAYOUT_PATH, normalized);
   return normalized;
 }
 
@@ -3737,6 +3748,12 @@ function renderSimcaHome(req, res, options) {
           <h2 class="name">Editor PDF Tabla de Pagos</h2>
           <p class="desc">Ajusta formato, columnas y layout de impresión del módulo Tabla de Pagos.</p>
         </a>` : '';
+  const financiamientoEditorCard = isGerente ? `
+        <a class="card" href="/financiamiento-simca/editor">
+          <span class="tag">Editor</span>
+          <h2 class="name">Editor PDF Financiamiento</h2>
+          <p class="desc">Ajusta el layout de impresión del módulo Financiamiento SIMCA.</p>
+        </a>` : '';
   const tablaPagosCard = `
         <a class="card" href="/tabla-pagos">
           <span class="tag">Módulo</span>
@@ -3749,7 +3766,8 @@ function renderSimcaHome(req, res, options) {
           <span class="tag">Módulo</span>
           <h2 class="name">Financiamiento SIMCA</h2>
           <p class="desc">Cotiza mensualidades y tabla de amortización con balloons por unidad.</p>
-        </a>`;
+        </a>
+        ${financiamientoEditorCard}`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -4094,6 +4112,71 @@ app.get('/generador-roi', (req, res) => {
 
 app.get('/financiamiento-simca', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'financiamiento-simca.html'));
+});
+
+app.get('/financiamiento-simca/editor', requireGerente, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'financiamiento-simca-editor.html'));
+});
+
+app.get('/api/financiamiento-simca/layout', (req, res) => {
+  return res.json({ ok: true, layout: readFinanciamientoSimcaLayout() });
+});
+
+app.post('/api/financiamiento-simca/layout', requireGerente, (req, res) => {
+  try {
+    const incoming = req.body && req.body.layout ? req.body.layout : req.body;
+    const saved = saveFinanciamientoSimcaLayout(incoming);
+    return res.json({ ok: true, layout: saved });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar el layout de Financiamiento SIMCA',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.post('/api/financiamiento-simca/render-pdf', async (req, res) => {
+  const html = typeof req.body?.html === 'string' ? req.body.html : '';
+  const rawPrefix = String(req.body?.fileNamePrefix || 'financiamiento-simca').trim();
+  const fileNamePrefix = rawPrefix.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').slice(0, 60) || 'financiamiento-simca';
+  if (!html || html.length < 100) {
+    return res.status(400).json({ error: 'HTML inválido para generar PDF.' });
+  }
+
+  try {
+    let pdfBuffer;
+    try {
+      const browser = await getSharedPdfBrowser();
+      pdfBuffer = await buildPdfBufferWithBrowser(browser, html, {
+        format: 'Letter',
+        margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' },
+        printBackground: true
+      });
+    } catch (firstErr) {
+      if (!isRetryablePdfError(firstErr)) throw firstErr;
+      try {
+        if (sharedPdfBrowser) await sharedPdfBrowser.close();
+      } catch {}
+      sharedPdfBrowser = null;
+      const retryBrowser = await getSharedPdfBrowser();
+      pdfBuffer = await buildPdfBufferWithBrowser(retryBrowser, html, {
+        format: 'Letter',
+        margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' },
+        printBackground: true
+      });
+    }
+
+    const fileName = `${fileNamePrefix}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    log(`Error en /api/financiamiento-simca/render-pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF de Financiamiento SIMCA',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/api/session-info', requireAuth, (req, res) => {

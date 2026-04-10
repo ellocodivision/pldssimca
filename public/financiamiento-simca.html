@@ -6,6 +6,22 @@
 <title>Financiamiento SIMCA</title>
 <style>
   :root{
+    --print-scale:.92;
+    --print-margin-mm:0;
+    --brand-top-height:226px;
+    --rail-offset-y:226px;
+    --rail-height:278px;
+    --rail-width:54px;
+    --logo-width:480px;
+    --logo-height:120px;
+    --logo-offset-x:0px;
+    --logo-offset-y:0px;
+    --rail-text-size:18px;
+    --title-size:30px;
+    --subtitle-size:14px;
+    --font-body:Arial, sans-serif;
+    --font-heading:Arial, sans-serif;
+    --font-table:Arial, sans-serif;
     --bg:#f3efe6;
     --surface:#fffdf8;
     --surface-soft:#f6f0e1;
@@ -23,11 +39,30 @@
   html,body{min-height:100%}
   body{
     margin:0;
-    font-family:Arial, sans-serif;
+    font-family:var(--font-body);
     color:var(--ink);
     background:
       radial-gradient(circle at top left, rgba(243,211,52,.24), transparent 28%),
       linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%);
+  }
+
+  body.preview-mode .topbar,
+  body.print-preview-mode .topbar{
+    display:none;
+  }
+
+  body.print-preview-mode{
+    background:#d9dbe2;
+    padding:20px 0;
+  }
+
+  body.preview-mode .page,
+  body.print-preview-mode .page{
+    width:816px;
+    max-width:none;
+    min-height:1056px;
+    padding:0;
+    margin:0 auto;
   }
 
   .page{
@@ -47,8 +82,9 @@
 
   .title-wrap h1{
     margin:0;
-    font-size:30px;
+    font-size:var(--title-size);
     letter-spacing:.02em;
+    font-family:var(--font-heading);
   }
 
   .title-wrap p{
@@ -56,6 +92,7 @@
     color:var(--muted);
     max-width:760px;
     line-height:1.45;
+    font-size:var(--subtitle-size);
   }
 
   .actions{
@@ -196,6 +233,7 @@
 
   .content{
     padding:18px;
+    position:relative;
   }
 
   .detail-grid{
@@ -257,6 +295,7 @@
     width:100%;
     border-collapse:collapse;
     min-width:1040px;
+    font-family:var(--font-table);
   }
 
   th,td{
@@ -314,6 +353,24 @@
     line-height:1.5;
   }
 
+  .sheet-overlay{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    overflow:visible;
+  }
+
+  body.hide-header .header-section,
+  body.hide-header-print .header-section,
+  body.hide-summary .summary-section,
+  body.hide-summary-print .summary-section,
+  body.hide-payments .payments-section,
+  body.hide-payments-print .payments-section{
+    display:none !important;
+  }
+
   @media (max-width:1180px){
     .shell{grid-template-columns:1fr}
     .sidebar{position:relative;top:0}
@@ -348,7 +405,9 @@
         <p>Cotizador con tabla de amortización para <strong>IPANA</strong>, <strong>SERENADA</strong>, <strong>GRAN TULUM</strong>, <strong>COSTA CARIBE</strong>, <strong>MARILA</strong> y <strong>SINGULAR JOY</strong>. El balloon se captura por mes y se suma como abono extraordinario a capital.</p>
       </div>
       <div class="actions">
-        <a class="link-btn" href="/simca">Regresar a SIMCA</a>
+        <a class="link-btn" href="/simca" id="backBtn">Regresar a SIMCA</a>
+        <a class="link-btn" href="/financiamiento-simca/editor" id="editorBtn" hidden>Editor PDF Martin SIMCA</a>
+        <button class="btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
         <button class="btn btn-primary" type="button" id="printBtn">Imprimir</button>
       </div>
     </div>
@@ -399,41 +458,53 @@
       </aside>
 
       <main class="card content">
-        <h2>Resumen</h2>
-        <div id="summaryGrid" class="summary-grid">
-          <div class="metric"><div class="k">Valor de la venta</div><div class="v">-</div></div>
-          <div class="metric"><div class="k">Enganche</div><div class="v">-</div></div>
-          <div class="metric"><div class="k">Monto a financiar</div><div class="v">-</div></div>
-          <div class="metric"><div class="k">Pago mensual base</div><div class="v">-</div></div>
-        </div>
+        <section class="header-section">
+          <h2>Resumen</h2>
+        </section>
 
-        <div id="detailGrid" class="detail-grid">
-          <div class="detail"><div class="k">Proyecto</div><div class="v">-</div></div>
-          <div class="detail"><div class="k">Unidad</div><div class="v">-</div></div>
-          <div class="detail"><div class="k">Plazo meses</div><div class="v">-</div></div>
-          <div class="detail"><div class="k">Interés total</div><div class="v">-</div></div>
-          <div class="detail"><div class="k">Monto total pagado</div><div class="v">-</div></div>
-          <div class="detail"><div class="k">Prom int anual</div><div class="v">-</div></div>
-        </div>
-
-        <div class="note-box">
-          La mensualidad base se calcula como pago fijo amortizado. Si capturas un <strong>balloon</strong> en cualquier mes, ese monto se agrega como pago extraordinario a capital y el saldo se reajusta hacia adelante; la mensualidad base sigue igual y el último pago se reduce si el saldo se liquida antes.
-        </div>
-
-        <section class="table-card">
-          <div class="table-head">
-            <h3>Tabla de amortización</h3>
-            <div class="helper">Edita la columna <strong>Balloon</strong> por mes.</div>
+        <section class="summary-section">
+          <div id="summaryGrid" class="summary-grid">
+            <div class="metric"><div class="k">Valor de la venta</div><div class="v">-</div></div>
+            <div class="metric"><div class="k">Enganche</div><div class="v">-</div></div>
+            <div class="metric"><div class="k">Monto a financiar</div><div class="v">-</div></div>
+            <div class="metric"><div class="k">Pago mensual base</div><div class="v">-</div></div>
           </div>
-          <div id="tableWrap" class="table-wrap">
-            <div class="empty-state">Selecciona un desarrollo y una unidad para generar la tabla.</div>
+
+          <div id="detailGrid" class="detail-grid">
+            <div class="detail"><div class="k">Proyecto</div><div class="v">-</div></div>
+            <div class="detail"><div class="k">Unidad</div><div class="v">-</div></div>
+            <div class="detail"><div class="k">Plazo meses</div><div class="v">-</div></div>
+            <div class="detail"><div class="k">Interés total</div><div class="v">-</div></div>
+            <div class="detail"><div class="k">Monto total pagado</div><div class="v">-</div></div>
+            <div class="detail"><div class="k">Prom int anual</div><div class="v">-</div></div>
           </div>
         </section>
+
+        <section class="payments-section">
+          <div class="note-box">
+            La mensualidad base se calcula como pago fijo amortizado. Si capturas un <strong>balloon</strong> en cualquier mes, ese monto se agrega como pago extraordinario a capital y el saldo se reajusta hacia adelante; la mensualidad base sigue igual y el último pago se reduce si el saldo se liquida antes.
+          </div>
+
+          <section class="table-card">
+            <div class="table-head">
+              <h3>Tabla de amortización</h3>
+              <div class="helper">Edita la columna <strong>Balloon</strong> por mes.</div>
+            </div>
+            <div id="tableWrap" class="table-wrap">
+              <div class="empty-state">Selecciona un desarrollo y una unidad para generar la tabla.</div>
+            </div>
+          </section>
+        </section>
+        <svg class="sheet-overlay" id="sheetOverlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
       </main>
     </div>
   </div>
 
 <script>
+  const query = new URLSearchParams(window.location.search || '');
+  const previewQuery = String(query.get('editorPreview') || '').trim();
+  const isPreviewMode = previewQuery === '1' || previewQuery === 'print';
+  const isPrintPreviewMode = previewQuery === 'print';
   const ELIGIBLE_DEVELOPMENTS = [
     'IPANA',
     'SERENADA',
@@ -454,7 +525,78 @@
   const summaryGrid = document.getElementById('summaryGrid');
   const detailGrid = document.getElementById('detailGrid');
   const tableWrap = document.getElementById('tableWrap');
+  const editorBtn = document.getElementById('editorBtn');
+  const downloadPdfBtn = document.getElementById('downloadPdfBtn');
   const printBtn = document.getElementById('printBtn');
+  const sheetOverlay = document.getElementById('sheetOverlay');
+
+  const defaultLayout = {
+    version: 4,
+    printScale: 0.92,
+    pageMarginMm: 0,
+    brandTopHeight: 226,
+    railOffsetY: 226,
+    railHeight: 278,
+    railWidth: 54,
+    logoDataUrl: '',
+    logoWidth: 480,
+    logoHeight: 120,
+    logoOffsetX: 0,
+    logoOffsetY: 0,
+    railText: 'simca.mx',
+    railTextSize: 18,
+    titleSize: 30,
+    subtitleSize: 14,
+    headerPaddingTop: 12,
+    headerPaddingSides: 14,
+    headerPaddingBottom: 10,
+    contentPaddingTop: 6,
+    contentPaddingSides: 12,
+    contentPaddingBottom: 12,
+    contentGap: 14,
+    titleOffsetX: 0,
+    titleOffsetY: 0,
+    showHeaderInPrint: true,
+    showSummaryInPrint: true,
+    showPaymentsInPrint: true,
+    surfaceColor: '#fffdf8',
+    paperColor: '#fffdf8',
+    paperSoftColor: '#f6f0e1',
+    textColor: '#201d17',
+    titleColor: '#201d17',
+    mutedColor: '#746b5d',
+    accentColor: '#f3d334',
+    railAccentColor: '#ffdb16',
+    railTextColor: '#1d1c18',
+    lineColor: '#d8cfbf',
+    lineStrongColor: '#c4b79f',
+    highlightRowColor: '#f9efbe',
+    bodyFontFamily: 'Arial, sans-serif',
+    headingFontFamily: 'Arial, sans-serif',
+    tableFontFamily: 'Arial, sans-serif',
+    summaryHeaderSize: 9,
+    summaryBodySize: 12,
+    paymentHeaderSize: 9,
+    paymentBodySize: 12,
+    paymentTitleSize: 20,
+    summaryColDevelopment: 20,
+    summaryColUnit: 12,
+    summaryColPlan: 16,
+    summaryColList: 17,
+    summaryColDiscount: 17,
+    summaryColPromo: 18,
+    paymentsColStage: 10,
+    paymentsColConcept: 22,
+    paymentsColReference: 28,
+    paymentsColPercent: 16,
+    paymentsColAmount: 24,
+    paymentsAlignStage: 'right',
+    paymentsAlignConcept: 'left',
+    paymentsAlignReference: 'left',
+    paymentsAlignPercent: 'right',
+    paymentsAlignAmount: 'right',
+    lines: []
+  };
 
   const COL = {
     DEVELOPMENT: 3,
@@ -546,6 +688,122 @@
 
   function formatPercent(value) {
     return `${value.toFixed(2)}%`;
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function normalizeLayout(input) {
+    const src = input && typeof input === 'object' ? input : {};
+    const out = Object.assign({}, defaultLayout, src);
+    const validAlign = ['left', 'center', 'right'];
+    out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
+    out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
+    out.railWidth = clamp(Number(out.railWidth) || defaultLayout.railWidth, 36, 180);
+    out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
+    out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
+    out.logoOffsetX = clamp(Number(out.logoOffsetX) || defaultLayout.logoOffsetX, -240, 240);
+    out.logoOffsetY = clamp(Number(out.logoOffsetY) || defaultLayout.logoOffsetY, -140, 140);
+    out.railTextSize = clamp(Number(out.railTextSize) || defaultLayout.railTextSize, 10, 28);
+    out.titleSize = clamp(Number(out.titleSize) || defaultLayout.titleSize, 16, 40);
+    out.subtitleSize = clamp(Number(out.subtitleSize) || defaultLayout.subtitleSize, 10, 22);
+    out.showHeaderInPrint = Boolean(out.showHeaderInPrint);
+    out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
+    out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+    out.paymentsAlignStage = validAlign.includes(String(out.paymentsAlignStage || '').toLowerCase()) ? String(out.paymentsAlignStage).toLowerCase() : defaultLayout.paymentsAlignStage;
+    out.paymentsAlignConcept = validAlign.includes(String(out.paymentsAlignConcept || '').toLowerCase()) ? String(out.paymentsAlignConcept).toLowerCase() : defaultLayout.paymentsAlignConcept;
+    out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : defaultLayout.paymentsAlignReference;
+    out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : defaultLayout.paymentsAlignPercent;
+    out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : defaultLayout.paymentsAlignAmount;
+    ['surfaceColor','paperColor','paperSoftColor','textColor','titleColor','mutedColor','accentColor','railAccentColor','railTextColor','lineColor','lineStrongColor','highlightRowColor','bodyFontFamily','headingFontFamily','tableFontFamily','logoDataUrl','railText'].forEach((key) => {
+      if (typeof out[key] !== 'string') out[key] = defaultLayout[key];
+    });
+    out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map((line, index) => {
+      const srcLine = line && typeof line === 'object' ? line : {};
+      const orientation = String(srcLine.orientation || '').toLowerCase() === 'vertical' ? 'vertical' : 'horizontal';
+      const x = clamp(Number(srcLine.x) || Number(srcLine.x1) || 0, 0, 100);
+      const y = clamp(Number(srcLine.y) || Number(srcLine.y1) || 0, 0, 100);
+      const length = clamp(Number(srcLine.length) || 0, 0, 100);
+      return {
+        id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : 'line-' + (index + 1),
+        orientation,
+        x,
+        y,
+        length,
+        width: clamp(Number(srcLine.width) || 1, 1, 12),
+        color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : defaultLayout.lineStrongColor,
+        opacity: clamp(Number(srcLine.opacity) || 1, 0.1, 1)
+      };
+    }) : [];
+    return out;
+  }
+
+  function renderOverlayLines(lines) {
+    if (!sheetOverlay) return;
+    sheetOverlay.innerHTML = (lines || []).map((line) => {
+      const x1 = line.x;
+      const y1 = line.y;
+      const x2 = line.orientation === 'vertical' ? line.x : clamp(line.x + line.length, 0, 100);
+      const y2 = line.orientation === 'vertical' ? clamp(line.y + line.length, 0, 100) : line.y;
+      return [
+        '<line',
+        ' x1="', x1, '%"',
+        ' y1="', y1, '%"',
+        ' x2="', x2, '%"',
+        ' y2="', y2, '%"',
+        ' stroke="', escapeHtml(line.color), '"',
+        ' stroke-width="', line.width, '"',
+        ' stroke-opacity="', line.opacity, '"',
+        ' vector-effect="non-scaling-stroke"',
+        ' stroke-linecap="square"',
+        ' />'
+      ].join('');
+    }).join('');
+  }
+
+  function applyLayout(layoutInput) {
+    const layout = normalizeLayout(layoutInput);
+    const root = document.documentElement;
+    root.style.setProperty('--print-scale', String(layout.printScale));
+    root.style.setProperty('--print-margin-mm', String(layout.pageMarginMm));
+    root.style.setProperty('--rail-width', layout.railWidth + 'px');
+    root.style.setProperty('--logo-width', layout.logoWidth + 'px');
+    root.style.setProperty('--logo-height', layout.logoHeight + 'px');
+    root.style.setProperty('--logo-offset-x', layout.logoOffsetX + 'px');
+    root.style.setProperty('--logo-offset-y', layout.logoOffsetY + 'px');
+    root.style.setProperty('--rail-text-size', layout.railTextSize + 'px');
+    root.style.setProperty('--title-size', layout.titleSize + 'px');
+    root.style.setProperty('--subtitle-size', layout.subtitleSize + 'px');
+    root.style.setProperty('--surface', layout.surfaceColor);
+    root.style.setProperty('--paper', layout.paperColor);
+    root.style.setProperty('--paper-soft', layout.paperSoftColor);
+    root.style.setProperty('--ink', layout.textColor);
+    root.style.setProperty('--muted', layout.mutedColor);
+    root.style.setProperty('--accent', layout.accentColor);
+    root.style.setProperty('--line', layout.lineColor);
+    root.style.setProperty('--line-strong', layout.lineStrongColor);
+    root.style.setProperty('--font-body', layout.bodyFontFamily);
+    root.style.setProperty('--font-heading', layout.headingFontFamily);
+    root.style.setProperty('--font-table', layout.tableFontFamily);
+    document.body.classList.toggle('hide-header-print', !layout.showHeaderInPrint);
+    document.body.classList.toggle('hide-summary-print', !layout.showSummaryInPrint);
+    document.body.classList.toggle('hide-payments-print', !layout.showPaymentsInPrint);
+    if (isPrintPreviewMode) {
+      document.body.classList.toggle('hide-header', !layout.showHeaderInPrint);
+      document.body.classList.toggle('hide-summary', !layout.showSummaryInPrint);
+      document.body.classList.toggle('hide-payments', !layout.showPaymentsInPrint);
+    }
+    renderOverlayLines(layout.lines || []);
   }
 
   function formatMonthLabel(date) {
@@ -847,9 +1105,87 @@
     }
   });
 
+  function buildPdfSnapshotHtml() {
+    const clone = document.documentElement.cloneNode(true);
+    const body = clone.querySelector('body');
+    if (body) body.classList.remove('preview-mode', 'print-preview-mode');
+    clone.querySelectorAll('script').forEach((node) => node.remove());
+    return '<!doctype html>\n' + clone.outerHTML;
+  }
+
+  async function downloadServerPdf() {
+    const selectedDev = clean(developmentSelect.value) || 'desarrollo';
+    const selectedUnit = clean(unitSelect.value) || 'unidad';
+    const fileNamePrefix = `financiamiento-simca-${selectedDev}-${selectedUnit}`.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').toLowerCase();
+    const originalLabel = downloadPdfBtn.textContent;
+    downloadPdfBtn.disabled = true;
+    downloadPdfBtn.textContent = 'Generando PDF...';
+    try {
+      const res = await fetch('/api/financiamiento-simca/render-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          html: buildPdfSnapshotHtml(),
+          fileNamePrefix
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'No se pudo generar el PDF');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileNamePrefix + '.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      downloadPdfBtn.disabled = false;
+      downloadPdfBtn.textContent = originalLabel;
+    }
+  }
+
+  async function loadLayout() {
+    try {
+      const res = await fetch('/api/financiamiento-simca/layout', { credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data && data.ok && data.layout) {
+        applyLayout(data.layout);
+        return;
+      }
+    } catch {}
+    applyLayout(defaultLayout);
+  }
+
+  async function syncAccessControls() {
+    try {
+      const res = await fetch('/api/session-info', { credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+      editorBtn.hidden = !(res.ok && data && data.ok && data.isGerente);
+    } catch {}
+  }
+
+  window.addEventListener('message', (event) => {
+    if (!event || !event.data || event.data.type !== 'financiamiento-simca-layout-preview') return;
+    applyLayout(event.data.layout || defaultLayout);
+  });
+
+  downloadPdfBtn.addEventListener('click', () => {
+    downloadServerPdf().catch((err) => {
+      window.alert(err && err.message ? err.message : 'No se pudo generar el PDF.');
+    });
+  });
   printBtn.addEventListener('click', () => window.print());
 
+  if (isPreviewMode) document.body.classList.add('preview-mode');
+  if (isPrintPreviewMode) document.body.classList.add('print-preview-mode');
   renderEmptyState();
+  loadLayout();
+  syncAccessControls();
   loadMasterCsv();
 </script>
 </body>

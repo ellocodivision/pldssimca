@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editor PDF · Financiamiento SIMCA · Martin SIMCA</title>
+  <style>
+    :root {
+      --rail-width: 88px;
+      --bg: #eee9df;
+      --card: #fffdf9;
+      --line: #d8d1c1;
+      --ink: #1f1f1a;
+      --muted: #666459;
+      --accent: #f0c419;
+      --surface: #e8e4da;
+      --rail: #ffdb16;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Arial, sans-serif;
+      background:
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left calc(var(--rail-width) - 1px) top/1px 100% no-repeat,
+        linear-gradient(rgba(141, 135, 119, 0.92), rgba(141, 135, 119, 0.92)) left top 218px/calc(100% - var(--rail-width)) 1px no-repeat,
+        var(--surface);
+    }
+    .brand-frame { display:grid; grid-template-columns:var(--rail-width) minmax(0,1fr); min-height:100vh; }
+    .brand-rail { position:relative; background:var(--surface); }
+    .brand-rail-accent {
+      position:absolute; left:0; top:218px; width:var(--rail-width); height:278px;
+      background:var(--rail); border-top:1px solid rgba(141, 135, 119, 0.92); border-bottom:1px solid rgba(141, 135, 119, 0.92);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .brand-rail-accent span {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-size: 18px;
+      color: #1d1c18;
+    }
+    .brand-main { display:grid; grid-template-rows:218px minmax(0,1fr); min-width:0; }
+    .brand-top { display:flex; align-items:center; justify-content:center; }
+    .brand-placeholder {
+      width: min(100%, 540px);
+      height: 112px;
+      border: 1px dashed rgba(64, 59, 55, 0.25);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#7c7567;
+      font-size:14px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      background: rgba(255,255,255,.18);
+    }
+    .wrap { max-width: 1480px; margin: 0 auto; padding: 28px 24px 32px; }
+    .head { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+    h1 { margin:0; font-size:30px; }
+    .sub { margin:6px 0 0; color:var(--muted); max-width:820px; line-height:1.5; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 14px;
+      border:1px solid #bdb8a9; border-radius:999px; background:#fff; color:#111; text-decoration:none; font-size:13px; font-weight:700; cursor:pointer;
+    }
+    .btn.primary { border-color:#1d1c18; background:var(--accent); }
+    .layout { display:grid; grid-template-columns:460px minmax(0,1fr); gap:14px; align-items:start; }
+    .panel, .preview-panel { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:14px; }
+    .preview-panel { position:sticky; top:14px; align-self:start; max-height:calc(100vh - 28px); overflow:auto; }
+    .section + .section { margin-top:16px; padding-top:16px; border-top:1px solid #e7e1d4; }
+    .section h2 { margin:0 0 10px; font-size:16px; }
+    .grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+    .grid-1 { display:grid; gap:10px; }
+    label { display:grid; gap:5px; font-size:12px; font-weight:700; color:#615f56; }
+    input[type="number"], input[type="color"], input[type="text"], input[type="file"], select {
+      width:100%; min-height:38px; border:1px solid #cbc3b4; border-radius:10px; padding:0 10px; background:#fff; font-size:14px;
+    }
+    input[type="file"] { padding:7px 10px; min-height:auto; }
+    .check {
+      display:flex; align-items:center; gap:8px; min-height:38px; padding:0 10px;
+      border:1px solid #cbc3b4; border-radius:10px; background:#fff; font-size:13px; font-weight:600; color:#3a3934;
+    }
+    .toolbar { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:10px; }
+    .status { color:var(--muted); font-size:13px; }
+    .preview-stage {
+      width: 100%;
+      overflow: auto;
+      border:1px solid #d8d1c1;
+      border-radius:16px;
+      background:#d9dbe2;
+      padding: 24px 12px;
+    }
+    .preview-shell {
+      width: 816px;
+      height: 1056px;
+      margin: 0 auto;
+      transform-origin: top center;
+    }
+    .preview-frame {
+      width: 816px;
+      height: 1056px;
+      border:0;
+      background:#fff;
+      display:block;
+      box-shadow: 0 0 0 1px rgba(160, 166, 176, 0.75), 0 8px 24px rgba(36, 39, 46, 0.12);
+    }
+    .mini-note { margin:10px 0 0; color:var(--muted); font-size:13px; line-height:1.45; }
+    .actions-inline { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .small-btn {
+      min-height:34px;
+      padding:0 12px;
+      border:1px solid #c9c2b3;
+      border-radius:999px;
+      background:#fff;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .line-list { display:grid; gap:12px; margin-top:10px; }
+    .line-item {
+      border:1px solid #ddd5c7;
+      border-radius:14px;
+      padding:12px;
+      background:#fffdfa;
+    }
+    .line-item-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .line-title { font-size:13px; font-weight:700; color:#3d3a32; }
+    .line-remove {
+      min-height:30px;
+      padding:0 10px;
+      border:1px solid #d6ccbc;
+      border-radius:999px;
+      background:#fff;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    @media (max-width: 1180px) {
+      .brand-frame { grid-template-columns:1fr; background:var(--surface); }
+      .brand-rail { display:none; }
+      .brand-main { grid-template-rows:auto minmax(0,1fr); }
+      .brand-top { min-height:160px; padding:24px 16px; }
+      .wrap { padding:20px 14px 28px; }
+      .layout { grid-template-columns:1fr; }
+      .preview-panel { position:static; max-height:none; overflow:visible; }
+      .preview-stage { padding: 16px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="brand-frame">
+    <aside class="brand-rail" aria-hidden="true">
+      <div class="brand-rail-accent"><span>simca.mx</span></div>
+    </aside>
+    <div class="brand-main">
+      <div class="brand-top" aria-hidden="true">
+        <div class="brand-placeholder">Tu logo en esta franja superior</div>
+      </div>
+      <main class="wrap">
+        <div class="head">
+          <div>
+            <h1>Editor PDF · Financiamiento SIMCA · Martin SIMCA</h1>
+            <p class="sub">Uso exclusivo de Martin SIMCA. Aquí controlas la hoja real que se imprime en el módulo de financiamiento. Puedes subir tu propio logo, cambiar tipografías, mover elementos principales, ajustar colores y ver a la derecha el preview exacto del PDF.</p>
+          </div>
+          <div class="actions">
+            <a class="btn" href="/financiamiento-simca">Volver a financiamiento</a>
+            <button class="btn" type="button" id="resetBtn">Restaurar default</button>
+            <button class="btn primary" type="button" id="saveBtn">Guardar layout</button>
+          </div>
+        </div>
+
+        <div class="layout">
+          <section class="panel">
+            <div class="section">
+              <h2>Hoja</h2>
+              <div class="grid">
+                <label>Escala impresión<input id="printScale" type="number" min="0.65" max="1.15" step="0.01"></label>
+                <label>Margen hoja (mm)<input id="pageMarginMm" type="number" min="0" max="20" step="1"></label>
+                <label>Color fondo hoja<input id="surfaceColor" type="color"></label>
+                <label>Color papel tablas<input id="paperColor" type="color"></label>
+                <label>Color beige interno<input id="paperSoftColor" type="color"></label>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Marca y Logo</h2>
+              <div class="grid-1">
+                <label>Subir logo<input id="logoFile" type="file" accept="image/*"></label>
+                <div class="actions-inline">
+                  <button class="small-btn" type="button" id="removeLogoBtn">Quitar logo</button>
+                  <span class="hint">El archivo se guarda dentro del layout para que se vea igual en preview y PDF.</span>
+                </div>
+              </div>
+              <div class="grid" style="margin-top:10px;">
+                <label>Texto barra izquierda<input id="railText" type="text"></label>
+                <label>Ancho cuadro amarillo<input id="railWidth" type="number" min="36" max="180" step="1"></label>
+                <label>Tamaño texto barra<input id="railTextSize" type="number" min="10" max="28" step="1"></label>
+                <label>Altura franja superior<input id="brandTopHeight" type="number" min="120" max="320" step="1"></label>
+                <label>Cuadro amarillo Y<input id="railOffsetY" type="number" min="0" max="500" step="1"></label>
+                <label>Cuadro amarillo alto<input id="railHeight" type="number" min="40" max="500" step="1"></label>
+                <label>Logo ancho<input id="logoWidth" type="number" min="80" max="900" step="1"></label>
+                <label>Logo alto<input id="logoHeight" type="number" min="40" max="260" step="1"></label>
+                <label>Logo mover X<input id="logoOffsetX" type="number" min="-240" max="240" step="1"></label>
+                <label>Logo mover Y<input id="logoOffsetY" type="number" min="-140" max="140" step="1"></label>
+                <label>Color barra<input id="railAccentColor" type="color"></label>
+                <label>Color texto barra<input id="railTextColor" type="color"></label>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Tipografía</h2>
+              <div class="grid">
+                <label>Fuente cuerpo
+                  <select id="bodyFontFamily">
+                    <option value="&quot;Gotham&quot;, &quot;Montserrat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Gotham</option>
+                    <option value="&quot;Akkurat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Akkurat</option>
+                    <option value="&quot;Trim Mono&quot;, &quot;SFMono-Regular&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace">Trimono</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="&quot;Helvetica Neue&quot;, Arial, sans-serif">Helvetica Neue</option>
+                    <option value="&quot;Trebuchet MS&quot;, Arial, sans-serif">Trebuchet</option>
+                    <option value="Verdana, Arial, sans-serif">Verdana</option>
+                    <option value="Georgia, &quot;Times New Roman&quot;, serif">Georgia</option>
+                    <option value="&quot;Times New Roman&quot;, serif">Times New Roman</option>
+                  </select>
+                </label>
+                <label>Fuente títulos
+                  <select id="headingFontFamily">
+                    <option value="&quot;Gotham&quot;, &quot;Montserrat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Gotham</option>
+                    <option value="&quot;Akkurat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Akkurat</option>
+                    <option value="&quot;Trim Mono&quot;, &quot;SFMono-Regular&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace">Trimono</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="&quot;Helvetica Neue&quot;, Arial, sans-serif">Helvetica Neue</option>
+                    <option value="&quot;Trebuchet MS&quot;, Arial, sans-serif">Trebuchet</option>
+                    <option value="Verdana, Arial, sans-serif">Verdana</option>
+                    <option value="Georgia, &quot;Times New Roman&quot;, serif">Georgia</option>
+                    <option value="&quot;Times New Roman&quot;, serif">Times New Roman</option>
+                  </select>
+                </label>
+                <label>Fuente tablas
+                  <select id="tableFontFamily">
+                    <option value="&quot;Gotham&quot;, &quot;Montserrat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Gotham</option>
+                    <option value="&quot;Akkurat&quot;, &quot;Helvetica Neue&quot;, Arial, sans-serif">Akkurat</option>
+                    <option value="&quot;Trim Mono&quot;, &quot;SFMono-Regular&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace">Trimono</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="&quot;Helvetica Neue&quot;, Arial, sans-serif">Helvetica Neue</option>
+                    <option value="&quot;Trebuchet MS&quot;, Arial, sans-serif">Trebuchet</option>
+                    <option value="Verdana, Arial, sans-serif">Verdana</option>
+                    <option value="Georgia, &quot;Times New Roman&quot;, serif">Georgia</option>
+                    <option value="&quot;Times New Roman&quot;, serif">Times New Roman</option>
+                  </select>
+                </label>
+                <label>Color texto<input id="textColor" type="color"></label>
+                <label>Color título<input id="titleColor" type="color"></label>
+                <label>Color texto secundario<input id="mutedColor" type="color"></label>
+                <label>Tamaño título<input id="titleSize" type="number" min="16" max="40" step="1"></label>
+                <label>Tamaño subtítulo<input id="subtitleSize" type="number" min="10" max="22" step="1"></label>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Posición y Espacios</h2>
+              <div class="grid">
+                <label>Padding superior header<input id="headerPaddingTop" type="number" min="-160" max="160" step="1"></label>
+                <label>Padding lateral header<input id="headerPaddingSides" type="number" min="0" max="40" step="1"></label>
+                <label>Padding inferior header<input id="headerPaddingBottom" type="number" min="0" max="40" step="1"></label>
+                <label>Título mover X<input id="titleOffsetX" type="number" min="-240" max="240" step="1"></label>
+                <label>Título mover Y<input id="titleOffsetY" type="number" min="-120" max="120" step="1"></label>
+                <label>Padding superior cuerpo<input id="contentPaddingTop" type="number" min="0" max="40" step="1"></label>
+                <label>Padding lateral cuerpo<input id="contentPaddingSides" type="number" min="0" max="40" step="1"></label>
+                <label>Padding inferior cuerpo<input id="contentPaddingBottom" type="number" min="0" max="40" step="1"></label>
+                <label>Separación bloques<input id="contentGap" type="number" min="0" max="32" step="1"></label>
+              </div>
+              <div class="grid-1" style="margin-top:10px;">
+                <label class="check"><input id="showHeaderInPrint" type="checkbox"> Mostrar encabezado en PDF</label>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Colores de Tablas</h2>
+              <div class="grid">
+                <label>Accent<input id="accentColor" type="color"></label>
+                <label>Línea<input id="lineColor" type="color"></label>
+                <label>Línea fuerte<input id="lineStrongColor" type="color"></label>
+                <label>Fila highlight<input id="highlightRowColor" type="color"></label>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Líneas libres</h2>
+              <div class="actions-inline">
+                <button class="small-btn" type="button" id="addLineBtn">Agregar línea</button>
+                <span class="hint">Define una línea de punto a punto en porcentajes de la hoja. También sale en el PDF.</span>
+              </div>
+              <div class="line-list" id="lineList"></div>
+            </div>
+
+            <div class="section">
+              <h2>Tabla Resumen</h2>
+              <div class="grid">
+                <label>Header tamaño<input id="summaryHeaderSize" type="number" min="7" max="16" step="1"></label>
+                <label>Body tamaño<input id="summaryBodySize" type="number" min="9" max="20" step="1"></label>
+                <label class="check"><input id="showSummaryInPrint" type="checkbox"> Mostrar resumen en PDF</label>
+              </div>
+              <div class="grid" style="margin-top:10px;">
+                <label>% Desarrollo<input id="summaryColDevelopment" type="number" min="10" max="35" step="1"></label>
+                <label>% Unidad<input id="summaryColUnit" type="number" min="8" max="25" step="1"></label>
+                <label>% Forma de pago<input id="summaryColPlan" type="number" min="10" max="30" step="1"></label>
+                <label>% Precio lista<input id="summaryColList" type="number" min="10" max="30" step="1"></label>
+                <label>% Descuento<input id="summaryColDiscount" type="number" min="10" max="30" step="1"></label>
+                <label>% Precio promo<input id="summaryColPromo" type="number" min="10" max="30" step="1"></label>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Desglose</h2>
+              <div class="grid">
+                <label>Título tamaño<input id="paymentTitleSize" type="number" min="12" max="30" step="1"></label>
+                <label>Header tamaño<input id="paymentHeaderSize" type="number" min="7" max="16" step="1"></label>
+                <label>Body tamaño<input id="paymentBodySize" type="number" min="9" max="20" step="1"></label>
+                <label class="check"><input id="showPaymentsInPrint" type="checkbox"> Mostrar desglose en PDF</label>
+              </div>
+              <div class="grid" style="margin-top:10px;">
+                <label>% Etapa<input id="paymentsColStage" type="number" min="6" max="24" step="1"></label>
+                <label>% Concepto<input id="paymentsColConcept" type="number" min="10" max="36" step="1"></label>
+                <label>% Referencia<input id="paymentsColReference" type="number" min="12" max="40" step="1"></label>
+                <label>% Porcentaje<input id="paymentsColPercent" type="number" min="8" max="30" step="1"></label>
+                <label>% Monto<input id="paymentsColAmount" type="number" min="10" max="30" step="1"></label>
+              </div>
+              <div class="grid" style="margin-top:10px;">
+                <label>Alinear Etapa<select id="paymentsAlignStage"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+                <label>Alinear Concepto<select id="paymentsAlignConcept"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+                <label>Alinear Referencia<select id="paymentsAlignReference"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+                <label>Alinear Porcentaje<select id="paymentsAlignPercent"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+                <label>Alinear Monto<select id="paymentsAlignAmount"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+              </div>
+            </div>
+          </section>
+
+          <section class="preview-panel">
+            <div class="toolbar">
+              <div>
+                <strong>Vista previa real</strong>
+                <div class="status">La derecha usa el mismo modo impresión del módulo final.</div>
+              </div>
+              <div class="status" id="status">Cargando layout...</div>
+            </div>
+            <div class="preview-stage" id="previewStage">
+              <div class="preview-shell" id="previewShell">
+                <iframe id="previewFrame" class="preview-frame" src="/financiamiento-simca?editorPreview=print"></iframe>
+              </div>
+            </div>
+            <p class="mini-note">El preview se queda visible mientras editas. Todo lo que cambias aquí se refleja en la hoja de la derecha y luego en impresión/PDF.</p>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const defaultLayout = {
+        version: 4,
+        printScale: 0.92,
+        pageMarginMm: 0,
+        brandTopHeight: 226,
+        railOffsetY: 226,
+        railHeight: 278,
+        railWidth: 88,
+        logoDataUrl: '',
+        logoWidth: 480,
+        logoHeight: 120,
+        logoOffsetX: 0,
+        logoOffsetY: 0,
+        railText: 'simca.mx',
+        railTextSize: 18,
+        titleSize: 28,
+        subtitleSize: 14,
+        headerPaddingTop: 12,
+        headerPaddingSides: 14,
+        headerPaddingBottom: 10,
+        contentPaddingTop: 6,
+        contentPaddingSides: 12,
+        contentPaddingBottom: 12,
+        contentGap: 14,
+        titleOffsetX: 0,
+        titleOffsetY: 0,
+        showHeaderInPrint: true,
+        showSummaryInPrint: true,
+        showPaymentsInPrint: true,
+        surfaceColor: '#e8e4da',
+        paperColor: '#fffdf8',
+        paperSoftColor: '#f8f2e6',
+        textColor: '#1d1c18',
+        titleColor: '#1d1c18',
+        mutedColor: '#6f6859',
+        accentColor: '#f0c419',
+        railAccentColor: '#ffdb16',
+        railTextColor: '#1d1c18',
+        lineColor: '#ddd1bb',
+        lineStrongColor: '#c7b89d',
+        highlightRowColor: '#f9efbe',
+        bodyFontFamily: 'Arial, sans-serif',
+        headingFontFamily: 'Arial, sans-serif',
+        tableFontFamily: 'Arial, sans-serif',
+        summaryHeaderSize: 9,
+        summaryBodySize: 12,
+        paymentHeaderSize: 9,
+        paymentBodySize: 12,
+        paymentTitleSize: 20,
+        summaryColDevelopment: 20,
+        summaryColUnit: 12,
+        summaryColPlan: 16,
+        summaryColList: 17,
+        summaryColDiscount: 17,
+        summaryColPromo: 18,
+        paymentsColStage: 10,
+        paymentsColConcept: 22,
+        paymentsColReference: 28,
+        paymentsColPercent: 16,
+        paymentsColAmount: 24,
+        paymentsAlignStage: 'right',
+        paymentsAlignConcept: 'left',
+        paymentsAlignReference: 'left',
+        paymentsAlignPercent: 'right',
+        paymentsAlignAmount: 'right',
+        lines: []
+      };
+
+      const els = {
+        saveBtn: document.getElementById('saveBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        addLineBtn: document.getElementById('addLineBtn'),
+        removeLogoBtn: document.getElementById('removeLogoBtn'),
+        logoFile: document.getElementById('logoFile'),
+        lineList: document.getElementById('lineList'),
+        status: document.getElementById('status'),
+        previewStage: document.getElementById('previewStage'),
+        previewShell: document.getElementById('previewShell'),
+        previewFrame: document.getElementById('previewFrame'),
+        printScale: document.getElementById('printScale'),
+        pageMarginMm: document.getElementById('pageMarginMm'),
+        brandTopHeight: document.getElementById('brandTopHeight'),
+        railOffsetY: document.getElementById('railOffsetY'),
+        railHeight: document.getElementById('railHeight'),
+        railWidth: document.getElementById('railWidth'),
+        logoWidth: document.getElementById('logoWidth'),
+        logoHeight: document.getElementById('logoHeight'),
+        logoOffsetX: document.getElementById('logoOffsetX'),
+        logoOffsetY: document.getElementById('logoOffsetY'),
+        railText: document.getElementById('railText'),
+        railTextSize: document.getElementById('railTextSize'),
+        titleSize: document.getElementById('titleSize'),
+        subtitleSize: document.getElementById('subtitleSize'),
+        headerPaddingTop: document.getElementById('headerPaddingTop'),
+        headerPaddingSides: document.getElementById('headerPaddingSides'),
+        headerPaddingBottom: document.getElementById('headerPaddingBottom'),
+        contentPaddingTop: document.getElementById('contentPaddingTop'),
+        contentPaddingSides: document.getElementById('contentPaddingSides'),
+        contentPaddingBottom: document.getElementById('contentPaddingBottom'),
+        contentGap: document.getElementById('contentGap'),
+        titleOffsetX: document.getElementById('titleOffsetX'),
+        titleOffsetY: document.getElementById('titleOffsetY'),
+        showHeaderInPrint: document.getElementById('showHeaderInPrint'),
+        surfaceColor: document.getElementById('surfaceColor'),
+        paperColor: document.getElementById('paperColor'),
+        paperSoftColor: document.getElementById('paperSoftColor'),
+        textColor: document.getElementById('textColor'),
+        titleColor: document.getElementById('titleColor'),
+        mutedColor: document.getElementById('mutedColor'),
+        accentColor: document.getElementById('accentColor'),
+        railAccentColor: document.getElementById('railAccentColor'),
+        railTextColor: document.getElementById('railTextColor'),
+        lineColor: document.getElementById('lineColor'),
+        lineStrongColor: document.getElementById('lineStrongColor'),
+        highlightRowColor: document.getElementById('highlightRowColor'),
+        bodyFontFamily: document.getElementById('bodyFontFamily'),
+        headingFontFamily: document.getElementById('headingFontFamily'),
+        tableFontFamily: document.getElementById('tableFontFamily'),
+        summaryHeaderSize: document.getElementById('summaryHeaderSize'),
+        summaryBodySize: document.getElementById('summaryBodySize'),
+        showSummaryInPrint: document.getElementById('showSummaryInPrint'),
+        summaryColDevelopment: document.getElementById('summaryColDevelopment'),
+        summaryColUnit: document.getElementById('summaryColUnit'),
+        summaryColPlan: document.getElementById('summaryColPlan'),
+        summaryColList: document.getElementById('summaryColList'),
+        summaryColDiscount: document.getElementById('summaryColDiscount'),
+        summaryColPromo: document.getElementById('summaryColPromo'),
+        paymentTitleSize: document.getElementById('paymentTitleSize'),
+        paymentHeaderSize: document.getElementById('paymentHeaderSize'),
+        paymentBodySize: document.getElementById('paymentBodySize'),
+        showPaymentsInPrint: document.getElementById('showPaymentsInPrint'),
+        paymentsColStage: document.getElementById('paymentsColStage'),
+        paymentsColConcept: document.getElementById('paymentsColConcept'),
+        paymentsColReference: document.getElementById('paymentsColReference'),
+        paymentsColPercent: document.getElementById('paymentsColPercent'),
+        paymentsColAmount: document.getElementById('paymentsColAmount'),
+        paymentsAlignStage: document.getElementById('paymentsAlignStage'),
+        paymentsAlignConcept: document.getElementById('paymentsAlignConcept'),
+        paymentsAlignReference: document.getElementById('paymentsAlignReference'),
+        paymentsAlignPercent: document.getElementById('paymentsAlignPercent'),
+        paymentsAlignAmount: document.getElementById('paymentsAlignAmount')
+      };
+
+      const fieldNames = Object.keys(els).filter(function (key) {
+        return !['saveBtn', 'resetBtn', 'addLineBtn', 'removeLogoBtn', 'logoFile', 'lineList', 'status', 'previewStage', 'previewShell', 'previewFrame'].includes(key);
+      });
+
+      let currentLogoDataUrl = '';
+      let currentLines = [];
+      const previewPaperWidth = 816;
+      const previewPaperHeight = 1056;
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function normalizeLayout(input) {
+        const src = input && typeof input === 'object' ? input : {};
+        const out = Object.assign({}, defaultLayout, src);
+        const validAlign = ['left', 'center', 'right'];
+
+        var srcVersion = Number(src.version) || 0;
+        if (srcVersion < 3 && (!Number.isFinite(Number(src.printScale)) || Math.abs(Number(src.printScale) - 0.74) < 0.001)) {
+          out.printScale = defaultLayout.printScale;
+        }
+        if (srcVersion < 4 && (!Number.isFinite(Number(src.pageMarginMm)) || Math.abs(Number(src.pageMarginMm) - 6) < 0.001)) {
+          out.pageMarginMm = defaultLayout.pageMarginMm;
+        }
+        out.printScale = clamp(Number(out.printScale) || defaultLayout.printScale, 0.65, 1.15);
+        out.pageMarginMm = clamp(Number(out.pageMarginMm) || defaultLayout.pageMarginMm, 0, 20);
+        out.brandTopHeight = clamp(Number(out.brandTopHeight) || defaultLayout.brandTopHeight, 120, 320);
+        out.railOffsetY = clamp(Number(out.railOffsetY) || defaultLayout.railOffsetY, 0, 500);
+        out.railHeight = clamp(Number(out.railHeight) || defaultLayout.railHeight, 40, 500);
+        out.railWidth = clamp(Number(out.railWidth) || defaultLayout.railWidth, 36, 180);
+        out.logoWidth = clamp(Number(out.logoWidth) || defaultLayout.logoWidth, 80, 900);
+        out.logoHeight = clamp(Number(out.logoHeight) || defaultLayout.logoHeight, 40, 260);
+        out.logoOffsetX = clamp(Number(out.logoOffsetX) || defaultLayout.logoOffsetX, -240, 240);
+        out.logoOffsetY = clamp(Number(out.logoOffsetY) || defaultLayout.logoOffsetY, -140, 140);
+        out.railTextSize = clamp(Number(out.railTextSize) || defaultLayout.railTextSize, 10, 28);
+        out.titleSize = clamp(Number(out.titleSize) || defaultLayout.titleSize, 16, 40);
+        out.subtitleSize = clamp(Number(out.subtitleSize) || defaultLayout.subtitleSize, 10, 22);
+        out.headerPaddingTop = clamp(Number(out.headerPaddingTop) || defaultLayout.headerPaddingTop, -160, 160);
+        out.headerPaddingSides = clamp(Number(out.headerPaddingSides) || defaultLayout.headerPaddingSides, 0, 40);
+        out.headerPaddingBottom = clamp(Number(out.headerPaddingBottom) || defaultLayout.headerPaddingBottom, 0, 40);
+        out.contentPaddingTop = clamp(Number(out.contentPaddingTop) || defaultLayout.contentPaddingTop, 0, 40);
+        out.contentPaddingSides = clamp(Number(out.contentPaddingSides) || defaultLayout.contentPaddingSides, 0, 40);
+        out.contentPaddingBottom = clamp(Number(out.contentPaddingBottom) || defaultLayout.contentPaddingBottom, 0, 40);
+        out.contentGap = clamp(Number(out.contentGap) || defaultLayout.contentGap, 0, 32);
+        out.titleOffsetX = clamp(Number(out.titleOffsetX) || defaultLayout.titleOffsetX, -240, 240);
+        out.titleOffsetY = clamp(Number(out.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120);
+        out.summaryHeaderSize = clamp(Number(out.summaryHeaderSize) || defaultLayout.summaryHeaderSize, 7, 16);
+        out.summaryBodySize = clamp(Number(out.summaryBodySize) || defaultLayout.summaryBodySize, 9, 20);
+        out.paymentHeaderSize = clamp(Number(out.paymentHeaderSize) || defaultLayout.paymentHeaderSize, 7, 16);
+        out.paymentBodySize = clamp(Number(out.paymentBodySize) || defaultLayout.paymentBodySize, 9, 20);
+        out.paymentTitleSize = clamp(Number(out.paymentTitleSize) || defaultLayout.paymentTitleSize, 12, 30);
+        out.summaryColDevelopment = clamp(Number(out.summaryColDevelopment) || defaultLayout.summaryColDevelopment, 10, 35);
+        out.summaryColUnit = clamp(Number(out.summaryColUnit) || defaultLayout.summaryColUnit, 8, 25);
+        out.summaryColPlan = clamp(Number(out.summaryColPlan) || defaultLayout.summaryColPlan, 10, 30);
+        out.summaryColList = clamp(Number(out.summaryColList) || defaultLayout.summaryColList, 10, 30);
+        out.summaryColDiscount = clamp(Number(out.summaryColDiscount) || defaultLayout.summaryColDiscount, 10, 30);
+        out.summaryColPromo = clamp(Number(out.summaryColPromo) || defaultLayout.summaryColPromo, 10, 30);
+        out.paymentsColStage = clamp(Number(out.paymentsColStage) || defaultLayout.paymentsColStage, 6, 24);
+        out.paymentsColConcept = clamp(Number(out.paymentsColConcept) || defaultLayout.paymentsColConcept, 10, 36);
+        out.paymentsColReference = clamp(Number(out.paymentsColReference) || defaultLayout.paymentsColReference, 12, 40);
+        out.paymentsColPercent = clamp(Number(out.paymentsColPercent) || defaultLayout.paymentsColPercent, 8, 30);
+        out.paymentsColAmount = clamp(Number(out.paymentsColAmount) || defaultLayout.paymentsColAmount, 10, 30);
+        out.paymentsAlignStage = validAlign.includes(String(out.paymentsAlignStage || '').toLowerCase()) ? String(out.paymentsAlignStage).toLowerCase() : defaultLayout.paymentsAlignStage;
+        out.paymentsAlignConcept = validAlign.includes(String(out.paymentsAlignConcept || '').toLowerCase()) ? String(out.paymentsAlignConcept).toLowerCase() : defaultLayout.paymentsAlignConcept;
+        out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : defaultLayout.paymentsAlignReference;
+        out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : defaultLayout.paymentsAlignPercent;
+        out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : defaultLayout.paymentsAlignAmount;
+        out.showHeaderInPrint = Boolean(out.showHeaderInPrint);
+        out.showSummaryInPrint = Boolean(out.showSummaryInPrint);
+        out.showPaymentsInPrint = Boolean(out.showPaymentsInPrint);
+        out.logoDataUrl = typeof out.logoDataUrl === 'string' ? out.logoDataUrl : '';
+        out.surfaceColor = typeof out.surfaceColor === 'string' ? out.surfaceColor : defaultLayout.surfaceColor;
+        out.paperColor = typeof out.paperColor === 'string' ? out.paperColor : defaultLayout.paperColor;
+        out.paperSoftColor = typeof out.paperSoftColor === 'string' ? out.paperSoftColor : defaultLayout.paperSoftColor;
+        out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map(function (line, index) {
+          const srcLine = line && typeof line === 'object' ? line : {};
+          const orientation = String(srcLine.orientation || '').toLowerCase() === 'vertical' ? 'vertical' : 'horizontal';
+          const x = clamp(Number(srcLine.x) || Number(srcLine.x1) || 0, 0, 100);
+          const y = clamp(Number(srcLine.y) || Number(srcLine.y1) || 0, 0, 100);
+          const length = clamp(
+            Number(srcLine.length) || (
+              orientation === 'vertical'
+                ? Math.max(0, (Number(srcLine.y2) || y) - y)
+                : Math.max(0, (Number(srcLine.x2) || x) - x)
+            ),
+            0,
+            100
+          );
+          return {
+            id: typeof srcLine.id === 'string' && srcLine.id ? srcLine.id : 'line-' + (index + 1),
+            orientation: orientation,
+            x: x,
+            y: y,
+            length: length,
+            width: clamp(Number(srcLine.width) || 1, 1, 12),
+            color: typeof srcLine.color === 'string' && srcLine.color ? srcLine.color : defaultLayout.lineStrongColor,
+            opacity: clamp(Number(srcLine.opacity) || 1, 0.1, 1)
+          };
+        }) : [];
+        return out;
+      }
+
+      function renderLinesEditor() {
+        els.lineList.innerHTML = currentLines.map(function (line, index) {
+          return [
+            '<div class="line-item" data-line-id="' + line.id + '">',
+            '<div class="line-item-head">',
+            '<div class="line-title">Linea ' + (index + 1) + '</div>',
+            '<button class="line-remove" type="button" data-remove-line="' + line.id + '">Quitar</button>',
+            '</div>',
+            '<div class="grid">',
+            '<label>Orientación<select data-line-field="orientation" data-line-id="' + line.id + '"><option value="horizontal"' + (line.orientation === 'horizontal' ? ' selected' : '') + '>Horizontal</option><option value="vertical"' + (line.orientation === 'vertical' ? ' selected' : '') + '>Vertical</option></select></label>',
+            '<label>X %<input type="number" min="0" max="100" step="0.1" data-line-field="x" data-line-id="' + line.id + '" value="' + line.x + '"></label>',
+            '<label>Y %<input type="number" min="0" max="100" step="0.1" data-line-field="y" data-line-id="' + line.id + '" value="' + line.y + '"></label>',
+            '<label>Largo %<input type="number" min="0" max="100" step="0.1" data-line-field="length" data-line-id="' + line.id + '" value="' + line.length + '"></label>',
+            '<label>Grosor<input type="number" min="1" max="12" step="0.1" data-line-field="width" data-line-id="' + line.id + '" value="' + line.width + '"></label>',
+            '<label>Opacidad<input type="number" min="0.1" max="1" step="0.1" data-line-field="opacity" data-line-id="' + line.id + '" value="' + line.opacity + '"></label>',
+            '<label>Color<input type="color" data-line-field="color" data-line-id="' + line.id + '" value="' + line.color + '"></label>',
+            '</div>',
+            '</div>'
+          ].join('');
+        }).join('');
+      }
+
+      function setForm(layoutInput) {
+        const layout = normalizeLayout(layoutInput);
+        document.documentElement.style.setProperty('--rail-width', layout.railWidth + 'px');
+        currentLogoDataUrl = layout.logoDataUrl || '';
+        currentLines = layout.lines.slice();
+        fieldNames.forEach(function (name) {
+          const el = els[name];
+          if (el.type === 'checkbox') el.checked = Boolean(layout[name]);
+          else el.value = String(layout[name]);
+        });
+        renderLinesEditor();
+      }
+
+      function getFormLayout() {
+        const out = { logoDataUrl: currentLogoDataUrl, lines: currentLines.slice() };
+        fieldNames.forEach(function (name) {
+          const el = els[name];
+          out[name] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+        out.logoDataUrl = currentLogoDataUrl;
+        out.lines = currentLines.slice();
+        return normalizeLayout(out);
+      }
+
+      function pushPreview() {
+        document.documentElement.style.setProperty('--rail-width', String(getFormLayout().railWidth) + 'px');
+        if (!els.previewFrame.contentWindow) return;
+        els.previewFrame.contentWindow.postMessage({
+          type: 'financiamiento-simca-layout-preview',
+          layout: getFormLayout()
+        }, window.location.origin);
+      }
+
+      function updatePreviewScale() {
+        if (!els.previewStage || !els.previewShell) return;
+        const stageWidth = Math.max(320, els.previewStage.clientWidth - 24);
+        const scale = Math.min(stageWidth / previewPaperWidth, 1);
+        els.previewShell.style.transform = 'scale(' + scale + ')';
+        els.previewStage.style.minHeight = Math.ceil(previewPaperHeight * scale + 48) + 'px';
+      }
+
+      async function loadLayout() {
+        els.status.textContent = 'Cargando layout...';
+        try {
+          const res = await fetch('/api/financiamiento-simca/layout', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          setForm(res.ok && data && data.ok && data.layout ? data.layout : defaultLayout);
+          els.status.textContent = 'Layout listo.';
+          pushPreview();
+        } catch {
+          setForm(defaultLayout);
+          els.status.textContent = 'No se pudo cargar layout. Se usó default.';
+          pushPreview();
+        }
+      }
+
+      async function saveLayout() {
+        els.status.textContent = 'Guardando layout...';
+        const layout = getFormLayout();
+        try {
+          const res = await fetch('/api/financiamiento-simca/layout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ layout: layout })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            els.status.textContent = data.error || 'No se pudo guardar.';
+            return;
+          }
+          setForm(data.layout || layout);
+          els.status.textContent = 'Layout guardado.';
+          pushPreview();
+        } catch {
+          els.status.textContent = 'Error de red guardando layout.';
+        }
+      }
+
+      function loadLogoFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+          currentLogoDataUrl = typeof reader.result === 'string' ? reader.result : '';
+          els.status.textContent = 'Logo cargado en preview. Falta guardar layout si quieres dejarlo fijo.';
+          pushPreview();
+        };
+        reader.onerror = function () {
+          els.status.textContent = 'No se pudo leer el logo.';
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function addLine() {
+        const next = {
+          id: 'line-' + Date.now(),
+          orientation: 'horizontal',
+          x: 6,
+          y: 6,
+          length: 88,
+          width: 1,
+          color: '#8d8777',
+          opacity: 1
+        };
+        currentLines = currentLines.concat([next]);
+        renderLinesEditor();
+        els.status.textContent = 'Linea agregada al preview. Guarda layout si quieres dejarla fija.';
+        pushPreview();
+      }
+
+      function updateLine(id, field, value) {
+        currentLines = currentLines.map(function (line) {
+          if (line.id !== id) return line;
+          const next = Object.assign({}, line);
+          if (field === 'orientation') next.orientation = value === 'vertical' ? 'vertical' : 'horizontal';
+          else if (field === 'color') next.color = String(value || '#8d8777');
+          else if (field === 'opacity') next.opacity = clamp(Number(value) || 1, 0.1, 1);
+          else if (field === 'width') next.width = clamp(Number(value) || 1, 1, 12);
+          else next[field] = clamp(Number(value) || 0, 0, 100);
+          return next;
+        });
+        pushPreview();
+      }
+
+      function removeLine(id) {
+        currentLines = currentLines.filter(function (line) { return line.id !== id; });
+        renderLinesEditor();
+        els.status.textContent = 'Linea eliminada del preview. Guarda layout si quieres dejar el cambio fijo.';
+        pushPreview();
+      }
+
+      fieldNames.forEach(function (name) {
+        const el = els[name];
+        el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', pushPreview);
+      });
+
+      els.logoFile.addEventListener('change', function () {
+        loadLogoFile(els.logoFile.files && els.logoFile.files[0]);
+      });
+
+      els.addLineBtn.addEventListener('click', addLine);
+
+      els.lineList.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset) return;
+        const lineId = target.dataset.lineId;
+        const field = target.dataset.lineField;
+        if (!lineId || !field) return;
+        updateLine(lineId, field, target.value);
+      });
+
+      els.lineList.addEventListener('click', function (event) {
+        const target = event.target;
+        if (!target || !target.dataset) return;
+        if (!target.dataset.removeLine) return;
+        removeLine(target.dataset.removeLine);
+      });
+
+      els.removeLogoBtn.addEventListener('click', function () {
+        currentLogoDataUrl = '';
+        els.logoFile.value = '';
+        els.status.textContent = 'Logo removido del preview. Guarda layout si quieres dejarlo fijo.';
+        pushPreview();
+      });
+
+      els.previewFrame.addEventListener('load', function () {
+        updatePreviewScale();
+        pushPreview();
+      });
+      window.addEventListener('resize', updatePreviewScale);
+      els.resetBtn.addEventListener('click', function () {
+        currentLogoDataUrl = defaultLayout.logoDataUrl || '';
+        currentLines = defaultLayout.lines.slice();
+        els.logoFile.value = '';
+        setForm(defaultLayout);
+        els.status.textContent = 'Valores default restaurados. Falta guardar si quieres dejarlos fijos.';
+        pushPreview();
+      });
+      els.saveBtn.addEventListener('click', saveLayout);
+
+      loadLayout();
+      updatePreviewScale();
+    })();
+  </script>
+</body>
+</html>
