@@ -38,6 +38,7 @@
     .preview-panel { position:sticky; top:14px; align-self:start; max-height:calc(100vh - 28px); overflow:auto; }
     .section + .section { margin-top:16px; padding-top:16px; border-top:1px solid #e7e1d4; }
     .section h2 { margin:0 0 10px; font-size:16px; }
+    .section.is-hidden-for-financing { display:none; }
     .grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
     .grid-1 { display:grid; gap:10px; }
     label { display:grid; gap:5px; font-size:12px; font-weight:700; color:#615f56; }
@@ -258,7 +259,7 @@
               <div class="line-list" id="lineList"></div>
             </div>
 
-            <div class="section">
+            <div class="section is-hidden-for-financing">
               <h2>Tabla Resumen</h2>
               <div class="grid">
                 <label>Header tamaño<input id="summaryHeaderSize" type="number" min="7" max="16" step="1"></label>
@@ -275,7 +276,7 @@
               </div>
             </div>
 
-            <div class="section">
+            <div class="section is-hidden-for-financing">
               <h2>Desglose</h2>
               <div class="grid">
                 <label>Título tamaño<input id="paymentTitleSize" type="number" min="12" max="30" step="1"></label>

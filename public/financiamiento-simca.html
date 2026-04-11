@@ -684,13 +684,19 @@
   }
 
   body.print-preview-mode .content-shell{
-    padding:24px 18px 18px;
+    padding:
+      calc(24px + var(--content-padding-top))
+      calc(18px + var(--content-padding-sides))
+      calc(18px + var(--content-padding-bottom));
     min-height:calc(1056px - var(--brand-top-height));
     overflow:hidden;
   }
 
   body.print-preview-mode .header{
-    padding:0 0 18px;
+    padding:
+      var(--header-padding-top)
+      var(--header-padding-sides)
+      calc(18px + var(--header-padding-bottom));
     gap:0;
     align-items:center;
   }
@@ -707,7 +713,7 @@
 
   body.print-preview-mode .content{
     padding:0;
-    gap:14px;
+    gap:var(--content-gap);
     background:transparent;
     border:0;
     box-shadow:none;
@@ -811,14 +817,20 @@
   }
 
   body.pdf-export .content-shell{
-    padding:24px 14px 16px;
+    padding:
+      calc(24px + var(--content-padding-top))
+      calc(18px + var(--content-padding-sides))
+      calc(18px + var(--content-padding-bottom));
     min-height:calc(1056px - var(--brand-top-height));
     background:var(--paper);
     overflow:hidden;
   }
 
   body.pdf-export .header{
-    padding:var(--header-padding-top) var(--header-padding-sides) var(--header-padding-bottom);
+    padding:
+      var(--header-padding-top)
+      var(--header-padding-sides)
+      calc(18px + var(--header-padding-bottom));
     gap:10px;
     align-items:center;
   }
@@ -1938,6 +1950,15 @@
     --font-heading:${layout.headingFontFamily};
     --font-table:${layout.tableFontFamily};
     --title-size:${layout.titleSize}px;
+    --header-padding-top:${layout.headerPaddingTop}px;
+    --header-padding-sides:${layout.headerPaddingSides}px;
+    --header-padding-bottom:${layout.headerPaddingBottom}px;
+    --content-padding-top:${layout.contentPaddingTop}px;
+    --content-padding-sides:${layout.contentPaddingSides}px;
+    --content-padding-bottom:${layout.contentPaddingBottom}px;
+    --content-gap:${layout.contentGap}px;
+    --title-offset-x:${layout.titleOffsetX}px;
+    --title-offset-y:${layout.titleOffsetY}px;
   }
   *{box-sizing:border-box}
   @page{size:portrait;margin:0}
@@ -1971,8 +1992,23 @@
   .pdf-logo-wrap{width:min(100%, var(--logo-width));height:var(--logo-height);display:flex;align-items:center;justify-content:center;transform:translate(var(--logo-offset-x), var(--logo-offset-y))}
   .pdf-logo-wrap.is-empty{opacity:0}
   .brand-logo{max-width:100%;max-height:100%;object-fit:contain;display:block}
-  .pdf-body{background:var(--paper);padding:24px 18px 18px;height:calc(var(--page-height) - var(--brand-top-height));overflow:hidden}
-  .pdf-header h1{margin:0 0 18px;font-family:var(--font-heading);font-size:var(--title-size);line-height:1;color:var(--title-color)}
+  .pdf-body{
+    background:var(--paper);
+    padding:
+      calc(24px + var(--content-padding-top))
+      calc(18px + var(--content-padding-sides))
+      calc(18px + var(--content-padding-bottom));
+    height:calc(var(--page-height) - var(--brand-top-height));
+    overflow:hidden
+  }
+  .pdf-header{
+    padding:
+      var(--header-padding-top)
+      var(--header-padding-sides)
+      calc(18px + var(--header-padding-bottom));
+    transform:translate(var(--title-offset-x), var(--title-offset-y));
+  }
+  .pdf-header h1{margin:0;font-family:var(--font-heading);font-size:var(--title-size);line-height:1;color:var(--title-color)}
   .info-grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
   .info-card{min-width:0;padding:14px 16px;border-radius:16px;background:var(--paper-soft);border:1px solid rgba(0,0,0,.03)}
   .info-card .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
