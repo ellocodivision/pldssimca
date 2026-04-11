@@ -1843,11 +1843,11 @@
     const firstRowHeight = 21;
     const nextRowHeight = 22;
     const firstAvailable = bodyHeight - bodyPadding - headerHeight - cardsBlockHeight - firstTableChrome;
-    const nextAvailable = bodyHeight - bodyPadding - 24 - nextTableChrome - 42;
+    const nextAvailable = bodyHeight - bodyPadding - 24 - nextTableChrome - 86;
 
     return {
       firstPageRows: clamp(Math.floor(firstAvailable / firstRowHeight), 5, 8),
-      nextPageRows: clamp(Math.floor(nextAvailable / nextRowHeight), 24, 34)
+      nextPageRows: clamp(Math.floor(nextAvailable / nextRowHeight), 22, 31)
     };
   }
 
