@@ -1371,18 +1371,22 @@
               overflow: hidden;
             }
             body.pdf-export .page {
-              width: calc((816px - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
+              width: calc(816px - (var(--print-margin-mm) * 2mm));
+              height: calc(1056px - (var(--print-margin-mm) * 2mm));
               max-width: none;
               margin: calc(var(--print-margin-mm) * 1mm) 0 0 calc(var(--print-margin-mm) * 1mm);
               padding: 0;
-              transform: scale(var(--print-scale));
-              transform-origin: top left;
+              overflow: hidden;
             }
             body.pdf-export .sheet {
+              width: calc((816px - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
+              height: calc((1056px - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
               border: none;
               box-shadow: none;
-              min-height: calc((1056px - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
               background: #fff;
+              transform: scale(var(--print-scale));
+              transform-origin: top left;
+              overflow: hidden;
             }
             body.pdf-export .topbar,
             body.pdf-export .form-section,
