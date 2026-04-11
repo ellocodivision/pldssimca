@@ -1829,6 +1829,27 @@
     return out;
   }
 
+  function computePdfRowTargets(layout) {
+    const pxPerMm = 96 / 25.4;
+    const innerPageHeight = 1056 - (layout.pageMarginMm * pxPerMm * 2);
+    const bodyHeight = Math.max(480, innerPageHeight - layout.brandTopHeight);
+    const bodyPadding = (24 + layout.contentPaddingTop) + (18 + layout.contentPaddingBottom);
+    const headerHeight = layout.headerPaddingTop + layout.headerPaddingBottom + layout.titleSize + 18;
+    const cardRows = Math.ceil(11 / 2);
+    const cardHeight = (layout.cardPadding * 2) + layout.subtitleSize + 42;
+    const cardsBlockHeight = (cardRows * cardHeight) + ((cardRows - 1) * layout.cardGap);
+    const firstTableChrome = 14 + 52;
+    const nextTableChrome = 12;
+    const rowHeight = 30;
+    const firstAvailable = bodyHeight - bodyPadding - headerHeight - cardsBlockHeight - firstTableChrome;
+    const nextAvailable = bodyHeight - bodyPadding - 24 - nextTableChrome;
+
+    return {
+      firstPageRows: clamp(Math.floor(firstAvailable / rowHeight), 3, 8),
+      nextPageRows: clamp(Math.floor(nextAvailable / rowHeight), 22, 30)
+    };
+  }
+
   function renderExportTableRows(rowsInput) {
     return rowsInput.map((row) => `
       <tr>
@@ -1866,8 +1887,9 @@
     const years = Number(termSelect.value);
     const data = buildSchedule(price, downPctValue / 100, years);
     const overlaySvg = renderExportOverlayLines(layout.lines || []);
-    const firstPageRows = layout.pageMarginMm > 0 ? 6 : 7;
-    const nextPageRows = layout.pageMarginMm > 0 ? 20 : 22;
+    const rowTargets = computePdfRowTargets(layout);
+    const firstPageRows = rowTargets.firstPageRows;
+    const nextPageRows = rowTargets.nextPageRows;
     const schedulePages = chunkRows(data.schedule, firstPageRows, nextPageRows);
     const logoHtml = layout.logoDataUrl ? `<img class="brand-logo" src="${escapeHtml(layout.logoDataUrl)}" alt="">` : '';
 
@@ -1937,8 +1959,8 @@
                 </section>
               </div>
             </div>
+            <svg class="pdf-overlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">${overlaySvg}</svg>
           </div>
-          <svg class="pdf-overlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">${overlaySvg}</svg>
         </section>
       `;
     }).join('');
