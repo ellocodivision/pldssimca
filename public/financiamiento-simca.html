@@ -2046,9 +2046,10 @@
   }
 
   async function downloadServerPdf() {
-    const selectedDev = clean(developmentSelect.value) || 'desarrollo';
-    const selectedUnit = clean(unitSelect.value) || 'unidad';
-    const fileNamePrefix = `financiamiento-simca-${selectedDev}-${selectedUnit}`.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').toLowerCase();
+    const selectedDev = clean(developmentSelect.value) || (currentLang === 'en' ? 'development' : 'desarrollo');
+    const selectedUnit = clean(unitSelect.value) || (currentLang === 'en' ? 'unit' : 'unidad');
+    const baseFileName = currentLang === 'en' ? 'simca-financing' : 'financiamiento-simca';
+    const fileNamePrefix = `${baseFileName}-${selectedDev}-${selectedUnit}`.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').toLowerCase();
     const originalLabel = downloadPdfBtn.textContent;
     downloadPdfBtn.disabled = true;
     downloadPdfBtn.textContent = 'Generando PDF...';
