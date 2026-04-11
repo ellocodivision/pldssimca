@@ -882,7 +882,6 @@
         <a class="link-btn" href="/financiamiento-simca/editor" id="editorBtn" hidden>Editor PDF Martin SIMCA</a>
         <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
         <button class="btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
-        <button class="btn btn-primary" type="button" id="printBtn">Imprimir</button>
       </div>
     </div>
 
@@ -1018,7 +1017,6 @@
   const tableWrap = document.getElementById('tableWrap');
   const editorBtn = document.getElementById('editorBtn');
   const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-  const printBtn = document.getElementById('printBtn');
   const langBtn = document.getElementById('langBtn');
   const langBtnText = document.getElementById('langBtnText');
   const sheetOverlay = document.getElementById('sheetOverlay');
@@ -1468,7 +1466,6 @@
     if (langBtn && langBtn.querySelector('span')) langBtn.querySelector('span').textContent = t.langFlag;
     if (langBtnText) langBtnText.textContent = t.lang;
     if (downloadPdfBtn) downloadPdfBtn.textContent = t.download;
-    if (printBtn) printBtn.textContent = t.print;
     if (labelDevelopment) labelDevelopment.textContent = t.development;
     if (labelUnit) labelUnit.textContent = t.unit;
     if (labelDownPayment) labelDownPayment.textContent = t.downPayment;
@@ -2070,8 +2067,6 @@
       window.alert(err && err.message ? err.message : 'No se pudo generar el PDF.');
     });
   });
-  printBtn.addEventListener('click', () => window.print());
-
   if (isPreviewMode) document.body.classList.add('preview-mode');
   if (isPrintPreviewMode) document.body.classList.add('print-preview-mode');
   renderEmptyState();
