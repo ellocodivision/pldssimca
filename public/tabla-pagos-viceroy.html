@@ -729,7 +729,7 @@
       <div class="topbar-actions">
         <a class="editor-btn" href="/viceroy/tabla-pagos/editor" id="editorBtn" hidden>Editor PDF</a>
         <button class="lang-btn" type="button" id="langBtn"><span>🇺🇸</span><span id="langBtnText">English</span></button>
-        <button class="print-btn" type="button" id="printBtn">Imprimir / Guardar PDF</button>
+        <button class="print-btn" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
       </div>
     </div>
 
@@ -933,7 +933,7 @@
           editor: 'Editor PDF',
           lang: 'English',
           langFlag: '🇺🇸',
-          print: 'Imprimir / Guardar PDF',
+          download: 'Descargar PDF exacto',
           headline: 'Tabla de pago Viceroy',
           section: 'Formas de Pago:',
           unit: 'Unidad',
@@ -963,7 +963,7 @@
           editor: 'PDF Editor',
           lang: 'Español',
           langFlag: '🇲🇽',
-          print: 'Print / Save PDF',
+          download: 'Download exact PDF',
           headline: 'Viceroy Payment Plan',
           section: 'Payment Structures:',
           unit: 'Unit',
@@ -995,7 +995,7 @@
         editorBtn: document.getElementById('editorBtn'),
         langBtn: document.getElementById('langBtn'),
         langBtnText: document.getElementById('langBtnText'),
-        printBtn: document.getElementById('printBtn'),
+        downloadPdfBtn: document.getElementById('downloadPdfBtn'),
         headline: document.getElementById('headline'),
         sectionTitle: document.getElementById('sectionTitle'),
         labelUnit: document.getElementById('labelUnit'),
@@ -1177,6 +1177,19 @@
           .replace(/'/g, '&#39;');
       }
 
+      function slugifyFilePart(value, fallback) {
+        const safe = String(value || '')
+          .trim()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^\w\- ]+/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .toLowerCase();
+        return safe || fallback;
+      }
+
       function findPlan(key) {
         return plans.find(function (plan) {
           return plan.key === key;
@@ -1213,7 +1226,7 @@
         els.editorBtn.textContent = t.editor;
         els.langBtn.querySelector('span').textContent = t.langFlag;
         els.langBtnText.textContent = t.lang;
-        els.printBtn.textContent = t.print;
+        els.downloadPdfBtn.textContent = t.download;
         els.headline.textContent = t.headline;
         els.sectionTitle.textContent = t.section;
         els.labelUnit.textContent = t.unit;
@@ -1308,6 +1321,159 @@
         els.footerAmount.textContent = formatCurrency(amountTotal);
       }
 
+      function buildPdfSnapshotHtml() {
+        const clone = document.documentElement.cloneNode(true);
+        const body = clone.querySelector('body');
+        if (body) {
+          body.classList.remove('preview-mode', 'print-preview-mode');
+          body.classList.add('pdf-export');
+        }
+
+        document.querySelectorAll('input, textarea, select').forEach(function (sourceElement) {
+          const selector = sourceElement.id
+            ? ('#' + CSS.escape(sourceElement.id))
+            : (sourceElement.name
+              ? (sourceElement.tagName.toLowerCase() + '[name="' + CSS.escape(sourceElement.name) + '"]')
+              : null);
+          if (!selector) return;
+          const targetElement = clone.querySelector(selector);
+          if (!targetElement) return;
+          if (sourceElement.tagName === 'TEXTAREA') {
+            targetElement.textContent = sourceElement.value;
+            return;
+          }
+          if (sourceElement.tagName === 'SELECT') {
+            Array.from(targetElement.options).forEach(function (option, index) {
+              option.selected = sourceElement.options[index] ? sourceElement.options[index].selected : false;
+            });
+            return;
+          }
+          if (sourceElement.type === 'checkbox' || sourceElement.type === 'radio') {
+            if (sourceElement.checked) targetElement.setAttribute('checked', 'checked');
+            else targetElement.removeAttribute('checked');
+            return;
+          }
+          targetElement.setAttribute('value', sourceElement.value || '');
+        });
+
+        clone.querySelectorAll('script').forEach(function (node) { node.remove(); });
+        const head = clone.querySelector('head');
+        if (head) {
+          const style = clone.ownerDocument.createElement('style');
+          style.textContent = `
+            @page { size: portrait; margin: 0; }
+            html, body { margin: 0; padding: 0; background: #fff; }
+            body.pdf-export {
+              background: #fff !important;
+              padding: 0 !important;
+              min-height: auto !important;
+            }
+            body.pdf-export .page {
+              width: 816px;
+              max-width: none;
+              margin: 0 auto;
+              padding: 0;
+            }
+            body.pdf-export .sheet {
+              border: none;
+              box-shadow: none;
+              min-height: 1056px;
+              background: #fff;
+            }
+            body.pdf-export .topbar,
+            body.pdf-export .form-section,
+            body.pdf-export .logos {
+              display: none !important;
+            }
+            body.pdf-export.hide-hero-print .hero,
+            body.pdf-export.hide-logos-print .logos,
+            body.pdf-export.hide-summary-print .summary-shell,
+            body.pdf-export.hide-payments-print .payments-shell,
+            body.pdf-export .summary-shell.is-hidden,
+            body.pdf-export .payments-shell.is-hidden {
+              display: none !important;
+            }
+            body.pdf-export .hero {
+              padding: var(--hero-padding-top) var(--hero-padding-sides) var(--hero-padding-bottom);
+            }
+            body.pdf-export .headline {
+              margin-top: 8px;
+              font-size: var(--headline-size);
+            }
+            body.pdf-export .content {
+              padding: var(--content-padding-top) var(--content-padding-sides) var(--content-padding-bottom);
+              gap: var(--content-gap);
+            }
+            body.pdf-export .summary-table thead th {
+              font-size: var(--summary-header-size);
+              padding: 6px 8px;
+            }
+            body.pdf-export .summary-table tbody td {
+              padding: var(--summary-row-padding-y) 8px calc(var(--summary-row-padding-y) + 2px);
+              font-size: var(--summary-value-size);
+            }
+            body.pdf-export .summary-table tbody td.amount {
+              font-size: var(--summary-value-size);
+            }
+            body.pdf-export .payments-head {
+              padding: 8px 10px 6px;
+            }
+            body.pdf-export .payments-head h2 {
+              font-size: var(--payments-title-size);
+            }
+            body.pdf-export .payments-table thead th {
+              padding: 6px 8px;
+              font-size: var(--payments-header-size);
+            }
+            body.pdf-export .payments-table td,
+            body.pdf-export .payments-table tfoot td {
+              padding: var(--payment-row-padding-y) 8px;
+              font-size: var(--payments-body-size);
+            }
+          `;
+          head.appendChild(style);
+        }
+
+        return '<!doctype html>\n' + clone.outerHTML;
+      }
+
+      async function downloadServerPdf() {
+        const originalLabel = els.downloadPdfBtn.textContent;
+        els.downloadPdfBtn.disabled = true;
+        els.downloadPdfBtn.textContent = 'Generando PDF...';
+        try {
+          const unit = slugifyFilePart(els.unitName.value, currentLang === 'en' ? 'unit' : 'unidad');
+          const plan = slugifyFilePart(findPlan(els.paymentPlan.value).shortLabel, currentLang === 'en' ? 'plan' : 'plan');
+          const baseFileName = currentLang === 'en' ? 'viceroy-payment-plan' : 'tabla-pago-viceroy';
+          const fileNamePrefix = `${baseFileName}-${unit}-${plan}`;
+          const res = await fetch('/api/viceroy/tabla-pagos/render-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              html: buildPdfSnapshotHtml(),
+              fileNamePrefix: fileNamePrefix
+            })
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(function () { return {}; });
+            throw new Error(data.error || 'No se pudo generar el PDF');
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileNamePrefix + '.pdf';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        } finally {
+          els.downloadPdfBtn.disabled = false;
+          els.downloadPdfBtn.textContent = originalLabel;
+        }
+      }
+
       async function loadLayout() {
         try {
           const res = await fetch('/api/viceroy/tabla-pagos/layout', { credentials: 'same-origin' });
@@ -1363,8 +1529,10 @@
         update();
       });
 
-      els.printBtn.addEventListener('click', function () {
-        window.print();
+      els.downloadPdfBtn.addEventListener('click', function () {
+        downloadServerPdf().catch(function (err) {
+          window.alert(err && err.message ? err.message : 'No se pudo generar el PDF.');
+        });
       });
 
       if (isPreviewMode) {
