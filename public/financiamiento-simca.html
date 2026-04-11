@@ -1836,17 +1836,18 @@
     const bodyPadding = (24 + layout.contentPaddingTop) + (18 + layout.contentPaddingBottom);
     const headerHeight = layout.headerPaddingTop + layout.headerPaddingBottom + layout.titleSize + 18;
     const cardRows = Math.ceil(11 / 2);
-    const cardHeight = (layout.cardPadding * 2) + layout.subtitleSize + 42;
+    const cardHeight = (layout.cardPadding * 2) + layout.subtitleSize + 26;
     const cardsBlockHeight = (cardRows * cardHeight) + ((cardRows - 1) * layout.cardGap);
     const firstTableChrome = 14 + 52;
     const nextTableChrome = 12;
-    const rowHeight = 30;
+    const firstRowHeight = 24;
+    const nextRowHeight = 22;
     const firstAvailable = bodyHeight - bodyPadding - headerHeight - cardsBlockHeight - firstTableChrome;
     const nextAvailable = bodyHeight - bodyPadding - 24 - nextTableChrome;
 
     return {
-      firstPageRows: clamp(Math.floor(firstAvailable / rowHeight), 3, 8),
-      nextPageRows: clamp(Math.floor(nextAvailable / rowHeight), 22, 30)
+      firstPageRows: clamp(Math.floor(firstAvailable / firstRowHeight), 4, 6),
+      nextPageRows: clamp(Math.floor(nextAvailable / nextRowHeight), 24, 34)
     };
   }
 
