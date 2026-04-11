@@ -236,6 +236,8 @@
                 <label>Padding lateral cuerpo<input id="contentPaddingSides" type="number" min="0" max="40" step="1"></label>
                 <label>Padding inferior cuerpo<input id="contentPaddingBottom" type="number" min="0" max="40" step="1"></label>
                 <label>Separación bloques<input id="contentGap" type="number" min="0" max="32" step="1"></label>
+                <label>Separación cuadros<input id="cardGap" type="number" min="0" max="24" step="1"></label>
+                <label>Padding cuadros<input id="cardPadding" type="number" min="6" max="24" step="1"></label>
               </div>
               <div class="grid-1" style="margin-top:10px;">
                 <label class="check"><input id="showHeaderInPrint" type="checkbox"> Mostrar encabezado en PDF</label>
@@ -347,6 +349,8 @@
         contentPaddingSides: 12,
         contentPaddingBottom: 12,
         contentGap: 14,
+        cardGap: 12,
+        cardPadding: 14,
         titleOffsetX: 0,
         titleOffsetY: 0,
         showHeaderInPrint: true,
@@ -425,6 +429,8 @@
         contentPaddingSides: document.getElementById('contentPaddingSides'),
         contentPaddingBottom: document.getElementById('contentPaddingBottom'),
         contentGap: document.getElementById('contentGap'),
+        cardGap: document.getElementById('cardGap'),
+        cardPadding: document.getElementById('cardPadding'),
         titleOffsetX: document.getElementById('titleOffsetX'),
         titleOffsetY: document.getElementById('titleOffsetY'),
         showHeaderInPrint: document.getElementById('showHeaderInPrint'),
@@ -515,6 +521,8 @@
         out.contentPaddingSides = clamp(Number(out.contentPaddingSides) || defaultLayout.contentPaddingSides, 0, 40);
         out.contentPaddingBottom = clamp(Number(out.contentPaddingBottom) || defaultLayout.contentPaddingBottom, 0, 40);
         out.contentGap = clamp(Number(out.contentGap) || defaultLayout.contentGap, 0, 32);
+        out.cardGap = clamp(Number(out.cardGap) || defaultLayout.cardGap, 0, 24);
+        out.cardPadding = clamp(Number(out.cardPadding) || defaultLayout.cardPadding, 6, 24);
         out.titleOffsetX = clamp(Number(out.titleOffsetX) || defaultLayout.titleOffsetX, -240, 240);
         out.titleOffsetY = clamp(Number(out.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120);
         out.summaryHeaderSize = clamp(Number(out.summaryHeaderSize) || defaultLayout.summaryHeaderSize, 7, 16);

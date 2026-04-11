@@ -26,6 +26,8 @@
     --content-padding-sides:12px;
     --content-padding-bottom:12px;
     --content-gap:14px;
+    --card-gap:12px;
+    --card-padding:14px;
     --title-offset-x:0px;
     --title-offset-y:0px;
     --font-body:Arial, sans-serif;
@@ -378,7 +380,7 @@
   .summary-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:12px;
+    gap:var(--card-gap);
     margin-top:14px;
   }
 
@@ -386,14 +388,14 @@
     background:var(--summary-card);
     border:1px solid var(--line);
     border-radius:16px;
-    padding:14px;
+    padding:var(--card-padding);
     min-width:0;
   }
 
   .metric .k{
-    font-size:11px;
+    font-size:var(--subtitle-size);
     text-transform:uppercase;
-    letter-spacing:.08em;
+    letter-spacing:.04em;
     color:var(--muted);
   }
 
@@ -427,22 +429,22 @@
   .detail-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:12px;
+    gap:var(--card-gap);
     margin-top:14px;
   }
 
   .detail{
     border:1px solid var(--line);
     border-radius:16px;
-    padding:14px;
+    padding:var(--card-padding);
     background:var(--detail-card);
     min-width:0;
   }
 
   .detail .k{
-    font-size:11px;
+    font-size:var(--subtitle-size);
     text-transform:uppercase;
-    letter-spacing:.08em;
+    letter-spacing:.04em;
     color:var(--muted);
   }
 
@@ -727,13 +729,13 @@
 
   body.print-preview-mode .summary-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:12px;
+    gap:var(--card-gap);
     margin-top:0;
   }
 
   body.print-preview-mode .detail-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:12px;
+    gap:var(--card-gap);
     margin-top:10px;
   }
 
@@ -853,13 +855,13 @@
 
   body.pdf-export .summary-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:10px;
+    gap:var(--card-gap);
     margin-top:0;
   }
 
   body.pdf-export .detail-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:10px;
+    gap:var(--card-gap);
     margin-top:10px;
   }
 
@@ -1070,6 +1072,8 @@
     contentPaddingSides: 12,
     contentPaddingBottom: 12,
     contentGap: 14,
+    cardGap: 12,
+    cardPadding: 14,
     titleOffsetX: 0,
     titleOffsetY: 0,
     showHeaderInPrint: true,
@@ -1331,6 +1335,8 @@
     out.contentPaddingSides = clamp(Number(out.contentPaddingSides) || defaultLayout.contentPaddingSides, 0, 40);
     out.contentPaddingBottom = clamp(Number(out.contentPaddingBottom) || defaultLayout.contentPaddingBottom, 0, 40);
     out.contentGap = clamp(Number(out.contentGap) || defaultLayout.contentGap, 0, 32);
+    out.cardGap = clamp(Number(out.cardGap) || defaultLayout.cardGap, 0, 24);
+    out.cardPadding = clamp(Number(out.cardPadding) || defaultLayout.cardPadding, 6, 24);
     out.titleOffsetX = clamp(Number(out.titleOffsetX) || defaultLayout.titleOffsetX, -240, 240);
     out.titleOffsetY = clamp(Number(out.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120);
     out.showHeaderInPrint = Boolean(out.showHeaderInPrint);
@@ -1411,6 +1417,8 @@
     root.style.setProperty('--content-padding-sides', layout.contentPaddingSides + 'px');
     root.style.setProperty('--content-padding-bottom', layout.contentPaddingBottom + 'px');
     root.style.setProperty('--content-gap', layout.contentGap + 'px');
+    root.style.setProperty('--card-gap', layout.cardGap + 'px');
+    root.style.setProperty('--card-padding', layout.cardPadding + 'px');
     root.style.setProperty('--title-offset-x', layout.titleOffsetX + 'px');
     root.style.setProperty('--title-offset-y', layout.titleOffsetY + 'px');
     root.style.setProperty('--surface', layout.surfaceColor);
@@ -1858,7 +1866,9 @@
     const years = Number(termSelect.value);
     const data = buildSchedule(price, downPctValue / 100, years);
     const overlaySvg = renderExportOverlayLines(layout.lines || []);
-    const schedulePages = chunkRows(data.schedule, 7, 22);
+    const firstPageRows = layout.pageMarginMm > 0 ? 6 : 7;
+    const nextPageRows = layout.pageMarginMm > 0 ? 20 : 22;
+    const schedulePages = chunkRows(data.schedule, firstPageRows, nextPageRows);
     const logoHtml = layout.logoDataUrl ? `<img class="brand-logo" src="${escapeHtml(layout.logoDataUrl)}" alt="">` : '';
 
     const firstPageCards = [
@@ -1884,46 +1894,48 @@
       const isFirst = index === 0;
       return `
         <section class="pdf-page">
-          <aside class="pdf-rail">
-            <div class="pdf-rail-accent"><span>${escapeHtml(layout.railText || 'simca.mx')}</span></div>
-          </aside>
-          <div class="pdf-main">
-            <div class="pdf-top">
-              <div class="pdf-logo-wrap ${layout.logoDataUrl ? '' : 'is-empty'}">${logoHtml}</div>
-            </div>
-            <div class="pdf-body">
-              ${isFirst ? `
-                <header class="pdf-header"><h1>${t.financingTitle}</h1></header>
-                <section class="info-grid">${firstPageCards}</section>
-              ` : '<div class="page-spacer"></div>'}
-              <section class="pdf-table-card">
-                ${isFirst ? `<div class="pdf-table-head"><h2>${t.amortizationTable}</h2></div>` : ''}
-                <table class="pdf-table">
-                  <colgroup>
-                    <col style="width:10%">
-                    <col style="width:12%">
-                    <col style="width:14%">
-                    <col style="width:12%">
-                    <col style="width:10%">
-                    <col style="width:10%">
-                    <col style="width:18%">
-                    <col style="width:14%">
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th class="num">${t.period}</th>
-                      <th>${t.month}</th>
-                      <th class="num">${t.disposition}</th>
-                      <th class="num">${t.balloon}</th>
-                      <th class="num">${t.interest}</th>
-                      <th class="num">${t.capital}</th>
-                      <th class="num">${t.capitalBalance}</th>
-                      <th class="num">${t.totalPayment}</th>
-                    </tr>
-                  </thead>
-                  <tbody>${renderExportTableRows(pageRows)}</tbody>
-                </table>
-              </section>
+          <div class="pdf-frame">
+            <aside class="pdf-rail">
+              <div class="pdf-rail-accent"><span>${escapeHtml(layout.railText || 'simca.mx')}</span></div>
+            </aside>
+            <div class="pdf-main">
+              <div class="pdf-top">
+                <div class="pdf-logo-wrap ${layout.logoDataUrl ? '' : 'is-empty'}">${logoHtml}</div>
+              </div>
+              <div class="pdf-body">
+                ${isFirst ? `
+                  <header class="pdf-header"><h1>${t.financingTitle}</h1></header>
+                  <section class="info-grid">${firstPageCards}</section>
+                ` : '<div class="page-spacer"></div>'}
+                <section class="pdf-table-card">
+                  ${isFirst ? `<div class="pdf-table-head"><h2>${t.amortizationTable}</h2></div>` : ''}
+                  <table class="pdf-table">
+                    <colgroup>
+                      <col style="width:10%">
+                      <col style="width:12%">
+                      <col style="width:14%">
+                      <col style="width:12%">
+                      <col style="width:10%">
+                      <col style="width:10%">
+                      <col style="width:18%">
+                      <col style="width:14%">
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th class="num">${t.period}</th>
+                        <th>${t.month}</th>
+                        <th class="num">${t.disposition}</th>
+                        <th class="num">${t.balloon}</th>
+                        <th class="num">${t.interest}</th>
+                        <th class="num">${t.capital}</th>
+                        <th class="num">${t.capitalBalance}</th>
+                        <th class="num">${t.totalPayment}</th>
+                      </tr>
+                    </thead>
+                    <tbody>${renderExportTableRows(pageRows)}</tbody>
+                  </table>
+                </section>
+              </div>
             </div>
           </div>
           <svg class="pdf-overlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">${overlaySvg}</svg>
@@ -1940,6 +1952,7 @@
   :root{
     --page-width:816px;
     --page-height:1056px;
+    --page-margin-mm:${layout.pageMarginMm};
     --rail-width:${layout.railWidth}px;
     --brand-top-height:${layout.brandTopHeight}px;
     --rail-offset-y:${layout.railOffsetY}px;
@@ -1963,6 +1976,7 @@
     --font-heading:${layout.headingFontFamily};
     --font-table:${layout.tableFontFamily};
     --title-size:${layout.titleSize}px;
+    --subtitle-size:${layout.subtitleSize}px;
     --header-padding-top:${layout.headerPaddingTop}px;
     --header-padding-sides:${layout.headerPaddingSides}px;
     --header-padding-bottom:${layout.headerPaddingBottom}px;
@@ -1970,6 +1984,8 @@
     --content-padding-sides:${layout.contentPaddingSides}px;
     --content-padding-bottom:${layout.contentPaddingBottom}px;
     --content-gap:${layout.contentGap}px;
+    --card-gap:${layout.cardGap}px;
+    --card-padding:${layout.cardPadding}px;
     --title-offset-x:${layout.titleOffsetX}px;
     --title-offset-y:${layout.titleOffsetY}px;
   }
@@ -1979,24 +1995,32 @@
   .pdf-page{
     width:var(--page-width);
     height:var(--page-height);
-    display:grid;
-    grid-template-columns:var(--rail-width) minmax(0, 1fr);
     position:relative;
     overflow:hidden;
-    background:var(--surface);
+    background:#fff;
+    padding:calc(var(--page-margin-mm) * 1mm);
     page-break-after:always;
     break-after:page;
     break-inside:avoid;
   }
   .pdf-page:last-child{page-break-after:auto}
-  .pdf-rail{position:relative;background:var(--surface);height:var(--page-height)}
+  .pdf-frame{
+    width:calc(var(--page-width) - (var(--page-margin-mm) * 2mm));
+    height:calc(var(--page-height) - (var(--page-margin-mm) * 2mm));
+    display:grid;
+    grid-template-columns:var(--rail-width) minmax(0, 1fr);
+    position:relative;
+    overflow:hidden;
+    background:var(--surface);
+  }
+  .pdf-rail{position:relative;background:var(--surface);height:100%}
   .pdf-rail::after{content:"";position:absolute;top:0;right:0;width:1px;height:100%;background:rgba(141,135,119,.92)}
   .pdf-rail-accent{position:absolute;top:var(--rail-offset-y);left:0;width:var(--rail-width);height:var(--rail-height);background:var(--rail-accent);display:flex;align-items:center;justify-content:center}
   .pdf-rail-accent span{writing-mode:vertical-rl;text-orientation:mixed;font-size:${layout.railTextSize}px;color:var(--rail-text)}
   .pdf-main{
     display:grid;
     grid-template-rows:var(--brand-top-height) minmax(0,1fr);
-    height:var(--page-height);
+    height:100%;
     background:
       linear-gradient(rgba(141,135,119,.92), rgba(141,135,119,.92)) left top var(--brand-top-height)/100% 1px no-repeat,
       var(--surface);
@@ -2011,7 +2035,7 @@
       calc(24px + var(--content-padding-top))
       calc(18px + var(--content-padding-sides))
       calc(18px + var(--content-padding-bottom));
-    height:calc(var(--page-height) - var(--brand-top-height));
+    height:calc(100% - var(--brand-top-height));
     overflow:hidden
   }
   .pdf-header{
@@ -2022,11 +2046,11 @@
     transform:translate(var(--title-offset-x), var(--title-offset-y));
   }
   .pdf-header h1{margin:0;font-family:var(--font-heading);font-size:var(--title-size);line-height:1;color:var(--title-color)}
-  .info-grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
-  .info-card{min-width:0;padding:14px 16px;border-radius:16px;border:1px solid rgba(0,0,0,.03)}
+  .info-grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:var(--card-gap)}
+  .info-card{min-width:0;padding:var(--card-padding);border-radius:16px;border:1px solid rgba(0,0,0,.03)}
   .info-card.is-summary{background:var(--summary-card)}
   .info-card.is-detail{background:var(--detail-card)}
-  .info-card .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .info-card .k{font-size:var(--subtitle-size);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
   .info-card .v{margin-top:8px;font-size:18px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
   .page-spacer{height:24px}
   .pdf-table-card{margin-top:14px;border-radius:18px;overflow:hidden;background:var(--paper);border:1px solid var(--line)}
