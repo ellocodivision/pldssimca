@@ -35,6 +35,8 @@
     --surface:#fffdf8;
     --paper:#fffdf8;
     --surface-soft:#f6f0e1;
+    --summary-card:#f6f0e1;
+    --detail-card:#ffffff;
     --ink:#201d17;
     --title-color:#201d17;
     --muted:#746b5d;
@@ -381,7 +383,7 @@
   }
 
   .metric{
-    background:var(--surface-soft);
+    background:var(--summary-card);
     border:1px solid var(--line);
     border-radius:16px;
     padding:14px;
@@ -433,7 +435,7 @@
     border:1px solid var(--line);
     border-radius:16px;
     padding:14px;
-    background:#fff;
+    background:var(--detail-card);
     min-width:0;
   }
 
@@ -1076,6 +1078,8 @@
     surfaceColor: '#fffdf8',
     paperColor: '#fffdf8',
     paperSoftColor: '#f6f0e1',
+    summaryCardColor: '#f6f0e1',
+    detailCardColor: '#ffffff',
     textColor: '#201d17',
     titleColor: '#201d17',
     mutedColor: '#746b5d',
@@ -1335,7 +1339,7 @@
     out.paymentsAlignReference = validAlign.includes(String(out.paymentsAlignReference || '').toLowerCase()) ? String(out.paymentsAlignReference).toLowerCase() : defaultLayout.paymentsAlignReference;
     out.paymentsAlignPercent = validAlign.includes(String(out.paymentsAlignPercent || '').toLowerCase()) ? String(out.paymentsAlignPercent).toLowerCase() : defaultLayout.paymentsAlignPercent;
     out.paymentsAlignAmount = validAlign.includes(String(out.paymentsAlignAmount || '').toLowerCase()) ? String(out.paymentsAlignAmount).toLowerCase() : defaultLayout.paymentsAlignAmount;
-    ['surfaceColor','paperColor','paperSoftColor','textColor','titleColor','mutedColor','accentColor','railAccentColor','railTextColor','lineColor','lineStrongColor','highlightRowColor','bodyFontFamily','headingFontFamily','tableFontFamily','logoDataUrl','railText'].forEach((key) => {
+    ['surfaceColor','paperColor','paperSoftColor','summaryCardColor','detailCardColor','textColor','titleColor','mutedColor','accentColor','railAccentColor','railTextColor','lineColor','lineStrongColor','highlightRowColor','bodyFontFamily','headingFontFamily','tableFontFamily','logoDataUrl','railText'].forEach((key) => {
       if (typeof out[key] !== 'string') out[key] = defaultLayout[key];
     });
     out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map((line, index) => {
@@ -1410,6 +1414,8 @@
     root.style.setProperty('--surface', layout.surfaceColor);
     root.style.setProperty('--paper', layout.paperColor);
     root.style.setProperty('--paper-soft', layout.paperSoftColor);
+    root.style.setProperty('--summary-card', layout.summaryCardColor || layout.paperSoftColor);
+    root.style.setProperty('--detail-card', layout.detailCardColor || '#ffffff');
     root.style.setProperty('--ink', layout.textColor);
     root.style.setProperty('--title-color', layout.titleColor);
     root.style.setProperty('--muted', layout.mutedColor);
@@ -1852,18 +1858,18 @@
     const logoHtml = layout.logoDataUrl ? `<img class="brand-logo" src="${escapeHtml(layout.logoDataUrl)}" alt="">` : '';
 
     const firstPageCards = [
-      [t.project, development],
-      [t.unit, unit],
-      [t.saleValue, formatMoney(data.price)],
-      [t.downPayment, `${downPctValue.toFixed(0)}% · ${formatMoney(data.downPayment)}`],
-      [t.amountToFinance, formatMoney(data.financed)],
-      [t.monthlyBasePayment, formatMoney(data.basePayment)],
-      [t.termMonths, String(data.months)],
-      [t.totalInterest, formatMoney(data.totalInterest)],
-      [t.totalPaid, formatMoney(data.totalPayments + data.downPayment)],
-      [t.avgAnnualInterest, formatPercent(data.averageAnnualInterest)]
-    ].map(([key, value]) => `
-      <div class="info-card">
+      [t.project, development, 'detail'],
+      [t.unit, unit, 'detail'],
+      [t.saleValue, formatMoney(data.price), 'summary'],
+      [t.downPayment, `${downPctValue.toFixed(0)}% · ${formatMoney(data.downPayment)}`, 'summary'],
+      [t.amountToFinance, formatMoney(data.financed), 'summary'],
+      [t.monthlyBasePayment, formatMoney(data.basePayment), 'summary'],
+      [t.termMonths, String(data.months), 'detail'],
+      [t.totalInterest, formatMoney(data.totalInterest), 'detail'],
+      [t.totalPaid, formatMoney(data.totalPayments + data.downPayment), 'detail'],
+      [t.avgAnnualInterest, formatPercent(data.averageAnnualInterest), 'detail']
+    ].map(([key, value, tone]) => `
+      <div class="info-card ${tone === 'summary' ? 'is-summary' : 'is-detail'}">
         <div class="k">${escapeHtml(key)}</div>
         <div class="v">${escapeHtml(value)}</div>
       </div>
@@ -1940,6 +1946,8 @@
     --surface:${layout.surfaceColor};
     --paper:${layout.paperColor};
     --paper-soft:${layout.paperSoftColor};
+    --summary-card:${layout.summaryCardColor || layout.paperSoftColor};
+    --detail-card:${layout.detailCardColor || '#ffffff'};
     --ink:${layout.textColor};
     --title-color:${layout.titleColor};
     --muted:${layout.mutedColor};
@@ -2010,7 +2018,9 @@
   }
   .pdf-header h1{margin:0;font-family:var(--font-heading);font-size:var(--title-size);line-height:1;color:var(--title-color)}
   .info-grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
-  .info-card{min-width:0;padding:14px 16px;border-radius:16px;background:var(--paper-soft);border:1px solid rgba(0,0,0,.03)}
+  .info-card{min-width:0;padding:14px 16px;border-radius:16px;border:1px solid rgba(0,0,0,.03)}
+  .info-card.is-summary{background:var(--summary-card)}
+  .info-card.is-detail{background:var(--detail-card)}
   .info-card .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
   .info-card .v{margin-top:8px;font-size:18px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
   .page-spacer{height:24px}
@@ -2072,6 +2082,7 @@
       const data = await res.json().catch(() => ({}));
       if (res.ok && data && data.ok && data.layout) {
         applyLayout(data.layout);
+        editorBtn.hidden = !(data && data.isGerente);
         return;
       }
     } catch {}

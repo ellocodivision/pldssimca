@@ -4119,7 +4119,12 @@ app.get('/financiamiento-simca/editor', requireGerente, (req, res) => {
 });
 
 app.get('/api/financiamiento-simca/layout', (req, res) => {
-  return res.json({ ok: true, layout: readFinanciamientoSimcaLayout() });
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  return res.json({
+    ok: true,
+    layout: readFinanciamientoSimcaLayout(),
+    isGerente: Boolean(currentEmail && currentEmail === GERENTE_EMAIL)
+  });
 });
 
 app.post('/api/financiamiento-simca/layout', requireGerente, (req, res) => {

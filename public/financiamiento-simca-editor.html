@@ -144,6 +144,8 @@
                 <label>Color fondo hoja<input id="surfaceColor" type="color"></label>
                 <label>Color papel tablas<input id="paperColor" type="color"></label>
                 <label>Color beige interno<input id="paperSoftColor" type="color"></label>
+                <label>Color cuadros beige<input id="summaryCardColor" type="color"></label>
+                <label>Color cuadros blancos<input id="detailCardColor" type="color"></label>
               </div>
             </div>
 
@@ -353,6 +355,8 @@
         surfaceColor: '#e8e4da',
         paperColor: '#fffdf8',
         paperSoftColor: '#f8f2e6',
+        summaryCardColor: '#f8f2e6',
+        detailCardColor: '#ffffff',
         textColor: '#1d1c18',
         titleColor: '#1d1c18',
         mutedColor: '#6f6859',
@@ -427,6 +431,8 @@
         surfaceColor: document.getElementById('surfaceColor'),
         paperColor: document.getElementById('paperColor'),
         paperSoftColor: document.getElementById('paperSoftColor'),
+        summaryCardColor: document.getElementById('summaryCardColor'),
+        detailCardColor: document.getElementById('detailCardColor'),
         textColor: document.getElementById('textColor'),
         titleColor: document.getElementById('titleColor'),
         mutedColor: document.getElementById('mutedColor'),
@@ -539,6 +545,8 @@
         out.surfaceColor = typeof out.surfaceColor === 'string' ? out.surfaceColor : defaultLayout.surfaceColor;
         out.paperColor = typeof out.paperColor === 'string' ? out.paperColor : defaultLayout.paperColor;
         out.paperSoftColor = typeof out.paperSoftColor === 'string' ? out.paperSoftColor : defaultLayout.paperSoftColor;
+        out.summaryCardColor = typeof out.summaryCardColor === 'string' ? out.summaryCardColor : defaultLayout.summaryCardColor;
+        out.detailCardColor = typeof out.detailCardColor === 'string' ? out.detailCardColor : defaultLayout.detailCardColor;
         out.lines = Array.isArray(out.lines) ? out.lines.slice(0, 24).map(function (line, index) {
           const srcLine = line && typeof line === 'object' ? line : {};
           const orientation = String(srcLine.orientation || '').toLowerCase() === 'vertical' ? 'vertical' : 'horizontal';
