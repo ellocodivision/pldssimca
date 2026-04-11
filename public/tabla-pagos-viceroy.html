@@ -1362,13 +1362,16 @@
           const style = clone.ownerDocument.createElement('style');
           style.textContent = `
             @page { size: portrait; margin: 0; }
-            html, body { margin: 0; padding: 0; background: #fff; width: 816px; }
+            html, body { margin: 0; padding: 0; background: #fff; width: 100%; }
             body.pdf-export {
               background: #fff !important;
               padding: 0 !important;
               min-height: auto !important;
-              width: 816px;
+              width: 100%;
               overflow: hidden;
+              display: flex;
+              justify-content: center;
+              align-items: flex-start;
             }
             body.pdf-export .page {
               width: calc(816px - (var(--print-margin-mm) * 2mm));
