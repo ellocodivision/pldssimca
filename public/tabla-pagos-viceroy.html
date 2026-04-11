@@ -1362,24 +1362,27 @@
           const style = clone.ownerDocument.createElement('style');
           style.textContent = `
             @page { size: portrait; margin: 0; }
-            html, body { margin: 0; padding: 0; background: #fff; width: 100%; }
+            html, body { margin: 0; padding: 0; background: #fff; width: 816px; height: 1056px; }
             body.pdf-export {
               background: #fff !important;
               padding: 0 !important;
-              min-height: auto !important;
-              width: 100%;
+              min-height: 1056px !important;
+              width: 816px;
+              height: 1056px;
               overflow: hidden;
-              display: flex;
-              justify-content: center;
-              align-items: flex-start;
+              position: relative;
             }
             body.pdf-export .page {
+              position: absolute;
+              left: 50%;
+              top: calc(var(--print-margin-mm) * 1mm);
               width: calc(816px - (var(--print-margin-mm) * 2mm));
               height: calc(1056px - (var(--print-margin-mm) * 2mm));
               max-width: none;
-              margin: calc(var(--print-margin-mm) * 1mm) auto 0;
+              margin: 0;
               padding: 0;
               overflow: hidden;
+              transform: translateX(-50%);
             }
             body.pdf-export .sheet {
               width: calc((816px - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
