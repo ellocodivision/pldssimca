@@ -283,16 +283,18 @@
 
       function canStartReservation(dateStr, room, hour) {
         if (!dateStr || !room || !hour) return false;
-        const slotIndex = HOURS.indexOf(hour);
-        if (slotIndex < 0 || slotIndex >= HOURS.length - 1) return false;
-        const nextHalfHour = HOURS[slotIndex + 1];
+        const slotStart = hourToMinutes(hour);
+        if (slotStart == null) return false;
+        const slotEnd = slotStart + 60;
         return !state.rows.some((row) => (
           row.date === dateStr &&
           row.room === room &&
-          (
-            reservationTouchesSlot(row.hour, hour) ||
-            reservationTouchesSlot(row.hour, nextHalfHour)
-          )
+          (() => {
+            const rowStart = hourToMinutes(row.hour);
+            if (rowStart == null) return false;
+            const rowEnd = rowStart + 60;
+            return slotStart < rowEnd && rowStart < slotEnd;
+          })()
         ));
       }
 
