@@ -250,6 +250,45 @@
   .shift-card.weekendAfternoon{background:color-mix(in srgb, var(--afternoon) 88%, white); color:#10200d;}
   .shift-card.free{background:var(--free); color:#72675b;}
 
+  .count-cell{
+    min-height:78px;
+    padding:12px 14px;
+    background:#faf7f1;
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+
+  .count-cell.label{
+    font-size:16px;
+    font-weight:800;
+    display:flex;
+    align-items:center;
+  }
+
+  .count-stack{
+    display:grid;
+    gap:6px;
+  }
+
+  .count-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-size:12px;
+    color:#5b5145;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+
+  .count-line strong{
+    font-size:15px;
+    color:#1f1b16;
+    letter-spacing:0;
+    text-transform:none;
+  }
+
   @media (max-width: 720px){
     .page{
       padding:18px 12px 30px;
@@ -443,9 +482,11 @@
         mid: 0,
         gt: 0,
         weekend: 0,
+        rebalanceMoves: 0,
         lastOfficeShift: null,
         weekendAssignments: 0,
         weekendInitialShift: null,
+        lastRebalanceWeek: -1,
         lastGtWeek: -1,
         lastWeekendWeek: -1
       };
@@ -461,9 +502,13 @@
     };
   }
 
-  function applyAssignmentToHistory(history, advisorId, type, weekIndex) {
+  function applyAssignmentToHistory(history, advisorId, type, weekIndex, options) {
     const record = history[advisorId];
     if (!record) return;
+    if (options && options.rebalanced) {
+      record.rebalanceMoves += 1;
+      record.lastRebalanceWeek = weekIndex;
+    }
     if (type === 'morning' || type === 'afternoon' || type === 'mid') {
       record[type] += 1;
       record.lastOfficeShift = type;
@@ -582,6 +627,43 @@
     return assignments;
   }
 
+  function summarizeOfficeCounts(cells) {
+    return ADVISORS.reduce((acc, advisor) => {
+      const type = cells[advisor.id] ? cells[advisor.id].type : 'free';
+      if (type === 'morning' || type === 'weekendMorning') acc.morning += 1;
+      if (type === 'afternoon' || type === 'weekendAfternoon') acc.afternoon += 1;
+      if (type === 'mid') acc.mid += 1;
+      return acc;
+    }, { morning: 0, afternoon: 0, mid: 0 });
+  }
+
+  function rebalanceOfficeCells(cells, history, weekIndex) {
+    const moved = new Set();
+    let counts = summarizeOfficeCounts(cells);
+
+    while (Math.abs(counts.morning - counts.afternoon) >= 2) {
+      const fromType = counts.morning > counts.afternoon ? 'morning' : 'afternoon';
+      const toType = fromType === 'morning' ? 'afternoon' : 'morning';
+      const candidates = ADVISORS.filter((advisor) => cells[advisor.id] && cells[advisor.id].type === fromType);
+      if (!candidates.length) break;
+
+      candidates.sort((a, b) => {
+        const aRecord = history[a.id];
+        const bRecord = history[b.id];
+        if (aRecord.rebalanceMoves !== bRecord.rebalanceMoves) return aRecord.rebalanceMoves - bRecord.rebalanceMoves;
+        if (aRecord.lastRebalanceWeek !== bRecord.lastRebalanceWeek) return aRecord.lastRebalanceWeek - bRecord.lastRebalanceWeek;
+        return a.name.localeCompare(b.name, 'es');
+      });
+
+      const picked = candidates[0];
+      cells[picked.id] = buildCell(toType);
+      moved.add(picked.id);
+      counts = summarizeOfficeCounts(cells);
+    }
+
+    return moved;
+  }
+
   function buildSeededWeek(weekStart, seedWeek, history, weekIndex) {
     const days = [];
     const gtAssignments = [];
@@ -590,6 +672,7 @@
     for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
       const date = addDays(weekStart, dayIndex);
       const cells = {};
+      const dayAssignments = [];
       ADVISORS.forEach((advisor) => {
         const code = seedWeek[advisor.id] ? seedWeek[advisor.id][dayIndex] : 'F';
         const type = SHIFT_CODE_TO_TYPE[code] || 'free';
@@ -597,8 +680,15 @@
         if ((type === 'weekendMorning' || type === 'weekendAfternoon') && !weekendPair.some((item) => item.id === advisor.id)) {
           weekendPair.push({ id: advisor.id, shift: type });
         }
-        applyAssignmentToHistory(history, advisor.id, type, weekIndex);
         cells[advisor.id] = buildCell(type, type === 'off' ? 'Descanso por guardia' : '');
+        dayAssignments.push({ advisorId: advisor.id, type });
+      });
+
+      const movedIds = dayIndex <= 4 ? rebalanceOfficeCells(cells, history, weekIndex) : new Set();
+      dayAssignments.forEach(({ advisorId }) => {
+        applyAssignmentToHistory(history, advisorId, cells[advisorId].type, weekIndex, {
+          rebalanced: movedIds.has(advisorId)
+        });
       });
       days.push({ date, cells });
     }
@@ -645,14 +735,18 @@
         const gtAdvisorId = gtAssignments[dayIndex];
         if (gtAdvisorId) {
           cells[gtAdvisorId] = buildCell('gt');
-          applyAssignmentToHistory(history, gtAdvisorId, 'gt', weekIndex);
         }
         const activeIds = ADVISORS.map((advisor) => advisor.id).filter((id) => id !== gtAdvisorId);
         const officeAssignments = chooseDayAssignments(activeIds, baseAssignments, history);
         Object.keys(officeAssignments).forEach((advisorId) => {
           const type = officeAssignments[advisorId];
           cells[advisorId] = buildCell(type);
-          applyAssignmentToHistory(history, advisorId, type, weekIndex);
+        });
+        const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
+        ADVISORS.forEach((advisor) => {
+          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
+            rebalanced: movedIds.has(advisor.id)
+          });
         });
       } else if (dayIndex <= 4) {
         weekendPair.forEach((item) => {
@@ -663,17 +757,24 @@
         Object.keys(officeAssignments).forEach((advisorId) => {
           const type = officeAssignments[advisorId];
           cells[advisorId] = buildCell(type);
-          applyAssignmentToHistory(history, advisorId, type, weekIndex);
+        });
+        const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
+        ADVISORS.forEach((advisor) => {
+          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
+            rebalanced: movedIds.has(advisor.id)
+          });
         });
       } else {
         weekendPair.forEach((item) => {
           cells[item.id] = buildCell(item.shift, 'Sábado y domingo');
-          applyAssignmentToHistory(history, item.id, item.shift, weekIndex);
         });
         ADVISORS.forEach((advisor) => {
           if (!weekendIds.has(advisor.id)) {
             cells[advisor.id] = buildCell('free', 'Sin guardia');
           }
+        });
+        ADVISORS.forEach((advisor) => {
+          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex);
         });
       }
 
@@ -762,7 +863,23 @@
       return row.join('');
     }).join('');
 
-    boardEl.innerHTML = header + rows;
+    const totalsRow = [
+      '<div class="count-cell label">Conteo</div>',
+      ...sim.days.map((day) => {
+        const counts = summarizeOfficeCounts(day.cells);
+        return `
+          <div class="count-cell">
+            <div class="count-stack">
+              <div class="count-line"><span>Manana</span><strong>${counts.morning}</strong></div>
+              <div class="count-line"><span>Tarde</span><strong>${counts.afternoon}</strong></div>
+              <div class="count-line"><span>11 a 4</span><strong>${counts.mid}</strong></div>
+            </div>
+          </div>
+        `;
+      })
+    ].join('');
+
+    boardEl.innerHTML = header + rows + totalsRow;
   }
 
   function renderCounters(sim) {
