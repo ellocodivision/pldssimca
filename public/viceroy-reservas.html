@@ -107,7 +107,7 @@
           <button id="saveBtn" class="btn primary" type="button">Reservar horario</button>
         </div>
         <p class="status" id="formStatus"></p>
-        <p class="status">Si eliges 4:30, esa sala queda bloqueada hasta las 5:30. Las reservas existentes se respetan tal como ya fueron guardadas.</p>
+        <p class="status">Primero elige fecha y sala. El horario solo mostrará bloques disponibles. Si eliges 4:30, esa sala queda bloqueada hasta las 5:30. Las reservas existentes se respetan tal como ya fueron guardadas.</p>
       </section>
 
       <section class="card">
@@ -201,13 +201,12 @@
         return slotStart >= rowStart && slotStart < (rowStart + 60);
       }
 
-      HOURS.forEach((hour) => {
-        const endHour = addMinutesToHour(hour, 60);
+      function buildHourOption(hour) {
         const opt = document.createElement("option");
         opt.value = hour;
-        opt.textContent = `${hour} - ${endHour}`;
-        bookingHour.appendChild(opt);
-      });
+        opt.textContent = `${hour} - ${addMinutesToHour(hour, 60)}`;
+        return opt;
+      }
 
       function isoDate(date) {
         return date.toISOString().slice(0, 10);
@@ -267,6 +266,38 @@
             ...row,
             isStartSlot: row.hour === hour
           }));
+      }
+
+      function getAvailableHours(dateStr, room) {
+        if (!dateStr || !room) return [];
+        return HOURS.filter((hour) => {
+          return !state.rows.some((row) => (
+            row.date === dateStr &&
+            row.room === room &&
+            reservationTouchesSlot(row.hour, hour)
+          ));
+        });
+      }
+
+      function refreshHourOptions(preferredValue) {
+        const dateStr = bookingDate.value;
+        const room = bookingRoom.value;
+        const available = getAvailableHours(dateStr, room);
+        const nextValue = available.includes(preferredValue) ? preferredValue : available[0] || "";
+        bookingHour.innerHTML = "";
+        if (!available.length) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "Sin horarios disponibles";
+          bookingHour.appendChild(opt);
+          bookingHour.disabled = true;
+          return;
+        }
+        available.forEach((hour) => {
+          bookingHour.appendChild(buildHourOption(hour));
+        });
+        bookingHour.disabled = false;
+        bookingHour.value = nextValue;
       }
 
       function canDelete(row) {
@@ -371,6 +402,7 @@
         state.isGerente = Boolean(data.isGerente);
         updateMeta(data.updatedAt);
         renderSchedule();
+        refreshHourOptions(bookingHour.value);
       }
 
       async function saveReservation() {
@@ -381,6 +413,10 @@
           hour: bookingHour.value,
           title: bookingTitle.value
         };
+        if (!payload.hour) {
+          setStatus("No hay horarios disponibles para esa fecha y sala.", "error");
+          return;
+        }
         const res = await fetch("/api/viceroy/reservas", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -415,6 +451,7 @@
       saveBtn.addEventListener("click", saveReservation);
       reloadBtn.addEventListener("click", loadRows);
       bookingDate.addEventListener("change", syncWeekFromDate);
+      bookingRoom.addEventListener("change", () => refreshHourOptions(bookingHour.value));
       prevWeekBtn.addEventListener("click", () => {
         state.weekStart = addDays(state.weekStart, -7);
         bookingDate.value = isoDate(state.weekStart);
@@ -431,6 +468,7 @@
         loadRows();
       });
 
+      refreshHourOptions(bookingHour.value);
       loadRows();
     })();
   </script>
