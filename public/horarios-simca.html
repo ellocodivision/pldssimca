@@ -565,8 +565,8 @@
     const preferred = getPreferredShift(advisor, weekIndex);
     return (
       (record[shiftKey] * 100) +
-      (preferred === shiftKey ? 0 : 22) +
-      (record.lastOfficeShift === shiftKey ? -10 : 0)
+      (preferred === shiftKey ? 0 : 180) +
+      (record.lastOfficeShift === shiftKey ? -24 : 0)
     );
   }
 
@@ -582,13 +582,13 @@
 
   function getOfficeTargets(activeCount) {
     if (activeCount >= 5) {
-      return { morning: 2, afternoon: 3, mid: activeCount - 5 };
+      return { morning: 2, afternoon: 2, mid: activeCount - 4 };
     }
     if (activeCount === 4) {
       return { morning: 2, afternoon: 2, mid: 0 };
     }
     if (activeCount === 3) {
-      return { morning: 1, afternoon: 2, mid: 0 };
+      return { morning: 1, afternoon: 1, mid: 1 };
     }
     if (activeCount === 2) {
       return { morning: 1, afternoon: 1, mid: 0 };
@@ -616,11 +616,13 @@
   function computeDailyShiftScore(advisor, shiftKey, baseAssignments, history) {
     const record = history[advisor.id];
     const baseShift = baseAssignments[advisor.id];
-    const basePenalty = baseShift === shiftKey ? 0 : (baseShift === 'mid' ? 28 : 48);
+    const basePenalty = baseShift === shiftKey
+      ? 0
+      : (baseShift === 'mid' ? 180 : 260);
     return (
       (record[shiftKey] * 100) +
       basePenalty +
-      (record.lastOfficeShift === shiftKey ? -8 : 0)
+      (record.lastOfficeShift === shiftKey ? -20 : 0)
     );
   }
 
