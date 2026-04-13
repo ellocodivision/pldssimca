@@ -574,6 +574,25 @@
     return pool.slice(0, count);
   }
 
+  function getOfficeTargets(activeCount) {
+    if (activeCount >= 5) {
+      return { morning: 2, afternoon: 3, mid: activeCount - 5 };
+    }
+    if (activeCount === 4) {
+      return { morning: 2, afternoon: 2, mid: 0 };
+    }
+    if (activeCount === 3) {
+      return { morning: 1, afternoon: 2, mid: 0 };
+    }
+    if (activeCount === 2) {
+      return { morning: 1, afternoon: 1, mid: 0 };
+    }
+    if (activeCount === 1) {
+      return { morning: 0, afternoon: 1, mid: 0 };
+    }
+    return { morning: 0, afternoon: 0, mid: 0 };
+  }
+
   function buildWeeklyBaseAssignments(history, weekIndex) {
     const advisors = ADVISORS.slice();
     const morningBase = chooseForWeeklyBase(advisors, 'morning', 2, history, weekIndex);
@@ -602,7 +621,8 @@
   function chooseDayAssignments(activeIds, baseAssignments, history) {
     const advisors = activeIds.map((id) => advisorMap.get(id)).filter(Boolean);
     const assignments = {};
-    const morningNeed = Math.min(2, advisors.length);
+    const targets = getOfficeTargets(advisors.length);
+    const morningNeed = Math.min(targets.morning, advisors.length);
     const morningPicked = advisors.slice().sort((a, b) => {
       const scoreA = computeDailyShiftScore(a, 'morning', baseAssignments, history);
       const scoreB = computeDailyShiftScore(b, 'morning', baseAssignments, history);
@@ -611,7 +631,7 @@
     }).slice(0, morningNeed);
 
     const afterMorning = advisors.filter((advisor) => !morningPicked.some((item) => item.id === advisor.id));
-    const afternoonNeed = Math.min(2, afterMorning.length);
+    const afternoonNeed = Math.min(targets.afternoon, afterMorning.length);
     const afternoonPicked = afterMorning.slice().sort((a, b) => {
       const scoreA = computeDailyShiftScore(a, 'afternoon', baseAssignments, history);
       const scoreB = computeDailyShiftScore(b, 'afternoon', baseAssignments, history);
@@ -640,10 +660,56 @@
   function rebalanceOfficeCells(cells, history, weekIndex) {
     const moved = new Set();
     let counts = summarizeOfficeCounts(cells);
+    const activeCount = counts.morning + counts.afternoon + counts.mid;
+    const targets = getOfficeTargets(activeCount);
 
-    while (Math.abs(counts.morning - counts.afternoon) >= 2) {
-      const fromType = counts.morning > counts.afternoon ? 'morning' : 'afternoon';
-      const toType = fromType === 'morning' ? 'afternoon' : 'morning';
+    for (let guard = 0; guard < 20; guard += 1) {
+      if (
+        counts.morning === targets.morning &&
+        counts.afternoon === targets.afternoon &&
+        counts.mid === targets.mid
+      ) {
+        break;
+      }
+
+      let fromType = null;
+      let toType = null;
+
+      if (counts.afternoon < targets.afternoon) {
+        if (counts.morning > targets.morning) {
+          fromType = 'morning';
+          toType = 'afternoon';
+        } else if (counts.mid > targets.mid) {
+          fromType = 'mid';
+          toType = 'afternoon';
+        }
+      } else if (counts.morning < targets.morning) {
+        if (counts.afternoon > targets.afternoon) {
+          fromType = 'afternoon';
+          toType = 'morning';
+        } else if (counts.mid > targets.mid) {
+          fromType = 'mid';
+          toType = 'morning';
+        }
+      } else if (counts.mid < targets.mid) {
+        if (counts.afternoon > targets.afternoon) {
+          fromType = 'afternoon';
+          toType = 'mid';
+        } else if (counts.morning > targets.morning) {
+          fromType = 'morning';
+          toType = 'mid';
+        }
+      } else if (counts.mid > targets.mid) {
+        if (counts.afternoon < targets.afternoon) {
+          fromType = 'mid';
+          toType = 'afternoon';
+        } else if (counts.morning < targets.morning) {
+          fromType = 'mid';
+          toType = 'morning';
+        }
+      }
+
+      if (!fromType || !toType) break;
       const candidates = ADVISORS.filter((advisor) => cells[advisor.id] && cells[advisor.id].type === fromType);
       if (!candidates.length) break;
 
