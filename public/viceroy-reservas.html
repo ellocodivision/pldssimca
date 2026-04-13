@@ -64,7 +64,7 @@
     <div class="top">
       <div>
         <h1 class="title">Reserva de oficinas</h1>
-        <p class="sub">Reserva sala grande o sala chica en bloques de una hora, de 10:00 a 19:00.</p>
+        <p class="sub">Reserva sala grande o sala chica cada media hora. Cada reserva bloquea una hora completa, de 10:00 a 19:30.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/viceroy">Volver</a>
@@ -107,7 +107,7 @@
           <button id="saveBtn" class="btn primary" type="button">Reservar horario</button>
         </div>
         <p class="status" id="formStatus"></p>
-        <p class="status">Si el horario ya está ocupado en esa sala, el sistema no te dejará guardarlo.</p>
+        <p class="status">Si eliges 4:30, esa sala queda bloqueada hasta las 5:30. Las reservas existentes se respetan tal como ya fueron guardadas.</p>
       </section>
 
       <section class="card">
@@ -139,7 +139,17 @@
         "sala-grande": "Sala grande",
         "sala-chica": "Sala chica"
       };
-      const HOURS = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+      const HOURS = [
+        "10:00", "10:30",
+        "11:00", "11:30",
+        "12:00", "12:30",
+        "13:00", "13:30",
+        "14:00", "14:30",
+        "15:00", "15:30",
+        "16:00", "16:30",
+        "17:00", "17:30",
+        "18:00", "18:30"
+      ];
       const state = {
         rows: [],
         currentEmail: "",
@@ -163,8 +173,36 @@
       const metaUpdated = document.getElementById("metaUpdated");
       const weekLabel = document.getElementById("weekLabel");
 
+      function hourToMinutes(hour) {
+        const parts = String(hour || "").split(":");
+        if (parts.length !== 2) return null;
+        const hh = Number(parts[0]);
+        const mm = Number(parts[1]);
+        if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+        return (hh * 60) + mm;
+      }
+
+      function minutesToHour(totalMinutes) {
+        const hh = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+        const mm = String(totalMinutes % 60).padStart(2, "0");
+        return `${hh}:${mm}`;
+      }
+
+      function addMinutesToHour(hour, minutes) {
+        const total = hourToMinutes(hour);
+        if (total == null) return hour;
+        return minutesToHour(total + minutes);
+      }
+
+      function reservationTouchesSlot(rowHour, slotHour) {
+        const rowStart = hourToMinutes(rowHour);
+        const slotStart = hourToMinutes(slotHour);
+        if (rowStart == null || slotStart == null) return false;
+        return slotStart >= rowStart && slotStart < (rowStart + 60);
+      }
+
       HOURS.forEach((hour) => {
-        const endHour = String(Number(hour.slice(0, 2)) + 1).padStart(2, "0") + ":00";
+        const endHour = addMinutesToHour(hour, 60);
         const opt = document.createElement("option");
         opt.value = hour;
         opt.textContent = `${hour} - ${endHour}`;
@@ -223,7 +261,12 @@
       }
 
       function getRowsForSlot(dateStr, hour) {
-        return state.rows.filter((row) => row.date === dateStr && row.hour === hour);
+        return state.rows
+          .filter((row) => row.date === dateStr && reservationTouchesSlot(row.hour, hour))
+          .map((row) => ({
+            ...row,
+            isStartSlot: row.hour === hour
+          }));
       }
 
       function canDelete(row) {
@@ -266,7 +309,7 @@
         });
 
         HOURS.forEach((hour) => {
-          const endHour = String(Number(hour.slice(0, 2)) + 1).padStart(2, "0") + ":00";
+          const endHour = addMinutesToHour(hour, 30);
           const timeCell = document.createElement("div");
           timeCell.className = "time-col";
           timeCell.textContent = `${hour} - ${endHour}`;
@@ -289,13 +332,13 @@
               title.textContent = row.title;
               const meta = document.createElement("div");
               meta.className = "reservation-meta";
-              meta.textContent = row.createdByName
-                ? `Reservó: ${row.createdByName}`
-                : `Reservó: ${row.createdByEmail || "-"}`;
+              meta.textContent = row.isStartSlot
+                ? `${row.hour} - ${addMinutesToHour(row.hour, 60)} · ${row.createdByName ? `Reservó: ${row.createdByName}` : `Reservó: ${row.createdByEmail || "-"}`}`
+                : `Continúa hasta ${addMinutesToHour(row.hour, 60)}`;
               card.appendChild(room);
               card.appendChild(title);
               card.appendChild(meta);
-              if (canDelete(row)) {
+              if (row.isStartSlot && canDelete(row)) {
                 const btn = document.createElement("button");
                 btn.className = "btn danger";
                 btn.type = "button";

@@ -2390,7 +2390,17 @@ async function whisperlistAllowedEmails() {
 }
 
 const VICEROY_ROOM_OPTIONS = new Set(['sala-grande', 'sala-chica']);
-const VICEROY_ROOM_HOURS = new Set(['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']);
+const VICEROY_ROOM_HOURS = new Set([
+  '10:00', '10:30',
+  '11:00', '11:30',
+  '12:00', '12:30',
+  '13:00', '13:30',
+  '14:00', '14:30',
+  '15:00', '15:30',
+  '16:00', '16:30',
+  '17:00', '17:30',
+  '18:00', '18:30'
+]);
 
 function normalizeReservationRoom(value) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -2406,6 +2416,22 @@ function normalizeReservationDate(value) {
 function normalizeReservationHour(value) {
   const normalized = String(value || '').trim();
   return VICEROY_ROOM_HOURS.has(normalized) ? normalized : '';
+}
+
+function reservationHourToMinutes(value) {
+  const normalized = normalizeReservationHour(value);
+  if (!normalized) return null;
+  const [hour, minute] = normalized.split(':').map(Number);
+  return (hour * 60) + minute;
+}
+
+function reservationHoursOverlap(existingHour, nextHour) {
+  const existingStart = reservationHourToMinutes(existingHour);
+  const nextStart = reservationHourToMinutes(nextHour);
+  if (existingStart == null || nextStart == null) return false;
+  const existingEnd = existingStart + 60;
+  const nextEnd = nextStart + 60;
+  return existingStart < nextEnd && nextStart < existingEnd;
 }
 
 function normalizeReservationTitle(value) {
@@ -5711,7 +5737,11 @@ app.post('/api/viceroy/reservas', (req, res) => {
   }
 
   const data = readViceroyRoomReservations();
-  const occupied = data.rows.find((row) => row.date === date && row.room === room && row.hour === hour);
+  const occupied = data.rows.find((row) => (
+    row.date === date &&
+    row.room === room &&
+    reservationHoursOverlap(row.hour, hour)
+  ));
   if (occupied) {
     return res.status(409).json({
       error: 'Horario ocupado',
