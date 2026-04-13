@@ -745,97 +745,20 @@
     };
   }
 
-  function computeBaseShiftScore(team, shiftKey, history, weekIndex) {
-    const record = getTeamRecord(team, history);
-    const preferred = getPreferredShiftForTeam(team, weekIndex);
-    return (
-      (record[shiftKey] * 100) +
-      (preferred === shiftKey ? 0 : 180) +
-      (record.lastOfficeShift === shiftKey ? -24 : 0)
-    );
-  }
-
-  function chooseForWeeklyBase(candidates, shiftKey, count, history, weekIndex) {
-    const pool = candidates.slice().sort((a, b) => {
-      const scoreA = computeBaseShiftScore(a, shiftKey, history, weekIndex);
-      const scoreB = computeBaseShiftScore(b, shiftKey, history, weekIndex);
-      if (scoreA !== scoreB) return scoreA - scoreB;
-      return a.id.localeCompare(b.id, 'es');
-    });
-    return pool.slice(0, count);
-  }
-
-  function getOfficeTargets(activeCount) {
-    if (activeCount >= 5) {
-      return { morning: 2, afternoon: 2, mid: activeCount - 4 };
-    }
-    if (activeCount === 4) {
-      return { morning: 2, afternoon: 2, mid: 0 };
-    }
-    if (activeCount === 3) {
-      return { morning: 1, afternoon: 1, mid: 1 };
-    }
-    if (activeCount === 2) {
-      return { morning: 1, afternoon: 1, mid: 0 };
-    }
-    if (activeCount === 1) {
-      return { morning: 0, afternoon: 1, mid: 0 };
-    }
-    return { morning: 0, afternoon: 0, mid: 0 };
-  }
-
   function buildWeeklyBaseAssignments(history, weekIndex) {
-    const teams = TEAMS.slice();
-    const morningBase = chooseForWeeklyBase(teams, 'morning', 1, history, weekIndex);
-    const remainingAfterMorning = teams.filter((team) => !morningBase.some((item) => item.id === team.id));
-    const afternoonBase = chooseForWeeklyBase(remainingAfterMorning, 'afternoon', 1, history, weekIndex);
     const base = {};
-    morningBase.forEach((team) => { base[team.id] = 'morning'; });
-    afternoonBase.forEach((team) => { base[team.id] = 'afternoon'; });
     TEAMS.forEach((team) => {
-      if (!base[team.id]) base[team.id] = 'mid';
+      base[team.id] = getPreferredShiftForTeam(team, weekIndex);
     });
     return base;
   }
 
-  function computeDailyShiftScore(team, shiftKey, baseAssignments, history) {
-    const record = getTeamRecord(team, history);
-    const baseShift = baseAssignments[team.id];
-    const basePenalty = baseShift === shiftKey
-      ? 0
-      : (baseShift === 'mid' ? 180 : 260);
-    return (
-      (record[shiftKey] * 100) +
-      basePenalty +
-      (record.lastOfficeShift === shiftKey ? -20 : 0)
-    );
-  }
-
   function chooseDayAssignments(activeTeamIds, baseAssignments, history) {
-    const teams = activeTeamIds.map((id) => TEAMS.find((team) => team.id === id)).filter(Boolean);
     const assignments = {};
-    const targets = getOfficeTargets(teams.length);
-    const morningNeed = Math.min(targets.morning, teams.length);
-    const morningPicked = teams.slice().sort((a, b) => {
-      const scoreA = computeDailyShiftScore(a, 'morning', baseAssignments, history);
-      const scoreB = computeDailyShiftScore(b, 'morning', baseAssignments, history);
-      if (scoreA !== scoreB) return scoreA - scoreB;
-      return a.id.localeCompare(b.id, 'es');
-    }).slice(0, morningNeed);
-
-    const afterMorning = teams.filter((team) => !morningPicked.some((item) => item.id === team.id));
-    const afternoonNeed = Math.min(targets.afternoon, afterMorning.length);
-    const afternoonPicked = afterMorning.slice().sort((a, b) => {
-      const scoreA = computeDailyShiftScore(a, 'afternoon', baseAssignments, history);
-      const scoreB = computeDailyShiftScore(b, 'afternoon', baseAssignments, history);
-      if (scoreA !== scoreB) return scoreA - scoreB;
-      return a.id.localeCompare(b.id, 'es');
-    }).slice(0, afternoonNeed);
-
-    morningPicked.forEach((team) => { assignments[team.id] = 'morning'; });
-    afternoonPicked.forEach((team) => { assignments[team.id] = 'afternoon'; });
-    teams.forEach((team) => {
-      if (!assignments[team.id]) assignments[team.id] = 'mid';
+    activeTeamIds.forEach((teamId) => {
+      if (baseAssignments[teamId]) {
+        assignments[teamId] = baseAssignments[teamId];
+      }
     });
     return assignments;
   }
@@ -935,28 +858,14 @@
 
       if (dayIndex <= 2) {
         const gtAdvisorId = gtAssignments[dayIndex];
-        if (gtAdvisorId) {
-          setSingleCell(cells, gtAdvisorId, 'gt');
-        }
-        const activeTeamIds = TEAMS.map((team) => team.id).filter((teamId) => {
-          const team = TEAMS.find((item) => item.id === teamId);
-          return !team || !team.memberIds.includes(gtAdvisorId);
-        });
+        const activeTeamIds = TEAMS.map((team) => team.id);
         const officeAssignments = chooseDayAssignments(activeTeamIds, baseAssignments, history);
         Object.keys(officeAssignments).forEach((teamId) => {
           const type = officeAssignments[teamId];
           setTeamCells(cells, teamId, type);
         });
         if (gtAdvisorId) {
-          const team = getTeamByAdvisorId(gtAdvisorId);
-          if (team) {
-            const teamShift = officeAssignments[team.id];
-            team.memberIds.forEach((advisorId) => {
-              if (advisorId !== gtAdvisorId && teamShift) {
-                setSingleCell(cells, advisorId, teamShift);
-              }
-            });
-          }
+          setSingleCell(cells, gtAdvisorId, 'gt');
         }
         const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
         ADVISORS.forEach((advisor) => {
@@ -966,9 +875,6 @@
           });
         });
       } else if (dayIndex <= 4) {
-        weekendPair.forEach((item) => {
-          setSingleCell(cells, item.id, 'off', 'Descanso por guardia');
-        });
         const activeTeamIds = TEAMS.map((team) => team.id);
         const officeAssignments = chooseDayAssignments(activeTeamIds, baseAssignments, history);
         Object.keys(officeAssignments).forEach((teamId) => {
@@ -991,7 +897,7 @@
         });
         ADVISORS.forEach((advisor) => {
           if (!weekendIds.has(advisor.id)) {
-            setSingleCell(cells, advisor.id, 'free', '');
+            setSingleCell(cells, advisor.id, 'off', 'Descanso');
           }
         });
         ADVISORS.forEach((advisor) => {
