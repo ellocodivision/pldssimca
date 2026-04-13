@@ -20,7 +20,7 @@
     --mid:#f6bf21;
     --gt:#5c98d2;
     --off:#eb2c2c;
-    --weekend:#3a2f1e;
+    --weekend:#8a4df0;
     --free:#ece7dd;
     --team-a:#d56d6d;
     --team-b:#f1c232;
@@ -83,15 +83,7 @@
     color:var(--accent-ink);
   }
 
-  .hero{
-    display:grid;
-    grid-template-columns:minmax(0, 1.2fr) minmax(320px, .8fr);
-    gap:18px;
-    margin-bottom:18px;
-  }
-
-  .hero-card,
-  .side-card,
+  .summary-strip,
   .board-card{
     background:var(--card);
     border:1px solid var(--line);
@@ -99,48 +91,10 @@
     box-shadow:var(--shadow);
   }
 
-  .hero-card{
-    padding:28px 30px;
-    background:
-      linear-gradient(135deg, rgba(242,210,75,.18), transparent 34%),
-      var(--card);
-  }
-
-  .eyebrow{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    min-height:30px;
-    padding:0 12px;
-    border-radius:999px;
-    background:#f8efd0;
-    color:#695411;
-    font-size:12px;
-    font-weight:700;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-  }
-
-  h1{
-    margin:14px 0 8px;
-    font-size:44px;
-    line-height:.96;
-    letter-spacing:-.04em;
-  }
-
-  .hero-copy{
-    max-width:860px;
-    margin:0;
-    color:var(--muted);
-    font-size:18px;
-    line-height:1.55;
-  }
-
   .week-pill{
     display:inline-flex;
     align-items:center;
     gap:10px;
-    margin-top:18px;
     min-height:42px;
     padding:0 16px;
     border-radius:999px;
@@ -150,21 +104,13 @@
     color:#46392a;
   }
 
-  .side-stack{
-    display:grid;
-    gap:18px;
+  .summary-strip{
+    display:block;
+    padding:18px;
+    margin-top:18px;
   }
 
-  .side-card{
-    padding:20px 20px 18px;
-  }
-
-  .side-card h2{
-    margin:0 0 12px;
-    font-size:20px;
-  }
-
-  .mini-grid{
+  .counters-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:10px;
@@ -192,53 +138,6 @@
     line-height:1.15;
   }
 
-  .rotations{
-    display:grid;
-    gap:8px;
-  }
-
-  .rotation-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    padding:10px 12px;
-    border-radius:14px;
-    background:#faf7f1;
-    border:1px solid #eadfce;
-    font-size:14px;
-  }
-
-  .rotation-row strong{
-    font-size:15px;
-  }
-
-  .legend{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-
-  .legend-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    min-height:34px;
-    padding:0 12px;
-    border-radius:999px;
-    background:#faf7f1;
-    border:1px solid #e7dac4;
-    font-size:13px;
-    font-weight:700;
-    color:#4a4035;
-  }
-
-  .legend-dot{
-    width:12px;
-    height:12px;
-    border-radius:999px;
-  }
-
   .board-card{
     padding:16px;
     overflow:hidden;
@@ -259,7 +158,6 @@
   }
 
   .head-cell,
-  .team-cell,
   .person-cell,
   .shift-cell{
     border-right:1px solid var(--line);
@@ -290,23 +188,6 @@
     font-weight:700;
   }
 
-  .team-cell{
-    padding:14px 16px;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    background:#fff8ef;
-    min-height:56px;
-    font-weight:800;
-    letter-spacing:.01em;
-  }
-
-  .team-bar{
-    width:10px;
-    align-self:stretch;
-    border-radius:999px;
-  }
-
   .person-cell{
     min-height:86px;
     padding:14px 16px;
@@ -323,12 +204,9 @@
     line-height:1.05;
   }
 
-  .person-team{
-    font-size:12px;
-    color:#7a7063;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    font-weight:700;
+  .person-cell.group-start,
+  .shift-cell.group-start{
+    border-top:3px solid #e7dbc6;
   }
 
   .shift-cell{
@@ -372,38 +250,11 @@
   .shift-card.weekend{background:var(--weekend); color:#fff7e4;}
   .shift-card.free{background:var(--free); color:#72675b;}
 
-  .rules{
-    display:grid;
-    gap:10px;
-  }
-
-  .rule{
-    padding:12px 14px;
-    border-radius:16px;
-    background:#faf7f1;
-    border:1px solid #eadfce;
-    color:#51463b;
-    line-height:1.45;
-    font-size:14px;
-  }
-
-  @media (max-width: 1080px){
-    .hero{
-      grid-template-columns:1fr;
-    }
-  }
-
   @media (max-width: 720px){
     .page{
       padding:18px 12px 30px;
     }
-    h1{
-      font-size:36px;
-    }
-    .hero-copy{
-      font-size:16px;
-    }
-    .mini-grid{
+    .counters-grid{
       grid-template-columns:1fr;
     }
   }
@@ -415,36 +266,11 @@
       <div class="topbar-left">
         <a class="back-btn" href="/simca">Regresar a SIMCA</a>
         <button class="nav-btn" id="prevWeekBtn" type="button">Semana anterior</button>
+        <div class="week-pill" id="weekRangePill">Semana</div>
         <button class="today-btn" id="currentWeekBtn" type="button">Semana actual</button>
         <button class="nav-btn" id="nextWeekBtn" type="button">Semana siguiente</button>
       </div>
     </div>
-
-    <section class="hero">
-      <article class="hero-card">
-        <span class="eyebrow">Horarios comerciales</span>
-        <h1>Rotación semanal justa para el equipo de ventas</h1>
-        <p class="hero-copy">Vista semanal para que todo el equipo vea quién está en mañana, tarde, 11 a 4, Gran Tulum y guardia de fin de semana. La rotación busca ser lo más justa posible y evita repetir guardias especiales antes de que pasen todos.</p>
-        <div class="week-pill" id="weekRangePill">Semana</div>
-      </article>
-
-      <div class="side-stack">
-        <aside class="side-card">
-          <h2>Semana en números</h2>
-          <div class="mini-grid" id="weekStats"></div>
-        </aside>
-
-        <aside class="side-card">
-          <h2>Próximas rotaciones</h2>
-          <div class="rotations" id="rotationPreview"></div>
-        </aside>
-      </div>
-    </section>
-
-    <section class="side-card" style="margin-bottom:18px;">
-      <h2 style="margin-bottom:12px;">Leyenda</h2>
-      <div class="legend" id="legend"></div>
-    </section>
 
     <section class="board-card">
       <div class="board-scroll">
@@ -452,15 +278,8 @@
       </div>
     </section>
 
-    <section class="side-card" style="margin-top:18px;">
-      <h2>Reglas activas</h2>
-      <div class="rules">
-        <div class="rule">`Gran Tulum` rota por cola semanal en lunes, martes y miércoles. Nadie repite hasta que pasen todos.</div>
-        <div class="rule">La guardia de fin de semana usa otra cola. Cada fin de semana salen dos personas: una para `mañana` y otra para `tarde`. No vuelven a salir hasta que pase todo el equipo.</div>
-        <div class="rule">Cuando a una persona le vuelve a tocar guardia de fin de semana, alterna entre `mañana` y `tarde`.</div>
-        <div class="rule">Quienes cubren fin de semana quedan en `OFF` jueves y viernes.</div>
-        <div class="rule">Entre semana el motor fuerza `2 mañana`, `2 tarde` y manda el resto a `11 a 4`, buscando mantener equilibrio en el tiempo.</div>
-      </div>
+    <section class="summary-strip">
+      <div class="counters-grid" id="countersGrid"></div>
     </section>
   </main>
 
@@ -470,11 +289,11 @@
   const MONTH_NAMES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const BASE_MONDAY = '2026-03-30';
 
-  const TEAM_META = {
-    alpha: { name: 'Equipo Rodrigo / Andrés / Lu', color: getComputedStyle(document.documentElement).getPropertyValue('--team-a').trim() || '#d56d6d' },
-    beta: { name: 'Equipo Ángeles / Rafa / Claudia', color: getComputedStyle(document.documentElement).getPropertyValue('--team-b').trim() || '#f1c232' },
-    gamma: { name: 'Equipo Ayrton / Abi', color: getComputedStyle(document.documentElement).getPropertyValue('--team-c').trim() || '#8d7bd1' }
-  };
+  const TEAM_ORDER = [
+    ['rodrigo', 'andres', 'lu'],
+    ['angeles', 'rafa', 'claudia'],
+    ['ayrton', 'abi']
+  ];
 
   const ADVISORS = [
     { id: 'rodrigo', name: 'Rodrigo', team: 'alpha', phaseOffset: 0 },
@@ -487,8 +306,59 @@
     { id: 'abi', name: 'Abi', team: 'gamma', phaseOffset: 1 }
   ];
 
-  const GT_QUEUE_INITIAL = ['rodrigo', 'angeles', 'andres', 'rafa', 'ayrton', 'abi', 'lu', 'claudia'];
-  const WEEKEND_QUEUE_INITIAL = ['rodrigo', 'angeles', 'andres', 'rafa', 'ayrton', 'abi', 'lu', 'claudia'];
+  const SEEDED_WEEKS = {
+    '2026-03-30': {
+      rodrigo: ['M','M','M','O','O','WM','WM'],
+      andres:  ['M','M','M','M','M','F','F'],
+      angeles: ['T','T','T','T','T','F','F'],
+      rafa:    ['T','T','T','O','O','WA','WA'],
+      ayrton:  ['X','G','X','X','X','F','F'],
+      abi:     ['X','X','G','X','X','F','F'],
+      lu:      ['G','X','X','M','M','F','F'],
+      claudia: ['F','F','F','F','F','F','F']
+    },
+    '2026-04-06': {
+      rodrigo: ['G','X','X','T','X','F','F'],
+      andres:  ['X','X','G','X','T','F','F'],
+      angeles: ['M','G','M','M','M','F','F'],
+      rafa:    ['M','M','M','M','M','F','F'],
+      ayrton:  ['T','T','T','O','O','WA','WA'],
+      abi:     ['T','T','T','T','T','F','F'],
+      lu:      ['M','M','X','O','O','WM','WM'],
+      claudia: ['X','X','X','X','X','F','F']
+    },
+    '2026-04-13': {
+      rodrigo: ['T','T','T','T','T','F','F'],
+      andres:  ['T','T','T','O','O','WA','WA'],
+      angeles: ['X','X','X','X','X','F','F'],
+      rafa:    ['G','X','X','X','X','F','F'],
+      ayrton:  ['M','M','G','M','M','F','F'],
+      abi:     ['M','M','M','M','M','F','F'],
+      lu:      ['T','G','M','T','T','F','F'],
+      claudia: ['T','T','T','O','O','WM','WM']
+    },
+    '2026-04-20': {
+      rodrigo: ['M','M','G','T','T','F','F'],
+      andres:  ['M','M','M','M','M','F','F'],
+      angeles: ['T','T','T','T','T','F','F'],
+      rafa:    ['T','T','T','O','O','WA','WA'],
+      ayrton:  ['X','X','X','X','X','F','F'],
+      abi:     ['G','X','X','O','O','WM','WM'],
+      lu:      ['M','M','M','M','M','F','F'],
+      claudia: ['M','G','M','M','M','F','F']
+    }
+  };
+
+  const SHIFT_CODE_TO_TYPE = {
+    M: 'morning',
+    T: 'afternoon',
+    X: 'mid',
+    G: 'gt',
+    O: 'off',
+    WM: 'weekendMorning',
+    WA: 'weekendAfternoon',
+    F: 'free'
+  };
 
   const SHIFT_META = {
     morning: { title: 'Oficina NEST mañana', short: 'Mañana', tone: 'morning' },
@@ -504,9 +374,7 @@
   const PHASE_SEQUENCE = ['morning', 'mid', 'afternoon'];
 
   const boardEl = document.getElementById('board');
-  const legendEl = document.getElementById('legend');
-  const rotationPreviewEl = document.getElementById('rotationPreview');
-  const weekStatsEl = document.getElementById('weekStats');
+  const countersGridEl = document.getElementById('countersGrid');
   const weekRangePillEl = document.getElementById('weekRangePill');
   const prevWeekBtn = document.getElementById('prevWeekBtn');
   const nextWeekBtn = document.getElementById('nextWeekBtn');
@@ -567,6 +435,64 @@
     return shift === 'weekendMorning' ? 'weekendAfternoon' : 'weekendMorning';
   }
 
+  function createHistory() {
+    return ADVISORS.reduce((acc, advisor) => {
+      acc[advisor.id] = {
+        morning: 0,
+        afternoon: 0,
+        mid: 0,
+        gt: 0,
+        weekend: 0,
+        lastOfficeShift: null,
+        weekendAssignments: 0,
+        weekendInitialShift: null,
+        lastGtWeek: -1,
+        lastWeekendWeek: -1
+      };
+      return acc;
+    }, {});
+  }
+
+  function buildCell(type, meta) {
+    return {
+      type,
+      title: SHIFT_META[type].title,
+      meta: meta || SHIFT_META[type].short
+    };
+  }
+
+  function applyAssignmentToHistory(history, advisorId, type, weekIndex) {
+    const record = history[advisorId];
+    if (!record) return;
+    if (type === 'morning' || type === 'afternoon' || type === 'mid') {
+      record[type] += 1;
+      record.lastOfficeShift = type;
+    }
+    if (type === 'gt') {
+      record.gt += 1;
+      record.lastGtWeek = weekIndex;
+    }
+    if (type === 'weekendMorning' || type === 'weekendAfternoon') {
+      if (!record.weekendInitialShift) {
+        record.weekendInitialShift = type;
+      }
+      record.weekend += 1;
+      record.weekendAssignments += 1;
+      record.lastWeekendWeek = weekIndex;
+    }
+  }
+
+  function deriveQueueFromHistory(history, kind) {
+    return ADVISORS.slice().sort((a, b) => {
+      const aRecord = history[a.id];
+      const bRecord = history[b.id];
+      const aWeek = kind === 'gt' ? aRecord.lastGtWeek : aRecord.lastWeekendWeek;
+      const bWeek = kind === 'gt' ? bRecord.lastGtWeek : bRecord.lastWeekendWeek;
+      if (aWeek !== bWeek) return aWeek - bWeek;
+      return a.name.localeCompare(b.name, 'es');
+    }).map((advisor) => advisor.id);
+  }
+
   function takeFromQueue(queue, count, excludedSet) {
     const picked = [];
     const remaining = [];
@@ -583,194 +509,224 @@
     };
   }
 
-  function createHistory() {
-    return ADVISORS.reduce((acc, advisor) => {
-      acc[advisor.id] = {
-        morning: 0,
-        afternoon: 0,
-        mid: 0,
-        gt: 0,
-        weekend: 0,
-        lastOfficeShift: null,
-        weekendAssignments: 0,
-        weekendInitialShift: null
-      };
-      return acc;
-    }, {});
-  }
-
-  function chooseForShift(candidates, shiftKey, count, history, weekIndex) {
-    const picked = [];
-    const available = candidates.slice();
-    while (picked.length < count && available.length) {
-      available.sort((a, b) => {
-        const scoreA = computeShiftScore(a, shiftKey, history, weekIndex);
-        const scoreB = computeShiftScore(b, shiftKey, history, weekIndex);
-        if (scoreA !== scoreB) return scoreA - scoreB;
-        return a.name.localeCompare(b.name, 'es');
-      });
-      picked.push(available.shift());
-    }
-    return {
-      picked,
-      rest: candidates.filter((advisor) => !picked.some((item) => item.id === advisor.id))
-    };
-  }
-
-  function computeShiftScore(advisor, shiftKey, history, weekIndex) {
+  function computeBaseShiftScore(advisor, shiftKey, history, weekIndex) {
     const record = history[advisor.id];
     const preferred = getPreferredShift(advisor, weekIndex);
     return (
       (record[shiftKey] * 100) +
-      (preferred === shiftKey ? 0 : 20) +
-      (record.lastOfficeShift === shiftKey ? -6 : 0)
+      (preferred === shiftKey ? 0 : 22) +
+      (record.lastOfficeShift === shiftKey ? -10 : 0)
     );
   }
 
-  function assignOfficeDay(activeIds, weekIndex, history) {
+  function chooseForWeeklyBase(candidates, shiftKey, count, history, weekIndex) {
+    const pool = candidates.slice().sort((a, b) => {
+      const scoreA = computeBaseShiftScore(a, shiftKey, history, weekIndex);
+      const scoreB = computeBaseShiftScore(b, shiftKey, history, weekIndex);
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return a.name.localeCompare(b.name, 'es');
+    });
+    return pool.slice(0, count);
+  }
+
+  function buildWeeklyBaseAssignments(history, weekIndex) {
+    const advisors = ADVISORS.slice();
+    const morningBase = chooseForWeeklyBase(advisors, 'morning', 2, history, weekIndex);
+    const remainingAfterMorning = advisors.filter((advisor) => !morningBase.some((item) => item.id === advisor.id));
+    const afternoonBase = chooseForWeeklyBase(remainingAfterMorning, 'afternoon', 2, history, weekIndex);
+    const base = {};
+    morningBase.forEach((advisor) => { base[advisor.id] = 'morning'; });
+    afternoonBase.forEach((advisor) => { base[advisor.id] = 'afternoon'; });
+    ADVISORS.forEach((advisor) => {
+      if (!base[advisor.id]) base[advisor.id] = 'mid';
+    });
+    return base;
+  }
+
+  function computeDailyShiftScore(advisor, shiftKey, baseAssignments, history) {
+    const record = history[advisor.id];
+    const baseShift = baseAssignments[advisor.id];
+    const basePenalty = baseShift === shiftKey ? 0 : (baseShift === 'mid' ? 28 : 48);
+    return (
+      (record[shiftKey] * 100) +
+      basePenalty +
+      (record.lastOfficeShift === shiftKey ? -8 : 0)
+    );
+  }
+
+  function chooseDayAssignments(activeIds, baseAssignments, history) {
     const advisors = activeIds.map((id) => advisorMap.get(id)).filter(Boolean);
-    const morningNeed = Math.min(2, advisors.length);
-    const firstPass = chooseForShift(advisors, 'morning', morningNeed, history, weekIndex);
-    const afternoonNeed = Math.min(2, firstPass.rest.length);
-    const secondPass = chooseForShift(firstPass.rest, 'afternoon', afternoonNeed, history, weekIndex);
     const assignments = {};
+    const morningNeed = Math.min(2, advisors.length);
+    const morningPicked = advisors.slice().sort((a, b) => {
+      const scoreA = computeDailyShiftScore(a, 'morning', baseAssignments, history);
+      const scoreB = computeDailyShiftScore(b, 'morning', baseAssignments, history);
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return a.name.localeCompare(b.name, 'es');
+    }).slice(0, morningNeed);
 
-    firstPass.picked.forEach((advisor) => {
-      assignments[advisor.id] = 'morning';
-      history[advisor.id].morning += 1;
-      history[advisor.id].lastOfficeShift = 'morning';
+    const afterMorning = advisors.filter((advisor) => !morningPicked.some((item) => item.id === advisor.id));
+    const afternoonNeed = Math.min(2, afterMorning.length);
+    const afternoonPicked = afterMorning.slice().sort((a, b) => {
+      const scoreA = computeDailyShiftScore(a, 'afternoon', baseAssignments, history);
+      const scoreB = computeDailyShiftScore(b, 'afternoon', baseAssignments, history);
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return a.name.localeCompare(b.name, 'es');
+    }).slice(0, afternoonNeed);
+
+    morningPicked.forEach((advisor) => { assignments[advisor.id] = 'morning'; });
+    afternoonPicked.forEach((advisor) => { assignments[advisor.id] = 'afternoon'; });
+    advisors.forEach((advisor) => {
+      if (!assignments[advisor.id]) assignments[advisor.id] = 'mid';
     });
-
-    secondPass.picked.forEach((advisor) => {
-      assignments[advisor.id] = 'afternoon';
-      history[advisor.id].afternoon += 1;
-      history[advisor.id].lastOfficeShift = 'afternoon';
-    });
-
-    secondPass.rest.forEach((advisor) => {
-      assignments[advisor.id] = 'mid';
-      history[advisor.id].mid += 1;
-      history[advisor.id].lastOfficeShift = 'mid';
-    });
-
     return assignments;
   }
 
+  function buildSeededWeek(weekStart, seedWeek, history, weekIndex) {
+    const days = [];
+    const gtAssignments = [];
+    const weekendPair = [];
+
+    for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+      const date = addDays(weekStart, dayIndex);
+      const cells = {};
+      ADVISORS.forEach((advisor) => {
+        const code = seedWeek[advisor.id] ? seedWeek[advisor.id][dayIndex] : 'F';
+        const type = SHIFT_CODE_TO_TYPE[code] || 'free';
+        if (type === 'gt') gtAssignments.push(advisor.id);
+        if ((type === 'weekendMorning' || type === 'weekendAfternoon') && !weekendPair.some((item) => item.id === advisor.id)) {
+          weekendPair.push({ id: advisor.id, shift: type });
+        }
+        applyAssignmentToHistory(history, advisor.id, type, weekIndex);
+        cells[advisor.id] = buildCell(type, type === 'off' ? 'Descanso por guardia' : '');
+      });
+      days.push({ date, cells });
+    }
+
+    return {
+      weekIndex,
+      weekStart,
+      days,
+      gtAssignments,
+      weekendPair,
+      nextGtQueue: deriveQueueFromHistory(history, 'gt'),
+      nextWeekendQueue: deriveQueueFromHistory(history, 'weekend'),
+      history
+    };
+  }
+
+  function buildGeneratedWeek(weekStart, history, gtQueue, weekendQueue, weekIndex) {
+    const weekendPull = takeFromQueue(weekendQueue, 2, new Set());
+    const weekendPair = weekendPull.picked.map((id, pairIndex) => {
+      const record = history[id];
+      if (!record.weekendInitialShift) {
+        record.weekendInitialShift = pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon';
+      }
+      const shift = record.weekendAssignments % 2 === 0
+        ? record.weekendInitialShift
+        : oppositeWeekendShift(record.weekendInitialShift);
+      return { id, shift };
+    });
+
+    const weekendIds = new Set(weekendPair.map((item) => item.id));
+    const gtPull = takeFromQueue(gtQueue, 3, weekendIds);
+    const gtAssignments = gtPull.picked;
+    const baseAssignments = buildWeeklyBaseAssignments(history, weekIndex);
+    const days = [];
+
+    for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+      const date = addDays(weekStart, dayIndex);
+      const cells = {};
+      ADVISORS.forEach((advisor) => {
+        cells[advisor.id] = buildCell('free');
+      });
+
+      if (dayIndex <= 2) {
+        const gtAdvisorId = gtAssignments[dayIndex];
+        if (gtAdvisorId) {
+          cells[gtAdvisorId] = buildCell('gt');
+          applyAssignmentToHistory(history, gtAdvisorId, 'gt', weekIndex);
+        }
+        const activeIds = ADVISORS.map((advisor) => advisor.id).filter((id) => id !== gtAdvisorId);
+        const officeAssignments = chooseDayAssignments(activeIds, baseAssignments, history);
+        Object.keys(officeAssignments).forEach((advisorId) => {
+          const type = officeAssignments[advisorId];
+          cells[advisorId] = buildCell(type);
+          applyAssignmentToHistory(history, advisorId, type, weekIndex);
+        });
+      } else if (dayIndex <= 4) {
+        weekendPair.forEach((item) => {
+          cells[item.id] = buildCell('off', 'Descanso por guardia');
+        });
+        const activeIds = ADVISORS.map((advisor) => advisor.id).filter((id) => !weekendIds.has(id));
+        const officeAssignments = chooseDayAssignments(activeIds, baseAssignments, history);
+        Object.keys(officeAssignments).forEach((advisorId) => {
+          const type = officeAssignments[advisorId];
+          cells[advisorId] = buildCell(type);
+          applyAssignmentToHistory(history, advisorId, type, weekIndex);
+        });
+      } else {
+        weekendPair.forEach((item) => {
+          cells[item.id] = buildCell(item.shift, 'Sábado y domingo');
+          applyAssignmentToHistory(history, item.id, item.shift, weekIndex);
+        });
+        ADVISORS.forEach((advisor) => {
+          if (!weekendIds.has(advisor.id)) {
+            cells[advisor.id] = buildCell('free', 'Sin guardia');
+          }
+        });
+      }
+
+      days.push({ date, cells });
+    }
+
+    return {
+      weekIndex,
+      weekStart,
+      days,
+      gtAssignments,
+      weekendPair,
+      nextGtQueue: gtPull.nextQueue,
+      nextWeekendQueue: weekendPull.nextQueue,
+      history
+    };
+  }
+
   function buildWeekSimulation(targetMonday) {
-    let gtQueue = GT_QUEUE_INITIAL.slice();
-    let weekendQueue = WEEKEND_QUEUE_INITIAL.slice();
     const history = createHistory();
     const baseMonday = parseIsoDate(BASE_MONDAY);
     const totalWeeks = diffWeeks(baseMonday, targetMonday);
+    let gtQueue = null;
+    let weekendQueue = null;
     let targetWeek = null;
 
     for (let weekIndex = 0; weekIndex <= totalWeeks; weekIndex += 1) {
       const weekStart = addDays(baseMonday, weekIndex * 7);
-      const weekendPull = takeFromQueue(weekendQueue, 2, new Set());
-      weekendQueue = weekendPull.nextQueue;
-      const weekendPair = weekendPull.picked.map((id, pairIndex) => {
-        const record = history[id];
-        if (!record.weekendInitialShift) {
-          record.weekendInitialShift = pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon';
-        }
-        const shift = record.weekendAssignments % 2 === 0
-          ? record.weekendInitialShift
-          : oppositeWeekendShift(record.weekendInitialShift);
-        record.weekendAssignments += 1;
-        record.weekend += 1;
-        return { id, shift };
-      });
+      const key = dateKey(weekStart);
+      let weekResult;
 
-      const weekendIds = new Set(weekendPair.map((item) => item.id));
-      const gtPull = takeFromQueue(gtQueue, 3, weekendIds);
-      gtQueue = gtPull.nextQueue;
-      const gtAssignments = gtPull.picked;
-      const days = [];
-
-      for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
-        const date = addDays(weekStart, dayIndex);
-        const cells = {};
-        ADVISORS.forEach((advisor) => {
-          cells[advisor.id] = { type: 'free', title: SHIFT_META.free.title, meta: SHIFT_META.free.short };
-        });
-
-        if (dayIndex <= 2) {
-          const gtAdvisorId = gtAssignments[dayIndex];
-          if (gtAdvisorId) {
-            cells[gtAdvisorId] = { type: 'gt', title: SHIFT_META.gt.title, meta: 'Rotación especial' };
-            history[gtAdvisorId].gt += 1;
-          }
-          const activeIds = ADVISORS
-            .map((advisor) => advisor.id)
-            .filter((id) => id !== gtAdvisorId);
-          const officeAssignments = assignOfficeDay(activeIds, weekIndex, history);
-          Object.keys(officeAssignments).forEach((advisorId) => {
-            const key = officeAssignments[advisorId];
-            cells[advisorId] = { type: key, title: SHIFT_META[key].title, meta: TEAM_META[advisorMap.get(advisorId).team].name };
-          });
-        } else if (dayIndex <= 4) {
-          weekendPair.forEach((item) => {
-            cells[item.id] = { type: 'off', title: SHIFT_META.off.title, meta: 'Descanso por guardia' };
-          });
-          const activeIds = ADVISORS
-            .map((advisor) => advisor.id)
-            .filter((id) => !weekendIds.has(id));
-          const officeAssignments = assignOfficeDay(activeIds, weekIndex, history);
-          Object.keys(officeAssignments).forEach((advisorId) => {
-            const key = officeAssignments[advisorId];
-            cells[advisorId] = { type: key, title: SHIFT_META[key].title, meta: TEAM_META[advisorMap.get(advisorId).team].name };
-          });
-        } else {
-          weekendPair.forEach((item) => {
-            const meta = item.shift === 'weekendMorning' ? 'Sábado y domingo' : 'Sábado y domingo';
-            cells[item.id] = { type: 'weekend', title: SHIFT_META[item.shift].title, meta };
-          });
-          ADVISORS.forEach((advisor) => {
-            if (!weekendIds.has(advisor.id)) {
-              cells[advisor.id] = { type: 'free', title: SHIFT_META.free.title, meta: 'Sin guardia' };
-            }
-          });
-        }
-
-        days.push({
-          date,
-          cells
-        });
+      if (SEEDED_WEEKS[key]) {
+        weekResult = buildSeededWeek(weekStart, SEEDED_WEEKS[key], history, weekIndex);
+        gtQueue = deriveQueueFromHistory(history, 'gt');
+        weekendQueue = deriveQueueFromHistory(history, 'weekend');
+      } else {
+        if (!gtQueue) gtQueue = deriveQueueFromHistory(history, 'gt');
+        if (!weekendQueue) weekendQueue = deriveQueueFromHistory(history, 'weekend');
+        weekResult = buildGeneratedWeek(weekStart, history, gtQueue, weekendQueue, weekIndex);
+        gtQueue = weekResult.nextGtQueue.slice();
+        weekendQueue = weekResult.nextWeekendQueue.slice();
       }
 
       if (weekIndex === totalWeeks) {
-        targetWeek = {
-          weekIndex,
-          weekStart,
-          days,
-          weekendPair,
-          gtAssignments,
-          nextGtQueue: gtQueue.slice(),
-          nextWeekendQueue: weekendQueue.slice(),
-          history
-        };
+        targetWeek = weekResult;
       }
     }
 
     return targetWeek;
   }
 
-  function renderLegend() {
-    const items = [
-      ['Mañana', '--morning'],
-      ['Tarde', '--afternoon'],
-      ['11 a 4', '--mid'],
-      ['Gran Tulum', '--gt'],
-      ['OFF', '--off'],
-      ['Guardia fin de semana', '--weekend'],
-      ['Libre', '--free']
-    ];
-    legendEl.innerHTML = items.map(([label, cssVar]) => `
-      <div class="legend-chip">
-        <span class="legend-dot" style="background:${getComputedStyle(document.documentElement).getPropertyValue(cssVar)}"></span>
-        <span>${label}</span>
-      </div>
-    `).join('');
+  function isGroupStart(advisorId) {
+    return TEAM_ORDER.some((group) => group[0] === advisorId) && advisorId !== TEAM_ORDER[0][0];
   }
 
   function renderWeek(sim) {
@@ -787,57 +743,38 @@
       `)
     ].join('');
 
-    const grouped = Object.entries(TEAM_META).map(([teamId, team]) => {
-      const members = ADVISORS.filter((advisor) => advisor.team === teamId);
-      const teamRows = [
-        `<div class="team-cell"><span class="team-bar" style="background:${team.color};"></span><span>${team.name}</span></div>`,
-        ...sim.days.map(() => `<div class="team-cell" style="background:#fff8ef;"></div>`)
+    const rows = ADVISORS.map((advisor) => {
+      const groupStartClass = isGroupStart(advisor.id) ? ' group-start' : '';
+      const row = [
+        `<div class="person-cell${groupStartClass}"><div class="person-name">${advisor.name}</div></div>`
       ];
-
-      const memberRows = members.map((advisor) => {
-        const row = [
-          `<div class="person-cell"><div class="person-name">${advisor.name}</div><div class="person-team">${team.name}</div></div>`
-        ];
-        sim.days.forEach((day) => {
-          const cell = day.cells[advisor.id];
-          row.push(`
-            <div class="shift-cell">
-              <div class="shift-card ${cell.type}">
-                <div class="title">${cell.title}</div>
-                <div class="meta">${cell.meta}</div>
-              </div>
+      sim.days.forEach((day) => {
+        const cell = day.cells[advisor.id];
+        row.push(`
+          <div class="shift-cell${groupStartClass}">
+            <div class="shift-card ${cell.type}">
+              <div class="title">${cell.title}</div>
+              <div class="meta">${cell.meta || ''}</div>
             </div>
-          `);
-        });
-        return row.join('');
+          </div>
+        `);
       });
-
-      return teamRows.join('') + memberRows.join('');
+      return row.join('');
     }).join('');
 
-    boardEl.innerHTML = header + grouped;
+    boardEl.innerHTML = header + rows;
   }
 
-  function renderSidePanels(sim) {
-    const weekendMorning = sim.weekendPair.find((item) => item.shift === 'weekendMorning');
-    const weekendAfternoon = sim.weekendPair.find((item) => item.shift === 'weekendAfternoon');
-    const gtNames = sim.gtAssignments.map((id) => advisorMap.get(id)?.name || id);
-
-    weekStatsEl.innerHTML = [
-      ['Gran Tulum', gtNames.join(' · ')],
-      ['Guardia mañana', weekendMorning ? advisorMap.get(weekendMorning.id).name : '-'],
-      ['Guardia tarde', weekendAfternoon ? advisorMap.get(weekendAfternoon.id).name : '-'],
-      ['Base rotación', formatCompactDate(parseIsoDate(BASE_MONDAY))]
-    ].map(([k, v]) => `<div class="mini-stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
-
-    const nextGt = sim.nextGtQueue.slice(0, 4).map((id) => advisorMap.get(id)?.name || id);
-    const nextWeekend = sim.nextWeekendQueue.slice(0, 4).map((id) => advisorMap.get(id)?.name || id);
-    rotationPreviewEl.innerHTML = [
-      ['Siguiente cola Gran Tulum', nextGt.join(' · ')],
-      ['Siguiente cola fin de semana', nextWeekend.join(' · ')],
-      ['Guardia actual mañana', weekendMorning ? advisorMap.get(weekendMorning.id).name : '-'],
-      ['Guardia actual tarde', weekendAfternoon ? advisorMap.get(weekendAfternoon.id).name : '-']
-    ].map(([k, v]) => `<div class="rotation-row"><span>${k}</span><strong>${v}</strong></div>`).join('');
+  function renderCounters(sim) {
+    countersGridEl.innerHTML = ADVISORS.map((advisor) => {
+      const record = sim.history[advisor.id];
+      return `
+        <div class="mini-stat">
+          <div class="k">${advisor.name}</div>
+          <div class="v">GT: ${record.gt} · FDS: ${record.weekend}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   function rerender() {
@@ -845,7 +782,7 @@
     selectedMonday = monday;
     const sim = buildWeekSimulation(monday);
     renderWeek(sim);
-    renderSidePanels(sim);
+    renderCounters(sim);
   }
 
   prevWeekBtn.addEventListener('click', function () {
@@ -865,7 +802,6 @@
     rerender();
   });
 
-  renderLegend();
   rerender();
 })();
 </script>
