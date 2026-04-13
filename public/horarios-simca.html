@@ -773,8 +773,40 @@
     }, { morning: 0, afternoon: 0, mid: 0 });
   }
 
-  function rebalanceOfficeCells() {
-    return new Set();
+  function rebalanceOfficeCells(cells, history, weekIndex) {
+    const moved = new Set();
+
+    function pickMidCandidate() {
+      const candidates = ADVISORS.filter((advisor) => cells[advisor.id] && cells[advisor.id].type === 'mid');
+      candidates.sort((a, b) => {
+        const aRecord = history[a.id];
+        const bRecord = history[b.id];
+        if (aRecord.rebalanceMoves !== bRecord.rebalanceMoves) return aRecord.rebalanceMoves - bRecord.rebalanceMoves;
+        if (aRecord.lastRebalanceWeek !== bRecord.lastRebalanceWeek) return aRecord.lastRebalanceWeek - bRecord.lastRebalanceWeek;
+        return a.name.localeCompare(b.name, 'es');
+      });
+      return candidates[0] || null;
+    }
+
+    let counts = summarizeOfficeCounts(cells);
+
+    while (counts.morning < 2) {
+      const candidate = pickMidCandidate();
+      if (!candidate) break;
+      cells[candidate.id] = buildCell('morning');
+      moved.add(candidate.id);
+      counts = summarizeOfficeCounts(cells);
+    }
+
+    while (counts.afternoon < 2) {
+      const candidate = pickMidCandidate();
+      if (!candidate) break;
+      cells[candidate.id] = buildCell('afternoon');
+      moved.add(candidate.id);
+      counts = summarizeOfficeCounts(cells);
+    }
+
+    return moved;
   }
 
   function setTeamCells(cells, teamId, type, meta) {
