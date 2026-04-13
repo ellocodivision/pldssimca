@@ -74,7 +74,7 @@
     <div class="top">
       <div>
         <h1 class="title">Reserva de oficinas</h1>
-        <p class="sub">Reserva sala grande o sala chica cada media hora. Cada reserva bloquea una hora completa, de 10:00 a 19:30.</p>
+        <p class="sub"></p>
       </div>
       <div class="actions">
         <a class="btn" href="/viceroy">Volver</a>
@@ -422,9 +422,10 @@
               const dayEndClass = roomId === "sala-chica" ? " day-end" : "";
               const reservation = state.rows.find((row) => row.date === dateStr && row.room === roomId && row.hour === hour);
               if (reservation) {
+                const rowSpan = index < HOURS.length - 1 ? 2 : 1;
                 const td = document.createElement("td");
                 td.className = `slot reserved${dayEndClass}`;
-                td.rowSpan = 2;
+                td.rowSpan = rowSpan;
                 const card = document.createElement("div");
                 card.className = "reservation";
                 const title = document.createElement("div");
@@ -451,8 +452,10 @@
                 }
                 td.appendChild(card);
                 rowEl.appendChild(td);
-                const nextHour = HOURS[index + 1];
-                if (nextHour) skip[dateStr][roomId].add(nextHour);
+                if (rowSpan === 2) {
+                  const nextHour = HOURS[index + 1];
+                  if (nextHour) skip[dateStr][roomId].add(nextHour);
+                }
               } else {
                 const coveredByPrevious = state.rows.some((row) => (
                   row.date === dateStr &&
