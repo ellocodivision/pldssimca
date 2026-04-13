@@ -41,9 +41,12 @@
     .schedule-table th{background:#faf7f0;padding:10px 12px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#5e5649}
     .schedule-table th.day-head{background:#f3eee3;text-align:center;font-size:11px}
     .schedule-table th.room-head{font-size:10px;padding:8px 6px;text-align:center}
+    .schedule-table th.day-end,
+    .schedule-table td.day-end{border-right:3px solid #cdbfa8}
     .time-col{width:90px;background:#faf7f0;padding:8px 10px;font-weight:700;font-size:13px;white-space:nowrap}
     .slot{width:105px;padding:0;min-height:44px;background:#fff}
     .slot.empty{background:#fff}
+    .slot.available{background:#e9f6df}
     .slot.continues{background:#fff6bf}
     .slot.reserved{background:#fff16e}
     .reservation{height:100%;min-height:88px;border:0;border-radius:0;padding:8px 10px;background:transparent;display:flex;flex-direction:column}
@@ -51,6 +54,11 @@
     .reservation-title{font-size:13px;font-weight:700;margin-top:3px}
     .reservation-meta{font-size:11px;color:var(--muted);margin-top:4px}
     .reservation .btn{padding:5px 8px;font-size:11px;margin-top:6px}
+    .slot-actions{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:88px;justify-content:center}
+    .slot-actions .btn{padding:7px 10px;font-size:12px}
+    .slot-inline-label{font-size:11px;color:#537145;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .slot-inline-input{width:100%;padding:8px 9px;border:1px solid #b7cda7;border-radius:10px;background:#fff;font:inherit;font-size:12px}
+    .slot-inline-row{display:flex;gap:6px;flex-wrap:wrap}
     .legend{display:flex;gap:10px;flex-wrap:wrap}
     .legend span{font-size:12px;color:var(--muted)}
     .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -156,7 +164,9 @@
         currentEmail: "",
         currentName: "",
         isGerente: false,
-        weekStart: null
+        weekStart: null,
+        inlineDraftKey: "",
+        inlineDraftTitle: ""
       };
 
       const bookingDate = document.getElementById("bookingDate");
@@ -305,6 +315,40 @@
         return state.isGerente || String(row.createdByEmail || "").toLowerCase() === String(state.currentEmail || "").toLowerCase();
       }
 
+      function makeInlineKey(dateStr, room, hour) {
+        return `${dateStr}__${room}__${hour}`;
+      }
+
+      async function submitReservation(payload, options) {
+        const clearForm = Boolean(options && options.clearForm);
+        const closeInline = Boolean(options && options.closeInline);
+        const res = await fetch("/api/viceroy/reservas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          setStatus("Ese horario ya está ocupado en esa sala.", "error");
+          await loadRows();
+          return false;
+        }
+        if (!res.ok) {
+          setStatus(data && data.error ? data.error : `No se pudo guardar (${res.status})`, "error");
+          return false;
+        }
+        setStatus("Reserva guardada.", "ok");
+        if (clearForm) bookingTitle.value = "";
+        if (closeInline) {
+          state.inlineDraftKey = "";
+          state.inlineDraftTitle = "";
+        }
+        state.weekStart = getMonday(parseIsoDate(payload.date) || new Date());
+        await loadRows();
+        return true;
+      }
+
       async function deleteReservation(id) {
         const ok = window.confirm("¿Borrar esta reserva?");
         if (!ok) return;
@@ -334,10 +378,10 @@
         thead.innerHTML = `
           <tr>
             <th rowspan="2">Hora</th>
-            ${days.map((day) => `<th class="day-head" colspan="2">${formatDay(day)}</th>`).join("")}
+            ${days.map((day) => `<th class="day-head day-end" colspan="2">${formatDay(day)}</th>`).join("")}
           </tr>
           <tr>
-            ${days.map(() => `<th class="room-head">${ROOM_LABELS["sala-grande"]}</th><th class="room-head">${ROOM_LABELS["sala-chica"]}</th>`).join("")}
+            ${days.map(() => `<th class="room-head">${ROOM_LABELS["sala-grande"]}</th><th class="room-head day-end">${ROOM_LABELS["sala-chica"]}</th>`).join("")}
           </tr>
         `;
         table.appendChild(thead);
@@ -364,10 +408,11 @@
             const dateStr = isoDate(day);
             ["sala-grande", "sala-chica"].forEach((roomId) => {
               if (skip[dateStr][roomId].has(hour)) return;
+              const dayEndClass = roomId === "sala-chica" ? " day-end" : "";
               const reservation = state.rows.find((row) => row.date === dateStr && row.room === roomId && row.hour === hour);
               if (reservation) {
                 const td = document.createElement("td");
-                td.className = "slot reserved";
+                td.className = `slot reserved${dayEndClass}`;
                 td.rowSpan = 2;
                 const card = document.createElement("div");
                 card.className = "reservation";
@@ -398,7 +443,70 @@
                   reservationTouchesSlot(row.hour, hour)
                 ));
                 const td = document.createElement("td");
-                td.className = `slot${coveredByPrevious ? " continues" : " empty"}`;
+                td.className = `slot${coveredByPrevious ? " continues" : " empty"}${dayEndClass}`;
+                if (!coveredByPrevious) {
+                  td.classList.add("available");
+                  const inlineKey = makeInlineKey(dateStr, roomId, hour);
+                  const wrapper = document.createElement("div");
+                  wrapper.className = "slot-actions";
+                  if (state.inlineDraftKey === inlineKey) {
+                    const label = document.createElement("div");
+                    label.className = "slot-inline-label";
+                    label.textContent = `${ROOM_LABELS[roomId]} · ${hour} - ${addMinutesToHour(hour, 60)}`;
+                    const input = document.createElement("input");
+                    input.className = "slot-inline-input";
+                    input.placeholder = "Broker y detalle";
+                    input.value = state.inlineDraftTitle || "";
+                    input.addEventListener("input", (event) => {
+                      state.inlineDraftTitle = event.target.value;
+                    });
+                    const rowButtons = document.createElement("div");
+                    rowButtons.className = "slot-inline-row";
+                    const saveInlineBtn = document.createElement("button");
+                    saveInlineBtn.className = "btn primary";
+                    saveInlineBtn.type = "button";
+                    saveInlineBtn.textContent = "Guardar";
+                    saveInlineBtn.addEventListener("click", async () => {
+                      const title = String(state.inlineDraftTitle || "").trim();
+                      if (!title) {
+                        setStatus("Escribe broker y detalle para guardar la reserva.", "error");
+                        return;
+                      }
+                      await submitReservation({
+                        date: dateStr,
+                        room: roomId,
+                        hour,
+                        title
+                      }, { closeInline: true });
+                    });
+                    const cancelInlineBtn = document.createElement("button");
+                    cancelInlineBtn.className = "btn";
+                    cancelInlineBtn.type = "button";
+                    cancelInlineBtn.textContent = "Cancelar";
+                    cancelInlineBtn.addEventListener("click", () => {
+                      state.inlineDraftKey = "";
+                      state.inlineDraftTitle = "";
+                      renderSchedule();
+                    });
+                    rowButtons.appendChild(saveInlineBtn);
+                    rowButtons.appendChild(cancelInlineBtn);
+                    wrapper.appendChild(label);
+                    wrapper.appendChild(input);
+                    wrapper.appendChild(rowButtons);
+                  } else {
+                    const reserveBtn = document.createElement("button");
+                    reserveBtn.className = "btn";
+                    reserveBtn.type = "button";
+                    reserveBtn.textContent = "Reservar";
+                    reserveBtn.addEventListener("click", () => {
+                      state.inlineDraftKey = inlineKey;
+                      state.inlineDraftTitle = "";
+                      renderSchedule();
+                    });
+                    wrapper.appendChild(reserveBtn);
+                  }
+                  td.appendChild(wrapper);
+                }
                 rowEl.appendChild(td);
               }
             });
@@ -445,26 +553,7 @@
           setStatus("No hay horarios disponibles para esa fecha y sala.", "error");
           return;
         }
-        const res = await fetch("/api/viceroy/reservas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.status === 409) {
-          setStatus("Ese horario ya está ocupado en esa sala.", "error");
-          await loadRows();
-          return;
-        }
-        if (!res.ok) {
-          setStatus(data && data.error ? data.error : `No se pudo guardar (${res.status})`, "error");
-          return;
-        }
-        setStatus("Reserva guardada.", "ok");
-        bookingTitle.value = "";
-        state.weekStart = getMonday(parseIsoDate(bookingDate.value) || new Date());
-        await loadRows();
+        await submitReservation(payload, { clearForm: true });
       }
 
       function syncWeekFromDate() {
