@@ -1115,6 +1115,13 @@
       const response = await fetch(`/api/horarios-simca/overrides?weekStart=${encodeURIComponent(dateKey(monday))}`, {
         credentials: 'same-origin'
       });
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+      if (!response.ok) {
+        throw new Error(`No se pudo cargar ajustes (${response.status}).`);
+      }
+      if (!contentType.includes('application/json')) {
+        throw new Error('La respuesta de ajustes no vino en JSON.');
+      }
       const data = await response.json();
       if (token !== lastLoadToken) return;
       currentOverrides = Array.isArray(data.rows) ? data.rows : [];
@@ -1128,7 +1135,10 @@
       renderCounters(currentSim);
     } catch (err) {
       if (token !== lastLoadToken) return;
-      setEditorStatus('No se pudieron cargar los ajustes manuales.', true);
+      setEditorStatus(err && err.message ? err.message : 'No se pudieron cargar los ajustes manuales.', true);
+      currentOverrides = [];
+      isGerente = false;
+      editorNoteEl.textContent = 'Vista de horario.';
       currentSim = buildWeekSimulation(monday);
       renderWeek(currentSim);
       renderCounters(currentSim);
