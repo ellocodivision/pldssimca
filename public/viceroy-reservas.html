@@ -45,7 +45,8 @@
     .slot{width:105px;padding:0;min-height:44px;background:#fff}
     .slot.empty{background:#fff}
     .slot.continues{background:#fff6bf}
-    .reservation{height:100%;min-height:88px;border:0;border-radius:0;padding:8px 10px;background:#fff16e}
+    .slot.reserved{background:#fff16e}
+    .reservation{height:100%;min-height:88px;border:0;border-radius:0;padding:8px 10px;background:transparent;display:flex;flex-direction:column}
     .reservation-room{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
     .reservation-title{font-size:13px;font-weight:700;margin-top:3px}
     .reservation-meta{font-size:11px;color:var(--muted);margin-top:4px}
@@ -366,7 +367,7 @@
               const reservation = state.rows.find((row) => row.date === dateStr && row.room === roomId && row.hour === hour);
               if (reservation) {
                 const td = document.createElement("td");
-                td.className = "slot";
+                td.className = "slot reserved";
                 td.rowSpan = 2;
                 const card = document.createElement("div");
                 card.className = "reservation";
