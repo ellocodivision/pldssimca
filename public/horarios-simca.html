@@ -268,7 +268,7 @@
   .shift-card.off{background:color-mix(in srgb, var(--off) 90%, white); color:#fff4f4;}
   .shift-card.weekendMorning{background:color-mix(in srgb, var(--morning) 88%, white); color:#fff7df;}
   .shift-card.weekendAfternoon{background:color-mix(in srgb, var(--afternoon) 88%, white); color:#10200d;}
-  .shift-card.free{background:var(--free); color:#72675b;}
+  .shift-card.free{background:#fff; color:#72675b; box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);}
 
   .manual-badge{
     align-self:flex-start;
@@ -556,7 +556,7 @@
     off: { title: 'OFF', short: 'OFF', tone: 'off' },
     weekendMorning: { title: 'Guardia fin de semana mañana', short: 'Guardia mañana', tone: 'weekend' },
     weekendAfternoon: { title: 'Guardia fin de semana tarde', short: 'Guardia tarde', tone: 'weekend' },
-    free: { title: 'Libre', short: 'Libre', tone: 'free' }
+    free: { title: '', short: '', tone: 'free' }
   };
 
   const PHASE_SEQUENCE = ['morning', 'mid', 'afternoon'];
@@ -584,8 +584,7 @@
     { value: 'gt', label: 'Gran Tulum / Coca' },
     { value: 'off', label: 'OFF' },
     { value: 'weekendMorning', label: 'Guardia fin de semana mañana' },
-    { value: 'weekendAfternoon', label: 'Guardia fin de semana tarde' },
-    { value: 'free', label: 'Libre' }
+    { value: 'weekendAfternoon', label: 'Guardia fin de semana tarde' }
   ];
 
   let selectedMonday = maxDate(startOfWeek(new Date()), parseIsoDate(BASE_MONDAY));
@@ -992,7 +991,7 @@
         });
         ADVISORS.forEach((advisor) => {
           if (!weekendIds.has(advisor.id)) {
-            setSingleCell(cells, advisor.id, 'free', 'Sin guardia');
+            setSingleCell(cells, advisor.id, 'free', '');
           }
         });
         ADVISORS.forEach((advisor) => {
