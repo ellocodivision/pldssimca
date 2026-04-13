@@ -45,6 +45,7 @@ const EXTRA_ALLOWED_EMAILS = new Set(
     .filter(Boolean)
 );
 EXTRA_ALLOWED_EMAILS.add('jmotta@relatedgroup.com');
+EXTRA_ALLOWED_EMAILS.add('reception@viceroyplayadelcarmen.com');
 const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
 const USE_WHISPERLIST_DB = Boolean(DATABASE_URL);
 const LOG_PATH = '/tmp/fr-ven-server.log';
