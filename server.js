@@ -3768,6 +3768,12 @@ function renderSimcaHome(req, res, options) {
           <p class="desc">Cotiza mensualidades y tabla de amortización con balloons por unidad.</p>
         </a>
         ${financiamientoEditorCard}`;
+  const horariosCard = `
+        <a class="card" href="/horarios-simca">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Horarios Comerciales</h2>
+          <p class="desc">Consulta la semana del equipo con rotación de Gran Tulum, guardias y turnos justos.</p>
+        </a>`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -3888,6 +3894,7 @@ function renderSimcaHome(req, res, options) {
           <p class="desc">Cálculo de retorno de inversión por unidad.</p>
         </a>
         ${financiamientoCard}
+        ${horariosCard}
         ${brokersCard}
         ${presentacionesCard}
         ${tablaPagosCard}
@@ -4009,6 +4016,7 @@ app.use('/generador-faes', requireInternalUser);
 app.use('/plds', requireInternalUser);
 app.use('/generador-roi', requireInternalUser);
 app.use('/financiamiento-simca', requireInternalUser);
+app.use('/horarios-simca', requireInternalUser);
 app.use('/tabla-pagos', requireInternalUser);
 app.use('/form', requireInternalUser);
 app.use('/form-nacional', requireInternalUser);
@@ -4112,6 +4120,10 @@ app.get('/generador-roi', (req, res) => {
 
 app.get('/financiamiento-simca', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'financiamiento-simca.html'));
+});
+
+app.get('/horarios-simca', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'horarios-simca.html'));
 });
 
 app.get('/financiamiento-simca/editor', requireGerente, (req, res) => {

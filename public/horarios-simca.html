@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horarios Comerciales</title>
+<style>
+  :root{
+    --bg:#f5f0e6;
+    --card:#fffdf8;
+    --card-soft:#f8f3e8;
+    --ink:#1f1b16;
+    --muted:#72685c;
+    --line:#ddd2c0;
+    --accent:#f2d24b;
+    --accent-ink:#2c2412;
+    --shadow:0 26px 70px rgba(62, 46, 17, 0.08);
+    --morning:#8c6b11;
+    --afternoon:#7fba49;
+    --mid:#f6bf21;
+    --gt:#5c98d2;
+    --off:#eb2c2c;
+    --weekend:#3a2f1e;
+    --free:#ece7dd;
+    --team-a:#d56d6d;
+    --team-b:#f1c232;
+    --team-c:#8d7bd1;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(242,210,75,.18), transparent 28%),
+      linear-gradient(180deg, #faf6ee 0%, var(--bg) 100%);
+  }
+
+  .page{
+    max-width:1480px;
+    margin:0 auto;
+    padding:24px 18px 40px;
+  }
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+
+  .topbar-left{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  .back-btn,
+  .nav-btn,
+  .today-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:42px;
+    padding:0 16px;
+    border-radius:999px;
+    text-decoration:none;
+    border:1px solid #c8bda9;
+    background:rgba(255,255,255,.9);
+    color:#241d14;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  .today-btn{
+    background:var(--accent);
+    border-color:#ceb13f;
+    color:var(--accent-ink);
+  }
+
+  .hero{
+    display:grid;
+    grid-template-columns:minmax(0, 1.2fr) minmax(320px, .8fr);
+    gap:18px;
+    margin-bottom:18px;
+  }
+
+  .hero-card,
+  .side-card,
+  .board-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+  }
+
+  .hero-card{
+    padding:28px 30px;
+    background:
+      linear-gradient(135deg, rgba(242,210,75,.18), transparent 34%),
+      var(--card);
+  }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    min-height:30px;
+    padding:0 12px;
+    border-radius:999px;
+    background:#f8efd0;
+    color:#695411;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  h1{
+    margin:14px 0 8px;
+    font-size:44px;
+    line-height:.96;
+    letter-spacing:-.04em;
+  }
+
+  .hero-copy{
+    max-width:860px;
+    margin:0;
+    color:var(--muted);
+    font-size:18px;
+    line-height:1.55;
+  }
+
+  .week-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    margin-top:18px;
+    min-height:42px;
+    padding:0 16px;
+    border-radius:999px;
+    background:#f4efe3;
+    border:1px solid var(--line);
+    font-weight:700;
+    color:#46392a;
+  }
+
+  .side-stack{
+    display:grid;
+    gap:18px;
+  }
+
+  .side-card{
+    padding:20px 20px 18px;
+  }
+
+  .side-card h2{
+    margin:0 0 12px;
+    font-size:20px;
+  }
+
+  .mini-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+  }
+
+  .mini-stat{
+    padding:14px;
+    border-radius:18px;
+    background:var(--card-soft);
+    border:1px solid #e8dcc8;
+  }
+
+  .mini-stat .k{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#7d7264;
+  }
+
+  .mini-stat .v{
+    margin-top:8px;
+    font-size:18px;
+    font-weight:800;
+    line-height:1.15;
+  }
+
+  .rotations{
+    display:grid;
+    gap:8px;
+  }
+
+  .rotation-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:10px 12px;
+    border-radius:14px;
+    background:#faf7f1;
+    border:1px solid #eadfce;
+    font-size:14px;
+  }
+
+  .rotation-row strong{
+    font-size:15px;
+  }
+
+  .legend{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .legend-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    min-height:34px;
+    padding:0 12px;
+    border-radius:999px;
+    background:#faf7f1;
+    border:1px solid #e7dac4;
+    font-size:13px;
+    font-weight:700;
+    color:#4a4035;
+  }
+
+  .legend-dot{
+    width:12px;
+    height:12px;
+    border-radius:999px;
+  }
+
+  .board-card{
+    padding:16px;
+    overflow:hidden;
+  }
+
+  .board-scroll{
+    overflow:auto;
+  }
+
+  .board{
+    min-width:1180px;
+    display:grid;
+    grid-template-columns:250px repeat(7, minmax(150px, 1fr));
+    border:1px solid var(--line);
+    border-radius:24px;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .head-cell,
+  .team-cell,
+  .person-cell,
+  .shift-cell{
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+
+  .head-cell{
+    padding:12px 12px 10px;
+    background:#f8f3e7;
+    min-height:86px;
+  }
+
+  .head-cell.blank{
+    background:#f4eee2;
+  }
+
+  .day-name{
+    font-size:15px;
+    font-weight:800;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  .day-date{
+    margin-top:8px;
+    font-size:13px;
+    color:#73695f;
+    font-weight:700;
+  }
+
+  .team-cell{
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:#fff8ef;
+    min-height:56px;
+    font-weight:800;
+    letter-spacing:.01em;
+  }
+
+  .team-bar{
+    width:10px;
+    align-self:stretch;
+    border-radius:999px;
+  }
+
+  .person-cell{
+    min-height:86px;
+    padding:14px 16px;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:6px;
+  }
+
+  .person-name{
+    font-size:18px;
+    font-weight:800;
+    line-height:1.05;
+  }
+
+  .person-team{
+    font-size:12px;
+    color:#7a7063;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:700;
+  }
+
+  .shift-cell{
+    min-height:86px;
+    padding:10px;
+    background:#fff;
+  }
+
+  .shift-card{
+    height:100%;
+    min-height:64px;
+    border-radius:20px;
+    padding:12px 12px 10px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:10px;
+    color:#15120e;
+    font-weight:800;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+
+  .shift-card .title{
+    font-size:13px;
+    line-height:1.15;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+
+  .shift-card .meta{
+    font-size:12px;
+    font-weight:700;
+    opacity:.9;
+  }
+
+  .shift-card.morning{background:color-mix(in srgb, var(--morning) 88%, white); color:#fff7df;}
+  .shift-card.afternoon{background:color-mix(in srgb, var(--afternoon) 88%, white); color:#10200d;}
+  .shift-card.mid{background:color-mix(in srgb, var(--mid) 90%, white); color:#241b08;}
+  .shift-card.gt{background:color-mix(in srgb, var(--gt) 88%, white); color:#f6fbff;}
+  .shift-card.off{background:color-mix(in srgb, var(--off) 90%, white); color:#fff4f4;}
+  .shift-card.weekend{background:var(--weekend); color:#fff7e4;}
+  .shift-card.free{background:var(--free); color:#72675b;}
+
+  .rules{
+    display:grid;
+    gap:10px;
+  }
+
+  .rule{
+    padding:12px 14px;
+    border-radius:16px;
+    background:#faf7f1;
+    border:1px solid #eadfce;
+    color:#51463b;
+    line-height:1.45;
+    font-size:14px;
+  }
+
+  @media (max-width: 1080px){
+    .hero{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 720px){
+    .page{
+      padding:18px 12px 30px;
+    }
+    h1{
+      font-size:36px;
+    }
+    .hero-copy{
+      font-size:16px;
+    }
+    .mini-grid{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <div class="topbar-left">
+        <a class="back-btn" href="/simca">Regresar a SIMCA</a>
+        <button class="nav-btn" id="prevWeekBtn" type="button">Semana anterior</button>
+        <button class="today-btn" id="currentWeekBtn" type="button">Semana actual</button>
+        <button class="nav-btn" id="nextWeekBtn" type="button">Semana siguiente</button>
+      </div>
+    </div>
+
+    <section class="hero">
+      <article class="hero-card">
+        <span class="eyebrow">Horarios comerciales</span>
+        <h1>Rotación semanal justa para el equipo de ventas</h1>
+        <p class="hero-copy">Vista semanal para que todo el equipo vea quién está en mañana, tarde, 11 a 4, Gran Tulum y guardia de fin de semana. La rotación busca ser lo más justa posible y evita repetir guardias especiales antes de que pasen todos.</p>
+        <div class="week-pill" id="weekRangePill">Semana</div>
+      </article>
+
+      <div class="side-stack">
+        <aside class="side-card">
+          <h2>Semana en números</h2>
+          <div class="mini-grid" id="weekStats"></div>
+        </aside>
+
+        <aside class="side-card">
+          <h2>Próximas rotaciones</h2>
+          <div class="rotations" id="rotationPreview"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="side-card" style="margin-bottom:18px;">
+      <h2 style="margin-bottom:12px;">Leyenda</h2>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="board-card">
+      <div class="board-scroll">
+        <div class="board" id="board"></div>
+      </div>
+    </section>
+
+    <section class="side-card" style="margin-top:18px;">
+      <h2>Reglas activas</h2>
+      <div class="rules">
+        <div class="rule">`Gran Tulum` rota por cola semanal en lunes, martes y miércoles. Nadie repite hasta que pasen todos.</div>
+        <div class="rule">La guardia de fin de semana usa otra cola. Cada fin de semana salen dos personas: una para `mañana` y otra para `tarde`. No vuelven a salir hasta que pase todo el equipo.</div>
+        <div class="rule">Cuando a una persona le vuelve a tocar guardia de fin de semana, alterna entre `mañana` y `tarde`.</div>
+        <div class="rule">Quienes cubren fin de semana quedan en `OFF` jueves y viernes.</div>
+        <div class="rule">Entre semana el motor fuerza `2 mañana`, `2 tarde` y manda el resto a `11 a 4`, buscando mantener equilibrio en el tiempo.</div>
+      </div>
+    </section>
+  </main>
+
+<script>
+(function () {
+  const WEEKDAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const MONTH_NAMES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const BASE_MONDAY = '2026-03-30';
+
+  const TEAM_META = {
+    alpha: { name: 'Equipo Rodrigo / Andrés / Lu', color: getComputedStyle(document.documentElement).getPropertyValue('--team-a').trim() || '#d56d6d' },
+    beta: { name: 'Equipo Ángeles / Rafa / Claudia', color: getComputedStyle(document.documentElement).getPropertyValue('--team-b').trim() || '#f1c232' },
+    gamma: { name: 'Equipo Ayrton / Abi', color: getComputedStyle(document.documentElement).getPropertyValue('--team-c').trim() || '#8d7bd1' }
+  };
+
+  const ADVISORS = [
+    { id: 'rodrigo', name: 'Rodrigo', team: 'alpha', phaseOffset: 0 },
+    { id: 'andres', name: 'Andrés Castro', team: 'alpha', phaseOffset: 1 },
+    { id: 'lu', name: 'Lu', team: 'alpha', phaseOffset: 2 },
+    { id: 'angeles', name: 'Ángeles', team: 'beta', phaseOffset: 0 },
+    { id: 'rafa', name: 'Rafa', team: 'beta', phaseOffset: 1 },
+    { id: 'claudia', name: 'Claudia', team: 'beta', phaseOffset: 2 },
+    { id: 'ayrton', name: 'Ayrton', team: 'gamma', phaseOffset: 0 },
+    { id: 'abi', name: 'Abi', team: 'gamma', phaseOffset: 1 }
+  ];
+
+  const GT_QUEUE_INITIAL = ['rodrigo', 'angeles', 'andres', 'rafa', 'ayrton', 'abi', 'lu', 'claudia'];
+  const WEEKEND_QUEUE_INITIAL = ['rodrigo', 'angeles', 'andres', 'rafa', 'ayrton', 'abi', 'lu', 'claudia'];
+
+  const SHIFT_META = {
+    morning: { title: 'Oficina NEST mañana', short: 'Mañana', tone: 'morning' },
+    afternoon: { title: 'Oficina NEST tarde', short: 'Tarde', tone: 'afternoon' },
+    mid: { title: 'Oficina NEST 11 a 4', short: '11 a 4', tone: 'mid' },
+    gt: { title: 'Gran Tulum', short: 'Gran Tulum', tone: 'gt' },
+    off: { title: 'OFF', short: 'OFF', tone: 'off' },
+    weekendMorning: { title: 'Guardia fin de semana mañana', short: 'Guardia mañana', tone: 'weekend' },
+    weekendAfternoon: { title: 'Guardia fin de semana tarde', short: 'Guardia tarde', tone: 'weekend' },
+    free: { title: 'Libre', short: 'Libre', tone: 'free' }
+  };
+
+  const PHASE_SEQUENCE = ['morning', 'mid', 'afternoon'];
+
+  const boardEl = document.getElementById('board');
+  const legendEl = document.getElementById('legend');
+  const rotationPreviewEl = document.getElementById('rotationPreview');
+  const weekStatsEl = document.getElementById('weekStats');
+  const weekRangePillEl = document.getElementById('weekRangePill');
+  const prevWeekBtn = document.getElementById('prevWeekBtn');
+  const nextWeekBtn = document.getElementById('nextWeekBtn');
+  const currentWeekBtn = document.getElementById('currentWeekBtn');
+
+  const advisorMap = new Map(ADVISORS.map((advisor) => [advisor.id, advisor]));
+  let selectedMonday = maxDate(startOfWeek(new Date()), parseIsoDate(BASE_MONDAY));
+
+  function parseIsoDate(value) {
+    const [y, m, d] = String(value).split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  }
+
+  function startOfWeek(date) {
+    const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const day = copy.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    copy.setDate(copy.getDate() + diff);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    next.setDate(next.getDate() + days);
+    next.setHours(0, 0, 0, 0);
+    return next;
+  }
+
+  function maxDate(a, b) {
+    return a.getTime() >= b.getTime() ? a : b;
+  }
+
+  function dateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatShortDate(date) {
+    return `${date.getDate()} ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+  }
+
+  function formatCompactDate(date) {
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
+
+  function diffWeeks(base, target) {
+    return Math.max(0, Math.round((startOfWeek(target).getTime() - startOfWeek(base).getTime()) / (7 * 24 * 60 * 60 * 1000)));
+  }
+
+  function getPreferredShift(advisor, weekIndex) {
+    return PHASE_SEQUENCE[(weekIndex + advisor.phaseOffset) % PHASE_SEQUENCE.length];
+  }
+
+  function oppositeWeekendShift(shift) {
+    return shift === 'weekendMorning' ? 'weekendAfternoon' : 'weekendMorning';
+  }
+
+  function takeFromQueue(queue, count, excludedSet) {
+    const picked = [];
+    const remaining = [];
+    queue.forEach((id) => {
+      if (picked.length < count && !(excludedSet && excludedSet.has(id))) {
+        picked.push(id);
+      } else {
+        remaining.push(id);
+      }
+    });
+    return {
+      picked,
+      nextQueue: remaining.concat(picked)
+    };
+  }
+
+  function createHistory() {
+    return ADVISORS.reduce((acc, advisor) => {
+      acc[advisor.id] = {
+        morning: 0,
+        afternoon: 0,
+        mid: 0,
+        gt: 0,
+        weekend: 0,
+        lastOfficeShift: null,
+        weekendAssignments: 0,
+        weekendInitialShift: null
+      };
+      return acc;
+    }, {});
+  }
+
+  function chooseForShift(candidates, shiftKey, count, history, weekIndex) {
+    const picked = [];
+    const available = candidates.slice();
+    while (picked.length < count && available.length) {
+      available.sort((a, b) => {
+        const scoreA = computeShiftScore(a, shiftKey, history, weekIndex);
+        const scoreB = computeShiftScore(b, shiftKey, history, weekIndex);
+        if (scoreA !== scoreB) return scoreA - scoreB;
+        return a.name.localeCompare(b.name, 'es');
+      });
+      picked.push(available.shift());
+    }
+    return {
+      picked,
+      rest: candidates.filter((advisor) => !picked.some((item) => item.id === advisor.id))
+    };
+  }
+
+  function computeShiftScore(advisor, shiftKey, history, weekIndex) {
+    const record = history[advisor.id];
+    const preferred = getPreferredShift(advisor, weekIndex);
+    return (
+      (record[shiftKey] * 100) +
+      (preferred === shiftKey ? 0 : 20) +
+      (record.lastOfficeShift === shiftKey ? -6 : 0)
+    );
+  }
+
+  function assignOfficeDay(activeIds, weekIndex, history) {
+    const advisors = activeIds.map((id) => advisorMap.get(id)).filter(Boolean);
+    const morningNeed = Math.min(2, advisors.length);
+    const firstPass = chooseForShift(advisors, 'morning', morningNeed, history, weekIndex);
+    const afternoonNeed = Math.min(2, firstPass.rest.length);
+    const secondPass = chooseForShift(firstPass.rest, 'afternoon', afternoonNeed, history, weekIndex);
+    const assignments = {};
+
+    firstPass.picked.forEach((advisor) => {
+      assignments[advisor.id] = 'morning';
+      history[advisor.id].morning += 1;
+      history[advisor.id].lastOfficeShift = 'morning';
+    });
+
+    secondPass.picked.forEach((advisor) => {
+      assignments[advisor.id] = 'afternoon';
+      history[advisor.id].afternoon += 1;
+      history[advisor.id].lastOfficeShift = 'afternoon';
+    });
+
+    secondPass.rest.forEach((advisor) => {
+      assignments[advisor.id] = 'mid';
+      history[advisor.id].mid += 1;
+      history[advisor.id].lastOfficeShift = 'mid';
+    });
+
+    return assignments;
+  }
+
+  function buildWeekSimulation(targetMonday) {
+    let gtQueue = GT_QUEUE_INITIAL.slice();
+    let weekendQueue = WEEKEND_QUEUE_INITIAL.slice();
+    const history = createHistory();
+    const baseMonday = parseIsoDate(BASE_MONDAY);
+    const totalWeeks = diffWeeks(baseMonday, targetMonday);
+    let targetWeek = null;
+
+    for (let weekIndex = 0; weekIndex <= totalWeeks; weekIndex += 1) {
+      const weekStart = addDays(baseMonday, weekIndex * 7);
+      const weekendPull = takeFromQueue(weekendQueue, 2, new Set());
+      weekendQueue = weekendPull.nextQueue;
+      const weekendPair = weekendPull.picked.map((id, pairIndex) => {
+        const record = history[id];
+        if (!record.weekendInitialShift) {
+          record.weekendInitialShift = pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon';
+        }
+        const shift = record.weekendAssignments % 2 === 0
+          ? record.weekendInitialShift
+          : oppositeWeekendShift(record.weekendInitialShift);
+        record.weekendAssignments += 1;
+        record.weekend += 1;
+        return { id, shift };
+      });
+
+      const weekendIds = new Set(weekendPair.map((item) => item.id));
+      const gtPull = takeFromQueue(gtQueue, 3, weekendIds);
+      gtQueue = gtPull.nextQueue;
+      const gtAssignments = gtPull.picked;
+      const days = [];
+
+      for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+        const date = addDays(weekStart, dayIndex);
+        const cells = {};
+        ADVISORS.forEach((advisor) => {
+          cells[advisor.id] = { type: 'free', title: SHIFT_META.free.title, meta: SHIFT_META.free.short };
+        });
+
+        if (dayIndex <= 2) {
+          const gtAdvisorId = gtAssignments[dayIndex];
+          if (gtAdvisorId) {
+            cells[gtAdvisorId] = { type: 'gt', title: SHIFT_META.gt.title, meta: 'Rotación especial' };
+            history[gtAdvisorId].gt += 1;
+          }
+          const activeIds = ADVISORS
+            .map((advisor) => advisor.id)
+            .filter((id) => id !== gtAdvisorId);
+          const officeAssignments = assignOfficeDay(activeIds, weekIndex, history);
+          Object.keys(officeAssignments).forEach((advisorId) => {
+            const key = officeAssignments[advisorId];
+            cells[advisorId] = { type: key, title: SHIFT_META[key].title, meta: TEAM_META[advisorMap.get(advisorId).team].name };
+          });
+        } else if (dayIndex <= 4) {
+          weekendPair.forEach((item) => {
+            cells[item.id] = { type: 'off', title: SHIFT_META.off.title, meta: 'Descanso por guardia' };
+          });
+          const activeIds = ADVISORS
+            .map((advisor) => advisor.id)
+            .filter((id) => !weekendIds.has(id));
+          const officeAssignments = assignOfficeDay(activeIds, weekIndex, history);
+          Object.keys(officeAssignments).forEach((advisorId) => {
+            const key = officeAssignments[advisorId];
+            cells[advisorId] = { type: key, title: SHIFT_META[key].title, meta: TEAM_META[advisorMap.get(advisorId).team].name };
+          });
+        } else {
+          weekendPair.forEach((item) => {
+            const meta = item.shift === 'weekendMorning' ? 'Sábado y domingo' : 'Sábado y domingo';
+            cells[item.id] = { type: 'weekend', title: SHIFT_META[item.shift].title, meta };
+          });
+          ADVISORS.forEach((advisor) => {
+            if (!weekendIds.has(advisor.id)) {
+              cells[advisor.id] = { type: 'free', title: SHIFT_META.free.title, meta: 'Sin guardia' };
+            }
+          });
+        }
+
+        days.push({
+          date,
+          cells
+        });
+      }
+
+      if (weekIndex === totalWeeks) {
+        targetWeek = {
+          weekIndex,
+          weekStart,
+          days,
+          weekendPair,
+          gtAssignments,
+          nextGtQueue: gtQueue.slice(),
+          nextWeekendQueue: weekendQueue.slice(),
+          history
+        };
+      }
+    }
+
+    return targetWeek;
+  }
+
+  function renderLegend() {
+    const items = [
+      ['Mañana', '--morning'],
+      ['Tarde', '--afternoon'],
+      ['11 a 4', '--mid'],
+      ['Gran Tulum', '--gt'],
+      ['OFF', '--off'],
+      ['Guardia fin de semana', '--weekend'],
+      ['Libre', '--free']
+    ];
+    legendEl.innerHTML = items.map(([label, cssVar]) => `
+      <div class="legend-chip">
+        <span class="legend-dot" style="background:${getComputedStyle(document.documentElement).getPropertyValue(cssVar)}"></span>
+        <span>${label}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderWeek(sim) {
+    const weekEnd = addDays(sim.weekStart, 6);
+    weekRangePillEl.textContent = `${formatShortDate(sim.weekStart)} · ${formatShortDate(weekEnd)}`;
+
+    const header = [
+      '<div class="head-cell blank"></div>',
+      ...sim.days.map((day) => `
+        <div class="head-cell">
+          <div class="day-name">${WEEKDAY_NAMES[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}</div>
+          <div class="day-date">${formatCompactDate(day.date)}</div>
+        </div>
+      `)
+    ].join('');
+
+    const grouped = Object.entries(TEAM_META).map(([teamId, team]) => {
+      const members = ADVISORS.filter((advisor) => advisor.team === teamId);
+      const teamRows = [
+        `<div class="team-cell"><span class="team-bar" style="background:${team.color};"></span><span>${team.name}</span></div>`,
+        ...sim.days.map(() => `<div class="team-cell" style="background:#fff8ef;"></div>`)
+      ];
+
+      const memberRows = members.map((advisor) => {
+        const row = [
+          `<div class="person-cell"><div class="person-name">${advisor.name}</div><div class="person-team">${team.name}</div></div>`
+        ];
+        sim.days.forEach((day) => {
+          const cell = day.cells[advisor.id];
+          row.push(`
+            <div class="shift-cell">
+              <div class="shift-card ${cell.type}">
+                <div class="title">${cell.title}</div>
+                <div class="meta">${cell.meta}</div>
+              </div>
+            </div>
+          `);
+        });
+        return row.join('');
+      });
+
+      return teamRows.join('') + memberRows.join('');
+    }).join('');
+
+    boardEl.innerHTML = header + grouped;
+  }
+
+  function renderSidePanels(sim) {
+    const weekendMorning = sim.weekendPair.find((item) => item.shift === 'weekendMorning');
+    const weekendAfternoon = sim.weekendPair.find((item) => item.shift === 'weekendAfternoon');
+    const gtNames = sim.gtAssignments.map((id) => advisorMap.get(id)?.name || id);
+
+    weekStatsEl.innerHTML = [
+      ['Gran Tulum', gtNames.join(' · ')],
+      ['Guardia mañana', weekendMorning ? advisorMap.get(weekendMorning.id).name : '-'],
+      ['Guardia tarde', weekendAfternoon ? advisorMap.get(weekendAfternoon.id).name : '-'],
+      ['Base rotación', formatCompactDate(parseIsoDate(BASE_MONDAY))]
+    ].map(([k, v]) => `<div class="mini-stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+    const nextGt = sim.nextGtQueue.slice(0, 4).map((id) => advisorMap.get(id)?.name || id);
+    const nextWeekend = sim.nextWeekendQueue.slice(0, 4).map((id) => advisorMap.get(id)?.name || id);
+    rotationPreviewEl.innerHTML = [
+      ['Siguiente cola Gran Tulum', nextGt.join(' · ')],
+      ['Siguiente cola fin de semana', nextWeekend.join(' · ')],
+      ['Guardia actual mañana', weekendMorning ? advisorMap.get(weekendMorning.id).name : '-'],
+      ['Guardia actual tarde', weekendAfternoon ? advisorMap.get(weekendAfternoon.id).name : '-']
+    ].map(([k, v]) => `<div class="rotation-row"><span>${k}</span><strong>${v}</strong></div>`).join('');
+  }
+
+  function rerender() {
+    const monday = maxDate(startOfWeek(selectedMonday), parseIsoDate(BASE_MONDAY));
+    selectedMonday = monday;
+    const sim = buildWeekSimulation(monday);
+    renderWeek(sim);
+    renderSidePanels(sim);
+  }
+
+  prevWeekBtn.addEventListener('click', function () {
+    const next = addDays(selectedMonday, -7);
+    if (next.getTime() < parseIsoDate(BASE_MONDAY).getTime()) return;
+    selectedMonday = next;
+    rerender();
+  });
+
+  nextWeekBtn.addEventListener('click', function () {
+    selectedMonday = addDays(selectedMonday, 7);
+    rerender();
+  });
+
+  currentWeekBtn.addEventListener('click', function () {
+    selectedMonday = maxDate(startOfWeek(new Date()), parseIsoDate(BASE_MONDAY));
+    rerender();
+  });
+
+  renderLegend();
+  rerender();
+})();
+</script>
+</body>
+</html>
