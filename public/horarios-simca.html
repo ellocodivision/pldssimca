@@ -222,6 +222,18 @@
     background:#fff;
   }
 
+  .shift-cell.editable{
+    cursor:pointer;
+  }
+
+  .shift-cell.editable:hover{
+    background:#fbf6eb;
+  }
+
+  .shift-cell.manual .shift-card{
+    box-shadow:inset 0 0 0 2px rgba(44, 36, 18, 0.24);
+  }
+
   .shift-card{
     height:100%;
     min-height:64px;
@@ -257,6 +269,109 @@
   .shift-card.weekendMorning{background:color-mix(in srgb, var(--morning) 88%, white); color:#fff7df;}
   .shift-card.weekendAfternoon{background:color-mix(in srgb, var(--afternoon) 88%, white); color:#10200d;}
   .shift-card.free{background:var(--free); color:#72675b;}
+
+  .manual-badge{
+    align-self:flex-start;
+    padding:3px 8px;
+    border-radius:999px;
+    background:rgba(255,255,255,.28);
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+
+  .editor-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin:0 0 14px;
+    flex-wrap:wrap;
+  }
+
+  .editor-note{
+    font-size:13px;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .editor-note strong{
+    color:var(--ink);
+  }
+
+  .editor-status{
+    min-height:20px;
+    font-size:13px;
+    color:#6d624f;
+    font-weight:700;
+  }
+
+  .editor-status.error{
+    color:#b42318;
+  }
+
+  .cell-editor{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    width:min(320px, calc(100vw - 24px));
+    padding:16px;
+    border-radius:24px;
+    border:1px solid var(--line);
+    background:rgba(255,253,248,.98);
+    box-shadow:var(--shadow);
+    z-index:30;
+  }
+
+  .cell-editor[hidden]{
+    display:none;
+  }
+
+  .cell-editor-title{
+    font-size:15px;
+    font-weight:800;
+  }
+
+  .cell-editor-meta{
+    margin-top:6px;
+    font-size:13px;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .cell-editor-select{
+    width:100%;
+    margin-top:12px;
+    min-height:44px;
+    border-radius:14px;
+    border:1px solid #ccbfa9;
+    background:#fff;
+    padding:0 12px;
+    font:inherit;
+  }
+
+  .cell-editor-actions{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .cell-editor-btn{
+    flex:1;
+    min-height:42px;
+    border-radius:999px;
+    border:1px solid #c8bda9;
+    background:#fff;
+    color:#241d14;
+    font:inherit;
+    font-weight:800;
+    cursor:pointer;
+  }
+
+  .cell-editor-btn.primary{
+    background:var(--accent);
+    border-color:#ceb13f;
+  }
 
   .count-cell{
     min-height:78px;
@@ -319,6 +434,11 @@
       </div>
     </div>
 
+    <div class="editor-bar">
+      <div class="editor-note" id="editorNote">Vista de horario.</div>
+      <div class="editor-status" id="editorStatus"></div>
+    </div>
+
     <section class="board-card">
       <div class="board-scroll">
         <div class="board" id="board"></div>
@@ -329,6 +449,17 @@
       <div class="counters-grid" id="countersGrid"></div>
     </section>
   </main>
+
+  <div class="cell-editor" id="cellEditor" hidden>
+    <div class="cell-editor-title" id="cellEditorTitle">Editar horario</div>
+    <div class="cell-editor-meta" id="cellEditorMeta"></div>
+    <select class="cell-editor-select" id="cellEditorSelect"></select>
+    <div class="cell-editor-actions">
+      <button class="cell-editor-btn primary" id="cellEditorSaveBtn" type="button">Guardar</button>
+      <button class="cell-editor-btn" id="cellEditorDeleteBtn" type="button">Quitar ajuste</button>
+      <button class="cell-editor-btn" id="cellEditorCancelBtn" type="button">Cerrar</button>
+    </div>
+  </div>
 
 <script>
 (function () {
@@ -353,6 +484,16 @@
     { id: 'abi', name: 'Abi', team: 'gamma', phaseOffset: 1 }
   ];
 
+  const TEAMS = TEAM_ORDER.map((memberIds, index) => {
+    const advisors = memberIds.map((id) => ADVISORS.find((advisor) => advisor.id === id)).filter(Boolean);
+    return {
+      id: advisors[0] ? advisors[0].team : `team-${index + 1}`,
+      memberIds,
+      advisors,
+      phaseOffset: index
+    };
+  });
+
   const SEEDED_WEEKS = {
     '2026-03-30': {
       rodrigo: ['M','M','M','O','O','WM','WM'],
@@ -369,15 +510,15 @@
       andres:  ['X','X','G','X','T','F','F'],
       angeles: ['M','G','M','M','M','F','F'],
       rafa:    ['M','M','M','M','M','T','T'],
-      ayrton:  ['T','T','T','O','O','WA','WA'],
+      ayrton:  ['T','T','T','O','O','T','T'],
       abi:     ['T','T','T','T','T','F','F'],
-      lu:      ['M','M','X','O','O','WM','WM'],
+      lu:      ['M','M','X','O','O','M','M'],
       claudia: ['X','X','X','X','X','F','F']
     },
     '2026-04-13': {
       rodrigo: ['T','T','T','T','T','F','F'],
-      andres:  ['T','T','T','O','O','WA','WA'],
-      angeles: ['X','X','X','O','O','WM','WM'],
+      andres:  ['T','T','T','O','O','T','T'],
+      angeles: ['X','X','X','O','O','M','M'],
       rafa:    ['G','X','X','X','X','F','F'],
       ayrton:  ['M','M','G','M','M','F','F'],
       abi:     ['M','M','M','M','M','F','F'],
@@ -388,9 +529,9 @@
       rodrigo: ['M','M','G','T','T','F','F'],
       andres:  ['M','M','M','M','M','F','F'],
       angeles: ['T','T','T','T','T','F','F'],
-      rafa:    ['T','T','T','O','O','WA','WA'],
+      rafa:    ['T','T','T','O','O','T','T'],
       ayrton:  ['X','X','X','X','X','F','F'],
-      abi:     ['G','X','X','O','O','WM','WM'],
+      abi:     ['G','X','X','O','O','M','M'],
       lu:      ['M','M','M','M','M','F','F'],
       claudia: ['M','G','M','M','M','F','F']
     }
@@ -426,9 +567,33 @@
   const prevWeekBtn = document.getElementById('prevWeekBtn');
   const nextWeekBtn = document.getElementById('nextWeekBtn');
   const currentWeekBtn = document.getElementById('currentWeekBtn');
+  const editorNoteEl = document.getElementById('editorNote');
+  const editorStatusEl = document.getElementById('editorStatus');
+  const cellEditorEl = document.getElementById('cellEditor');
+  const cellEditorTitleEl = document.getElementById('cellEditorTitle');
+  const cellEditorMetaEl = document.getElementById('cellEditorMeta');
+  const cellEditorSelectEl = document.getElementById('cellEditorSelect');
+  const cellEditorSaveBtn = document.getElementById('cellEditorSaveBtn');
+  const cellEditorDeleteBtn = document.getElementById('cellEditorDeleteBtn');
+  const cellEditorCancelBtn = document.getElementById('cellEditorCancelBtn');
 
-  const advisorMap = new Map(ADVISORS.map((advisor) => [advisor.id, advisor]));
+  const MANUAL_SHIFT_OPTIONS = [
+    { value: 'morning', label: 'Oficina NEST mañana' },
+    { value: 'afternoon', label: 'Oficina NEST tarde' },
+    { value: 'mid', label: 'Oficina NEST 11 a 4' },
+    { value: 'gt', label: 'Gran Tulum / Coca' },
+    { value: 'off', label: 'OFF' },
+    { value: 'weekendMorning', label: 'Guardia fin de semana mañana' },
+    { value: 'weekendAfternoon', label: 'Guardia fin de semana tarde' },
+    { value: 'free', label: 'Libre' }
+  ];
+
   let selectedMonday = maxDate(startOfWeek(new Date()), parseIsoDate(BASE_MONDAY));
+  let currentSim = null;
+  let currentOverrides = [];
+  let isGerente = false;
+  let lastLoadToken = 0;
+  let activeCellContext = null;
 
   function parseIsoDate(value) {
     const [y, m, d] = String(value).split('-').map(Number);
@@ -474,8 +639,17 @@
     return Math.max(0, Math.round((startOfWeek(target).getTime() - startOfWeek(base).getTime()) / (7 * 24 * 60 * 60 * 1000)));
   }
 
+  function getTeamByAdvisorId(advisorId) {
+    return TEAMS.find((team) => team.memberIds.includes(advisorId)) || null;
+  }
+
+  function getPreferredShiftForTeam(team, weekIndex) {
+    return PHASE_SEQUENCE[(weekIndex + team.phaseOffset) % PHASE_SEQUENCE.length];
+  }
+
   function getPreferredShift(advisor, weekIndex) {
-    return PHASE_SEQUENCE[(weekIndex + advisor.phaseOffset) % PHASE_SEQUENCE.length];
+    const team = getTeamByAdvisorId(advisor.id);
+    return team ? getPreferredShiftForTeam(team, weekIndex) : PHASE_SEQUENCE[0];
   }
 
   function oppositeWeekendShift(shift) {
@@ -512,6 +686,10 @@
     };
   }
 
+  function getTeamRecord(team, history) {
+    return history[team.memberIds[0]];
+  }
+
   function applyAssignmentToHistory(history, advisorId, type, weekIndex, options) {
     const record = history[advisorId];
     if (!record) return;
@@ -542,14 +720,14 @@
   }
 
   function deriveQueueFromHistory(history, kind) {
-    return ADVISORS.slice().sort((a, b) => {
-      const aRecord = history[a.id];
-      const bRecord = history[b.id];
+    return TEAMS.slice().sort((a, b) => {
+      const aRecord = getTeamRecord(a, history);
+      const bRecord = getTeamRecord(b, history);
       const aOrder = kind === 'gt' ? aRecord.lastGtOrder : aRecord.lastWeekendOrder;
       const bOrder = kind === 'gt' ? bRecord.lastGtOrder : bRecord.lastWeekendOrder;
       if (aOrder !== bOrder) return aOrder - bOrder;
-      return a.name.localeCompare(b.name, 'es');
-    }).map((advisor) => advisor.id);
+      return a.id.localeCompare(b.id, 'es');
+    }).map((team) => team.id);
   }
 
   function takeFromQueue(queue, count, excludedSet) {
@@ -568,9 +746,9 @@
     };
   }
 
-  function computeBaseShiftScore(advisor, shiftKey, history, weekIndex) {
-    const record = history[advisor.id];
-    const preferred = getPreferredShift(advisor, weekIndex);
+  function computeBaseShiftScore(team, shiftKey, history, weekIndex) {
+    const record = getTeamRecord(team, history);
+    const preferred = getPreferredShiftForTeam(team, weekIndex);
     return (
       (record[shiftKey] * 100) +
       (preferred === shiftKey ? 0 : 180) +
@@ -583,7 +761,7 @@
       const scoreA = computeBaseShiftScore(a, shiftKey, history, weekIndex);
       const scoreB = computeBaseShiftScore(b, shiftKey, history, weekIndex);
       if (scoreA !== scoreB) return scoreA - scoreB;
-      return a.name.localeCompare(b.name, 'es');
+      return a.id.localeCompare(b.id, 'es');
     });
     return pool.slice(0, count);
   }
@@ -608,22 +786,22 @@
   }
 
   function buildWeeklyBaseAssignments(history, weekIndex) {
-    const advisors = ADVISORS.slice();
-    const morningBase = chooseForWeeklyBase(advisors, 'morning', 2, history, weekIndex);
-    const remainingAfterMorning = advisors.filter((advisor) => !morningBase.some((item) => item.id === advisor.id));
-    const afternoonBase = chooseForWeeklyBase(remainingAfterMorning, 'afternoon', 2, history, weekIndex);
+    const teams = TEAMS.slice();
+    const morningBase = chooseForWeeklyBase(teams, 'morning', 1, history, weekIndex);
+    const remainingAfterMorning = teams.filter((team) => !morningBase.some((item) => item.id === team.id));
+    const afternoonBase = chooseForWeeklyBase(remainingAfterMorning, 'afternoon', 1, history, weekIndex);
     const base = {};
-    morningBase.forEach((advisor) => { base[advisor.id] = 'morning'; });
-    afternoonBase.forEach((advisor) => { base[advisor.id] = 'afternoon'; });
-    ADVISORS.forEach((advisor) => {
-      if (!base[advisor.id]) base[advisor.id] = 'mid';
+    morningBase.forEach((team) => { base[team.id] = 'morning'; });
+    afternoonBase.forEach((team) => { base[team.id] = 'afternoon'; });
+    TEAMS.forEach((team) => {
+      if (!base[team.id]) base[team.id] = 'mid';
     });
     return base;
   }
 
-  function computeDailyShiftScore(advisor, shiftKey, baseAssignments, history) {
-    const record = history[advisor.id];
-    const baseShift = baseAssignments[advisor.id];
+  function computeDailyShiftScore(team, shiftKey, baseAssignments, history) {
+    const record = getTeamRecord(team, history);
+    const baseShift = baseAssignments[team.id];
     const basePenalty = baseShift === shiftKey
       ? 0
       : (baseShift === 'mid' ? 180 : 260);
@@ -634,31 +812,31 @@
     );
   }
 
-  function chooseDayAssignments(activeIds, baseAssignments, history) {
-    const advisors = activeIds.map((id) => advisorMap.get(id)).filter(Boolean);
+  function chooseDayAssignments(activeTeamIds, baseAssignments, history) {
+    const teams = activeTeamIds.map((id) => TEAMS.find((team) => team.id === id)).filter(Boolean);
     const assignments = {};
-    const targets = getOfficeTargets(advisors.length);
-    const morningNeed = Math.min(targets.morning, advisors.length);
-    const morningPicked = advisors.slice().sort((a, b) => {
+    const targets = getOfficeTargets(teams.length);
+    const morningNeed = Math.min(targets.morning, teams.length);
+    const morningPicked = teams.slice().sort((a, b) => {
       const scoreA = computeDailyShiftScore(a, 'morning', baseAssignments, history);
       const scoreB = computeDailyShiftScore(b, 'morning', baseAssignments, history);
       if (scoreA !== scoreB) return scoreA - scoreB;
-      return a.name.localeCompare(b.name, 'es');
+      return a.id.localeCompare(b.id, 'es');
     }).slice(0, morningNeed);
 
-    const afterMorning = advisors.filter((advisor) => !morningPicked.some((item) => item.id === advisor.id));
+    const afterMorning = teams.filter((team) => !morningPicked.some((item) => item.id === team.id));
     const afternoonNeed = Math.min(targets.afternoon, afterMorning.length);
     const afternoonPicked = afterMorning.slice().sort((a, b) => {
       const scoreA = computeDailyShiftScore(a, 'afternoon', baseAssignments, history);
       const scoreB = computeDailyShiftScore(b, 'afternoon', baseAssignments, history);
       if (scoreA !== scoreB) return scoreA - scoreB;
-      return a.name.localeCompare(b.name, 'es');
+      return a.id.localeCompare(b.id, 'es');
     }).slice(0, afternoonNeed);
 
-    morningPicked.forEach((advisor) => { assignments[advisor.id] = 'morning'; });
-    afternoonPicked.forEach((advisor) => { assignments[advisor.id] = 'afternoon'; });
-    advisors.forEach((advisor) => {
-      if (!assignments[advisor.id]) assignments[advisor.id] = 'mid';
+    morningPicked.forEach((team) => { assignments[team.id] = 'morning'; });
+    afternoonPicked.forEach((team) => { assignments[team.id] = 'afternoon'; });
+    teams.forEach((team) => {
+      if (!assignments[team.id]) assignments[team.id] = 'mid';
     });
     return assignments;
   }
@@ -673,77 +851,25 @@
     }, { morning: 0, afternoon: 0, mid: 0 });
   }
 
-  function rebalanceOfficeCells(cells, history, weekIndex) {
-    const moved = new Set();
-    let counts = summarizeOfficeCounts(cells);
-    const activeCount = counts.morning + counts.afternoon + counts.mid;
-    const targets = getOfficeTargets(activeCount);
+  function rebalanceOfficeCells() {
+    return new Set();
+  }
 
-    for (let guard = 0; guard < 20; guard += 1) {
-      if (
-        counts.morning === targets.morning &&
-        counts.afternoon === targets.afternoon &&
-        counts.mid === targets.mid
-      ) {
-        break;
-      }
+  function setTeamCells(cells, teamId, type, meta) {
+    const team = TEAMS.find((item) => item.id === teamId);
+    if (!team) return;
+    team.memberIds.forEach((advisorId) => {
+      cells[advisorId] = buildCell(type, meta);
+    });
+  }
 
-      let fromType = null;
-      let toType = null;
-
-      if (counts.afternoon < targets.afternoon) {
-        if (counts.morning > targets.morning) {
-          fromType = 'morning';
-          toType = 'afternoon';
-        } else if (counts.mid > targets.mid) {
-          fromType = 'mid';
-          toType = 'afternoon';
-        }
-      } else if (counts.morning < targets.morning) {
-        if (counts.afternoon > targets.afternoon) {
-          fromType = 'afternoon';
-          toType = 'morning';
-        } else if (counts.mid > targets.mid) {
-          fromType = 'mid';
-          toType = 'morning';
-        }
-      } else if (counts.mid < targets.mid) {
-        if (counts.afternoon > targets.afternoon) {
-          fromType = 'afternoon';
-          toType = 'mid';
-        } else if (counts.morning > targets.morning) {
-          fromType = 'morning';
-          toType = 'mid';
-        }
-      } else if (counts.mid > targets.mid) {
-        if (counts.afternoon < targets.afternoon) {
-          fromType = 'mid';
-          toType = 'afternoon';
-        } else if (counts.morning < targets.morning) {
-          fromType = 'mid';
-          toType = 'morning';
-        }
-      }
-
-      if (!fromType || !toType) break;
-      const candidates = ADVISORS.filter((advisor) => cells[advisor.id] && cells[advisor.id].type === fromType);
-      if (!candidates.length) break;
-
-      candidates.sort((a, b) => {
-        const aRecord = history[a.id];
-        const bRecord = history[b.id];
-        if (aRecord.rebalanceMoves !== bRecord.rebalanceMoves) return aRecord.rebalanceMoves - bRecord.rebalanceMoves;
-        if (aRecord.lastRebalanceWeek !== bRecord.lastRebalanceWeek) return aRecord.lastRebalanceWeek - bRecord.lastRebalanceWeek;
-        return a.name.localeCompare(b.name, 'es');
-      });
-
-      const picked = candidates[0];
-      cells[picked.id] = buildCell(toType);
-      moved.add(picked.id);
-      counts = summarizeOfficeCounts(cells);
-    }
-
-    return moved;
+  function getSeededTeamType(seedWeek, team, dayIndex) {
+    const priority = ['off', 'weekendMorning', 'weekendAfternoon', 'gt', 'morning', 'afternoon', 'mid', 'free'];
+    const teamTypes = team.memberIds.map((advisorId) => {
+      const code = seedWeek[advisorId] ? seedWeek[advisorId][dayIndex] : 'F';
+      return SHIFT_CODE_TO_TYPE[code] || 'free';
+    });
+    return priority.find((type) => teamTypes.includes(type)) || 'free';
   }
 
   function buildSeededWeek(weekStart, seedWeek, history, weekIndex) {
@@ -754,22 +880,19 @@
     for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
       const date = addDays(weekStart, dayIndex);
       const cells = {};
-      const dayAssignments = [];
-      ADVISORS.forEach((advisor) => {
-        const code = seedWeek[advisor.id] ? seedWeek[advisor.id][dayIndex] : 'F';
-        const type = SHIFT_CODE_TO_TYPE[code] || 'free';
-        if (type === 'gt') gtAssignments.push(advisor.id);
-        if ((type === 'weekendMorning' || type === 'weekendAfternoon') && !weekendPair.some((item) => item.id === advisor.id)) {
-          weekendPair.push({ id: advisor.id, shift: type });
+      TEAMS.forEach((team) => {
+        const type = getSeededTeamType(seedWeek, team, dayIndex);
+        if (type === 'gt') gtAssignments.push(team.id);
+        if ((type === 'weekendMorning' || type === 'weekendAfternoon') && !weekendPair.some((item) => item.id === team.id)) {
+          weekendPair.push({ id: team.id, shift: type });
         }
-        cells[advisor.id] = buildCell(type, type === 'off' ? 'Descanso por guardia' : '');
-        dayAssignments.push({ advisorId: advisor.id, type });
+        setTeamCells(cells, team.id, type, type === 'off' ? 'Descanso por guardia' : '');
       });
 
       const movedIds = dayIndex <= 4 ? rebalanceOfficeCells(cells, history, weekIndex) : new Set();
-      dayAssignments.forEach(({ advisorId }) => {
-        applyAssignmentToHistory(history, advisorId, cells[advisorId].type, weekIndex, {
-          rebalanced: movedIds.has(advisorId),
+      ADVISORS.forEach((advisor) => {
+        applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
+          rebalanced: movedIds.has(advisor.id),
           sortOrder: (weekIndex * 10) + dayIndex
         });
       });
@@ -789,20 +912,22 @@
   }
 
   function buildGeneratedWeek(weekStart, history, gtQueue, weekendQueue, weekIndex) {
-    const weekendPull = takeFromQueue(weekendQueue, 2, new Set());
-    const weekendPair = weekendPull.picked.map((id, pairIndex) => {
-      const record = history[id];
+    const weekendPull = takeFromQueue(weekendQueue, 1, new Set());
+    const weekendPair = weekendPull.picked.map((teamId) => {
+      const team = TEAMS.find((item) => item.id === teamId);
+      const record = team ? getTeamRecord(team, history) : null;
+      if (!record) return { id: teamId, shift: 'weekendMorning' };
       if (!record.weekendInitialShift) {
-        record.weekendInitialShift = pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon';
+        record.weekendInitialShift = 'weekendMorning';
       }
       const shift = record.weekendAssignments % 2 === 0
         ? record.weekendInitialShift
         : oppositeWeekendShift(record.weekendInitialShift);
-      return { id, shift };
+      return { id: teamId, shift };
     });
 
     const weekendIds = new Set(weekendPair.map((item) => item.id));
-    const gtPull = takeFromQueue(gtQueue, 3, weekendIds);
+    const gtPull = takeFromQueue(gtQueue, 3, new Set());
     const gtAssignments = gtPull.picked;
     const baseAssignments = buildWeeklyBaseAssignments(history, weekIndex);
     const days = [];
@@ -815,15 +940,15 @@
       });
 
       if (dayIndex <= 2) {
-        const gtAdvisorId = gtAssignments[dayIndex];
-        if (gtAdvisorId) {
-          cells[gtAdvisorId] = buildCell('gt');
+        const gtTeamId = gtAssignments[dayIndex];
+        if (gtTeamId) {
+          setTeamCells(cells, gtTeamId, 'gt');
         }
-        const activeIds = ADVISORS.map((advisor) => advisor.id).filter((id) => id !== gtAdvisorId);
-        const officeAssignments = chooseDayAssignments(activeIds, baseAssignments, history);
-        Object.keys(officeAssignments).forEach((advisorId) => {
-          const type = officeAssignments[advisorId];
-          cells[advisorId] = buildCell(type);
+        const activeTeamIds = TEAMS.map((team) => team.id).filter((id) => id !== gtTeamId);
+        const officeAssignments = chooseDayAssignments(activeTeamIds, baseAssignments, history);
+        Object.keys(officeAssignments).forEach((teamId) => {
+          const type = officeAssignments[teamId];
+          setTeamCells(cells, teamId, type);
         });
         const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
         ADVISORS.forEach((advisor) => {
@@ -834,13 +959,13 @@
         });
       } else if (dayIndex <= 4) {
         weekendPair.forEach((item) => {
-          cells[item.id] = buildCell('off', 'Descanso por guardia');
+          setTeamCells(cells, item.id, 'off', 'Descanso por guardia');
         });
-        const activeIds = ADVISORS.map((advisor) => advisor.id).filter((id) => !weekendIds.has(id));
-        const officeAssignments = chooseDayAssignments(activeIds, baseAssignments, history);
-        Object.keys(officeAssignments).forEach((advisorId) => {
-          const type = officeAssignments[advisorId];
-          cells[advisorId] = buildCell(type);
+        const activeTeamIds = TEAMS.map((team) => team.id).filter((id) => !weekendIds.has(id));
+        const officeAssignments = chooseDayAssignments(activeTeamIds, baseAssignments, history);
+        Object.keys(officeAssignments).forEach((teamId) => {
+          const type = officeAssignments[teamId];
+          setTeamCells(cells, teamId, type);
         });
         const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
         ADVISORS.forEach((advisor) => {
@@ -851,11 +976,11 @@
         });
       } else {
         weekendPair.forEach((item) => {
-          cells[item.id] = buildCell(item.shift, 'Sábado y domingo');
+          setTeamCells(cells, item.id, item.shift, 'Sábado y domingo');
         });
-        ADVISORS.forEach((advisor) => {
-          if (!weekendIds.has(advisor.id)) {
-            cells[advisor.id] = buildCell('free', 'Sin guardia');
+        TEAMS.forEach((team) => {
+          if (!weekendIds.has(team.id)) {
+            setTeamCells(cells, team.id, 'free', 'Sin guardia');
           }
         });
         ADVISORS.forEach((advisor) => {
@@ -913,6 +1038,91 @@
     return targetWeek;
   }
 
+  function cloneWeekSimulation(sim) {
+    return {
+      ...sim,
+      days: sim.days.map((day) => ({
+        ...day,
+        cells: Object.keys(day.cells).reduce((acc, advisorId) => {
+          acc[advisorId] = { ...day.cells[advisorId] };
+          return acc;
+        }, {})
+      }))
+    };
+  }
+
+  function applyOverridesToSimulation(sim, rows) {
+    const nextSim = cloneWeekSimulation(sim);
+    const rowsByDateAdvisor = new Map(
+      rows.map((row) => [`${row.date}::${row.advisorId}`, row])
+    );
+    nextSim.days.forEach((day) => {
+      const dayKey = dateKey(day.date);
+      ADVISORS.forEach((advisor) => {
+        const override = rowsByDateAdvisor.get(`${dayKey}::${advisor.id}`);
+        if (!override) return;
+        day.cells[advisor.id] = {
+          ...buildCell(override.type),
+          isManual: true
+        };
+      });
+    });
+    return nextSim;
+  }
+
+  function setEditorStatus(message, isError) {
+    editorStatusEl.textContent = message || '';
+    editorStatusEl.className = isError ? 'editor-status error' : 'editor-status';
+  }
+
+  function populateCellEditorOptions() {
+    cellEditorSelectEl.innerHTML = MANUAL_SHIFT_OPTIONS.map((option) => (
+      `<option value="${option.value}">${option.label}</option>`
+    )).join('');
+  }
+
+  function closeCellEditor() {
+    activeCellContext = null;
+    cellEditorEl.hidden = true;
+  }
+
+  function openCellEditor(context) {
+    if (!isGerente) return;
+    activeCellContext = context;
+    cellEditorTitleEl.textContent = `Editar ${context.advisorName}`;
+    cellEditorMetaEl.textContent = `${WEEKDAY_NAMES[context.dayIndex]} · ${formatCompactDate(parseIsoDate(context.date))}`;
+    cellEditorSelectEl.value = context.type;
+    cellEditorDeleteBtn.disabled = !context.isManual;
+    cellEditorEl.hidden = false;
+  }
+
+  async function loadOverridesForWeek(monday, keepStatus) {
+    const token = ++lastLoadToken;
+    if (!keepStatus) setEditorStatus('Cargando ajustes manuales...');
+    try {
+      const response = await fetch(`/api/horarios-simca/overrides?weekStart=${encodeURIComponent(dateKey(monday))}`, {
+        credentials: 'same-origin'
+      });
+      const data = await response.json();
+      if (token !== lastLoadToken) return;
+      currentOverrides = Array.isArray(data.rows) ? data.rows : [];
+      isGerente = !!data.isGerente;
+      editorNoteEl.innerHTML = isGerente
+        ? '<strong>Edicion manual activa.</strong> Da click en una celda para cambiar solo ese dia sin alterar semanas futuras.'
+        : 'Vista de horario.';
+      if (!keepStatus) setEditorStatus('');
+      currentSim = applyOverridesToSimulation(buildWeekSimulation(monday), currentOverrides);
+      renderWeek(currentSim);
+      renderCounters(currentSim);
+    } catch (err) {
+      if (token !== lastLoadToken) return;
+      setEditorStatus('No se pudieron cargar los ajustes manuales.', true);
+      currentSim = buildWeekSimulation(monday);
+      renderWeek(currentSim);
+      renderCounters(currentSim);
+    }
+  }
+
   function isGroupStart(advisorId) {
     return TEAM_ORDER.some((group) => group[0] === advisorId) && advisorId !== TEAM_ORDER[0][0];
   }
@@ -945,12 +1155,21 @@
           <div class="person-theory">Teorico: ${theoryLabel}</div>
         </div>`
       ];
-      sim.days.forEach((day) => {
+      sim.days.forEach((day, dayIndex) => {
         const cell = day.cells[advisor.id];
+        const manualBadge = cell.isManual ? '<div class="manual-badge">Manual</div>' : '';
+        const editableClass = isGerente ? ' editable' : '';
+        const manualClass = cell.isManual ? ' manual' : '';
         row.push(`
-          <div class="shift-cell${groupStartClass}">
+          <div
+            class="shift-cell${groupStartClass}${editableClass}${manualClass}"
+            data-advisor-id="${advisor.id}"
+            data-date="${dateKey(day.date)}"
+            data-day-index="${dayIndex}"
+          >
             <div class="shift-card ${cell.type}">
               <div class="title">${cell.title}</div>
+              ${manualBadge}
               <div class="meta">${cell.meta || ''}</div>
             </div>
           </div>
@@ -990,31 +1209,105 @@
     }).join('');
   }
 
-  function rerender() {
+  async function rerender() {
     const monday = maxDate(startOfWeek(selectedMonday), parseIsoDate(BASE_MONDAY));
     selectedMonday = monday;
-    const sim = buildWeekSimulation(monday);
-    renderWeek(sim);
-    renderCounters(sim);
+    closeCellEditor();
+    await loadOverridesForWeek(monday);
   }
 
-  prevWeekBtn.addEventListener('click', function () {
+  boardEl.addEventListener('click', function (event) {
+    if (!isGerente || !currentSim) return;
+    const cellEl = event.target.closest('.shift-cell[data-advisor-id]');
+    if (!cellEl) return;
+    const advisorId = String(cellEl.dataset.advisorId || '');
+    const date = String(cellEl.dataset.date || '');
+    const dayIndex = Number(cellEl.dataset.dayIndex || 0);
+    const advisor = ADVISORS.find((item) => item.id === advisorId);
+    const day = currentSim.days[dayIndex];
+    const cell = day && day.cells ? day.cells[advisorId] : null;
+    if (!advisor || !cell || !date) return;
+    openCellEditor({
+      advisorId,
+      advisorName: advisor.name,
+      date,
+      dayIndex,
+      type: cell.type,
+      isManual: !!cell.isManual
+    });
+  });
+
+  cellEditorCancelBtn.addEventListener('click', function () {
+    closeCellEditor();
+  });
+
+  cellEditorSaveBtn.addEventListener('click', async function () {
+    if (!activeCellContext) return;
+    setEditorStatus('Guardando ajuste manual...');
+    try {
+      const response = await fetch('/api/horarios-simca/overrides', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weekStart: dateKey(selectedMonday),
+          date: activeCellContext.date,
+          advisorId: activeCellContext.advisorId,
+          type: cellEditorSelectEl.value
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data && data.error ? data.error : 'No se pudo guardar.');
+      closeCellEditor();
+      setEditorStatus('Ajuste manual guardado.');
+      await loadOverridesForWeek(selectedMonday, true);
+    } catch (err) {
+      setEditorStatus(err && err.message ? err.message : 'No se pudo guardar el ajuste.', true);
+    }
+  });
+
+  cellEditorDeleteBtn.addEventListener('click', async function () {
+    if (!activeCellContext || !activeCellContext.isManual) return;
+    setEditorStatus('Quitando ajuste manual...');
+    try {
+      const response = await fetch('/api/horarios-simca/overrides', {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weekStart: dateKey(selectedMonday),
+          date: activeCellContext.date,
+          advisorId: activeCellContext.advisorId
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data && data.error ? data.error : 'No se pudo quitar.');
+      closeCellEditor();
+      setEditorStatus('Ajuste manual eliminado.');
+      await loadOverridesForWeek(selectedMonday, true);
+    } catch (err) {
+      setEditorStatus(err && err.message ? err.message : 'No se pudo quitar el ajuste.', true);
+    }
+  });
+
+  prevWeekBtn.addEventListener('click', async function () {
     const next = addDays(selectedMonday, -7);
     if (next.getTime() < parseIsoDate(BASE_MONDAY).getTime()) return;
     selectedMonday = next;
-    rerender();
+    await rerender();
   });
 
-  nextWeekBtn.addEventListener('click', function () {
+  nextWeekBtn.addEventListener('click', async function () {
     selectedMonday = addDays(selectedMonday, 7);
-    rerender();
+    await rerender();
   });
 
-  currentWeekBtn.addEventListener('click', function () {
+  currentWeekBtn.addEventListener('click', async function () {
     selectedMonday = maxDate(startOfWeek(new Date()), parseIsoDate(BASE_MONDAY));
-    rerender();
+    await rerender();
   });
 
+  populateCellEditorOptions();
   rerender();
 })();
 </script>
