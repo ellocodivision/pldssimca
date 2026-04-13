@@ -36,16 +36,14 @@
     .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#ece7da;font-size:12px;font-weight:700}
     .meta{display:flex;gap:8px;flex-wrap:wrap}
     .schedule-wrap{margin-top:8px;overflow-x:auto;overflow-y:hidden}
-    .schedule{display:grid;grid-template-columns:90px repeat(7, minmax(140px,1fr));gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;min-width:1070px}
-    .head{background:#faf7f0;padding:10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-size:12px;font-weight:700;min-height:68px}
-    .head.weekend{background:#f7f1df}
-    .head:last-child{border-right:0}
-    .time-col,.slot{padding:10px;border-right:1px solid #ebe4d6;border-bottom:1px solid #ebe4d6;min-height:88px}
-    .time-col{background:#faf7f0;font-weight:700;font-size:13px}
-    .slot:last-child{border-right:0}
+    .schedule-table{width:100%;min-width:620px;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    .schedule-table th,.schedule-table td{border:1px solid #ebe4d6;vertical-align:top}
+    .schedule-table th{background:#faf7f0;padding:10px 12px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#5e5649}
+    .time-col{width:90px;background:#faf7f0;padding:8px 10px;font-weight:700;font-size:13px;white-space:nowrap}
+    .slot{width:calc((100% - 90px)/2);padding:0;min-height:44px;background:#fff}
     .slot.empty{background:#fff}
-    .reservation{border:1px solid #d7d0bf;border-radius:10px;padding:8px;margin-bottom:6px;background:#fffdf7}
-    .reservation:last-child{margin-bottom:0}
+    .slot.continues{background:#fff6bf}
+    .reservation{height:100%;min-height:88px;border:0;border-radius:0;padding:8px 10px;background:#fff16e}
     .reservation-room{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
     .reservation-title{font-size:13px;font-weight:700;margin-top:3px}
     .reservation-meta{font-size:11px;color:var(--muted);margin-top:4px}
@@ -55,7 +53,7 @@
     .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     @media (max-width:980px){
       .grid{grid-template-columns:1fr}
-      .schedule{grid-template-columns:80px repeat(7, minmax(120px,1fr));min-width:920px}
+      .schedule-table{min-width:520px}
     }
   </style>
 </head>
@@ -113,21 +111,21 @@
       <section class="card">
         <div class="row" style="justify-content:space-between;align-items:center">
           <div class="row">
-            <span class="badge">Calendario semanal</span>
+            <span class="badge">Agenda del dia</span>
             <span class="legend">
               <span>Sala grande</span>
               <span>Sala chica</span>
             </span>
           </div>
           <div class="row">
-            <button id="prevWeekBtn" class="btn" type="button">Semana anterior</button>
-            <button id="todayBtn" class="btn" type="button">Semana actual</button>
-            <button id="nextWeekBtn" class="btn" type="button">Semana siguiente</button>
+            <button id="prevWeekBtn" class="btn" type="button">Dia anterior</button>
+            <button id="todayBtn" class="btn" type="button">Hoy</button>
+            <button id="nextWeekBtn" class="btn" type="button">Dia siguiente</button>
           </div>
         </div>
         <p id="weekLabel" class="status"></p>
         <div class="schedule-wrap">
-          <div id="schedule" class="schedule"></div>
+          <div id="schedule"></div>
         </div>
       </section>
     </div>
@@ -155,7 +153,7 @@
         currentEmail: "",
         currentName: "",
         isGerente: false,
-        weekStart: null
+        selectedDate: null
       };
 
       const bookingDate = document.getElementById("bookingDate");
@@ -222,14 +220,6 @@
         return new Date(year, month - 1, day);
       }
 
-      function getMonday(date) {
-        const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        const day = copy.getDay();
-        const delta = day === 0 ? -6 : 1 - day;
-        copy.setDate(copy.getDate() + delta);
-        return copy;
-      }
-
       function addDays(date, days) {
         const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         copy.setDate(copy.getDate() + days);
@@ -242,11 +232,6 @@
           day: "2-digit",
           month: "2-digit"
         });
-      }
-
-      function formatWeekRange(start) {
-        const end = addDays(start, 6);
-        return `${start.toLocaleDateString("es-MX")} - ${end.toLocaleDateString("es-MX")}`;
       }
 
       function setStatus(message, type) {
@@ -322,71 +307,89 @@
 
       function renderSchedule() {
         schedule.innerHTML = "";
-        const weekStart = state.weekStart || getMonday(new Date());
-        weekLabel.textContent = `Semana: ${formatWeekRange(weekStart)}`;
+        const selectedDate = state.selectedDate || parseIsoDate(bookingDate.value) || new Date();
+        const dateStr = isoDate(selectedDate);
+        weekLabel.textContent = `Fecha: ${formatDay(selectedDate)} · ${selectedDate.toLocaleDateString("es-MX")}`;
 
-        const headBlank = document.createElement("div");
-        headBlank.className = "head";
-        headBlank.textContent = "Hora";
-        schedule.appendChild(headBlank);
+        const table = document.createElement("table");
+        table.className = "schedule-table";
 
-        const days = Array.from({ length: 7 }, (_, idx) => addDays(weekStart, idx));
-        days.forEach((day) => {
-          const cell = document.createElement("div");
-          cell.className = "head";
-          if (day.getDay() === 0 || day.getDay() === 6) cell.classList.add("weekend");
-          cell.textContent = formatDay(day);
-          schedule.appendChild(cell);
-        });
+        const thead = document.createElement("thead");
+        thead.innerHTML = `
+          <tr>
+            <th>Hora</th>
+            <th>${ROOM_LABELS["sala-grande"]}</th>
+            <th>${ROOM_LABELS["sala-chica"]}</th>
+          </tr>
+        `;
+        table.appendChild(thead);
 
-        HOURS.forEach((hour) => {
-          const endHour = addMinutesToHour(hour, 30);
-          const timeCell = document.createElement("div");
+        const tbody = document.createElement("tbody");
+        const skip = {
+          "sala-grande": new Set(),
+          "sala-chica": new Set()
+        };
+
+        HOURS.forEach((hour, index) => {
+          const rowEl = document.createElement("tr");
+
+          const timeCell = document.createElement("td");
           timeCell.className = "time-col";
-          timeCell.textContent = `${hour} - ${endHour}`;
-          schedule.appendChild(timeCell);
+          timeCell.textContent = hour;
+          rowEl.appendChild(timeCell);
 
-          days.forEach((day) => {
-            const dateStr = isoDate(day);
-            const slot = document.createElement("div");
-            slot.className = "slot";
-            const rows = getRowsForSlot(dateStr, hour);
-            if (!rows.length) slot.classList.add("empty");
-            rows.forEach((row) => {
+          ["sala-grande", "sala-chica"].forEach((roomId) => {
+            if (skip[roomId].has(hour)) return;
+            const reservation = state.rows.find((row) => row.date === dateStr && row.room === roomId && row.hour === hour);
+            if (reservation) {
+              const td = document.createElement("td");
+              td.className = "slot";
+              td.rowSpan = 2;
               const card = document.createElement("div");
               card.className = "reservation";
-              const room = document.createElement("div");
-              room.className = "reservation-room";
-              room.textContent = ROOM_LABELS[row.room] || row.room;
               const title = document.createElement("div");
               title.className = "reservation-title";
-              title.textContent = row.title;
+              title.textContent = reservation.title;
               const meta = document.createElement("div");
               meta.className = "reservation-meta";
-              meta.textContent = row.isStartSlot
-                ? `${row.hour} - ${addMinutesToHour(row.hour, 60)} · ${row.createdByName ? `Reservó: ${row.createdByName}` : `Reservó: ${row.createdByEmail || "-"}`}`
-                : `Continúa hasta ${addMinutesToHour(row.hour, 60)}`;
-              card.appendChild(room);
+              meta.textContent = `${reservation.hour} - ${addMinutesToHour(reservation.hour, 60)}`;
               card.appendChild(title);
               card.appendChild(meta);
-              if (row.isStartSlot && canDelete(row)) {
+              if (canDelete(reservation)) {
                 const btn = document.createElement("button");
                 btn.className = "btn danger";
                 btn.type = "button";
                 btn.textContent = "Borrar";
-                btn.addEventListener("click", () => deleteReservation(row.id));
+                btn.addEventListener("click", () => deleteReservation(reservation.id));
                 card.appendChild(btn);
               }
-              slot.appendChild(card);
-            });
-            schedule.appendChild(slot);
+              td.appendChild(card);
+              rowEl.appendChild(td);
+              const nextHour = HOURS[index + 1];
+              if (nextHour) skip[roomId].add(nextHour);
+            } else {
+              const coveredByPrevious = state.rows.some((row) => (
+                row.date === dateStr &&
+                row.room === roomId &&
+                reservationTouchesSlot(row.hour, hour)
+              ));
+              const td = document.createElement("td");
+              td.className = `slot${coveredByPrevious ? " continues" : " empty"}`;
+              rowEl.appendChild(td);
+            }
           });
+
+          tbody.appendChild(rowEl);
         });
+
+        table.appendChild(tbody);
+        schedule.appendChild(table);
       }
 
       async function loadRows() {
-        const from = isoDate(state.weekStart);
-        const to = isoDate(addDays(state.weekStart, 6));
+        const selectedDate = state.selectedDate || parseIsoDate(bookingDate.value) || new Date();
+        const from = isoDate(selectedDate);
+        const to = from;
         const res = await fetch(`/api/viceroy/reservas?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, {
           credentials: "same-origin",
           cache: "no-store"
@@ -435,36 +438,36 @@
         }
         setStatus("Reserva guardada.", "ok");
         bookingTitle.value = "";
-        state.weekStart = getMonday(parseIsoDate(bookingDate.value) || new Date());
+        state.selectedDate = parseIsoDate(bookingDate.value) || new Date();
         await loadRows();
       }
 
       function syncWeekFromDate() {
         const selected = parseIsoDate(bookingDate.value) || new Date();
-        state.weekStart = getMonday(selected);
+        state.selectedDate = selected;
         loadRows();
       }
 
       bookingDate.value = isoDate(new Date());
-      state.weekStart = getMonday(new Date());
+      state.selectedDate = new Date();
 
       saveBtn.addEventListener("click", saveReservation);
       reloadBtn.addEventListener("click", loadRows);
       bookingDate.addEventListener("change", syncWeekFromDate);
       bookingRoom.addEventListener("change", () => refreshHourOptions(bookingHour.value));
       prevWeekBtn.addEventListener("click", () => {
-        state.weekStart = addDays(state.weekStart, -7);
-        bookingDate.value = isoDate(state.weekStart);
+        state.selectedDate = addDays(state.selectedDate || new Date(), -1);
+        bookingDate.value = isoDate(state.selectedDate);
         loadRows();
       });
       nextWeekBtn.addEventListener("click", () => {
-        state.weekStart = addDays(state.weekStart, 7);
-        bookingDate.value = isoDate(state.weekStart);
+        state.selectedDate = addDays(state.selectedDate || new Date(), 1);
+        bookingDate.value = isoDate(state.selectedDate);
         loadRows();
       });
       todayBtn.addEventListener("click", () => {
         bookingDate.value = isoDate(new Date());
-        state.weekStart = getMonday(new Date());
+        state.selectedDate = new Date();
         loadRows();
       });
 
