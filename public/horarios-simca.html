@@ -203,6 +203,14 @@
     line-height:1.05;
   }
 
+  .person-theory{
+    font-size:12px;
+    color:#7a6f62;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+
   .person-cell.group-start,
   .shift-cell.group-start{
     border-top:3px solid #e7dbc6;
@@ -909,6 +917,11 @@
     return TEAM_ORDER.some((group) => group[0] === advisorId) && advisorId !== TEAM_ORDER[0][0];
   }
 
+  function getPreferredShiftLabel(advisor, weekIndex) {
+    const preferred = getPreferredShift(advisor, weekIndex);
+    return SHIFT_META[preferred] ? SHIFT_META[preferred].short : '';
+  }
+
   function renderWeek(sim) {
     const weekEnd = addDays(sim.weekStart, 6);
     weekRangePillEl.textContent = `${formatShortDate(sim.weekStart)} · ${formatShortDate(weekEnd)}`;
@@ -925,8 +938,12 @@
 
     const rows = ADVISORS.map((advisor) => {
       const groupStartClass = isGroupStart(advisor.id) ? ' group-start' : '';
+      const theoryLabel = getPreferredShiftLabel(advisor, sim.weekIndex);
       const row = [
-        `<div class="person-cell${groupStartClass}"><div class="person-name">${advisor.name}</div></div>`
+        `<div class="person-cell${groupStartClass}">
+          <div class="person-name">${advisor.name}</div>
+          <div class="person-theory">Teorico: ${theoryLabel}</div>
+        </div>`
       ];
       sim.days.forEach((day) => {
         const cell = day.cells[advisor.id];
