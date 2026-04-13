@@ -279,15 +279,24 @@
           }));
       }
 
+      function canStartReservation(dateStr, room, hour) {
+        if (!dateStr || !room || !hour) return false;
+        const slotIndex = HOURS.indexOf(hour);
+        if (slotIndex < 0 || slotIndex >= HOURS.length - 1) return false;
+        const nextHalfHour = HOURS[slotIndex + 1];
+        return !state.rows.some((row) => (
+          row.date === dateStr &&
+          row.room === room &&
+          (
+            reservationTouchesSlot(row.hour, hour) ||
+            reservationTouchesSlot(row.hour, nextHalfHour)
+          )
+        ));
+      }
+
       function getAvailableHours(dateStr, room) {
         if (!dateStr || !room) return [];
-        return HOURS.filter((hour) => {
-          return !state.rows.some((row) => (
-            row.date === dateStr &&
-            row.room === room &&
-            reservationTouchesSlot(row.hour, hour)
-          ));
-        });
+        return HOURS.filter((hour) => canStartReservation(dateStr, room, hour));
       }
 
       function refreshHourOptions(preferredValue) {
@@ -444,7 +453,7 @@
                 ));
                 const td = document.createElement("td");
                 td.className = `slot${coveredByPrevious ? " continues" : " empty"}${dayEndClass}`;
-                if (!coveredByPrevious) {
+                if (!coveredByPrevious && canStartReservation(dateStr, roomId, hour)) {
                   td.classList.add("available");
                   const inlineKey = makeInlineKey(dateStr, roomId, hour);
                   const wrapper = document.createElement("div");
