@@ -488,7 +488,9 @@
         weekendInitialShift: null,
         lastRebalanceWeek: -1,
         lastGtWeek: -1,
-        lastWeekendWeek: -1
+        lastWeekendWeek: -1,
+        lastGtOrder: -1,
+        lastWeekendOrder: -1
       };
       return acc;
     }, {});
@@ -516,6 +518,7 @@
     if (type === 'gt') {
       record.gt += 1;
       record.lastGtWeek = weekIndex;
+      record.lastGtOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
     }
     if (type === 'weekendMorning' || type === 'weekendAfternoon') {
       if (!record.weekendInitialShift) {
@@ -524,6 +527,7 @@
       record.weekend += 1;
       record.weekendAssignments += 1;
       record.lastWeekendWeek = weekIndex;
+      record.lastWeekendOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
     }
   }
 
@@ -531,9 +535,9 @@
     return ADVISORS.slice().sort((a, b) => {
       const aRecord = history[a.id];
       const bRecord = history[b.id];
-      const aWeek = kind === 'gt' ? aRecord.lastGtWeek : aRecord.lastWeekendWeek;
-      const bWeek = kind === 'gt' ? bRecord.lastGtWeek : bRecord.lastWeekendWeek;
-      if (aWeek !== bWeek) return aWeek - bWeek;
+      const aOrder = kind === 'gt' ? aRecord.lastGtOrder : aRecord.lastWeekendOrder;
+      const bOrder = kind === 'gt' ? bRecord.lastGtOrder : bRecord.lastWeekendOrder;
+      if (aOrder !== bOrder) return aOrder - bOrder;
       return a.name.localeCompare(b.name, 'es');
     }).map((advisor) => advisor.id);
   }
@@ -753,7 +757,8 @@
       const movedIds = dayIndex <= 4 ? rebalanceOfficeCells(cells, history, weekIndex) : new Set();
       dayAssignments.forEach(({ advisorId }) => {
         applyAssignmentToHistory(history, advisorId, cells[advisorId].type, weekIndex, {
-          rebalanced: movedIds.has(advisorId)
+          rebalanced: movedIds.has(advisorId),
+          sortOrder: (weekIndex * 10) + dayIndex
         });
       });
       days.push({ date, cells });
@@ -811,7 +816,8 @@
         const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
         ADVISORS.forEach((advisor) => {
           applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
-            rebalanced: movedIds.has(advisor.id)
+            rebalanced: movedIds.has(advisor.id),
+            sortOrder: (weekIndex * 10) + dayIndex
           });
         });
       } else if (dayIndex <= 4) {
@@ -827,7 +833,8 @@
         const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
         ADVISORS.forEach((advisor) => {
           applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
-            rebalanced: movedIds.has(advisor.id)
+            rebalanced: movedIds.has(advisor.id),
+            sortOrder: (weekIndex * 10) + dayIndex
           });
         });
       } else {
@@ -840,7 +847,9 @@
           }
         });
         ADVISORS.forEach((advisor) => {
-          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex);
+          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
+            sortOrder: (weekIndex * 10) + dayIndex
+          });
         });
       }
 
