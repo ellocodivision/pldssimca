@@ -52,6 +52,7 @@
     .reservation{height:100%;min-height:88px;border:0;border-radius:0;padding:8px 10px;background:transparent;display:flex;flex-direction:column}
     .reservation-room{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
     .reservation-title{font-size:13px;font-weight:700;margin-top:3px}
+    .reservation-author{font-size:11px;font-weight:700;color:#7a715f;margin-top:4px}
     .reservation-meta{font-size:11px;color:var(--muted);margin-top:4px}
     .reservation .btn{padding:5px 8px;font-size:11px;margin-top:6px}
     .slot-actions{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:88px;justify-content:center}
@@ -428,10 +429,16 @@
                 const title = document.createElement("div");
                 title.className = "reservation-title";
                 title.textContent = reservation.title;
+                const author = document.createElement("div");
+                author.className = "reservation-author";
+                author.textContent = reservation.createdByName
+                  ? `Asesor: ${reservation.createdByName}`
+                  : `Asesor: ${reservation.createdByEmail || "-"}`;
                 const meta = document.createElement("div");
                 meta.className = "reservation-meta";
                 meta.textContent = `${reservation.hour} - ${addMinutesToHour(reservation.hour, 60)}`;
                 card.appendChild(title);
+                card.appendChild(author);
                 card.appendChild(meta);
                 if (canDelete(reservation)) {
                   const btn = document.createElement("button");
