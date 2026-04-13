@@ -692,22 +692,23 @@
   function applyAssignmentToHistory(history, advisorId, type, weekIndex, options) {
     const record = history[advisorId];
     if (!record) return;
+    const effectiveType = String(options && options.historyType || type || '');
     if (options && options.rebalanced) {
       record.rebalanceMoves += 1;
       record.lastRebalanceWeek = weekIndex;
     }
-    if (type === 'morning' || type === 'afternoon' || type === 'mid') {
-      record[type] += 1;
-      record.lastOfficeShift = type;
+    if (effectiveType === 'morning' || effectiveType === 'afternoon' || effectiveType === 'mid') {
+      record[effectiveType] += 1;
+      record.lastOfficeShift = effectiveType;
     }
-    if (type === 'gt') {
+    if (effectiveType === 'gt') {
       record.gt += 1;
       record.lastGtWeek = weekIndex;
       record.lastGtOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
     }
-    if (type === 'weekendMorning' || type === 'weekendAfternoon') {
+    if (effectiveType === 'weekendMorning' || effectiveType === 'weekendAfternoon') {
       if (!record.weekendInitialShift) {
-        record.weekendInitialShift = type;
+        record.weekendInitialShift = effectiveType;
       }
       if (record.lastWeekendWeek !== weekIndex) {
         record.weekend += 1;
@@ -841,7 +842,13 @@
 
       const movedIds = dayIndex <= 4 ? rebalanceOfficeCells(cells, history, weekIndex) : new Set();
       ADVISORS.forEach((advisor) => {
+        let historyType = cells[advisor.id].type;
+        if (dayIndex >= 5) {
+          if (historyType === 'morning') historyType = 'weekendMorning';
+          if (historyType === 'afternoon') historyType = 'weekendAfternoon';
+        }
         applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
+          historyType,
           rebalanced: movedIds.has(advisor.id),
           sortOrder: (weekIndex * 10) + dayIndex
         });
