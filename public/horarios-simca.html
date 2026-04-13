@@ -524,10 +524,12 @@
       if (!record.weekendInitialShift) {
         record.weekendInitialShift = type;
       }
-      record.weekend += 1;
-      record.weekendAssignments += 1;
-      record.lastWeekendWeek = weekIndex;
-      record.lastWeekendOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
+      if (record.lastWeekendWeek !== weekIndex) {
+        record.weekend += 1;
+        record.weekendAssignments += 1;
+        record.lastWeekendWeek = weekIndex;
+        record.lastWeekendOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
+      }
     }
   }
 
