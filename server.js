@@ -4147,6 +4147,9 @@ app.use('/api/viceroy/reservas', requireAuth);
 app.use('/viceroy/inicio', requireAuth);
 app.use('/viceroy-piloto', requireGerente);
 app.use('/api/viceroy-piloto', (req, res, next) => {
+  if (String(req.path || '').startsWith('/public-data')) {
+    return requireViceroyPresentAccess(req, res, next);
+  }
   return requireGerente(req, res, next);
 });
 app.use('/viceroy/registros', requireAuth);
