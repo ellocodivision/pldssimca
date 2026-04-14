@@ -629,14 +629,6 @@
       const token = params.get('token') || '';
       const dataUrl = '/api/viceroy-piloto/public-data' + (token ? ('?token=' + encodeURIComponent(token)) : '');
 
-      const DEMO_PRICE_BY_BEDROOM = {
-        '1B': 420000,
-        '2B': 590000,
-        '3B': 780000,
-        '2PH': 980000,
-        '3PH': 1250000
-      };
-
       const BEDROOM_BUCKETS = [
         { id: '1B', name: 'ONE BEDROOM', aliases: ['1B', '1 BR', '1BR', '1 REC'] },
         { id: '2B', name: 'TWO BEDROOM', aliases: ['2B', '2 BR', '2BR', '2 REC'] },
@@ -1288,10 +1280,7 @@
         if (matches.length) {
           return { value: Math.min.apply(Math, matches), isDemo: false };
         }
-        if (Object.prototype.hasOwnProperty.call(DEMO_PRICE_BY_BEDROOM, bucketId)) {
-          return { value: DEMO_PRICE_BY_BEDROOM[bucketId], isDemo: true };
-        }
-        return { value: null, isDemo: true };
+        return { value: null, isDemo: false };
       }
 
       function getTipologiasByBedroom(bucketId) {
@@ -1316,7 +1305,8 @@
           const rec = normalizeBedroom(row.recamaras);
           const id = String(row.tipologia || '').trim();
           if (!id || seen.has(norm(id))) return;
-          if (bucketId && rec && rec !== bucketId) return;
+          if (!rec) return;
+          if (bucketId && rec !== bucketId) return;
           seen.add(norm(id));
           out.push({
             id: id,
