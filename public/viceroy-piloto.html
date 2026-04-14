@@ -563,8 +563,39 @@
         return Number.isFinite(n) ? String(Math.round(n)) : String(value == null ? '' : value);
       }
 
+      function pickSampleRows(rows) {
+        const source = Array.isArray(rows) ? rows.filter(function (row) {
+          return row && (row.unidad || row.recamaras || row.vista || row.m2 || row.price || row.precio);
+        }) : [];
+        if (!source.length) return [];
+        if (source.length <= 3) return source.slice(0, 3);
+
+        const scoreText = function (value) {
+          return String(value == null ? '' : value).trim().length;
+        };
+        const byLongestVista = source.reduce(function (best, row) {
+          return scoreText(row && row.vista) > scoreText(best && best.vista) ? row : best;
+        }, source[0]);
+        const byLongestUnidad = source.reduce(function (best, row) {
+          return scoreText(row && row.unidad) > scoreText(best && best.unidad) ? row : best;
+        }, source[0]);
+        const byLargestPrice = source.reduce(function (best, row) {
+          return parseMoney(row && (row.price || row.precio)) > parseMoney(best && (best.price || best.precio)) ? row : best;
+        }, source[0]);
+
+        const picked = [];
+        [byLongestUnidad, byLongestVista, byLargestPrice].forEach(function (row) {
+          if (row && !picked.includes(row)) picked.push(row);
+        });
+        source.forEach(function (row) {
+          if (picked.length >= 3) return;
+          if (!picked.includes(row)) picked.push(row);
+        });
+        return picked.slice(0, 3);
+      }
+
       function renderSampleRows() {
-        const rows = (state.inventoryRows || []).slice(0, 8);
+        const rows = pickSampleRows(state.inventoryRows || []);
         if (!rows.length) {
           els.sampleRows.innerHTML = '<tr><td colspan="5">Sin inventario</td></tr>';
           return;

@@ -485,6 +485,7 @@
     const zoomRangeInput = document.getElementById("zoomRangeInput");
     const zoomValue = document.getElementById("zoomValue");
     const DEV_LABEL = String(DEV || "ceiba").replace(/[-_]+/g, " ").toUpperCase();
+    const FORCE_HIDE_UNIT_LABELS = IS_VICEROY_PILOTO;
     if (tipologiaRow) {
       tipologiaRow.style.display = IS_VICEROY_PILOTO ? "block" : "none";
     }
@@ -569,6 +570,10 @@
 
     function activeFloor() {
       return state.floors.find((f) => f.id === state.activeFloorId) || null;
+    }
+
+    function shouldShowUnitLabels() {
+      return !FORCE_HIDE_UNIT_LABELS && state.showUnitLabels;
     }
 
     function activeFloorIndex() {
@@ -2005,7 +2010,7 @@
         const strokeWidth = Number.isFinite(Number(zone.borderWidth))
           ? Number(zone.borderWidth)
           : (isPrimary ? 3 : (isSelected ? 2.5 : 2));
-        const labelHtml = state.showUnitLabels ? `
+        const labelHtml = shouldShowUnitLabels() ? `
             <text
               data-label-zone-id="${zone.id}"
               x="${cx}"
@@ -2236,8 +2241,9 @@
       }
       state.floors = normalizedFloors;
       state.nextZoneId = Math.max(Number(payload && payload.nextZoneId) || 1, state.nextZoneId || 1);
-      state.showUnitLabels = payload.showUnitLabels !== false;
+      state.showUnitLabels = FORCE_HIDE_UNIT_LABELS ? false : payload.showUnitLabels !== false;
       showLabelsInput.checked = state.showUnitLabels;
+      showLabelsInput.disabled = FORCE_HIDE_UNIT_LABELS;
       state.activeFloorId = state.floors[0].id;
       clearSelection();
       state.drawing = false;
@@ -2569,9 +2575,16 @@
       renderEditLineGuide(null);
     });
     showLabelsInput.addEventListener("change", () => {
-      state.showUnitLabels = showLabelsInput.checked;
+      state.showUnitLabels = FORCE_HIDE_UNIT_LABELS ? false : showLabelsInput.checked;
+      showLabelsInput.checked = state.showUnitLabels;
       renderOverlay();
     });
+
+    if (FORCE_HIDE_UNIT_LABELS) {
+      state.showUnitLabels = false;
+      showLabelsInput.checked = false;
+      showLabelsInput.disabled = true;
+    }
 
     exportBtn.addEventListener("click", exportJson);
     importBtn.addEventListener("click", () => importInput.click());
