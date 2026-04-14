@@ -3368,8 +3368,10 @@ function normalizeViceroyInventoryRow(rawRow) {
 function normalizeViceroyRawBedroom(value) {
   const key = normalizeHeaderKey(value);
   if (!key) return '';
-  if ((key.includes('ph') || key.includes('pent')) && (key.includes('3') || key.includes('three') || key.includes('tres'))) return '3PH';
-  if ((key.includes('ph') || key.includes('pent')) && (key.includes('2') || key.includes('two') || key.includes('dos'))) return '2PH';
+  if ((key.includes('ph') || key.includes('pent')) && (key.includes('4') || key.includes('four') || key.includes('cuatro'))) return 'PH4';
+  if ((key.includes('ph') || key.includes('pent')) && (key.includes('3') || key.includes('three') || key.includes('tres'))) return 'PH3';
+  if ((key.includes('ph') || key.includes('pent')) && (key.includes('2') || key.includes('two') || key.includes('dos'))) return 'PH2';
+  if (key.includes('4') || key.includes('four') || key.includes('cuatro')) return '4B';
   if (key.includes('3') || key.includes('three') || key.includes('tres')) return '3B';
   if (key.includes('2') || key.includes('two') || key.includes('dos')) return '2B';
   if (key.includes('1') || key.includes('one') || key.includes('uno') || key.includes('una') || key === 'un') return '1B';

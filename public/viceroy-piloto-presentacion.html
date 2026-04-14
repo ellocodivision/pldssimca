@@ -699,8 +699,14 @@
         { id: '2B+DEN', name: 'TWO BEDROOM + DEN', aliases: ['2B + DEN', '2BDEN', '2 REC + DEN'] },
         { id: '3B', name: 'THREE BEDROOM', aliases: ['3B', '3 BR', '3BR', '3 REC'] },
         { id: '3B+DEN', name: 'THREE BEDROOM + DEN', aliases: ['3B + DEN', '3BDEN', '3 REC + DEN'] },
-        { id: '2PH', name: 'PENTHOUSE TWO BEDROOM', aliases: ['2PH', 'PH2', 'PH 2'] },
-        { id: '3PH', name: 'PENTHOUSE THREE BEDROOM', aliases: ['3PH', 'PH3', 'PH 3'] }
+        { id: '4B', name: 'FOUR BEDROOM', aliases: ['4B', '4 BR', '4BR', '4 REC'] },
+        { id: '4B+DEN', name: 'FOUR BEDROOM + DEN', aliases: ['4B + DEN', '4BDEN', '4 REC + DEN'] },
+        { id: 'PH2', name: 'PENTHOUSE TWO BEDROOM', aliases: ['2PH', 'PH2', 'PH 2'] },
+        { id: 'PH2+DEN', name: 'PENTHOUSE TWO BEDROOM + DEN', aliases: ['2PH + DEN', 'PH2 + DEN', 'PH 2 + DEN'] },
+        { id: 'PH3', name: 'PENTHOUSE THREE BEDROOM', aliases: ['3PH', 'PH3', 'PH 3'] },
+        { id: 'PH3+DEN', name: 'PENTHOUSE THREE BEDROOM + DEN', aliases: ['3PH + DEN', 'PH3 + DEN', 'PH 3 + DEN'] },
+        { id: 'PH4', name: 'PENTHOUSE FOUR BEDROOM', aliases: ['4PH', 'PH4', 'PH 4'] },
+        { id: 'PH4+DEN', name: 'PENTHOUSE FOUR BEDROOM + DEN', aliases: ['4PH + DEN', 'PH4 + DEN', 'PH 4 + DEN'] }
       ];
 
       const state = {
@@ -860,8 +866,10 @@
         const vn = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         if (!v) return '';
         const hasDen = vn.includes('DEN');
-        if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES'))) return '3PH';
-        if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS'))) return '2PH';
+        if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('4') || vn.includes('FOUR') || vn.includes('CUATRO'))) return hasDen ? 'PH4+DEN' : 'PH4';
+        if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES'))) return hasDen ? 'PH3+DEN' : 'PH3';
+        if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS'))) return hasDen ? 'PH2+DEN' : 'PH2';
+        if (vn.includes('4') || vn.includes('FOUR') || vn.includes('CUATRO')) return hasDen ? '4B+DEN' : '4B';
         if (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES')) return hasDen ? '3B+DEN' : '3B';
         if (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS')) return hasDen ? '2B+DEN' : '2B';
         if (vn.includes('1') || vn.includes('ONE') || vn.includes('UNA') || vn.includes('UNO') || vn === 'UN') return hasDen ? '1B+DEN' : '1B';
@@ -1006,8 +1014,8 @@
         const value = String(name || '').trim();
         const key = norm(value);
         if (key.includes('ground')) return 'Ground Level';
-        if (key.includes('lower_penthouse') || key.includes('level_5')) return 'Level 5: Lower Penthouse';
-        if (key.includes('upper_penthouse') || key.includes('level_6')) return 'Level 6: Upper Penthouse';
+        if (key.includes('lower_penthouse') || key.includes('level_5')) return 'Level 5';
+        if (key.includes('upper_penthouse') || key.includes('level_6')) return 'Lower Penthouse';
         if (key.includes('level_1')) return 'Level 1';
         if (key.includes('level_2')) return 'Level 2';
         if (key.includes('level_3')) return 'Level 3';
@@ -1017,8 +1025,8 @@
         if (idx === 2) return 'Level 2';
         if (idx === 3) return 'Level 3';
         if (idx === 4) return 'Level 4';
-        if (idx === 5) return 'Level 5: Lower Penthouse';
-        if (idx === 6) return 'Level 6: Upper Penthouse';
+        if (idx === 5) return 'Level 5';
+        if (idx === 6) return 'Lower Penthouse';
         return value || ('Level ' + idx);
       }
 
