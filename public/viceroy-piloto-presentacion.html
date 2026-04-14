@@ -880,6 +880,14 @@
         return BEDROOM_BUCKETS.find(function (b) { return b.id === bucketId; }) || { id: bucketId, name: bucketId };
       }
 
+      function getBedroomSortIndex(raw) {
+        const bucketId = normalizeBedroom(raw);
+        const index = BEDROOM_BUCKETS.findIndex(function (bucket) {
+          return bucket.id === bucketId;
+        });
+        return index >= 0 ? index : Number.MAX_SAFE_INTEGER;
+      }
+
       function getBedroomDisplayName(raw) {
         const bucketId = normalizeBedroom(raw);
         if (!bucketId) return String(raw || '').trim();
@@ -1256,8 +1264,21 @@
               })
           ).join('');
         };
+        const buildBedroomOptions = function (values, emptyLabel) {
+          return ['<option value="">' + emptyLabel + '</option>'].concat(
+            Array.from(new Set(values.filter(Boolean)))
+              .sort(function (a, b) {
+                const orderDiff = getBedroomSortIndex(a) - getBedroomSortIndex(b);
+                if (orderDiff !== 0) return orderDiff;
+                return String(a).localeCompare(String(b), 'es', { sensitivity: 'base', numeric: true });
+              })
+              .map(function (value) {
+                return '<option value="' + esc(value) + '">' + esc(value) + '</option>';
+              })
+          ).join('');
+        };
         if (els.filterRecamarasSelect) {
-          els.filterRecamarasSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
+          els.filterRecamarasSelect.innerHTML = buildBedroomOptions(infoRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
           els.filterRecamarasSelect.value = String(state.selectedRecamarasFilter || '');
         }
         if (els.filterVistaSelect) {
