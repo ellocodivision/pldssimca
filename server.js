@@ -3392,7 +3392,7 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const vista = String(rowDataByIndex(row, 12) || '').trim(); // M
     const m2 = rowDataByIndex(row, 13); // N
     const m2Value = parseCurrencyLike(m2);
-    const computedPrice = Number.isFinite(m2Value) ? (m2Value * 7300) : '';
+    const computedPrice = Number.isFinite(m2Value) ? (m2Value * 7100) : '';
 
     out.push({
       development: '',
