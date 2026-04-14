@@ -6659,6 +6659,7 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     dev: devSlug,
     floors: floorsData.floors,
     loadedFiles: floorsData.loadedFiles,
+    showUnitLabels: floorsData.showUnitLabels !== false,
     config,
     inventoryFileName,
     inventoryRows
