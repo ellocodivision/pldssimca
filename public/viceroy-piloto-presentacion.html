@@ -1004,6 +1004,7 @@
         const whisperAssignment = getWhisperAssignmentDetails(u);
         return {
           unidad: zoneLabel || String((row && row.unidad) || '').trim() || u,
+          hasInventoryMatch: !!row,
           tipologia: tipologia,
           tipKey: norm(tipologia),
           recamaras: rec,
@@ -1543,6 +1544,14 @@
           const info = resolveZoneInfo(zone);
           const tipAttr = esc(info.tipologia || '');
           const unitAttr = esc(info.unidad || '');
+
+          if (!info.hasInventoryMatch) {
+            const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
+            const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
+            return '<polygon points="' + polygon + '" fill="#0f1014" fill-opacity="0.75" stroke="#0f1014" stroke-width="2" style="cursor:not-allowed"></polygon>' +
+              '<text x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#ffffff" style="pointer-events:none">' + esc(info.unidad || '') + '</text>';
+          }
+
           const match = matchesFilter(info);
 
           if (!match) {
