@@ -1528,9 +1528,18 @@
 
       function renderUnitsTable(rows) {
         const focusedUnitKey = unitKey(state.focusedUnitKey || '');
-        const visibleRows = focusedUnitKey
+        const visibleRows = (focusedUnitKey
           ? rows.filter(function (row) { return unitKey(row && row.unidad) === focusedUnitKey; })
-          : rows;
+          : rows).slice().sort(function (a, b) {
+            const priceA = parseMoneyLike(a && a.price);
+            const priceB = parseMoneyLike(b && b.price);
+            const hasA = Number.isFinite(priceA);
+            const hasB = Number.isFinite(priceB);
+            if (hasA && hasB && priceA !== priceB) return priceA - priceB;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+          });
         if (!visibleRows.length) {
           els.unitsTableBody.innerHTML = '<tr><td colspan="5" style="color:#93a1b8">Sin unidades en este filtro</td></tr>';
           return;
