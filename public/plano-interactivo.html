@@ -206,7 +206,7 @@
       </div>
 
       <div class="section">
-        <h2>1) Cargar pisos (hasta 6)</h2>
+        <h2>1) Cargar pisos (hasta 7)</h2>
         <label for="imagesInput">Imágenes del proyecto</label>
         <input id="imagesInput" type="file" accept="image/*" multiple>
         <div class="btn-row" style="margin-top:8px;">
@@ -384,7 +384,7 @@
       LOCAL_STATE_KEYS.push("selectorUnidadesState", "planoInteractivoState", "plataformaUnidadesState");
     }
 
-    const MAX_FLOORS = 6;
+    const MAX_FLOORS = 7;
 
     const state = {
       floors: [],
@@ -959,7 +959,7 @@
 
     function updateHint() {
       if (!state.floors.length) {
-        drawHint.textContent = "Carga hasta 6 imágenes de pisos.";
+        drawHint.textContent = "Carga hasta 7 imágenes de pisos.";
       } else if (state.drawing) {
         drawHint.textContent = state.snapParallel
           ? "Dibujo activo: líneas ajustadas en paralelo a bordes."

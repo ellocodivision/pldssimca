@@ -694,8 +694,11 @@
 
       const BEDROOM_BUCKETS = [
         { id: '1B', name: 'ONE BEDROOM', aliases: ['1B', '1 BR', '1BR', '1 REC'] },
+        { id: '1B+DEN', name: 'ONE BEDROOM + DEN', aliases: ['1B + DEN', '1BDEN', '1 REC + DEN'] },
         { id: '2B', name: 'TWO BEDROOM', aliases: ['2B', '2 BR', '2BR', '2 REC'] },
+        { id: '2B+DEN', name: 'TWO BEDROOM + DEN', aliases: ['2B + DEN', '2BDEN', '2 REC + DEN'] },
         { id: '3B', name: 'THREE BEDROOM', aliases: ['3B', '3 BR', '3BR', '3 REC'] },
+        { id: '3B+DEN', name: 'THREE BEDROOM + DEN', aliases: ['3B + DEN', '3BDEN', '3 REC + DEN'] },
         { id: '2PH', name: 'PENTHOUSE TWO BEDROOM', aliases: ['2PH', 'PH2', 'PH 2'] },
         { id: '3PH', name: 'PENTHOUSE THREE BEDROOM', aliases: ['3PH', 'PH3', 'PH 3'] }
       ];
@@ -856,11 +859,12 @@
         const v = String(raw || '').toUpperCase().replace(/\s+/g, ' ').trim();
         const vn = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         if (!v) return '';
+        const hasDen = vn.includes('DEN');
         if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES'))) return '3PH';
         if ((vn.includes('PH') || vn.includes('PENT')) && (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS'))) return '2PH';
-        if (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES')) return '3B';
-        if (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS')) return '2B';
-        if (vn.includes('1') || vn.includes('ONE') || vn.includes('UNA') || vn.includes('UNO') || vn === 'UN') return '1B';
+        if (vn.includes('3') || vn.includes('THREE') || vn.includes('TRES')) return hasDen ? '3B+DEN' : '3B';
+        if (vn.includes('2') || vn.includes('TWO') || vn.includes('DOS')) return hasDen ? '2B+DEN' : '2B';
+        if (vn.includes('1') || vn.includes('ONE') || vn.includes('UNA') || vn.includes('UNO') || vn === 'UN') return hasDen ? '1B+DEN' : '1B';
         return v.replace(/\s+/g, '');
       }
 
@@ -1566,7 +1570,7 @@
       }
 
       function renderHome() {
-        els.bedGrid.innerHTML = BEDROOM_BUCKETS.map(function (bucket) {
+        els.bedGrid.innerHTML = visibleBedroomBuckets().map(function (bucket) {
           const p = getMinimumPriceByBedroom(bucket.id);
           return '<button class="bed-card" data-bedroom="' + esc(bucket.id) + '">' +
             '<p class="bed-name">' + esc(bucket.name) + '</p>' +
