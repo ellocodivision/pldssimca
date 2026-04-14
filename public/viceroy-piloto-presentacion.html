@@ -329,7 +329,7 @@
       border: 0;
       border-radius: 0;
       min-height: calc(100vh - 110px);
-      overflow: auto;
+      overflow: visible;
       padding: 0;
       display: flex;
       justify-content: center;
@@ -377,8 +377,8 @@
       left: var(--overlay-left);
       top: var(--overlay-top);
       width: var(--overlay-width);
-      max-height: calc(100% - 36px);
-      overflow: auto;
+      max-height: none;
+      overflow: visible;
       padding: 10px 10px 12px;
       background: var(--overlay-bg);
       border: 0;
@@ -662,7 +662,7 @@
         floors: [],
         activeFloorId: '',
         config: { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] },
-        showUnitLabels: true,
+        showUnitLabels: false,
         inventoryRows: [],
         canUploadInventory: false,
         byUnit: new Map(),
@@ -1682,7 +1682,7 @@
         });
         state.activeFloorId = state.floors[0] ? state.floors[0].id : '';
         state.config = normalizeConfig(data.config);
-        state.showUnitLabels = data.showUnitLabels !== false;
+        state.showUnitLabels = false;
         state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
         applyPresentationLayout();
 
