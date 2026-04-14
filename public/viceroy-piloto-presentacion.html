@@ -677,6 +677,7 @@
         selectedVistaFilter: '',
         selectedAsignacionFilter: '',
         selectedFloorRows: [],
+        focusedUnitKey: '',
         currentEmail: '',
         isGerente: false,
         whisperlistRows: [],
@@ -1100,6 +1101,15 @@
         });
       }
 
+      function getAssignableWhisperlistRows() {
+        const rows = getUserEditableWhisperlistRows();
+        const currentEmail = String(state.currentEmail || '').trim().toLowerCase();
+        if (!currentEmail) return rows;
+        return rows.filter(function (row) {
+          return String(row && row.correo || '').trim().toLowerCase() === currentEmail;
+        });
+      }
+
       function getSelectedWhisperRow() {
         const rowId = String(state.selectedWhisperRowId || '').trim();
         if (!rowId) return null;
@@ -1245,7 +1255,7 @@
       }
 
       function fillClientOptions() {
-        const rows = getVisibleWhisperlistRows();
+        const rows = getAssignableWhisperlistRows();
         const options = ['<option value="">Selecciona un cliente</option>'].concat(rows.map(function (row) {
           const clientName = String(row.nombreCliente || '').trim() || 'Sin nombre';
           const subtitle = [row.asesor, row.recamaras].filter(Boolean).join(' · ');
@@ -1286,7 +1296,7 @@
           els.assignStatus.textContent = 'Selecciona una opción válida.';
           return;
         }
-        const targetRow = getUserEditableWhisperlistRows().find(function (row) {
+        const targetRow = getAssignableWhisperlistRows().find(function (row) {
           return String(row.id || '') === rowId;
         });
         if (!targetRow) {
@@ -1517,11 +1527,15 @@
       }
 
       function renderUnitsTable(rows) {
-        if (!rows.length) {
+        const focusedUnitKey = unitKey(state.focusedUnitKey || '');
+        const visibleRows = focusedUnitKey
+          ? rows.filter(function (row) { return unitKey(row && row.unidad) === focusedUnitKey; })
+          : rows;
+        if (!visibleRows.length) {
           els.unitsTableBody.innerHTML = '<tr><td colspan="5" style="color:#93a1b8">Sin unidades en este filtro</td></tr>';
           return;
         }
-        const html = rows.slice(0, 80).map(function (r) {
+        const html = visibleRows.slice(0, 80).map(function (r) {
           const m2Num = Number(String(r.m2 == null ? '' : r.m2).replace(/[^0-9.\-]/g, ''));
           const m2 = Number.isFinite(m2Num)
             ? String(Math.round(m2Num))
@@ -1548,6 +1562,7 @@
           els.baseImage.removeAttribute('src');
           els.overlay.innerHTML = '';
           state.selectedFloorRows = [];
+          state.focusedUnitKey = '';
           hideAssignmentBox();
           renderUnitsTable([]);
           renderFilterChips({ shown: 0, available: 0, sold: 0 });
@@ -1608,6 +1623,9 @@
         }).join('');
 
         state.selectedFloorRows = rows;
+        if (state.focusedUnitKey && !rows.some(function (row) { return unitKey(row && row.unidad) === unitKey(state.focusedUnitKey); })) {
+          state.focusedUnitKey = '';
+        }
         els.overlay.innerHTML = svg;
         renderUnitsTable(rows);
         renderFilterChips({ shown: shown, available: available, sold: sold });
@@ -1744,6 +1762,8 @@
           return String(row.unidad || '') === unidad;
         }) || null;
         if (!info) return;
+        state.focusedUnitKey = unitKey(info.unidad || '');
+        renderUnitsTable(state.selectedFloorRows);
         if (!isUnitAssignedToCurrentUser(info)) return;
         if (!getUserEditableWhisperlistRows().length) {
           els.assignStatus.textContent = 'No hay clientes disponibles en tu Whisperlist.';
