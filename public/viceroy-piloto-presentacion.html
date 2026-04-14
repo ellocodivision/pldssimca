@@ -1905,9 +1905,11 @@
         state.focusedUnitKey = unitKey(info.unidad || '');
         renderUnitsTable(state.selectedFloorRows);
         if (!isUnitAssignedToCurrentUser(info)) return;
-        if (!getUserEditableWhisperlistRows().length) {
-          els.assignStatus.textContent = 'No hay clientes disponibles en tu Whisperlist.';
-          els.unitAssignmentBox.classList.remove('hidden');
+        if (!getAssignableWhisperlistRows().length) {
+          showAssignmentBox(info);
+          els.assignStatus.textContent = state.isGerente
+            ? 'No hay clientes disponibles en Whisperlist para asignar.'
+            : 'No hay clientes disponibles en tu Whisperlist.';
           return;
         }
         showAssignmentBox(info);
