@@ -1829,6 +1829,31 @@
         applyPresentationLayout();
       }
 
+      function getFloorUnitInfo(unidad) {
+        const floor = activeFloor();
+        if (!floor) return null;
+        const zones = Array.isArray(floor.zones) ? floor.zones : [];
+        const targetKey = unitKey(unidad);
+        if (!targetKey) return null;
+        const zone = zones.find(function (item) {
+          return unitKey(item && item.label) === targetKey;
+        });
+        return zone ? resolveZoneInfo(zone) : null;
+      }
+
+      function focusUnitInfo(info) {
+        if (!info) return;
+        state.focusedUnitKey = unitKey(info.unidad || '');
+        renderUnitsTable(state.selectedFloorRows);
+        if (!isUnitAssignedToCurrentUser(info)) return;
+        if (!getUserEditableWhisperlistRows().length) {
+          els.assignStatus.textContent = 'No hay clientes disponibles en tu Whisperlist.';
+          els.unitAssignmentBox.classList.remove('hidden');
+          return;
+        }
+        showAssignmentBox(info);
+      }
+
       function enterTipologias(bedroomId) {
         state.selectedBedroom = bedroomId;
         state.selectedTipologia = '';
@@ -1959,19 +1984,22 @@
         if (!target || typeof target.getAttribute !== 'function') return;
         const unidad = String(target.getAttribute('data-unidad') || '').trim();
         if (!unidad) return;
-        const info = state.selectedFloorRows.find(function (row) {
-          return String(row.unidad || '') === unidad;
-        }) || null;
+        let info = state.selectedFloorRows.find(function (row) {
+          return unitKey(row && row.unidad) === unitKey(unidad);
+        }) || getFloorUnitInfo(unidad);
         if (!info) return;
-        state.focusedUnitKey = unitKey(info.unidad || '');
-        renderUnitsTable(state.selectedFloorRows);
-        if (!isUnitAssignedToCurrentUser(info)) return;
-        if (!getUserEditableWhisperlistRows().length) {
-          els.assignStatus.textContent = 'No hay clientes disponibles en tu Whisperlist.';
-          els.unitAssignmentBox.classList.remove('hidden');
-          return;
+
+        if (state.selectedRecamarasFilter && String(info.recamaras || '').trim() !== String(state.selectedRecamarasFilter || '').trim()) {
+          state.selectedRecamarasFilter = '';
+          persistRouteState();
+          renderZoneAttributeFilters();
+          hideAssignmentBox();
+          drawFloor();
+          info = state.selectedFloorRows.find(function (row) {
+            return unitKey(row && row.unidad) === unitKey(unidad);
+          }) || getFloorUnitInfo(unidad);
         }
-        showAssignmentBox(info);
+        focusUnitInfo(info);
       });
 
       els.overlay.addEventListener('mousemove', function (ev) {
