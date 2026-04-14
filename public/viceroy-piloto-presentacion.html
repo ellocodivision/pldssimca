@@ -2127,6 +2127,7 @@
         el.addEventListener('change', function () {
           state[pair[1]] = String(el.value || '').trim();
           persistRouteState();
+          renderZoneAttributeFilters();
           hideAssignmentBox();
           drawFloor();
         });
