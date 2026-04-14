@@ -449,6 +449,46 @@
       color: #5f6573;
       line-height: 1.35;
     }
+    .assign-existing {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(102,105,119,0.18);
+      display: grid;
+      gap: 8px;
+    }
+    .assign-existing.hidden {
+      display: none !important;
+    }
+    .assign-existing-title {
+      margin: 0;
+      font-size: 11px;
+      color: #666977;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .assign-existing-list {
+      display: grid;
+      gap: 6px;
+    }
+    .assign-existing-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #d7dbcf;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.92);
+    }
+    .assign-existing-copy {
+      font-size: 12px;
+      color: #2d323a;
+      line-height: 1.35;
+    }
+    .assign-existing-btn {
+      flex: 0 0 auto;
+      min-width: 72px;
+    }
     .unit-hover-tooltip {
       position: fixed;
       z-index: 40;
@@ -578,10 +618,6 @@
                   <select id="filterRecamarasSelect">
                     <option value="">Todas</option>
                   </select>
-                  <label for="filterEdificioSelect">Edificio</label>
-                  <select id="filterEdificioSelect">
-                    <option value="">Todos</option>
-                  </select>
                   <label for="filterVistaSelect">Vista</label>
                   <select id="filterVistaSelect">
                     <option value="">Todas</option>
@@ -631,6 +667,10 @@
                   <button id="assignCloseBtn" class="btn" type="button">Cerrar</button>
                 </div>
                 <p id="assignStatus" class="assign-status"></p>
+                <div id="assignExistingBox" class="assign-existing hidden">
+                  <p class="assign-existing-title">Ya seleccionaron esta unidad</p>
+                  <div id="assignExistingList" class="assign-existing-list"></div>
+                </div>
                 <p class="assign-help">Solo verás tus clientes y tus unidades asignadas. Puedes cambiar a “ver todas” cuando necesites revisar el plano completo.</p>
               </div>
             </div>
@@ -676,7 +716,6 @@
         selectedWhisperRowId: '',
         selectedAdvisorEmail: '',
         selectedRecamarasFilter: '',
-        selectedEdificioFilter: '',
         selectedVistaFilter: '',
         selectedAsignacionFilter: '',
         selectedFloorRows: [],
@@ -704,7 +743,6 @@
         clientFilterSelect: document.getElementById('clientFilterSelect'),
         clearClientFilterBtn: document.getElementById('clearClientFilterBtn'),
         filterRecamarasSelect: document.getElementById('filterRecamarasSelect'),
-        filterEdificioSelect: document.getElementById('filterEdificioSelect'),
         filterVistaSelect: document.getElementById('filterVistaSelect'),
         filterAsignacionSelect: document.getElementById('filterAsignacionSelect'),
         refreshViewBtn: document.getElementById('refreshViewBtn'),
@@ -727,6 +765,8 @@
         assignDeleteBtn: document.getElementById('assignDeleteBtn'),
         assignCloseBtn: document.getElementById('assignCloseBtn'),
         assignStatus: document.getElementById('assignStatus'),
+        assignExistingBox: document.getElementById('assignExistingBox'),
+        assignExistingList: document.getElementById('assignExistingList'),
         unitHoverTooltip: document.getElementById('unitHoverTooltip'),
         inventoryUploadInput: document.getElementById('inventoryUploadInput'),
         inventoryUploadBtn: document.getElementById('inventoryUploadBtn'),
@@ -786,7 +826,6 @@
         state.selectedAdvisorEmail = String(route.get('advisor') || '').trim().toLowerCase();
         state.selectedWhisperRowId = String(route.get('client') || '').trim();
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
-        state.selectedEdificioFilter = String(route.get('zone_building') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
         state.selectedAsignacionFilter = String(route.get('zone_assignment') || '').trim();
       }
@@ -806,7 +845,7 @@
         setOrDelete('advisor', state.selectedAdvisorEmail);
         setOrDelete('client', state.selectedWhisperRowId);
         setOrDelete('zone_rec', state.selectedRecamarasFilter);
-        setOrDelete('zone_building', state.selectedEdificioFilter);
+        route.delete('zone_building');
         setOrDelete('zone_view', state.selectedVistaFilter);
         setOrDelete('zone_assignment', state.selectedAsignacionFilter);
         const next = window.location.pathname + (route.toString() ? ('?' + route.toString()) : '');
@@ -1086,11 +1125,10 @@
       function getUnitOptionColor(info) {
         const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
         if (!assignments.length) return '#41ac63';
-        if (assignments.length === 1) return '#e2b93b';
-        if (assignments.length === 2) return '#f0a53a';
-        if (assignments.length === 3) return '#ea7b3a';
-        if (assignments.length === 4) return '#df5a4a';
-        return '#c93b3b';
+        if (assignments.length === 1) return '#ffd400';
+        if (assignments.length === 2) return '#ff8a00';
+        if (assignments.length === 3) return '#d62828';
+        return '#4a2c1d';
       }
 
       function getUserEditableWhisperlistRows() {
@@ -1203,10 +1241,6 @@
           els.filterRecamarasSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
           els.filterRecamarasSelect.value = String(state.selectedRecamarasFilter || '');
         }
-        if (els.filterEdificioSelect) {
-          els.filterEdificioSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.edificio || ''; }), 'Todos');
-          els.filterEdificioSelect.value = String(state.selectedEdificioFilter || '');
-        }
         if (els.filterVistaSelect) {
           els.filterVistaSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.vista || ''; }), 'Todas');
           els.filterVistaSelect.value = String(state.selectedVistaFilter || '');
@@ -1236,6 +1270,8 @@
         state.selectedUnitInfo = null;
         if (els.unitAssignmentBox) els.unitAssignmentBox.classList.add('hidden');
         if (els.assignStatus) els.assignStatus.textContent = '';
+        if (els.assignExistingBox) els.assignExistingBox.classList.add('hidden');
+        if (els.assignExistingList) els.assignExistingList.innerHTML = '';
         if (els.assignUnitLabel) els.assignUnitLabel.textContent = 'Unidad -';
         if (els.assignClientSelect) els.assignClientSelect.value = '';
         if (els.assignOptionSelect) els.assignOptionSelect.value = 'opcionA';
@@ -1288,6 +1324,31 @@
         else if (unit && unitKey(kpi.opcionD) === unit) els.assignOptionSelect.value = 'opcionD';
       }
 
+      function getManageableAssignmentsForUnit(info) {
+        const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
+        const allowedRows = new Set(getAssignableWhisperlistRows().map(function (row) { return String(row && row.id || ''); }));
+        return assignments.filter(function (item) {
+          return item && allowedRows.has(String(item.rowId || ''));
+        });
+      }
+
+      function renderExistingAssignments(info) {
+        const items = getManageableAssignmentsForUnit(info);
+        if (!els.assignExistingBox || !els.assignExistingList) return;
+        if (!items.length) {
+          els.assignExistingBox.classList.add('hidden');
+          els.assignExistingList.innerHTML = '';
+          return;
+        }
+        els.assignExistingList.innerHTML = items.map(function (item) {
+          return '<div class="assign-existing-item">' +
+            '<div class="assign-existing-copy">' + esc(item.clientName || 'Cliente') + ' · ' + esc(item.optionLabel || '') + '</div>' +
+            '<button class="btn assign-existing-btn" type="button" data-delete-row="' + esc(item.rowId || '') + '" data-delete-option="' + esc(item.optionKey || '') + '">Borrar</button>' +
+          '</div>';
+        }).join('');
+        els.assignExistingBox.classList.remove('hidden');
+      }
+
       function showAssignmentBox(info) {
         state.selectedUnitInfo = info || null;
         fillClientOptions();
@@ -1297,6 +1358,7 @@
           : '';
         els.assignClientSelect.value = '';
         els.assignOptionSelect.value = 'opcionA';
+        renderExistingAssignments(info);
         if (els.assignPlanBtn) {
           if (info && info.planLink) els.assignPlanBtn.classList.remove('hidden');
           else els.assignPlanBtn.classList.add('hidden');
@@ -1346,15 +1408,21 @@
           });
           els.assignStatus.textContent = 'Guardado en ' + optionKey.replace('opcion', 'Opción ') + ' para ' + (targetRow.nombreCliente || 'cliente') + '.';
           drawFloor();
+          if (state.selectedUnitInfo) {
+            const nextInfo = state.selectedFloorRows.find(function (row) {
+              return unitKey(row && row.unidad) === unitKey(state.selectedUnitInfo && state.selectedUnitInfo.unidad);
+            }) || state.selectedUnitInfo;
+            showAssignmentBox(nextInfo);
+          }
         } catch (_) {
           els.assignStatus.textContent = 'Error al guardar. Revisa tu sesión.';
         }
       }
 
-      async function deleteUnitAssignment() {
+      async function deleteUnitAssignment(forceRowId, forceOptionKey) {
         const unitInfo = state.selectedUnitInfo;
-        const rowId = String(els.assignClientSelect.value || '').trim();
-        const optionKey = String(els.assignOptionSelect.value || '').trim();
+        const rowId = String(forceRowId || els.assignClientSelect.value || '').trim();
+        const optionKey = String(forceOptionKey || els.assignOptionSelect.value || '').trim();
         if (!unitInfo || !unitInfo.unidad) {
           els.assignStatus.textContent = 'Selecciona una unidad primero.';
           return;
@@ -1393,6 +1461,12 @@
           });
           els.assignStatus.textContent = 'Asignación borrada de ' + optionKey.replace('opcion', 'Opción ') + '.';
           drawFloor();
+          if (state.selectedUnitInfo) {
+            const nextInfo = state.selectedFloorRows.find(function (row) {
+              return unitKey(row && row.unidad) === unitKey(state.selectedUnitInfo && state.selectedUnitInfo.unidad);
+            }) || state.selectedUnitInfo;
+            showAssignmentBox(nextInfo);
+          }
         } catch (_) {
           els.assignStatus.textContent = 'Error al borrar. Revisa tu sesión.';
         }
@@ -1570,7 +1644,6 @@
           if (!allowedUnits.has(unitKey(info && info.unidad))) return false;
         }
         if (state.selectedRecamarasFilter && String(info && info.recamaras || '').trim() !== String(state.selectedRecamarasFilter || '').trim()) return false;
-        if (state.selectedEdificioFilter && String(info && info.edificio || '').trim() !== String(state.selectedEdificioFilter || '').trim()) return false;
         if (state.selectedVistaFilter && String(info && info.vista || '').trim() !== String(state.selectedVistaFilter || '').trim()) return false;
         if (state.selectedAsignacionFilter && String(info && info.asignacion || '').trim() !== String(state.selectedAsignacionFilter || '').trim()) return false;
         if (!state.showAllUnits && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
@@ -1587,7 +1660,6 @@
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Cliente KPI: ' + esc((getSelectedWhisperRow() && getSelectedWhisperRow().nombreCliente) || 'TODOS') + '</span>',
           '<span class="chip">Filtro recámaras: ' + esc(state.selectedRecamarasFilter || 'TODAS') + '</span>',
-          '<span class="chip">Filtro edificio: ' + esc(state.selectedEdificioFilter || 'TODOS') + '</span>',
           '<span class="chip">Filtro vista: ' + esc(state.selectedVistaFilter || 'TODAS') + '</span>',
           '<span class="chip">Filtro asignación: ' + esc(state.selectedAsignacionFilter || 'TODAS') + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
@@ -1770,6 +1842,7 @@
           state.whisperlistRows = [];
         }
 
+        const previousFloorId = String(state.activeFloorId || '').trim();
         const floors = Array.isArray(data.floors) ? data.floors : [];
         state.floors = floors.map(function (floor, idx) {
           const f = floor && typeof floor === 'object' ? floor : {};
@@ -1778,7 +1851,9 @@
           f.floorDisplay = normalizeFloorName(f.name, idx);
           return f;
         });
-        state.activeFloorId = state.floors[0] ? state.floors[0].id : '';
+        state.activeFloorId = previousFloorId && state.floors.some(function (floor) { return floor.id === previousFloorId; })
+          ? previousFloorId
+          : (state.floors[0] ? state.floors[0].id : '');
         state.config = normalizeConfig(data.config);
         state.showUnitLabels = false;
         state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
@@ -1922,12 +1997,19 @@
         });
       }
 
+      if (els.assignExistingList) {
+        els.assignExistingList.addEventListener('click', function (ev) {
+          const btn = ev.target.closest('[data-delete-row][data-delete-option]');
+          if (!btn) return;
+          deleteUnitAssignment(btn.getAttribute('data-delete-row') || '', btn.getAttribute('data-delete-option') || '');
+        });
+      }
+
       if (els.clearClientFilterBtn) {
         els.clearClientFilterBtn.addEventListener('click', function () {
           state.selectedAdvisorEmail = '';
           state.selectedWhisperRowId = '';
           state.selectedRecamarasFilter = '';
-          state.selectedEdificioFilter = '';
           state.selectedVistaFilter = '';
           state.selectedAsignacionFilter = '';
           persistRouteState();
@@ -1940,7 +2022,6 @@
 
       [
         ['filterRecamarasSelect', 'selectedRecamarasFilter'],
-        ['filterEdificioSelect', 'selectedEdificioFilter'],
         ['filterVistaSelect', 'selectedVistaFilter'],
         ['filterAsignacionSelect', 'selectedAsignacionFilter']
       ].forEach(function (pair) {
