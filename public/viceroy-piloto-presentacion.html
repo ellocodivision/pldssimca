@@ -1067,7 +1067,8 @@
         const u = unitKey(zoneLabel);
         const row = state.byUnit.get(u) || null;
         const tipologia = String((row && row.tipologia) || '').trim();
-        const rec = normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || '');
+        const recSource = String((row && row.recamaras) || state.config.unitRecamarasMap[u] || '').trim();
+        const rec = recSource || normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || '');
         const status = row && String(row.status || '').toLowerCase() === 'vendida' ? 'vendida' : 'disponible';
         const m2 = row && row.m2 != null ? row.m2 : (row && row.metros2 != null ? row.metros2 : null);
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);

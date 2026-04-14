@@ -3376,6 +3376,11 @@ function normalizeViceroyRawBedroom(value) {
   return '';
 }
 
+function hasViceroyDen(value) {
+  const key = normalizeHeaderKey(value);
+  return key === '1' || key === 'si' || key === 'yes' || key === 'true' || key === 'conden';
+}
+
 function rowDataByIndex(row, index) {
   const value = Array.isArray(row) ? row[index] : '';
   return value === undefined || value === null ? '' : value;
@@ -3401,11 +3406,16 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const m2Value = parseCurrencyLike(m2);
     const computedPrice = Number.isFinite(m2Value) ? (m2Value * 7100) : '';
 
+    const baseRecamaras = normalizeViceroyRawBedroom(recRaw);
+    const recamarasLabel = baseRecamaras && hasViceroyDen(den)
+      ? `${baseRecamaras} + DEN`
+      : baseRecamaras;
+
     out.push({
       development: '',
       unidad,
       planLink: '',
-      recamaras: normalizeViceroyRawBedroom(recRaw),
+      recamaras: recamarasLabel,
       edificio: '',
       tipologia,
       den,
