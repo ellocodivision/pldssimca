@@ -3365,16 +3365,26 @@ function normalizeViceroyInventoryRow(rawRow) {
   };
 }
 
-function normalizeViceroyRawBedroom(value) {
+function normalizeViceroyRawBedroom(value, options = {}) {
   const key = normalizeHeaderKey(value);
-  if (!key) return '';
-  if ((key.includes('ph') || key.includes('pent')) && (key.includes('4') || key.includes('four') || key.includes('cuatro'))) return 'PH4';
-  if ((key.includes('ph') || key.includes('pent')) && (key.includes('3') || key.includes('three') || key.includes('tres'))) return 'PH3';
-  if ((key.includes('ph') || key.includes('pent')) && (key.includes('2') || key.includes('two') || key.includes('dos'))) return 'PH2';
-  if (key.includes('4') || key.includes('four') || key.includes('cuatro')) return '4B';
-  if (key.includes('3') || key.includes('three') || key.includes('tres')) return '3B';
-  if (key.includes('2') || key.includes('two') || key.includes('dos')) return '2B';
-  if (key.includes('1') || key.includes('one') || key.includes('uno') || key.includes('una') || key === 'un') return '1B';
+  const phHint = normalizeHeaderKey(options.phHint);
+  const isPh = key.includes('ph') || key.includes('pent') || phHint.includes('ph') || phHint.includes('pent');
+  const countSource = key || '';
+  if (!countSource) {
+    if (/^ph[_\-\s]*4(?:b|br|bed|rec|$)/.test(phHint) || /^penthouse[_\-\s]*4/.test(phHint)) return 'PH4';
+    if (/^ph[_\-\s]*3(?:b|br|bed|rec|$)/.test(phHint) || /^penthouse[_\-\s]*3/.test(phHint)) return 'PH3';
+    if (/^ph[_\-\s]*2(?:b|br|bed|rec|$)/.test(phHint) || /^penthouse[_\-\s]*2/.test(phHint)) return 'PH2';
+    if (/^ph[_\-\s]*1(?:b|br|bed|rec|$)/.test(phHint) || /^penthouse[_\-\s]*1/.test(phHint)) return 'PH1';
+    return '';
+  }
+  if (isPh && (countSource.includes('4') || countSource.includes('four') || countSource.includes('cuatro'))) return 'PH4';
+  if (isPh && (countSource.includes('3') || countSource.includes('three') || countSource.includes('tres'))) return 'PH3';
+  if (isPh && (countSource.includes('2') || countSource.includes('two') || countSource.includes('dos'))) return 'PH2';
+  if (isPh && (countSource.includes('1') || countSource.includes('one') || countSource.includes('uno') || countSource.includes('una') || countSource === 'un')) return 'PH1';
+  if (countSource.includes('4') || countSource.includes('four') || countSource.includes('cuatro')) return '4B';
+  if (countSource.includes('3') || countSource.includes('three') || countSource.includes('tres')) return '3B';
+  if (countSource.includes('2') || countSource.includes('two') || countSource.includes('dos')) return '2B';
+  if (countSource.includes('1') || countSource.includes('one') || countSource.includes('uno') || countSource.includes('una') || countSource === 'un') return '1B';
   return '';
 }
 
@@ -3408,7 +3418,7 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const m2Value = parseCurrencyLike(m2);
     const computedPrice = Number.isFinite(m2Value) ? (m2Value * 7100) : '';
 
-    const baseRecamaras = normalizeViceroyRawBedroom(recRaw);
+    const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
     const recamarasLabel = baseRecamaras && hasViceroyDen(den)
       ? `${baseRecamaras} + DEN`
       : baseRecamaras;

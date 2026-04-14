@@ -701,12 +701,12 @@
         { id: '3B+DEN', name: 'THREE BEDROOM + DEN', aliases: ['3B + DEN', '3BDEN', '3 REC + DEN'] },
         { id: '4B', name: 'FOUR BEDROOM', aliases: ['4B', '4 BR', '4BR', '4 REC'] },
         { id: '4B+DEN', name: 'FOUR BEDROOM + DEN', aliases: ['4B + DEN', '4BDEN', '4 REC + DEN'] },
-        { id: 'PH2', name: 'PENTHOUSE TWO BEDROOM', aliases: ['2PH', 'PH2', 'PH 2'] },
-        { id: 'PH2+DEN', name: 'PENTHOUSE TWO BEDROOM + DEN', aliases: ['2PH + DEN', 'PH2 + DEN', 'PH 2 + DEN'] },
-        { id: 'PH3', name: 'PENTHOUSE THREE BEDROOM', aliases: ['3PH', 'PH3', 'PH 3'] },
-        { id: 'PH3+DEN', name: 'PENTHOUSE THREE BEDROOM + DEN', aliases: ['3PH + DEN', 'PH3 + DEN', 'PH 3 + DEN'] },
-        { id: 'PH4', name: 'PENTHOUSE FOUR BEDROOM', aliases: ['4PH', 'PH4', 'PH 4'] },
-        { id: 'PH4+DEN', name: 'PENTHOUSE FOUR BEDROOM + DEN', aliases: ['4PH + DEN', 'PH4 + DEN', 'PH 4 + DEN'] }
+        { id: 'PH2', name: 'TWO BEDROOM PH', aliases: ['2PH', 'PH2', 'PH 2', 'TWO BEDROOM PH'] },
+        { id: 'PH2+DEN', name: 'TWO BEDROOM PH + DEN', aliases: ['2PH + DEN', 'PH2 + DEN', 'PH 2 + DEN', 'TWO BEDROOM PH + DEN'] },
+        { id: 'PH3', name: 'THREE BEDROOM PH', aliases: ['3PH', 'PH3', 'PH 3', 'THREE BEDROOM PH'] },
+        { id: 'PH3+DEN', name: 'THREE BEDROOM PH + DEN', aliases: ['3PH + DEN', 'PH3 + DEN', 'PH 3 + DEN', 'THREE BEDROOM PH + DEN'] },
+        { id: 'PH4', name: 'FOUR BEDROOM PH', aliases: ['4PH', 'PH4', 'PH 4', 'FOUR BEDROOM PH', '4 BED PH'] },
+        { id: 'PH4+DEN', name: 'FOUR BEDROOM PH + DEN', aliases: ['4PH + DEN', 'PH4 + DEN', 'PH 4 + DEN', 'FOUR BEDROOM PH + DEN', '4 BED PH + DEN'] }
       ];
 
       const state = {
@@ -878,6 +878,12 @@
 
       function getBucketMeta(bucketId) {
         return BEDROOM_BUCKETS.find(function (b) { return b.id === bucketId; }) || { id: bucketId, name: bucketId };
+      }
+
+      function getBedroomDisplayName(raw) {
+        const bucketId = normalizeBedroom(raw);
+        if (!bucketId) return String(raw || '').trim();
+        return getBucketMeta(bucketId).name;
       }
 
       function parseMoneyLike(value) {
@@ -1080,7 +1086,7 @@
         const row = state.byUnit.get(u) || null;
         const tipologia = String((row && row.tipologia) || '').trim();
         const recSource = String((row && row.recamaras) || state.config.unitRecamarasMap[u] || '').trim();
-        const rec = recSource || normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || '');
+        const rec = getBedroomDisplayName(recSource || normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || ''));
         const status = row && String(row.status || '').toLowerCase() === 'vendida' ? 'vendida' : 'disponible';
         const m2 = row && row.m2 != null ? row.m2 : (row && row.metros2 != null ? row.metros2 : null);
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
@@ -1519,7 +1525,7 @@
           const rec = normalizeBedroom(tip.recamaras);
           const id = String(tip.id || tip.name || '').trim();
           if (!id || seen.has(norm(id))) return;
-          if (bucketId && rec && rec !== bucketId) return;
+          if (bucketId && rec !== bucketId) return;
           seen.add(norm(id));
           out.push({
             id: id,
