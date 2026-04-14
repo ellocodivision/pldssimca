@@ -1278,6 +1278,19 @@
             infoRows.push(resolveZoneInfo(zone));
           });
         });
+        const filterRows = function (overrides) {
+          const next = Object.assign({
+            recamaras: state.selectedRecamarasFilter,
+            vista: state.selectedVistaFilter,
+            asignacion: state.selectedAsignacionFilter
+          }, overrides || {});
+          return infoRows.filter(function (row) {
+            if (next.recamaras && String(row && row.recamaras || '').trim() !== String(next.recamaras || '').trim()) return false;
+            if (next.vista && String(row && row.vista || '').trim() !== String(next.vista || '').trim()) return false;
+            if (next.asignacion && String(row && row.asignacion || '').trim() !== String(next.asignacion || '').trim()) return false;
+            return true;
+          });
+        };
         const buildOptions = function (values, emptyLabel) {
           return ['<option value="">' + emptyLabel + '</option>'].concat(
             Array.from(new Set(values.filter(Boolean)))
@@ -1300,17 +1313,17 @@
               })
           ).join('');
         };
-        const recRows = infoRows;
-        const vistaRows = recRows.filter(function (row) {
-          if (state.selectedRecamarasFilter && String(row && row.recamaras || '').trim() !== String(state.selectedRecamarasFilter || '').trim()) return false;
-          return true;
-        });
-        const asignacionRows = vistaRows.filter(function (row) {
-          if (state.selectedVistaFilter && String(row && row.vista || '').trim() !== String(state.selectedVistaFilter || '').trim()) return false;
-          return true;
-        });
+        const recRows = filterRows({ recamaras: '' });
+        const vistaRows = filterRows({ vista: '' });
+        const asignacionRows = filterRows({ asignacion: '' });
         if (els.filterRecamarasSelect) {
           els.filterRecamarasSelect.innerHTML = buildBedroomOptions(recRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
+          if (state.selectedRecamarasFilter && !recRows.some(function (row) {
+            return String(row && row.recamaras || '').trim() === String(state.selectedRecamarasFilter || '').trim();
+          })) {
+            state.selectedRecamarasFilter = '';
+            didResetFilter = true;
+          }
           els.filterRecamarasSelect.value = String(state.selectedRecamarasFilter || '');
         }
         if (els.filterVistaSelect) {

@@ -177,7 +177,8 @@
         isGerente: false,
         weekStart: null,
         inlineDraftKey: "",
-        inlineDraftTitle: ""
+        inlineDraftTitle: "",
+        autoRefreshTimer: null
       };
 
       const bookingDate = document.getElementById("bookingDate");
@@ -279,6 +280,12 @@
       function updateMeta(updatedAt) {
         metaUser.textContent = `Usuario: ${state.currentName || state.currentEmail || "-"}`;
         metaUpdated.textContent = `Actualizado: ${updatedAt ? new Date(updatedAt).toLocaleString("es-MX") : "-"}`;
+      }
+
+      function isEditingReservationForm() {
+        const activeTag = String(document.activeElement && document.activeElement.tagName || "").toUpperCase();
+        const isTyping = activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT";
+        return isTyping || !!state.inlineDraftKey;
       }
 
       function getRowsForSlot(dateStr, hour) {
@@ -564,7 +571,9 @@
         schedule.appendChild(table);
       }
 
-      async function loadRows() {
+      async function loadRows(options) {
+        const silent = Boolean(options && options.silent);
+        if (silent && isEditingReservationForm()) return;
         const weekStart = state.weekStart || getMonday(parseIsoDate(bookingDate.value) || new Date());
         const from = isoDate(weekStart);
         const to = isoDate(addDays(weekStart, 6));
@@ -584,6 +593,13 @@
         updateMeta(data.updatedAt);
         renderSchedule();
         refreshHourOptions(bookingHour.value);
+      }
+
+      function startAutoRefresh() {
+        if (state.autoRefreshTimer) window.clearInterval(state.autoRefreshTimer);
+        state.autoRefreshTimer = window.setInterval(() => {
+          loadRows({ silent: true }).catch(() => {});
+        }, 60000);
       }
 
       async function saveReservation() {
@@ -632,6 +648,7 @@
 
       refreshHourOptions(bookingHour.value);
       loadRows();
+      startAutoRefresh();
     })();
   </script>
 </body>
