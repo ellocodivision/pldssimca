@@ -1102,9 +1102,11 @@
       }
 
       function getAssignableWhisperlistRows() {
-        const rows = getUserEditableWhisperlistRows();
+        const rows = state.isGerente
+          ? (state.whisperlistRows || []).filter(function (row) { return !!row; })
+          : getUserEditableWhisperlistRows();
         const currentEmail = String(state.currentEmail || '').trim().toLowerCase();
-        if (!currentEmail) return rows;
+        if (state.isGerente || !currentEmail) return rows;
         return rows.filter(function (row) {
           return String(row && row.correo || '').trim().toLowerCase() === currentEmail;
         });
