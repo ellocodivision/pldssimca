@@ -14,6 +14,8 @@
       --accent:#f3df2b;
       --ok:#1f8d3c;
       --warn:#c23a2b;
+      --today-col:#fff6c8;
+      --today-col-strong:#f6e78a;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
@@ -36,13 +38,16 @@
     .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#ece7da;font-size:12px;font-weight:700}
     .meta{display:flex;gap:8px;flex-wrap:wrap}
     .schedule-wrap{margin-top:8px;overflow-x:auto;overflow-y:hidden}
-    .schedule-table{width:100%;min-width:1580px;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    .schedule-table{width:100%;min-width:2250px;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
     .schedule-table th,.schedule-table td{border:1px solid #ebe4d6;vertical-align:top}
     .schedule-table th{background:#faf7f0;padding:10px 12px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#5e5649}
     .schedule-table th.day-head{background:#f3eee3;text-align:center;font-size:11px}
     .schedule-table th.room-head{font-size:10px;padding:8px 6px;text-align:center}
+    .schedule-table th.today-head{background:var(--today-col-strong)}
+    .schedule-table th.today-subhead{background:#f9edaa}
     .schedule-table th.day-end,
     .schedule-table td.day-end{border-right:3px solid #cdbfa8}
+    .schedule-table td.today-col{background:var(--today-col)}
     .time-col{width:90px;background:#faf7f0;padding:8px 10px;font-weight:700;font-size:13px;white-space:nowrap}
     .slot{width:105px;padding:0;min-height:44px;background:#fff}
     .slot.empty{background:#fff}
@@ -65,7 +70,7 @@
     .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     @media (max-width:980px){
       .grid{grid-template-columns:1fr}
-      .schedule-table{min-width:1380px}
+      .schedule-table{min-width:1980px}
     }
   </style>
 </head>
@@ -102,6 +107,7 @@
             <select id="bookingRoom" class="cell-input">
               <option value="sala-grande">Sala grande</option>
               <option value="sala-chica">Sala chica</option>
+              <option value="reserva-sin-oficina">Reserva sin oficina</option>
             </select>
           </div>
           <div>
@@ -127,6 +133,7 @@
             <span class="legend">
               <span>Sala grande</span>
               <span>Sala chica</span>
+              <span>Reserva sin oficina</span>
             </span>
           </div>
           <div class="row">
@@ -147,8 +154,10 @@
     (function () {
       const ROOM_LABELS = {
         "sala-grande": "Sala grande",
-        "sala-chica": "Sala chica"
+        "sala-chica": "Sala chica",
+        "reserva-sin-oficina": "Reserva sin oficina"
       };
+      const ROOM_ORDER = ["sala-grande", "sala-chica", "reserva-sin-oficina"];
       const HOURS = [
         "10:00", "10:30",
         "11:00", "11:30",
@@ -383,6 +392,7 @@
         const weekStart = state.weekStart || getMonday(parseIsoDate(bookingDate.value) || new Date());
         weekLabel.textContent = `Semana: ${formatWeekRange(weekStart)}`;
         const days = Array.from({ length: 7 }, (_, idx) => addDays(weekStart, idx));
+        const todayStr = isoDate(new Date());
 
         const table = document.createElement("table");
         table.className = "schedule-table";
@@ -391,10 +401,21 @@
         thead.innerHTML = `
           <tr>
             <th rowspan="2">Hora</th>
-            ${days.map((day) => `<th class="day-head day-end" colspan="2">${formatDay(day)}</th>`).join("")}
+            ${days.map((day) => {
+              const dayStr = isoDate(day);
+              const todayClass = dayStr === todayStr ? " today-head" : "";
+              return `<th class="day-head${todayClass} day-end" colspan="3">${formatDay(day)}</th>`;
+            }).join("")}
           </tr>
           <tr>
-            ${days.map(() => `<th class="room-head">${ROOM_LABELS["sala-grande"]}</th><th class="room-head day-end">${ROOM_LABELS["sala-chica"]}</th>`).join("")}
+            ${days.map((day) => {
+              const dayStr = isoDate(day);
+              const todayClass = dayStr === todayStr ? " today-subhead" : "";
+              return ROOM_ORDER.map((roomId, roomIndex) => {
+                const endClass = roomIndex === ROOM_ORDER.length - 1 ? " day-end" : "";
+                return `<th class="room-head${todayClass}${endClass}">${ROOM_LABELS[roomId]}</th>`;
+              }).join("");
+            }).join("")}
           </tr>
         `;
         table.appendChild(thead);
@@ -403,10 +424,10 @@
         const skip = {};
         days.forEach((day) => {
           const key = isoDate(day);
-          skip[key] = {
-            "sala-grande": new Set(),
-            "sala-chica": new Set()
-          };
+          skip[key] = ROOM_ORDER.reduce((acc, roomId) => {
+            acc[roomId] = new Set();
+            return acc;
+          }, {});
         });
 
         HOURS.forEach((hour, index) => {
@@ -419,14 +440,16 @@
 
           days.forEach((day) => {
             const dateStr = isoDate(day);
-            ["sala-grande", "sala-chica"].forEach((roomId) => {
+            const isTodayCol = dateStr === todayStr;
+            ROOM_ORDER.forEach((roomId, roomIndex) => {
               if (skip[dateStr][roomId].has(hour)) return;
-              const dayEndClass = roomId === "sala-chica" ? " day-end" : "";
+              const dayEndClass = roomIndex === ROOM_ORDER.length - 1 ? " day-end" : "";
+              const todayColClass = isTodayCol ? " today-col" : "";
               const reservation = state.rows.find((row) => row.date === dateStr && row.room === roomId && row.hour === hour);
               if (reservation) {
                 const rowSpan = index < HOURS.length - 1 ? 2 : 1;
                 const td = document.createElement("td");
-                td.className = `slot reserved${dayEndClass}`;
+                td.className = `slot reserved${todayColClass}${dayEndClass}`;
                 td.rowSpan = rowSpan;
                 const card = document.createElement("div");
                 card.className = "reservation";
@@ -465,7 +488,7 @@
                   reservationTouchesSlot(row.hour, hour)
                 ));
                 const td = document.createElement("td");
-                td.className = `slot${coveredByPrevious ? " continues" : " empty"}${dayEndClass}`;
+                td.className = `slot${coveredByPrevious ? " continues" : " empty"}${todayColClass}${dayEndClass}`;
                 if (!coveredByPrevious && canStartReservation(dateStr, roomId, hour)) {
                   td.classList.add("available");
                   const inlineKey = makeInlineKey(dateStr, roomId, hour);

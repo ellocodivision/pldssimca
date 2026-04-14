@@ -2443,7 +2443,7 @@ async function whisperlistAllowedEmails() {
   return emails;
 }
 
-const VICEROY_ROOM_OPTIONS = new Set(['sala-grande', 'sala-chica']);
+const VICEROY_ROOM_OPTIONS = new Set(['sala-grande', 'sala-chica', 'reserva-sin-oficina']);
 const VICEROY_ROOM_HOURS = new Set([
   '10:00', '10:30',
   '11:00', '11:30',
