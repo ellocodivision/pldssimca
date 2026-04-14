@@ -1250,6 +1250,7 @@
 
       function renderZoneAttributeFilters() {
         const infoRows = [];
+        let didResetFilter = false;
         state.floors.forEach(function (floor) {
           (Array.isArray(floor && floor.zones) ? floor.zones : []).forEach(function (zone) {
             infoRows.push(resolveZoneInfo(zone));
@@ -1277,18 +1278,40 @@
               })
           ).join('');
         };
+        const recRows = infoRows;
+        const vistaRows = recRows.filter(function (row) {
+          if (state.selectedRecamarasFilter && String(row && row.recamaras || '').trim() !== String(state.selectedRecamarasFilter || '').trim()) return false;
+          return true;
+        });
+        const asignacionRows = vistaRows.filter(function (row) {
+          if (state.selectedVistaFilter && String(row && row.vista || '').trim() !== String(state.selectedVistaFilter || '').trim()) return false;
+          return true;
+        });
         if (els.filterRecamarasSelect) {
-          els.filterRecamarasSelect.innerHTML = buildBedroomOptions(infoRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
+          els.filterRecamarasSelect.innerHTML = buildBedroomOptions(recRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
           els.filterRecamarasSelect.value = String(state.selectedRecamarasFilter || '');
         }
         if (els.filterVistaSelect) {
-          els.filterVistaSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.vista || ''; }), 'Todas');
+          els.filterVistaSelect.innerHTML = buildOptions(vistaRows.map(function (row) { return row.vista || ''; }), 'Todas');
+          if (state.selectedVistaFilter && !vistaRows.some(function (row) {
+            return String(row && row.vista || '').trim() === String(state.selectedVistaFilter || '').trim();
+          })) {
+            state.selectedVistaFilter = '';
+            didResetFilter = true;
+          }
           els.filterVistaSelect.value = String(state.selectedVistaFilter || '');
         }
         if (els.filterAsignacionSelect) {
-          els.filterAsignacionSelect.innerHTML = buildOptions(infoRows.map(function (row) { return row.asignacion || ''; }), 'Todas');
+          els.filterAsignacionSelect.innerHTML = buildOptions(asignacionRows.map(function (row) { return row.asignacion || ''; }), 'Todas');
+          if (state.selectedAsignacionFilter && !asignacionRows.some(function (row) {
+            return String(row && row.asignacion || '').trim() === String(state.selectedAsignacionFilter || '').trim();
+          })) {
+            state.selectedAsignacionFilter = '';
+            didResetFilter = true;
+          }
           els.filterAsignacionSelect.value = String(state.selectedAsignacionFilter || '');
         }
+        if (didResetFilter) persistRouteState();
       }
 
       function isUnitAssignedToCurrentUser(info) {
