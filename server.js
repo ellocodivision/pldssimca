@@ -590,6 +590,7 @@ function defaultViceroyPilotoConfig() {
       overlayX: 18,
       overlayY: 18,
       overlayWidth: 360,
+      overlayImageUrl: '',
       overlayBg: 'rgba(255,255,255,0.88)',
       overlayBorder: '#cdd2c6',
       tableHeaderBg: '#ecece4',
@@ -631,6 +632,11 @@ function normalizeViceroyPresentationLayout(raw) {
     if (!txt) return fallback;
     return txt.slice(0, maxLen);
   };
+  const toImageRef = (value, fallback = '') => {
+    const txt = String(value || '').trim();
+    if (!txt) return fallback;
+    return txt.slice(0, 5_000_000);
+  };
   const toAlign = (value, fallback = 'left') => {
     const txt = String(value || '').trim().toLowerCase();
     if (txt === 'left' || txt === 'center' || txt === 'right') return txt;
@@ -642,6 +648,7 @@ function normalizeViceroyPresentationLayout(raw) {
     overlayX: toNum(source.overlayX, 18, 0, 5000),
     overlayY: toNum(source.overlayY, 18, 0, 5000),
     overlayWidth: toNum(source.overlayWidth, 360, 220, 1800),
+    overlayImageUrl: toImageRef(source.overlayImageUrl, ''),
     overlayBg: toColor(source.overlayBg, 'rgba(255,255,255,0.88)'),
     overlayBorder: toColor(source.overlayBorder, '#cdd2c6'),
     tableHeaderBg: toColor(source.tableHeaderBg, '#ecece4'),

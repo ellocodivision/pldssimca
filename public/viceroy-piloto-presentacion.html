@@ -259,6 +259,23 @@
       overflow: visible;
       background: transparent;
     }
+    .overlay-header-image {
+      margin-bottom: 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.04);
+    }
+    .overlay-header-image.hidden {
+      display: none !important;
+    }
+    .overlay-header-image img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 220px;
+      object-fit: contain;
+      background: #fff;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -541,6 +558,9 @@
           <div class="stage">
             <div class="map-info-overlay">
               <div id="activeFilterChips" class="hidden"></div>
+              <div id="overlayHeaderImage" class="overlay-header-image hidden">
+                <img id="overlayHeaderImageTag" alt="Imagen lateral">
+              </div>
               <div class="table-wrap">
                 <table>
                   <thead>
@@ -684,6 +704,8 @@
         filterAsignacionSelect: document.getElementById('filterAsignacionSelect'),
         refreshViewBtn: document.getElementById('refreshViewBtn'),
         unitsTableBody: document.getElementById('unitsTableBody'),
+        overlayHeaderImage: document.getElementById('overlayHeaderImage'),
+        overlayHeaderImageTag: document.getElementById('overlayHeaderImageTag'),
         floorTabs: document.getElementById('floorTabs'),
         baseImage: document.getElementById('baseImage'),
         overlay: document.getElementById('overlay'),
@@ -911,6 +933,14 @@
         root.style.setProperty('--col-w-3', String(Number(layout.colWVista || 20)) + '%');
         root.style.setProperty('--col-w-4', String(Number(layout.colWM2 || 12)) + '%');
         root.style.setProperty('--col-w-5', String(Number(layout.colWPrecio || 32)) + '%');
+        const overlayImageUrl = String(layout.overlayImageUrl || '').trim();
+        if (overlayImageUrl) {
+          els.overlayHeaderImageTag.src = overlayImageUrl;
+          els.overlayHeaderImage.classList.remove('hidden');
+        } else {
+          els.overlayHeaderImageTag.removeAttribute('src');
+          els.overlayHeaderImage.classList.add('hidden');
+        }
       }
 
       function buildUnitIndex() {
@@ -1548,7 +1578,7 @@
           if (!info.hasInventoryMatch) {
             const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
             const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
-            return '<polygon points="' + polygon + '" fill="#0f1014" fill-opacity="0.75" stroke="#0f1014" stroke-width="2" style="cursor:not-allowed"></polygon>' +
+            return '<polygon points="' + polygon + '" fill="#000000" fill-opacity="0.96" stroke="#000000" stroke-width="2" style="cursor:not-allowed"></polygon>' +
               '<text x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#ffffff" style="pointer-events:none">' + esc(info.unidad || '') + '</text>';
           }
 

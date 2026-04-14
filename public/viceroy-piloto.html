@@ -65,6 +65,7 @@
     h2 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
     .help { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.35; }
     .status { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 16px; }
+    .status.compact { margin-top: 6px; min-height: 14px; }
     .row { display: grid; gap: 8px; margin-top: 8px; }
     .row.two { grid-template-columns: 1fr 1fr; }
     .row.three { grid-template-columns: 1fr 1fr 1fr; }
@@ -117,6 +118,23 @@
       touch-action: none;
     }
     .brand { line-height: 1; margin-bottom: 8px; }
+    .overlay-image-wrap {
+      margin-bottom: 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.04);
+    }
+    .overlay-image-wrap.hidden {
+      display: none !important;
+    }
+    .overlay-image-wrap img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 220px;
+      object-fit: contain;
+      background: #fff;
+    }
     .brand .a { font-size: 36px; letter-spacing: .08em; }
     .brand .b { font-size: 17px; letter-spacing: .08em; margin-top: 4px; }
     .brand .c { font-size: 27px; margin-top: 6px; }
@@ -182,7 +200,24 @@
             <select id="mappedJsonSelect"></select>
           </label>
         </div>
+        <div class="row two">
+          <button id="uploadJsonBtn" type="button">Cargar JSON</button>
+          <input id="uploadJsonInput" type="file" accept=".json" class="hidden">
+          <button id="clearJsonBtn" type="button">Quitar selección</button>
+        </div>
+        <p id="jsonStatus" class="status compact"></p>
         <p id="dataStatus" class="status"></p>
+      </div>
+
+      <div class="section">
+        <h2>Imagen Izquierda</h2>
+        <p class="help">Se muestra arriba de la tabla tanto aquí como en la presentación.</p>
+        <div class="row two">
+          <button id="uploadOverlayImageBtn" type="button">Cargar imagen</button>
+          <input id="uploadOverlayImageInput" type="file" accept="image/*" class="hidden">
+          <button id="clearOverlayImageBtn" type="button">Quitar imagen</button>
+        </div>
+        <p id="overlayImageStatus" class="status compact"></p>
       </div>
 
       <div class="section">
@@ -266,6 +301,9 @@
       <div class="stage" id="stage">
         <img id="baseImage" alt="Plano preview">
         <div id="overlayBox" class="overlay-box">
+          <div id="overlayImageWrap" class="overlay-image-wrap hidden">
+            <img id="overlayImagePreview" alt="Imagen lateral">
+          </div>
           <div id="brandBlock" class="brand">
             <div class="a">VICEROY</div>
             <div class="b">RESIDENCES</div>
@@ -395,9 +433,12 @@
         reloadBtn: document.getElementById('reloadBtn'),
         dataStatus: document.getElementById('dataStatus'),
         saveStatus: document.getElementById('saveStatus'),
+        jsonStatus: document.getElementById('jsonStatus'),
         stage: document.getElementById('stage'),
         baseImage: document.getElementById('baseImage'),
         overlayBox: document.getElementById('overlayBox'),
+        overlayImageWrap: document.getElementById('overlayImageWrap'),
+        overlayImagePreview: document.getElementById('overlayImagePreview'),
         brandBlock: document.getElementById('brandBlock'),
         levelBlock: document.getElementById('levelBlock'),
         sampleRows: document.getElementById('sampleRows'),
@@ -420,8 +461,41 @@
         colWVista: document.getElementById('colWVista'),
         colWM2: document.getElementById('colWM2'),
         colWPrecio: document.getElementById('colWPrecio'),
+        uploadJsonBtn: document.getElementById('uploadJsonBtn'),
+        uploadJsonInput: document.getElementById('uploadJsonInput'),
+        clearJsonBtn: document.getElementById('clearJsonBtn'),
+        uploadOverlayImageBtn: document.getElementById('uploadOverlayImageBtn'),
+        uploadOverlayImageInput: document.getElementById('uploadOverlayImageInput'),
+        clearOverlayImageBtn: document.getElementById('clearOverlayImageBtn'),
+        overlayImageStatus: document.getElementById('overlayImageStatus'),
         saveBtn: document.getElementById('saveBtn')
       };
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function readFileAsText(file) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function () { resolve(String(reader.result || '')); };
+          reader.onerror = function () { reject(new Error('No se pudo leer el archivo')); };
+          reader.readAsText(file);
+        });
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function () { resolve(String(reader.result || '')); };
+          reader.onerror = function () { reject(new Error('No se pudo leer la imagen')); };
+          reader.readAsDataURL(file);
+        });
+      }
 
       function setSelectValue(selectEl, value) {
         if (!selectEl) return;
@@ -532,6 +606,21 @@
         els.colWVista.value = Number(p.colWVista || 20);
         els.colWM2.value = Number(p.colWM2 || 12);
         els.colWPrecio.value = Number(p.colWPrecio || 32);
+        renderOverlayImage();
+      }
+
+      function renderOverlayImage() {
+        const p = ensureLayout();
+        const imageUrl = String(p.overlayImageUrl || '').trim();
+        if (!imageUrl) {
+          els.overlayImageWrap.classList.add('hidden');
+          els.overlayImagePreview.removeAttribute('src');
+          els.overlayImageStatus.textContent = 'Sin imagen cargada.';
+          return;
+        }
+        els.overlayImagePreview.src = imageUrl;
+        els.overlayImageWrap.classList.remove('hidden');
+        els.overlayImageStatus.textContent = 'Imagen lateral cargada.';
       }
 
       function applyLayoutToPreview() {
@@ -559,6 +648,7 @@
         document.documentElement.style.setProperty('--col-w-3', String(Number(p.colWVista || 20)) + '%');
         document.documentElement.style.setProperty('--col-w-4', String(Number(p.colWM2 || 12)) + '%');
         document.documentElement.style.setProperty('--col-w-5', String(Number(p.colWPrecio || 32)) + '%');
+        renderOverlayImage();
       }
 
       function syncLayoutFromControls() {
@@ -613,6 +703,37 @@
         } catch {
           els.mappedJsonSelect.innerHTML = '<option value="">Ultimo JSON detectado</option>';
         }
+      }
+
+      async function uploadMappedJson(file) {
+        if (!file) return;
+        els.jsonStatus.textContent = 'Subiendo JSON...';
+        const rawText = await readFileAsText(file);
+        let payload;
+        try {
+          payload = JSON.parse(rawText);
+        } catch {
+          throw new Error('El archivo JSON no es válido');
+        }
+        const res = await fetch('/api/plano-ventas/save-json?dev=viceroy-piloto', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            payload: payload
+          })
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || 'No se pudo guardar el JSON');
+        state.config.selectedFloorJsonName = String(data.fileName || file.name || '').trim();
+        await persistSelectedMappedJson();
+        await loadMappedJsonOptions();
+        if (els.mappedJsonSelect) {
+          els.mappedJsonSelect.value = state.config.selectedFloorJsonName;
+        }
+        await loadAll();
+        els.jsonStatus.textContent = 'JSON cargado: ' + String(state.config.selectedFloorJsonName || '');
       }
 
       function renderImage() {
@@ -753,6 +874,63 @@
           } catch (err) {
             els.dataStatus.textContent = err && err.message ? err.message : 'Error de carga';
           }
+        });
+      }
+
+      if (els.uploadJsonBtn && els.uploadJsonInput) {
+        els.uploadJsonBtn.addEventListener('click', function () {
+          els.uploadJsonInput.click();
+        });
+        els.uploadJsonInput.addEventListener('change', async function () {
+          const file = els.uploadJsonInput.files && els.uploadJsonInput.files[0];
+          els.uploadJsonInput.value = '';
+          if (!file) return;
+          try {
+            await uploadMappedJson(file);
+          } catch (err) {
+            els.jsonStatus.textContent = err && err.message ? err.message : 'No se pudo cargar el JSON';
+          }
+        });
+      }
+
+      if (els.clearJsonBtn) {
+        els.clearJsonBtn.addEventListener('click', async function () {
+          state.config.selectedFloorJsonName = '';
+          if (els.mappedJsonSelect) els.mappedJsonSelect.value = '';
+          try {
+            await persistSelectedMappedJson();
+            await loadAll();
+            els.jsonStatus.textContent = 'Se quitó la selección manual de JSON.';
+          } catch (err) {
+            els.jsonStatus.textContent = err && err.message ? err.message : 'No se pudo limpiar la selección';
+          }
+        });
+      }
+
+      if (els.uploadOverlayImageBtn && els.uploadOverlayImageInput) {
+        els.uploadOverlayImageBtn.addEventListener('click', function () {
+          els.uploadOverlayImageInput.click();
+        });
+        els.uploadOverlayImageInput.addEventListener('change', async function () {
+          const file = els.uploadOverlayImageInput.files && els.uploadOverlayImageInput.files[0];
+          els.uploadOverlayImageInput.value = '';
+          if (!file) return;
+          try {
+            const imageUrl = await readFileAsDataUrl(file);
+            ensureLayout().overlayImageUrl = imageUrl;
+            renderOverlayImage();
+            els.overlayImageStatus.textContent = 'Imagen lista. Falta guardar layout.';
+          } catch (err) {
+            els.overlayImageStatus.textContent = err && err.message ? err.message : 'No se pudo cargar la imagen';
+          }
+        });
+      }
+
+      if (els.clearOverlayImageBtn) {
+        els.clearOverlayImageBtn.addEventListener('click', function () {
+          ensureLayout().overlayImageUrl = '';
+          renderOverlayImage();
+          els.overlayImageStatus.textContent = 'Imagen quitada. Falta guardar layout.';
         });
       }
 
