@@ -1869,6 +1869,12 @@
       async function refreshCurrentView(options) {
         const silent = Boolean(options && options.silent);
         const keepStatus = Boolean(options && options.keepStatus);
+        const activeTag = String(document.activeElement && document.activeElement.tagName || '').toUpperCase();
+        const isEditingField = activeTag === 'INPUT' || activeTag === 'SELECT' || activeTag === 'TEXTAREA';
+        const assignmentOpen = els.unitAssignmentBox && !els.unitAssignmentBox.classList.contains('hidden');
+        if (silent && (assignmentOpen || isEditingField)) {
+          return;
+        }
         if (!silent && els.homeStatus) els.homeStatus.textContent = 'Actualizando...';
         hideAssignmentBox();
         await load();
