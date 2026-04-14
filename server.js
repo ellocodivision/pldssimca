@@ -4142,7 +4142,7 @@ app.use('/api/presentaciones', requireInternalUser);
 app.use('/viceroy', requireAuth);
 app.use('/viceroy/reservas', requireAuth);
 app.use('/api/viceroy/reservas', requireAuth);
-app.use('/viceroy/inicio', requireGerente);
+app.use('/viceroy/inicio', requireAuth);
 app.use('/viceroy-piloto', requireGerente);
 app.use('/api/viceroy-piloto', (req, res, next) => {
   return requireGerente(req, res, next);
@@ -5773,12 +5773,12 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Edición Viceroy Inventario</h2>
           <p class="desc">Flujo visual de tipologías e inventario por piso.</p>
         </a>` : '';
-  const inicioCard = showMartinCards ? `
+  const inicioCard = `
         <a class="card" href="/viceroy/inicio">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy Inicio</h2>
           <p class="desc">Acceso al módulo de presentación comercial.</p>
-        </a>` : '';
+        </a>`;
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
