@@ -440,6 +440,7 @@
       display: flex;
       gap: 8px;
       margin-top: 10px;
+      flex-wrap: wrap;
     }
     .assign-status {
       min-height: 18px;
@@ -626,6 +627,7 @@
                 <div class="assign-actions">
                   <button id="assignPlanBtn" class="btn hidden" type="button">Ver plano</button>
                   <button id="assignSaveBtn" class="btn primary" type="button">Guardar</button>
+                  <button id="assignDeleteBtn" class="btn" type="button">Borrar</button>
                   <button id="assignCloseBtn" class="btn" type="button">Cerrar</button>
                 </div>
                 <p id="assignStatus" class="assign-status"></p>
@@ -722,6 +724,7 @@
         assignOptionSelect: document.getElementById('assignOptionSelect'),
         assignPlanBtn: document.getElementById('assignPlanBtn'),
         assignSaveBtn: document.getElementById('assignSaveBtn'),
+        assignDeleteBtn: document.getElementById('assignDeleteBtn'),
         assignCloseBtn: document.getElementById('assignCloseBtn'),
         assignStatus: document.getElementById('assignStatus'),
         unitHoverTooltip: document.getElementById('unitHoverTooltip'),
@@ -1270,6 +1273,21 @@
         els.assignClientSelect.innerHTML = options.join('');
       }
 
+      function syncAssignmentOptionFromSelectedClient() {
+        const unitInfo = state.selectedUnitInfo;
+        const rowId = String(els.assignClientSelect && els.assignClientSelect.value || '').trim();
+        const targetRow = getAssignableWhisperlistRows().find(function (row) {
+          return String(row && row.id || '') === rowId;
+        }) || null;
+        if (!unitInfo || !unitInfo.unidad || !targetRow || !els.assignOptionSelect) return;
+        const kpi = targetRow.kpi && typeof targetRow.kpi === 'object' ? targetRow.kpi : {};
+        const unit = unitKey(unitInfo.unidad);
+        if (unit && unitKey(kpi.opcionA) === unit) els.assignOptionSelect.value = 'opcionA';
+        else if (unit && unitKey(kpi.opcionB) === unit) els.assignOptionSelect.value = 'opcionB';
+        else if (unit && unitKey(kpi.opcionC) === unit) els.assignOptionSelect.value = 'opcionC';
+        else if (unit && unitKey(kpi.opcionD) === unit) els.assignOptionSelect.value = 'opcionD';
+      }
+
       function showAssignmentBox(info) {
         state.selectedUnitInfo = info || null;
         fillClientOptions();
@@ -1330,6 +1348,53 @@
           drawFloor();
         } catch (_) {
           els.assignStatus.textContent = 'Error al guardar. Revisa tu sesión.';
+        }
+      }
+
+      async function deleteUnitAssignment() {
+        const unitInfo = state.selectedUnitInfo;
+        const rowId = String(els.assignClientSelect.value || '').trim();
+        const optionKey = String(els.assignOptionSelect.value || '').trim();
+        if (!unitInfo || !unitInfo.unidad) {
+          els.assignStatus.textContent = 'Selecciona una unidad primero.';
+          return;
+        }
+        if (!rowId) {
+          els.assignStatus.textContent = 'Selecciona un cliente.';
+          return;
+        }
+        if (!/^opcion[ABCD]$/i.test(optionKey)) {
+          els.assignStatus.textContent = 'Selecciona una opción válida.';
+          return;
+        }
+        const targetRow = getAssignableWhisperlistRows().find(function (row) {
+          return String(row.id || '') === rowId;
+        });
+        if (!targetRow) {
+          els.assignStatus.textContent = 'No se encontró el cliente seleccionado.';
+          return;
+        }
+        els.assignStatus.textContent = 'Borrando...';
+        try {
+          const res = await fetch('/api/whisperlist/rows/' + encodeURIComponent(rowId) + '/kpi', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [optionKey]: '' })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            els.assignStatus.textContent = data.error || 'No se pudo borrar en Whisperlist.';
+            return;
+          }
+          const nextRow = data && data.row ? data.row : null;
+          state.whisperlistRows = state.whisperlistRows.map(function (row) {
+            return String(row.id || '') === rowId ? { ...row, ...(nextRow || {}), canEdit: row.canEdit } : row;
+          });
+          els.assignStatus.textContent = 'Asignación borrada de ' + optionKey.replace('opcion', 'Opción ') + '.';
+          drawFloor();
+        } catch (_) {
+          els.assignStatus.textContent = 'Error al borrar. Revisa tu sesión.';
         }
       }
 
@@ -1851,6 +1916,12 @@
         });
       }
 
+      if (els.assignClientSelect) {
+        els.assignClientSelect.addEventListener('change', function () {
+          syncAssignmentOptionFromSelectedClient();
+        });
+      }
+
       if (els.clearClientFilterBtn) {
         els.clearClientFilterBtn.addEventListener('click', function () {
           state.selectedAdvisorEmail = '';
@@ -1894,6 +1965,10 @@
 
       if (els.assignSaveBtn) {
         els.assignSaveBtn.addEventListener('click', saveUnitAssignment);
+      }
+
+      if (els.assignDeleteBtn) {
+        els.assignDeleteBtn.addEventListener('click', deleteUnitAssignment);
       }
 
       if (els.assignPlanBtn) {
