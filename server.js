@@ -353,6 +353,8 @@ function requireGerente(req, res, next) {
 }
 
 function requireViceroyPresentAccess(req, res, next) {
+  if (LOCAL_NO_AUTH) return next();
+  if (req.isAuthenticated && req.isAuthenticated()) return next();
   if (!VICEROY_PRESENT_TOKEN) return next();
   const token = String(req.query && req.query.token || '').trim();
   if (token && token === VICEROY_PRESENT_TOKEN) return next();
