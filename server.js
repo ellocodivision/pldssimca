@@ -3374,38 +3374,37 @@ function rowDataByIndex(row, index) {
   return value === undefined || value === null ? '' : value;
 }
 
-function parseViceroyRowsByFixedColumns(sheet) {
+function parseViceroyRowsByListaPreciosV0(sheet) {
   const out = [];
   const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
   if (!Array.isArray(matrix) || !matrix.length) return out;
 
   matrix.forEach((row) => {
-    const unidad = String(rowDataByIndex(row, 0) || '').trim(); // A
+    const unidad = String(rowDataByIndex(row, 1) || '').trim(); // B
     if (!unidad) return;
     const unitKey = normalizeHeaderKey(unidad);
     if (!unitKey) return;
-    if (['unidad', 'unit', 'departamento', 'depto', 'no'].includes(unitKey)) return;
+    if (['unidad', 'unit', 'departamento', 'depto', 'no', 'numero_de_unidad', 'numerodeunidad'].includes(unitKey)) return;
 
-    const planLink = normalizeViceroyPlanLink(rowDataByIndex(row, 1)); // B
-    const building = String(rowDataByIndex(row, 2) || '').trim(); // C
-    const tipologia = String(rowDataByIndex(row, 3) || '').trim(); // D
-    const vista = String(rowDataByIndex(row, 4) || '').trim(); // E
-    const m2 = rowDataByIndex(row, 14); // O
-    const recRaw = rowDataByIndex(row, 15); // P
-    const price = rowDataByIndex(row, 19); // T
+    const tipologia = String(rowDataByIndex(row, 2) || '').trim(); // C
+    const recRaw = rowDataByIndex(row, 3); // D
+    const den = String(rowDataByIndex(row, 4) || '').trim(); // E
+    const vista = String(rowDataByIndex(row, 12) || '').trim(); // M
+    const m2 = rowDataByIndex(row, 13); // N
 
     out.push({
       development: '',
       unidad,
-      planLink,
+      planLink: '',
       recamaras: normalizeViceroyRawBedroom(recRaw),
-      edificio: building,
+      edificio: '',
       tipologia,
+      den,
       vista,
       asignacion: '',
       m2: m2 === '' ? '' : m2,
       sqft: '',
-      price: price === '' ? '' : price,
+      price: '',
       status: 'disponible'
     });
   });
@@ -3443,14 +3442,14 @@ function parseViceroyInventoryFile(filePath) {
     const firstSheetName = workbook.SheetNames[0];
     const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
     if (!firstSheet) return [];
-    const headerRows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' })
-      .map((row) => normalizeViceroyInventoryRow(row))
-      .filter(Boolean);
-    const indexRows = parseViceroyRowsByFixedColumns(firstSheet);
-    return dedupeViceroyRows([...headerRows, ...indexRows]);
+    return dedupeViceroyRows(parseViceroyRowsByListaPreciosV0(firstSheet));
   }
 
   const workbook = XLSX.readFile(filePath);
+  const preferredSheetName = workbook.SheetNames.find((sheetName) => normalizeHeaderKey(sheetName) === normalizeHeaderKey('Lista de Precios V0'));
+  if (preferredSheetName && workbook.Sheets[preferredSheetName]) {
+    return dedupeViceroyRows(parseViceroyRowsByListaPreciosV0(workbook.Sheets[preferredSheetName]));
+  }
   const out = [];
   workbook.SheetNames.forEach((sheetName) => {
     const sheet = workbook.Sheets[sheetName];
@@ -3460,7 +3459,7 @@ function parseViceroyInventoryFile(filePath) {
       const normalized = normalizeViceroyInventoryRow(row);
       if (normalized) out.push(normalized);
     });
-    out.push(...parseViceroyRowsByFixedColumns(sheet));
+    out.push(...parseViceroyRowsByListaPreciosV0(sheet));
   });
   return dedupeViceroyRows(out);
 }
