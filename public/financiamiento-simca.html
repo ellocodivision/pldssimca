@@ -947,7 +947,7 @@
                   </div>
                   <div class="field">
                     <label for="startDateInput" id="labelStartDate">Fecha inicio</label>
-                    <input id="startDateInput" type="text" readonly>
+                    <input id="startDateInput" type="date">
                   </div>
                 </div>
                 <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -1134,7 +1134,7 @@
       term: 'Plazo',
       annualRate: 'Tasa anual',
       startDate: 'Fecha inicio',
-      minDownPayment: 'Enganche mínimo 30%',
+      minDownPayment: 'Enganche mínimo {pct}%',
       selectDevelopment: 'Selecciona desarrollo...',
       selectUnit: 'Selecciona unidad...',
       years3: '3 años',
@@ -1175,7 +1175,7 @@
       term: 'Term',
       annualRate: 'Annual rate',
       startDate: 'Start date',
-      minDownPayment: 'Minimum down payment 30%',
+      minDownPayment: 'Minimum down payment {pct}%',
       selectDevelopment: 'Select development...',
       selectUnit: 'Select unit...',
       years3: '3 years',
@@ -1212,15 +1212,8 @@
 
   const startDate = new Date();
   startDate.setDate(1);
-  startDateInput.value = formatDateLabel(startDate);
-
-  for (let pct = 30; pct <= 90; pct += 5) {
-    const option = document.createElement('option');
-    option.value = String(pct);
-    option.textContent = `${pct}%`;
-    if (pct === 30) option.selected = true;
-    downPaymentSelect.appendChild(option);
-  }
+  let selectedStartDate = new Date(startDate.getTime());
+  startDateInput.value = formatDateInputValue(selectedStartDate);
 
   function parseCsvLine(line) {
     const out = [];
@@ -1468,6 +1461,47 @@
     return `${dd}/${mm}/${yy}`;
   }
 
+  function formatDateInputValue(date) {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(date.getFullYear());
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function parseInputDate(value) {
+    const text = String(value || '').trim();
+    if (!text) return null;
+    const [yyyy, mm, dd] = text.split('-').map(Number);
+    if (!yyyy || !mm || !dd) return null;
+    const date = new Date(yyyy, mm - 1, dd);
+    date.setHours(0, 0, 0, 0);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function getMinimumDownPaymentPercent(development) {
+    const dev = normalizeText(development);
+    if (dev === 'COSTA CARIBE') return 40;
+    if (dev === 'GRAN TULUM') return 20;
+    return 30;
+  }
+
+  function updateDownPaymentOptions() {
+    const minPct = getMinimumDownPaymentPercent(developmentSelect.value);
+    const previousValue = Number(downPaymentSelect.value) || minPct;
+    const nextValue = Math.max(minPct, previousValue);
+    downPaymentSelect.innerHTML = '';
+    for (let pct = minPct; pct <= 90; pct += 5) {
+      const option = document.createElement('option');
+      option.value = String(pct);
+      option.textContent = `${pct}%`;
+      if (pct === nextValue) option.selected = true;
+      downPaymentSelect.appendChild(option);
+    }
+    if (minimumDownPaymentPill) {
+      minimumDownPaymentPill.textContent = translations[currentLang].minDownPayment.replace('{pct}', String(minPct));
+    }
+  }
+
   function addMonths(date, months) {
     const next = new Date(date.getTime());
     next.setMonth(next.getMonth() + months);
@@ -1494,7 +1528,7 @@
     if (labelTerm) labelTerm.textContent = t.term;
     if (labelRate) labelRate.textContent = t.annualRate;
     if (labelStartDate) labelStartDate.textContent = t.startDate;
-    if (minimumDownPaymentPill) minimumDownPaymentPill.textContent = t.minDownPayment;
+    updateDownPaymentOptions();
 
     if (!developmentSelect.value) {
       developmentSelect.innerHTML = `<option value="">${t.selectDevelopment}</option>`;
@@ -1579,7 +1613,7 @@
     const basePayment = monthlyPayment(financed, months, monthlyRate);
     const schedule = [{
       period: 1,
-      monthLabel: formatMonthLabel(startDate),
+      monthLabel: formatMonthLabel(selectedStartDate),
       disposition: financed,
       balloon: 0,
       interest: 0,
@@ -1609,7 +1643,7 @@
 
       schedule.push({
         period: monthIndex + 1,
-        monthLabel: formatMonthLabel(addMonths(startDate, monthIndex)),
+        monthLabel: formatMonthLabel(addMonths(selectedStartDate, monthIndex)),
         disposition: 0,
         balloon: actualBalloon,
         interest,
@@ -1736,6 +1770,7 @@
   function resetSelection() {
     balloonValues = {};
     unitSelect.value = '';
+    updateDownPaymentOptions();
     renderEmptyState();
   }
 
@@ -1765,6 +1800,7 @@
 
   developmentSelect.addEventListener('change', () => {
     balloonValues = {};
+    updateDownPaymentOptions();
     updateUnitOptions();
     resetSelection();
   });
@@ -1776,6 +1812,15 @@
 
   downPaymentSelect.addEventListener('change', rerender);
   termSelect.addEventListener('change', rerender);
+  startDateInput.addEventListener('change', () => {
+    const parsed = parseInputDate(startDateInput.value);
+    if (!parsed) {
+      startDateInput.value = formatDateInputValue(selectedStartDate);
+      return;
+    }
+    selectedStartDate = parsed;
+    rerender();
+  });
 
   tableWrap.addEventListener('input', (event) => {
     const input = event.target;
