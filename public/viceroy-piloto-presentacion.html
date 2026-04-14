@@ -894,6 +894,28 @@
         return getBucketMeta(bucketId).name;
       }
 
+      function getBedroomCompactLabel(raw) {
+        const bucketId = normalizeBedroom(raw);
+        if (!bucketId) return String(raw || '').trim();
+        const map = {
+          '1B': '1',
+          '1B+DEN': '1+1',
+          '2B': '2',
+          '2B+DEN': '2+1',
+          '3B': '3',
+          '3B+DEN': '3+1',
+          '4B': '4',
+          '4B+DEN': '4+1',
+          'PH2': '2PH',
+          'PH2+DEN': '2PH+1',
+          'PH3': '3PH',
+          'PH3+DEN': '3PH+1',
+          'PH4': '4PH',
+          'PH4+DEN': '4PH+1'
+        };
+        return map[bucketId] || bucketId;
+      }
+
       function parseMoneyLike(value) {
         if (value == null || value === '') return null;
         const txt = String(value).replace(/[^0-9.\-]/g, '');
@@ -1755,6 +1777,7 @@
           const m2 = Number.isFinite(m2Num)
             ? String(Math.round(m2Num))
             : (r.m2 == null || r.m2 === '' ? 'N/D' : String(r.m2));
+          const rec = getBedroomCompactLabel(r.recamaras || '');
           const vista = r.vista || 'N/D';
           const priceNum = parseMoneyLike(r.price);
           const price = Number.isFinite(priceNum)
@@ -1762,7 +1785,7 @@
             : (r.price == null || r.price === '' ? 'N/D' : String(r.price));
           return '<tr>' +
             '<td>' + esc(r.unidad || '') + '</td>' +
-            '<td>' + esc(r.recamaras || 'N/D') + '</td>' +
+            '<td>' + esc(rec || 'N/D') + '</td>' +
             '<td>' + esc(vista) + '</td>' +
             '<td>' + esc(m2) + '</td>' +
             '<td>' + esc(price) + '</td>' +
