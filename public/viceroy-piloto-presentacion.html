@@ -724,7 +724,22 @@
       }
 
       function unitKey(s) {
-        return String(s || '').trim().toUpperCase();
+        const raw = String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (!raw) return '';
+        const normalizedChars = raw
+          .replace(/^[IL]$/g, '1')
+          .replace(/(?<=\d)[IL](?=\d|$)/g, '1')
+          .replace(/(?<=^|0)[IL](?=\d)/g, '1');
+        if (/^\d+$/.test(normalizedChars)) {
+          const num = String(Number(normalizedChars));
+          return num === 'NaN' ? normalizedChars : num;
+        }
+        const match = normalizedChars.match(/^0*(\d+)([A-Z]+)?$/);
+        if (match) {
+          const num = String(Number(match[1]));
+          return (num === 'NaN' ? match[1] : num) + (match[2] || '');
+        }
+        return normalizedChars;
       }
 
       function boolFromParam(value) {
@@ -987,7 +1002,7 @@
         const asignacion = String((row && (row.asignacion || row.assignment || row.asesor || row.broker)) || zone.asesorAsignado || '').trim();
         const whisperAssignment = getWhisperAssignmentDetails(u);
         return {
-          unidad: u,
+          unidad: String((row && row.unidad) || u || '').trim(),
           tipologia: tipologia,
           tipKey: norm(tipologia),
           recamaras: rec,
