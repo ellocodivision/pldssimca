@@ -1083,7 +1083,10 @@
         const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
         if (!assignments.length) return '#41ac63';
         if (assignments.length === 1) return '#e2b93b';
-        return '#d96b53';
+        if (assignments.length === 2) return '#f0a53a';
+        if (assignments.length === 3) return '#ea7b3a';
+        if (assignments.length === 4) return '#df5a4a';
+        return '#c93b3b';
       }
 
       function getUserEditableWhisperlistRows() {
