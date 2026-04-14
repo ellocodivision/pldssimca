@@ -1283,9 +1283,21 @@
         return { value: null, isDemo: false };
       }
 
+      function getMappedUnitKeys() {
+        const keys = new Set();
+        state.floors.forEach(function (floor) {
+          (Array.isArray(floor && floor.zones) ? floor.zones : []).forEach(function (zone) {
+            const key = unitKey(zone && zone.label);
+            if (key) keys.add(key);
+          });
+        });
+        return keys;
+      }
+
       function getTipologiasByBedroom(bucketId) {
         const out = [];
         const seen = new Set();
+        const mappedUnitKeys = getMappedUnitKeys();
 
         state.config.tipologias.forEach(function (tip) {
           const rec = normalizeBedroom(tip.recamaras);
@@ -1302,8 +1314,10 @@
         });
 
         state.inventoryRows.forEach(function (row) {
+          const unit = unitKey(row && row.unidad);
           const rec = normalizeBedroom(row.recamaras);
           const id = String(row.tipologia || '').trim();
+          if (!unit || !mappedUnitKeys.has(unit)) return;
           if (!id || seen.has(norm(id))) return;
           if (!rec) return;
           if (bucketId && rec !== bucketId) return;
