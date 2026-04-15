@@ -6000,6 +6000,54 @@ app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
 });
 
+app.get('/viceroy/inicio/hoja-reserva', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'hoja-reserva-simca.html'));
+});
+
+app.post('/api/viceroy/hoja-reserva/render-pdf', requireAuth, async (req, res) => {
+  const html = typeof req.body?.html === 'string' ? req.body.html : '';
+  const rawPrefix = String(req.body?.fileNamePrefix || 'hoja-reserva-simca').trim();
+  const fileNamePrefix = rawPrefix.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').slice(0, 60) || 'hoja-reserva-simca';
+  if (!html || html.length < 100) {
+    return res.status(400).json({ error: 'HTML inválido para generar PDF.' });
+  }
+
+  try {
+    let pdfBuffer;
+    try {
+      const browser = await getSharedPdfBrowser();
+      pdfBuffer = await buildPdfBufferWithBrowser(browser, html, {
+        format: 'Letter',
+        margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' },
+        printBackground: true
+      });
+    } catch (firstErr) {
+      if (!isRetryablePdfError(firstErr)) throw firstErr;
+      try {
+        if (sharedPdfBrowser) await sharedPdfBrowser.close();
+      } catch {}
+      sharedPdfBrowser = null;
+      const retryBrowser = await getSharedPdfBrowser();
+      pdfBuffer = await buildPdfBufferWithBrowser(retryBrowser, html, {
+        format: 'Letter',
+        margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' },
+        printBackground: true
+      });
+    }
+
+    const fileName = `${fileNamePrefix}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    log(`Error en /api/viceroy/hoja-reserva/render-pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF de hoja de reserva',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.get('/viceroy/inicio/presentacion/pdf', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'maresol-ppt-sales-desktop.pdf'));
 });
