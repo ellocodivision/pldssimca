@@ -1932,12 +1932,14 @@
     const nextTableChrome = 12;
     const firstRowHeight = 21;
     const nextRowHeight = 22;
-    const firstAvailable = bodyHeight - bodyPadding - headerHeight - cardsBlockHeight - firstTableChrome;
-    const nextAvailable = bodyHeight - bodyPadding - 24 - nextTableChrome - 86;
+    const firstSafetyBuffer = firstRowHeight * 2;
+    const nextSafetyBuffer = nextRowHeight;
+    const firstAvailable = bodyHeight - bodyPadding - headerHeight - cardsBlockHeight - firstTableChrome - firstSafetyBuffer;
+    const nextAvailable = bodyHeight - bodyPadding - 24 - nextTableChrome - 86 - nextSafetyBuffer;
 
     return {
-      firstPageRows: clamp(Math.floor(firstAvailable / firstRowHeight), 5, 8),
-      nextPageRows: clamp(Math.floor(nextAvailable / nextRowHeight), 22, 31)
+      firstPageRows: clamp(Math.floor(firstAvailable / firstRowHeight), 4, 6),
+      nextPageRows: clamp(Math.floor(nextAvailable / nextRowHeight), 18, 28)
     };
   }
 
