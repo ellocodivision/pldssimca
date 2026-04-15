@@ -1011,15 +1011,30 @@
     'GRAN TULUM',
     'COSTA CARIBE',
     'MARILA',
-    'SINGULAR JOY'
+    'SINGULAR JOY',
+    'CRUZ CON MAR'
   ];
-  const ANNUAL_RATE = 0.09;
+  const DEVELOPMENT_RULES = {
+    'IPANA': { minDownPayment: 30, terms: [3, 5, 7] },
+    'SERENADA': { minDownPayment: 30, terms: [3, 5, 7] },
+    'MARILA': { minDownPayment: 30, terms: [3, 5, 7] },
+    'COSTA CARIBE': { minDownPayment: 40, terms: [3, 5, 7] },
+    'CRUZ CON MAR': { minDownPayment: 30, terms: [3, 5] },
+    'SINGULAR JOY': { minDownPayment: 30, terms: [3] },
+    'GRAN TULUM': { minDownPayment: 20, terms: [3, 5] }
+  };
+  const TERM_ANNUAL_RATES = {
+    3: 0.09,
+    5: 0.10,
+    7: 0.10
+  };
   const CURRENCY = 'USD';
 
   const developmentSelect = document.getElementById('developmentSelect');
   const unitSelect = document.getElementById('unitSelect');
   const downPaymentSelect = document.getElementById('downPaymentSelect');
   const termSelect = document.getElementById('termSelect');
+  const rateInput = document.getElementById('rateInput');
   const startDateInput = document.getElementById('startDateInput');
   const statusEl = document.getElementById('status');
   const summaryGrid = document.getElementById('summaryGrid');
@@ -1480,9 +1495,37 @@
 
   function getMinimumDownPaymentPercent(development) {
     const dev = normalizeText(development);
-    if (dev === 'COSTA CARIBE') return 40;
-    if (dev === 'GRAN TULUM') return 20;
-    return 30;
+    return (DEVELOPMENT_RULES[dev] && DEVELOPMENT_RULES[dev].minDownPayment) || 30;
+  }
+
+  function getAllowedTerms(development) {
+    const dev = normalizeText(development);
+    return (DEVELOPMENT_RULES[dev] && DEVELOPMENT_RULES[dev].terms) || [3, 5, 7];
+  }
+
+  function getAnnualRateForTerm(years) {
+    return TERM_ANNUAL_RATES[Number(years)] || 0.09;
+  }
+
+  function updateRateInput() {
+    if (!rateInput) return;
+    rateInput.value = formatPercent(getAnnualRateForTerm(termSelect.value) * 100);
+  }
+
+  function updateTermOptions() {
+    const t = translations[currentLang];
+    const allowedTerms = getAllowedTerms(developmentSelect.value);
+    const previousValue = Number(termSelect.value) || allowedTerms[0] || 3;
+    const nextValue = allowedTerms.includes(previousValue) ? previousValue : allowedTerms[0];
+    termSelect.innerHTML = '';
+    allowedTerms.forEach((years) => {
+      const option = document.createElement('option');
+      option.value = String(years);
+      option.textContent = years === 3 ? t.years3 : years === 5 ? t.years5 : t.years7;
+      if (years === nextValue) option.selected = true;
+      termSelect.appendChild(option);
+    });
+    updateRateInput();
   }
 
   function updateDownPaymentOptions() {
@@ -1500,6 +1543,7 @@
     if (minimumDownPaymentPill) {
       minimumDownPaymentPill.textContent = translations[currentLang].minDownPayment.replace('{pct}', String(minPct));
     }
+    updateRateInput();
   }
 
   function addMonths(date, months) {
@@ -1546,6 +1590,7 @@
     if (termOptions[1]) termOptions[1].textContent = t.years5;
     if (termOptions[2]) termOptions[2].textContent = t.years7;
 
+    updateTermOptions();
     rerender();
   }
 
@@ -1609,7 +1654,8 @@
     const downPayment = price * downPct;
     const financed = Math.max(0, price - downPayment);
     const months = years * 12;
-    const monthlyRate = ANNUAL_RATE / 12;
+    const annualRate = getAnnualRateForTerm(years);
+    const monthlyRate = annualRate / 12;
     const basePayment = monthlyPayment(financed, months, monthlyRate);
     const schedule = [{
       period: 1,
@@ -1662,6 +1708,7 @@
       basePayment,
       totalInterest,
       totalPayments,
+      annualRate,
       averageAnnualInterest: financed > 0 && years > 0 ? (totalInterest / (financed * years)) * 100 : 0,
       schedule
     };
@@ -1680,7 +1727,7 @@
 
     detailGrid.innerHTML = [
       [t.termMonths, String(data.months)],
-      [t.contractualAnnualRate, formatPercent(ANNUAL_RATE * 100)],
+      [t.contractualAnnualRate, formatPercent(data.annualRate * 100)],
       [t.totalInterest, formatMoney(data.totalInterest)],
       [t.totalPaid, formatMoney(data.totalPayments + data.downPayment)],
       [t.avgAnnualInterest, formatPercent(data.averageAnnualInterest)]
@@ -1792,7 +1839,7 @@
 
       rows = dataRows;
       updateDevelopmentOptions();
-      setStatus(`CSV maestro cargado. ${rows.length} unidades disponibles en los 6 desarrollos del módulo.`, false);
+      setStatus(`CSV maestro cargado. ${rows.length} unidades disponibles en los 7 desarrollos del módulo.`, false);
     } catch (error) {
       setStatus('No se pudo cargar el CSV maestro automáticamente.', true);
     }
@@ -1800,6 +1847,7 @@
 
   developmentSelect.addEventListener('change', () => {
     balloonValues = {};
+    updateTermOptions();
     updateDownPaymentOptions();
     updateUnitOptions();
     resetSelection();
@@ -1811,7 +1859,10 @@
   });
 
   downPaymentSelect.addEventListener('change', rerender);
-  termSelect.addEventListener('change', rerender);
+  termSelect.addEventListener('change', () => {
+    updateRateInput();
+    rerender();
+  });
   startDateInput.addEventListener('change', () => {
     const parsed = parseInputDate(startDateInput.value);
     if (!parsed) {
@@ -1941,7 +1992,7 @@
       [t.amountToFinance, formatMoney(data.financed), 'summary'],
       [t.monthlyBasePayment, formatMoney(data.basePayment), 'summary'],
       [t.termMonths, String(data.months), 'detail'],
-      [t.contractualAnnualRate, formatPercent(ANNUAL_RATE * 100), 'detail'],
+      [t.contractualAnnualRate, formatPercent(data.annualRate * 100), 'detail'],
       [t.totalInterest, formatMoney(data.totalInterest), 'detail'],
       [t.totalPaid, formatMoney(data.totalPayments + data.downPayment), 'detail'],
       [t.avgAnnualInterest, formatPercent(data.averageAnnualInterest), 'detail']
