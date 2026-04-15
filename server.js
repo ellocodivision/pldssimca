@@ -3924,6 +3924,12 @@ function renderSimcaHome(req, res, options) {
           <h2 class="name">Horarios Comerciales</h2>
           <p class="desc">Consulta la semana del equipo con rotación de Gran Tulum, guardias y turnos justos.</p>
         </a>`;
+  const hojaReservaCard = `
+        <a class="card" href="/hoja-reserva-simca">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Hoja de Reserva</h2>
+          <p class="desc">Captura los datos de reserva y descarga el PDF exacto con layout SIMCA.</p>
+        </a>`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -4045,6 +4051,7 @@ function renderSimcaHome(req, res, options) {
         </a>
         ${financiamientoCard}
         ${horariosCard}
+        ${hojaReservaCard}
         ${brokersCard}
         ${presentacionesCard}
         ${tablaPagosCard}
@@ -4169,6 +4176,7 @@ app.use('/financiamiento-simca', requireInternalUser);
 app.use('/horarios-simca', requireInternalUser);
 app.use('/api/horarios-simca', requireInternalUser);
 app.use('/tabla-pagos', requireInternalUser);
+app.use('/hoja-reserva-simca', requireInternalUser);
 app.use('/form', requireInternalUser);
 app.use('/form-nacional', requireInternalUser);
 app.use('/form-nacional-moral', requireInternalUser);
@@ -4181,6 +4189,7 @@ app.use('/submissions', requireInternalUser);
 app.use('/api/plds', requireInternalUser);
 app.use('/api/roi', requireInternalUser);
 app.use('/api/tabla-pagos', requireInternalUser);
+app.use('/api/hoja-reserva-simca', requireInternalUser);
 app.use('/brokers.simca.mx', requireGerente);
 app.use('/api/brokers-simca-mx', requireGerente);
 app.use('/presentaciones', requireInternalUser);
@@ -6000,11 +6009,11 @@ app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
 });
 
-app.get('/viceroy/inicio/hoja-reserva', (req, res) => {
+app.get('/hoja-reserva-simca', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'hoja-reserva-simca.html'));
 });
 
-app.post('/api/viceroy/hoja-reserva/render-pdf', requireAuth, async (req, res) => {
+app.post('/api/hoja-reserva-simca/render-pdf', async (req, res) => {
   const html = typeof req.body?.html === 'string' ? req.body.html : '';
   const rawPrefix = String(req.body?.fileNamePrefix || 'hoja-reserva-simca').trim();
   const fileNamePrefix = rawPrefix.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').slice(0, 60) || 'hoja-reserva-simca';
@@ -6040,7 +6049,7 @@ app.post('/api/viceroy/hoja-reserva/render-pdf', requireAuth, async (req, res) =
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     return res.send(pdfBuffer);
   } catch (err) {
-    log(`Error en /api/viceroy/hoja-reserva/render-pdf: ${err && err.stack ? err.stack : err}`);
+    log(`Error en /api/hoja-reserva-simca/render-pdf: ${err && err.stack ? err.stack : err}`);
     return res.status(500).json({
       error: 'No se pudo generar el PDF de hoja de reserva',
       details: err && err.message ? err.message : 'error desconocido'

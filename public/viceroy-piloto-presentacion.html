@@ -588,6 +588,7 @@
       <span class="label" id="floorsTopLabel">Plano interactivo</span>
       <div>
         <button id="backToTiposBtn" class="btn" type="button">Volver a tipologias</button>
+        <button id="exportFloorsBtn" class="btn" type="button">Exportar 7 niveles</button>
         <button id="refreshViewBtn" class="btn" type="button">Refresh</button>
         <button id="showAllOnMapBtn" class="btn primary" type="button">Ver todo el plano</button>
       </div>
@@ -603,30 +604,19 @@
               <div id="overlayHeaderImage" class="overlay-header-image hidden">
                 <img id="overlayHeaderImageTag" alt="Imagen lateral">
               </div>
-              <div class="client-filter-box">
-                <label for="advisorFilterSelect">Asesor</label>
-                <select id="advisorFilterSelect">
-                  <option value="">Todos los asesores</option>
+              <div class="zone-filter-box">
+                <label for="filterRecamarasSelect">Recámaras</label>
+                <select id="filterRecamarasSelect">
+                  <option value="">Todas</option>
                 </select>
-                <label for="clientFilterSelect">Cliente KPI</label>
-                <select id="clientFilterSelect">
-                  <option value="">Todos los clientes</option>
+                <label for="filterVistaSelect">Vista</label>
+                <select id="filterVistaSelect">
+                  <option value="">Todas</option>
                 </select>
-                <button id="clearClientFilterBtn" class="btn" type="button">Quitar filtro cliente</button>
-                <div class="zone-filter-box">
-                  <label for="filterRecamarasSelect">Recámaras</label>
-                  <select id="filterRecamarasSelect">
-                    <option value="">Todas</option>
-                  </select>
-                  <label for="filterVistaSelect">Vista</label>
-                  <select id="filterVistaSelect">
-                    <option value="">Todas</option>
-                  </select>
-                  <label for="filterAsignacionSelect">Asignación</label>
-                  <select id="filterAsignacionSelect">
-                    <option value="">Todas</option>
-                  </select>
-                </div>
+                <label for="filterAsignacionSelect">Asignación</label>
+                <select id="filterAsignacionSelect">
+                  <option value="">Todas</option>
+                </select>
               </div>
               <div class="table-wrap">
                 <table>
@@ -747,10 +737,8 @@
         tipoGrid: document.getElementById('tipoGrid'),
         tipoStatus: document.getElementById('tipoStatus'),
         floorsTopLabel: document.getElementById('floorsTopLabel'),
+        exportFloorsBtn: document.getElementById('exportFloorsBtn'),
         activeFilterChips: document.getElementById('activeFilterChips'),
-        advisorFilterSelect: document.getElementById('advisorFilterSelect'),
-        clientFilterSelect: document.getElementById('clientFilterSelect'),
-        clearClientFilterBtn: document.getElementById('clearClientFilterBtn'),
         filterRecamarasSelect: document.getElementById('filterRecamarasSelect'),
         filterVistaSelect: document.getElementById('filterVistaSelect'),
         filterAsignacionSelect: document.getElementById('filterAsignacionSelect'),
@@ -832,8 +820,8 @@
         state.activeFloorId = String(route.get('floor') || '').trim();
         state.showAllUnits = boolFromParam(route.get('all'));
         state.showAllOnMap = state.showAllUnits;
-        state.selectedAdvisorEmail = String(route.get('advisor') || '').trim().toLowerCase();
-        state.selectedWhisperRowId = String(route.get('client') || '').trim();
+        state.selectedAdvisorEmail = '';
+        state.selectedWhisperRowId = '';
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
         state.selectedAsignacionFilter = String(route.get('zone_assignment') || '').trim();
@@ -851,8 +839,8 @@
         setOrDelete('tipologia', state.selectedTipologia);
         setOrDelete('floor', state.activeFloorId);
         if (state.showAllUnits) route.set('all', '1'); else route.delete('all');
-        setOrDelete('advisor', state.selectedAdvisorEmail);
-        setOrDelete('client', state.selectedWhisperRowId);
+        route.delete('advisor');
+        route.delete('client');
         setOrDelete('zone_rec', state.selectedRecamarasFilter);
         route.delete('zone_building');
         setOrDelete('zone_view', state.selectedVistaFilter);
@@ -1180,6 +1168,110 @@
         return '#4a2c1d';
       }
 
+      function loadImageElement(src) {
+        return new Promise(function (resolve, reject) {
+          const img = new Image();
+          img.onload = function () { resolve(img); };
+          img.onerror = reject;
+          img.src = src;
+        });
+      }
+
+      async function exportPaintedFloorsImage() {
+        if (!state.floors.length) {
+          if (els.homeStatus) els.homeStatus.textContent = 'No hay pisos para exportar.';
+          return;
+        }
+        if (els.exportFloorsBtn) {
+          els.exportFloorsBtn.disabled = true;
+          els.exportFloorsBtn.textContent = 'Exportando...';
+        }
+        try {
+          const cards = await Promise.all(state.floors.map(async function (floor) {
+            const img = await loadImageElement(floor.imageDataUrl);
+            const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
+            const width = Number(floor.imageWidth) || img.naturalWidth || img.width || 1200;
+            const height = Number(floor.imageHeight) || img.naturalHeight || img.height || 800;
+            return { floor: floor, img: img, zones: zones, width: width, height: height };
+          }));
+          const exportWidth = 1600;
+          const padding = 28;
+          const titleHeight = 58;
+          const gap = 28;
+          const scale = Math.min(1.2, (exportWidth - (padding * 2)) / Math.max.apply(Math, cards.map(function (card) { return card.width; })));
+          const totalHeight = cards.reduce(function (sum, card) {
+            return sum + titleHeight + Math.round(card.height * scale) + gap;
+          }, padding);
+          const canvas = document.createElement('canvas');
+          canvas.width = exportWidth;
+          canvas.height = Math.max(1200, totalHeight);
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          let y = padding;
+          cards.forEach(function (card) {
+            const drawWidth = Math.round(card.width * scale);
+            const drawHeight = Math.round(card.height * scale);
+            const x = Math.round((exportWidth - drawWidth) / 2);
+
+            ctx.fillStyle = '#36363f';
+            ctx.font = '700 30px Akkurat, Segoe UI, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(String(card.floor.floorDisplay || card.floor.name || card.floor.id || ''), x, y + 22);
+
+            ctx.strokeStyle = '#d4d6cc';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, y + 38);
+            ctx.lineTo(x + drawWidth, y + 38);
+            ctx.stroke();
+
+            const imageTop = y + titleHeight;
+            ctx.drawImage(card.img, x, imageTop, drawWidth, drawHeight);
+
+            card.zones.forEach(function (zone) {
+              const info = resolveZoneInfo(zone);
+              const points = Array.isArray(zone && zone.points) ? zone.points : [];
+              if (!points.length) return;
+              const color = !info.hasInventoryMatch
+                ? '#000000'
+                : (info.status === 'vendida' ? '#d65353' : getUnitOptionColor(info));
+              ctx.beginPath();
+              points.forEach(function (point, index) {
+                const px = x + (Number(point[0] || 0) * scale);
+                const py = imageTop + (Number(point[1] || 0) * scale);
+                if (index === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              });
+              ctx.closePath();
+              ctx.fillStyle = !info.hasInventoryMatch ? '#000000f0' : (color + '66');
+              ctx.strokeStyle = color;
+              ctx.lineWidth = 2;
+              ctx.fill();
+              ctx.stroke();
+            });
+
+            y += titleHeight + drawHeight + gap;
+          });
+
+          const link = document.createElement('a');
+          link.href = canvas.toDataURL('image/png');
+          link.download = 'viceroy-7-niveles.png';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } catch (err) {
+          const msg = err && err.message ? err.message : 'No se pudo exportar la imagen';
+          if (els.homeStatus) els.homeStatus.textContent = msg;
+        } finally {
+          if (els.exportFloorsBtn) {
+            els.exportFloorsBtn.disabled = false;
+            els.exportFloorsBtn.textContent = 'Exportar 7 niveles';
+          }
+        }
+      }
+
       function getUserEditableWhisperlistRows() {
         return (state.whisperlistRows || []).filter(function (row) {
           return row && row.canEdit;
@@ -1187,12 +1279,7 @@
       }
 
       function getVisibleWhisperlistRows() {
-        const rows = getUserEditableWhisperlistRows();
-        const advisorEmail = String(state.selectedAdvisorEmail || '').trim().toLowerCase();
-        if (!advisorEmail) return rows;
-        return rows.filter(function (row) {
-          return String(row && row.correo || '').trim().toLowerCase() === advisorEmail;
-        });
+        return getUserEditableWhisperlistRows();
       }
 
       function getAssignableWhisperlistRows() {
@@ -1221,49 +1308,8 @@
       }
 
       function renderWhisperFilters() {
-        const rows = getUserEditableWhisperlistRows();
-        const advisorMap = new Map();
-        rows.forEach(function (row) {
-          const email = String(row && row.correo || '').trim().toLowerCase();
-          const asesor = String(row && row.asesor || '').trim() || email;
-          if (!email) return;
-          if (!advisorMap.has(email)) advisorMap.set(email, asesor);
-        });
-        if (els.advisorFilterSelect) {
-          const advisorOptions = ['<option value="">Todos los asesores</option>'].concat(
-            Array.from(advisorMap.entries())
-              .sort(function (a, b) { return String(a[1] || '').localeCompare(String(b[1] || ''), 'es', { sensitivity: 'base' }); })
-              .map(function (entry) {
-                return '<option value="' + esc(entry[0]) + '">' + esc(entry[1]) + '</option>';
-              })
-          );
-          els.advisorFilterSelect.innerHTML = advisorOptions.join('');
-          els.advisorFilterSelect.value = String(state.selectedAdvisorEmail || '');
-        }
-
-        const visibleRows = getVisibleWhisperlistRows().slice().sort(function (a, b) {
-          const asesorA = String(a && a.asesor || '').trim();
-          const asesorB = String(b && b.asesor || '').trim();
-          const clientA = String(a && a.nombreCliente || '').trim();
-          const clientB = String(b && b.nombreCliente || '').trim();
-          return (asesorA + ' ' + clientA).localeCompare((asesorB + ' ' + clientB), 'es', { sensitivity: 'base' });
-        });
-
-        if (els.clientFilterSelect) {
-          const clientOptions = ['<option value="">Todos los clientes</option>'].concat(
-            visibleRows.map(function (row) {
-              const clientName = String(row && row.nombreCliente || '').trim() || 'Sin nombre';
-              const asesor = String(row && row.asesor || '').trim();
-              const label = state.isGerente && asesor ? (clientName + ' — ' + asesor) : clientName;
-              return '<option value="' + esc(row.id || '') + '">' + esc(label) + '</option>';
-            })
-          );
-          els.clientFilterSelect.innerHTML = clientOptions.join('');
-          const currentRowId = String(state.selectedWhisperRowId || '');
-          const exists = visibleRows.some(function (row) { return String(row && row.id || '') === currentRowId; });
-          if (!exists) state.selectedWhisperRowId = '';
-          els.clientFilterSelect.value = String(state.selectedWhisperRowId || '');
-        }
+        state.selectedAdvisorEmail = '';
+        state.selectedWhisperRowId = '';
       }
 
       function renderZoneAttributeFilters() {
@@ -1752,7 +1798,6 @@
           '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
           '<span class="chip">Tipologia: ' + esc((state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
-          '<span class="chip">Cliente KPI: ' + esc((getSelectedWhisperRow() && getSelectedWhisperRow().nombreCliente) || 'TODOS') + '</span>',
           '<span class="chip">Filtro recámaras: ' + esc(state.selectedRecamarasFilter || 'TODAS') + '</span>',
           '<span class="chip">Filtro vista: ' + esc(state.selectedVistaFilter || 'TODAS') + '</span>',
           '<span class="chip">Filtro asignación: ' + esc(state.selectedAsignacionFilter || 'TODAS') + '</span>',
@@ -2172,6 +2217,12 @@
             const msg = err && err.message ? err.message : 'No se pudo actualizar';
             if (els.homeStatus) els.homeStatus.textContent = msg;
           });
+        });
+      }
+
+      if (els.exportFloorsBtn) {
+        els.exportFloorsBtn.addEventListener('click', function () {
+          exportPaintedFloorsImage();
         });
       }
 

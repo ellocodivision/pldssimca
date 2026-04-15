@@ -384,7 +384,7 @@
       <div class="status" id="statusText">Captura los datos y descarga el PDF exacto.</div>
     </div>
     <div class="top-actions">
-      <a class="link-btn" href="/viceroy/inicio">Volver</a>
+      <a class="link-btn" href="/simca">Volver</a>
       <button class="btn primary" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
     </div>
   </div>
@@ -801,7 +801,7 @@
         statusText.textContent = "Generando PDF exacto...";
         try {
           const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hoja de Reserva SIMCA</title><style>${document.querySelector("style").textContent}</style></head><body><main class="preview-wrap">${buildPreviewHtml()}</main></body></html>`;
-          const res = await fetch("/api/viceroy/hoja-reserva/render-pdf", {
+          const res = await fetch("/api/hoja-reserva-simca/render-pdf", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "same-origin",
