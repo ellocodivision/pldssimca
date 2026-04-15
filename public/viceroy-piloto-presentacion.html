@@ -1904,7 +1904,6 @@
         if (!info) return;
         state.focusedUnitKey = unitKey(info.unidad || '');
         renderUnitsTable(state.selectedFloorRows);
-        if (!isUnitAssignedToCurrentUser(info)) return;
         if (!getAssignableWhisperlistRows().length) {
           showAssignmentBox(info);
           els.assignStatus.textContent = state.isGerente
