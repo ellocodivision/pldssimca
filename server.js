@@ -2123,6 +2123,22 @@ function normalizeWhisperlistAsesor(raw) {
   return normalized;
 }
 
+function whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente = false) {
+  if (isGerente) return true;
+  const email = String(currentEmail || '').trim().toLowerCase();
+  const ownerEmail = String(row && row.correo || '').trim().toLowerCase();
+  if (email && ownerEmail && ownerEmail === email) return true;
+
+  const normalizedCurrentName = normalizeWhisperlistAsesor(currentName || '');
+  const normalizedAsesor = normalizeWhisperlistAsesor(row && row.asesor || '');
+  if (normalizedCurrentName && normalizedAsesor && normalizedCurrentName === normalizedAsesor) return true;
+
+  const emailAlias = normalizeWhisperlistAsesor(email.split('@')[0] || '');
+  if (emailAlias && normalizedAsesor && emailAlias === normalizedAsesor) return true;
+
+  return false;
+}
+
 function normalizeClientEmail(raw) {
   return String(raw || '').trim().toLowerCase();
 }
@@ -6288,6 +6304,7 @@ app.get('/whisperlist/qr', (req, res) => {
 app.get('/api/whisperlist', async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = currentEmail === GERENTE_EMAIL;
     const data = await readWhisperlistData();
     const rows = data.rows.map((row) => ({
@@ -6295,18 +6312,19 @@ app.get('/api/whisperlist', async (req, res) => {
       asesor: normalizeWhisperlistAsesor(row.asesor),
       nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
       recamaras: normalizeWhisperlistRecamaras(row.recamaras),
-      clientEmail: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
+      clientEmail: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
         ? normalizeClientEmail(row.clientEmail)
         : '',
-      clientPhone: (isGerente || String(row.correo || '').toLowerCase() === currentEmail)
+      clientPhone: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
         ? normalizeClientPhone(row.clientPhone)
         : '',
-      canEdit: isGerente || String(row.correo || '').toLowerCase() === currentEmail,
-      canViewClientData: isGerente || String(row.correo || '').toLowerCase() === currentEmail
+      canEdit: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente),
+      canViewClientData: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
     }));
     res.json({
       ok: true,
       currentEmail,
+      currentName,
       isGerente,
       updatedAt: data.updatedAt,
       sourceFile: data.sourceFile,
@@ -6409,14 +6427,14 @@ app.post('/api/whisperlist/rows/:id/kpi', async (req, res) => {
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = currentEmail === GERENTE_EMAIL;
     const data = await readWhisperlistData();
     const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
 
     const target = data.rows[index];
-    const ownerEmail = String(target.correo || '').trim().toLowerCase();
-    if (!isGerente && ownerEmail !== currentEmail) {
+    if (!whisperlistRowMatchesUser(target, currentEmail, currentName, isGerente)) {
       return res.status(403).json({ error: 'Solo puedes editar KPI de filas asignadas a tu correo' });
     }
 
