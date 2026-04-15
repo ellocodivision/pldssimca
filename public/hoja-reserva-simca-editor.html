@@ -63,7 +63,12 @@
             <label>Subir logo<input id="logoFile" type="file" accept="image/*"></label>
             <div class="actions-inline">
               <button class="small-btn" type="button" id="removeLogoBtn">Quitar logo</button>
-              <span class="hint">Si no hay logo cargado, la hoja usa el texto SIMCA.</span>
+              <span class="hint">Si no hay logo cargado, la cabecera se queda vacía.</span>
+            </div>
+            <label>Subir logo footer<input id="footerLogoFile" type="file" accept="image/*"></label>
+            <div class="actions-inline">
+              <button class="small-btn" type="button" id="removeFooterLogoBtn">Quitar logo footer</button>
+              <span class="hint">Sirve para el bloque inferior derecho de ambas hojas.</span>
             </div>
           </div>
           <div class="grid" style="margin-top:10px">
@@ -76,6 +81,7 @@
             <label>Logo ancho<input id="logoWidth" type="number" min="120" max="520" step="1"></label>
             <label>Logo mover X<input id="logoOffsetX" type="number" min="-220" max="220" step="1"></label>
             <label>Logo mover Y<input id="logoOffsetY" type="number" min="-120" max="120" step="1"></label>
+            <label>Logo footer ancho<input id="footerLogoWidth" type="number" min="24" max="140" step="1"></label>
             <label>Título mover X<input id="titleOffsetX" type="number" min="-220" max="220" step="1"></label>
             <label>Título mover Y<input id="titleOffsetY" type="number" min="-120" max="120" step="1"></label>
             <label>Color líneas<input id="lineColor" type="color"></label>
@@ -141,6 +147,7 @@
     (function () {
       const defaultLayout = {
         logoDataUrl: '',
+        footerLogoDataUrl: '',
         railText: 'simca.mx',
         railWidth: 50,
         railOffsetY: 88,
@@ -150,6 +157,7 @@
         logoWidth: 320,
         logoOffsetX: 0,
         logoOffsetY: 0,
+        footerLogoWidth: 52,
         titleOffsetX: 0,
         titleOffsetY: 0,
         page1Scale: 0.92,
@@ -179,7 +187,9 @@
         resetBtn: document.getElementById('resetBtn'),
         addLineBtn: document.getElementById('addLineBtn'),
         removeLogoBtn: document.getElementById('removeLogoBtn'),
+        removeFooterLogoBtn: document.getElementById('removeFooterLogoBtn'),
         logoFile: document.getElementById('logoFile'),
+        footerLogoFile: document.getElementById('footerLogoFile'),
         lineList: document.getElementById('lineList'),
         status: document.getElementById('status'),
         previewFrame: document.getElementById('previewFrame'),
@@ -192,6 +202,7 @@
         logoWidth: document.getElementById('logoWidth'),
         logoOffsetX: document.getElementById('logoOffsetX'),
         logoOffsetY: document.getElementById('logoOffsetY'),
+        footerLogoWidth: document.getElementById('footerLogoWidth'),
         titleOffsetX: document.getElementById('titleOffsetX'),
         titleOffsetY: document.getElementById('titleOffsetY'),
         lineColor: document.getElementById('lineColor'),
@@ -217,6 +228,7 @@
         return !['saveBtn','resetBtn','addLineBtn','removeLogoBtn','logoFile','lineList','status','previewFrame'].includes(key);
       });
       let currentLogoDataUrl = '';
+      let currentFooterLogoDataUrl = '';
       let currentLines = [];
 
       function clamp(value, min, max) {
@@ -227,6 +239,7 @@
         const src = input && typeof input === 'object' ? input : {};
         return {
           logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
+          footerLogoDataUrl: typeof src.footerLogoDataUrl === 'string' ? src.footerLogoDataUrl : '',
           railText: typeof src.railText === 'string' ? src.railText : defaultLayout.railText,
           railWidth: clamp(Number(src.railWidth) || defaultLayout.railWidth, 30, 120),
           railOffsetY: clamp(Number(src.railOffsetY) || defaultLayout.railOffsetY, 0, 300),
@@ -236,6 +249,7 @@
           logoWidth: clamp(Number(src.logoWidth) || defaultLayout.logoWidth, 120, 520),
           logoOffsetX: clamp(Number(src.logoOffsetX) || defaultLayout.logoOffsetX, -220, 220),
           logoOffsetY: clamp(Number(src.logoOffsetY) || defaultLayout.logoOffsetY, -120, 120),
+          footerLogoWidth: clamp(Number(src.footerLogoWidth) || defaultLayout.footerLogoWidth, 24, 140),
           titleOffsetX: clamp(Number(src.titleOffsetX) || defaultLayout.titleOffsetX, -220, 220),
           titleOffsetY: clamp(Number(src.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120),
           lineColor: typeof src.lineColor === 'string' ? src.lineColor : defaultLayout.lineColor,
@@ -292,6 +306,7 @@
       function setForm(layoutInput) {
         const layout = normalizeLayout(layoutInput);
         currentLogoDataUrl = layout.logoDataUrl || '';
+        currentFooterLogoDataUrl = layout.footerLogoDataUrl || '';
         currentLines = layout.lines.slice();
         fieldNames.forEach(function (name) {
           els[name].value = String(layout[name]);
@@ -300,11 +315,12 @@
       }
 
       function getFormLayout() {
-        const out = { logoDataUrl: currentLogoDataUrl, lines: currentLines.slice() };
+        const out = { logoDataUrl: currentLogoDataUrl, footerLogoDataUrl: currentFooterLogoDataUrl, lines: currentLines.slice() };
         fieldNames.forEach(function (name) {
           out[name] = els[name].value;
         });
         out.logoDataUrl = currentLogoDataUrl;
+        out.footerLogoDataUrl = currentFooterLogoDataUrl;
         out.lines = currentLines.slice();
         return normalizeLayout(out);
       }
@@ -369,6 +385,20 @@
         reader.readAsDataURL(file);
       }
 
+      function loadFooterLogoFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+          currentFooterLogoDataUrl = typeof reader.result === 'string' ? reader.result : '';
+          els.status.textContent = 'Logo footer cargado en preview. Guarda layout si quieres dejarlo fijo.';
+          pushPreview();
+        };
+        reader.onerror = function () {
+          els.status.textContent = 'No se pudo leer el logo footer.';
+        };
+        reader.readAsDataURL(file);
+      }
+
       function addLine() {
         currentLines = currentLines.concat([{
           id: 'line-' + Date.now(),
@@ -408,7 +438,9 @@
         els[name].addEventListener('input', pushPreview);
       });
       els.logoFile.addEventListener('change', function () { loadLogoFile(els.logoFile.files && els.logoFile.files[0]); });
+      els.footerLogoFile.addEventListener('change', function () { loadFooterLogoFile(els.footerLogoFile.files && els.footerLogoFile.files[0]); });
       els.removeLogoBtn.addEventListener('click', function () { currentLogoDataUrl = ''; pushPreview(); });
+      els.removeFooterLogoBtn.addEventListener('click', function () { currentFooterLogoDataUrl = ''; pushPreview(); });
       els.addLineBtn.addEventListener('click', addLine);
       els.lineList.addEventListener('input', function (event) {
         const t = event.target;
@@ -424,6 +456,7 @@
       els.resetBtn.addEventListener('click', function () {
         setForm(defaultLayout);
         currentLogoDataUrl = '';
+        currentFooterLogoDataUrl = '';
         currentLines = [];
         renderLinesEditor();
         pushPreview();

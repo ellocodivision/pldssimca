@@ -1846,6 +1846,7 @@ function normalizeHojaReservaSimcaLayout(input) {
   const out = {
     version: 1,
     logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
+    footerLogoDataUrl: typeof src.footerLogoDataUrl === 'string' ? src.footerLogoDataUrl : '',
     railText: typeof src.railText === 'string' ? src.railText : 'simca.mx',
     railWidth: clampNumber(src.railWidth, 50, 30, 120),
     railOffsetY: clampNumber(src.railOffsetY, 88, 0, 300),
@@ -1855,6 +1856,7 @@ function normalizeHojaReservaSimcaLayout(input) {
     logoWidth: clampNumber(src.logoWidth, 320, 120, 520),
     logoOffsetX: clampNumber(src.logoOffsetX, 0, -220, 220),
     logoOffsetY: clampNumber(src.logoOffsetY, 0, -120, 120),
+    footerLogoWidth: clampNumber(src.footerLogoWidth, 52, 24, 140),
     titleOffsetX: clampNumber(src.titleOffsetX, 0, -220, 220),
     titleOffsetY: clampNumber(src.titleOffsetY, 0, -120, 120),
     page1Scale: clampNumber(src.page1Scale, 0.92, 0.7, 1.1),
@@ -3956,38 +3958,18 @@ function renderSimcaHome(req, res, options) {
           <h2 class="name">Presentaciones</h2>
           <p class="desc">Generación de presentaciones por proyecto con unidades seleccionadas.</p>
         </a>`;
-  const tablaPagosEditorCard = isGerente ? `
-        <a class="card" href="/tabla-pagos/editor">
-          <span class="tag">Editor</span>
-          <h2 class="name">Editor PDF Tabla de Pagos</h2>
-          <p class="desc">Ajusta formato, columnas y layout de impresión del módulo Tabla de Pagos.</p>
-        </a>` : '';
-  const financiamientoEditorCard = isGerente ? `
-        <a class="card" href="/financiamiento-simca/editor">
-          <span class="tag">Editor</span>
-          <h2 class="name">Editor PDF Financiamiento</h2>
-          <p class="desc">Ajusta el layout de impresión del módulo Financiamiento SIMCA.</p>
-        </a>` : '';
-  const hojaReservaEditorCard = isGerente ? `
-        <a class="card" href="/hoja-reserva-simca/editor">
-          <span class="tag">Editor</span>
-          <h2 class="name">Editor PDF Hoja de Reserva</h2>
-          <p class="desc">Mueve logo, líneas, cuadro amarillo y bloques del PDF de reserva.</p>
-        </a>` : '';
   const tablaPagosCard = `
         <a class="card" href="/tabla-pagos">
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pagos</h2>
-          <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.</p>
-        </a>
-        ${tablaPagosEditorCard}`;
+          <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.${isGerente ? ' Incluye acceso al editor PDF dentro del módulo.' : ''}</p>
+        </a>`;
   const financiamientoCard = `
         <a class="card" href="/financiamiento-simca">
           <span class="tag">Módulo</span>
           <h2 class="name">Financiamiento SIMCA</h2>
-          <p class="desc">Cotiza mensualidades y tabla de amortización con balloons por unidad.</p>
-        </a>
-        ${financiamientoEditorCard}`;
+          <p class="desc">Cotiza mensualidades y tabla de amortización con balloons por unidad.${isGerente ? ' Incluye acceso al editor PDF dentro del módulo.' : ''}</p>
+        </a>`;
   const horariosCard = `
         <a class="card" href="/horarios-simca">
           <span class="tag">Módulo</span>
@@ -3998,9 +3980,8 @@ function renderSimcaHome(req, res, options) {
         <a class="card" href="/hoja-reserva-simca">
           <span class="tag">Módulo</span>
           <h2 class="name">Hoja de Reserva</h2>
-          <p class="desc">Captura los datos de reserva y descarga el PDF exacto con layout SIMCA.</p>
-        </a>
-        ${hojaReservaEditorCard}`;
+          <p class="desc">Captura los datos de reserva y descarga el PDF exacto con layout SIMCA.${isGerente ? ' Incluye acceso al editor PDF dentro del módulo.' : ''}</p>
+        </a>`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>

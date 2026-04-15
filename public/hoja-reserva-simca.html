@@ -24,6 +24,7 @@
       --logo-width:320px;
       --logo-offset-x:0px;
       --logo-offset-y:0px;
+      --footer-logo-width:52px;
       --title-offset-x:0px;
       --title-offset-y:0px;
       --page1-scale:.92;
@@ -196,14 +197,11 @@
     .page-break{page-break-after:always}
     .page-shell{
       min-height:var(--page-height);
-      border-left:1px solid var(--line);
-      border-right:1px solid var(--line);
       display:grid;
       grid-template-columns:var(--side-rail) 1fr;
     }
     .rail{
       position:relative;
-      border-right:1px solid var(--line);
     }
     .rail .bar{
       position:absolute;
@@ -228,7 +226,6 @@
     }
     .header{
       height:var(--header-height);
-      border-bottom:1px solid var(--line);
       padding:18px 28px 14px;
       display:flex;
       justify-content:space-between;
@@ -365,7 +362,6 @@
       line-height:1.3;
     }
     .footer{
-      border-top:1px solid var(--line);
       padding:18px 24px 16px;
       display:grid;
       grid-template-columns:1fr 80px;
@@ -377,17 +373,19 @@
       transform:translateY(var(--footer-offset-y));
     }
     .footer-mark{
-      width:52px;
-      height:52px;
+      width:var(--footer-logo-width);
+      min-height:52px;
       margin-left:auto;
-      border:3px solid #212121;
-      display:grid;
-      place-items:center;
-      font-weight:800;
-      font-size:18px;
-      transform:rotate(45deg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
-    .footer-mark span{transform:rotate(-45deg)}
+    .footer-mark img{
+      display:block;
+      width:100%;
+      height:auto;
+      max-width:100%;
+    }
     .subsection-title{
       margin-top:2px;
       font-size:18px;
@@ -465,6 +463,7 @@
     </div>
     <div class="top-actions">
       <a class="link-btn" href="/simca">Volver</a>
+      <a class="link-btn" href="/hoja-reserva-simca/editor" id="editorBtn" hidden>Editor PDF Martin SIMCA</a>
       <button class="btn primary" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
     </div>
   </div>
@@ -652,6 +651,7 @@
       };
       const defaultLayout = {
         logoDataUrl: '',
+        footerLogoDataUrl: '',
         railText: 'simca.mx',
         railWidth: 50,
         railOffsetY: 88,
@@ -661,6 +661,7 @@
         logoWidth: 320,
         logoOffsetX: 0,
         logoOffsetY: 0,
+        footerLogoWidth: 52,
         titleOffsetX: 0,
         titleOffsetY: 0,
         page1Scale: 0.92,
@@ -688,6 +689,7 @@
 
       const statusText = document.getElementById("statusText");
       const printRoot = document.getElementById("printRoot");
+      const editorBtn = document.getElementById("editorBtn");
       const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 
       function applyLayout(layoutInput) {
@@ -706,6 +708,7 @@
         root.style.setProperty('--logo-width', String(currentLayout.logoWidth || defaultLayout.logoWidth) + 'px');
         root.style.setProperty('--logo-offset-x', String(currentLayout.logoOffsetX || defaultLayout.logoOffsetX) + 'px');
         root.style.setProperty('--logo-offset-y', String(currentLayout.logoOffsetY || defaultLayout.logoOffsetY) + 'px');
+        root.style.setProperty('--footer-logo-width', String(currentLayout.footerLogoWidth || defaultLayout.footerLogoWidth || 52) + 'px');
         root.style.setProperty('--title-offset-x', String(currentLayout.titleOffsetX || defaultLayout.titleOffsetX) + 'px');
         root.style.setProperty('--title-offset-y', String(currentLayout.titleOffsetY || defaultLayout.titleOffsetY) + 'px');
         root.style.setProperty('--page1-scale', String(currentLayout.page1Scale || defaultLayout.page1Scale));
@@ -752,7 +755,7 @@
       function pageHeader(title) {
         const logoBlock = currentLayout.logoDataUrl
           ? `<img src="${esc(currentLayout.logoDataUrl)}" alt="SIMCA" style="display:block;width:100%;height:auto;">`
-          : `<span class="logo-main">SIMCA</span><span class="logo-sub">MÁS QUE<br>BIENES RAÍCES</span>`;
+          : '';
         return `
           <div class="header">
             <div class="header-title">${title}</div>
@@ -781,25 +784,31 @@
       }
 
       function footerOne() {
+        const footerLogo = currentLayout.footerLogoDataUrl
+          ? `<img src="${esc(currentLayout.footerLogoDataUrl)}" alt="SIMCA footer logo">`
+          : '';
         return `
           <div class="footer">
             <div>
               This payment will be considered as part of the purchase final price, and it is fully refundable at client’s request up to 15 days.
               / Este pago será considerado como parte del total de la compra y es 100 % reembolsable si el cliente lo pide hasta 15 días a partir de la fecha de reserva.
             </div>
-            <div class="footer-mark"><span>SIM</span></div>
+            <div class="footer-mark">${footerLogo}</div>
           </div>
         `;
       }
 
       function footerTwo() {
+        const footerLogo = currentLayout.footerLogoDataUrl
+          ? `<img src="${esc(currentLayout.footerLogoDataUrl)}" alt="SIMCA footer logo">`
+          : '';
         return `
           <div class="footer">
             <div>
               The refund will be made within 45 business days of withdrawal from the purchase, the entire amount will be refund in the same way as the payment was made.
               / El reembolso se realizará dentro de los 45 días hábiles al desistimiento de la compra, el reembolso se realizará en su totalidad de la misma manera como fue realizado el pago.
             </div>
-            <div class="footer-mark"><span>SIM</span></div>
+            <div class="footer-mark">${footerLogo}</div>
           </div>
         `;
       }
@@ -972,6 +981,17 @@
         renderPreview();
       }
 
+      async function syncEditorAccess() {
+        if (!editorBtn) return;
+        try {
+          const res = await fetch('/api/session-info', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          editorBtn.hidden = !(res.ok && data && data.ok && data.isGerente);
+        } catch (_) {
+          editorBtn.hidden = true;
+        }
+      }
+
       document.querySelectorAll("[data-bind]").forEach((input) => {
         const key = input.getAttribute("data-bind");
         if (Object.prototype.hasOwnProperty.call(state, key) && !state[key] && input.value) {
@@ -1032,6 +1052,7 @@
       }
 
       downloadPdfBtn.addEventListener("click", downloadPdf);
+      syncEditorAccess();
       loadLayout();
     })();
   </script>
