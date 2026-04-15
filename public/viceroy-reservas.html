@@ -65,9 +65,14 @@
     .slot-inline-label{font-size:11px;color:#537145;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
     .slot-inline-input{width:100%;padding:8px 9px;border:1px solid #b7cda7;border-radius:10px;background:#fff;font:inherit;font-size:12px}
     .slot-inline-row{display:flex;gap:6px;flex-wrap:wrap}
+    .slot-inline-grid{display:grid;grid-template-columns:1fr;gap:6px}
     .legend{display:flex;gap:10px;flex-wrap:wrap}
     .legend span{font-size:12px;color:var(--muted)}
     .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .notify-box{margin-top:12px;padding:12px;border:1px dashed #cdbfa8;border-radius:12px;background:#fffdf6}
+    .notify-box.hidden{display:none}
+    .notify-box pre{margin:0;white-space:pre-wrap;font:inherit;color:#35322d}
+    .notify-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     @media (max-width:980px){
       .grid{grid-template-columns:1fr}
       .schedule-table{min-width:1980px}
@@ -107,7 +112,7 @@
             <select id="bookingRoom" class="cell-input">
               <option value="sala-grande">Sala grande</option>
               <option value="sala-chica">Sala chica</option>
-              <option value="reserva-sin-oficina">Reserva sin oficina</option>
+              <option value="reserva-sin-oficina">Reserva sin sala</option>
             </select>
           </div>
           <div>
@@ -116,13 +121,25 @@
           </div>
         </div>
         <div style="margin-top:10px">
-          <label class="label" for="bookingTitle">Broker y detalle</label>
-          <input id="bookingTitle" class="cell-input" placeholder="Ej: JUAN PEREZ (AGENCIA XYZ) o ANA LOPEZ (CLIENTE)" />
+          <label class="label" for="bookingBroker">Broker</label>
+          <input id="bookingBroker" class="cell-input" placeholder="Ej: JUAN PEREZ" />
+        </div>
+        <div style="margin-top:10px">
+          <label class="label" for="bookingClient">Cliente</label>
+          <input id="bookingClient" class="cell-input" placeholder="Ej: ANA LOPEZ" />
         </div>
         <div class="row" style="margin-top:12px">
           <button id="saveBtn" class="btn primary" type="button">Reservar horario</button>
         </div>
         <p class="status" id="formStatus"></p>
+        <div id="notifyBox" class="notify-box hidden">
+          <pre id="notifyText"></pre>
+          <div class="notify-actions">
+            <button id="copyNotifyBtn" class="btn" type="button">Copiar mensaje</button>
+            <a id="whatsappNotifyLink" class="btn" href="#" target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>
+            <a id="emailNotifyLink" class="btn" href="#">Correo a recepción</a>
+          </div>
+        </div>
         <p class="status">Primero elige fecha y sala. El horario solo mostrará bloques disponibles. Si eliges 4:30, esa sala queda bloqueada hasta las 5:30. Las reservas existentes se respetan tal como ya fueron guardadas.</p>
       </section>
 
@@ -133,7 +150,7 @@
             <span class="legend">
               <span>Sala grande</span>
               <span>Sala chica</span>
-              <span>Reserva sin oficina</span>
+              <span>Reserva sin sala</span>
             </span>
           </div>
           <div class="row">
@@ -155,9 +172,10 @@
       const ROOM_LABELS = {
         "sala-grande": "Sala grande",
         "sala-chica": "Sala chica",
-        "reserva-sin-oficina": "Reserva sin oficina"
+        "reserva-sin-oficina": "Reserva sin sala"
       };
       const ROOM_ORDER = ["sala-grande", "sala-chica", "reserva-sin-oficina"];
+      const RECEPTION_EMAIL = "reception@viceroyplayadelcarmen.com";
       const HOURS = [
         "10:00", "10:30",
         "11:00", "11:30",
@@ -177,14 +195,17 @@
         isGerente: false,
         weekStart: null,
         inlineDraftKey: "",
-        inlineDraftTitle: "",
-        autoRefreshTimer: null
+        inlineDraftBroker: "",
+        inlineDraftClient: "",
+        autoRefreshTimer: null,
+        lastNotificationMessage: ""
       };
 
       const bookingDate = document.getElementById("bookingDate");
       const bookingRoom = document.getElementById("bookingRoom");
       const bookingHour = document.getElementById("bookingHour");
-      const bookingTitle = document.getElementById("bookingTitle");
+      const bookingBroker = document.getElementById("bookingBroker");
+      const bookingClient = document.getElementById("bookingClient");
       const saveBtn = document.getElementById("saveBtn");
       const reloadBtn = document.getElementById("reloadBtn");
       const prevWeekBtn = document.getElementById("prevWeekBtn");
@@ -195,6 +216,11 @@
       const metaUser = document.getElementById("metaUser");
       const metaUpdated = document.getElementById("metaUpdated");
       const weekLabel = document.getElementById("weekLabel");
+      const notifyBox = document.getElementById("notifyBox");
+      const notifyText = document.getElementById("notifyText");
+      const copyNotifyBtn = document.getElementById("copyNotifyBtn");
+      const whatsappNotifyLink = document.getElementById("whatsappNotifyLink");
+      const emailNotifyLink = document.getElementById("emailNotifyLink");
 
       function hourToMinutes(hour) {
         const parts = String(hour || "").split(":");
@@ -280,6 +306,32 @@
       function updateMeta(updatedAt) {
         metaUser.textContent = `Usuario: ${state.currentName || state.currentEmail || "-"}`;
         metaUpdated.textContent = `Actualizado: ${updatedAt ? new Date(updatedAt).toLocaleString("es-MX") : "-"}`;
+      }
+
+      function buildReservationMessage(payload) {
+        return [
+          `Dia: ${payload.date || "-"}`,
+          `Hora: ${payload.hour ? `${payload.hour} - ${addMinutesToHour(payload.hour, 60)}` : "-"}`,
+          `Broker: ${payload.broker || "-"}`,
+          `Cliente: ${payload.client || "-"}`,
+          `Sala: ${ROOM_LABELS[payload.room] || payload.room || "-"}`
+        ].join("\n");
+      }
+
+      function setNotificationMessage(message) {
+        state.lastNotificationMessage = String(message || "").trim();
+        if (!state.lastNotificationMessage) {
+          notifyBox.classList.add("hidden");
+          notifyText.textContent = "";
+          whatsappNotifyLink.href = "#";
+          emailNotifyLink.href = "#";
+          return;
+        }
+        notifyText.textContent = state.lastNotificationMessage;
+        notifyBox.classList.remove("hidden");
+        const encoded = encodeURIComponent(state.lastNotificationMessage);
+        whatsappNotifyLink.href = `https://wa.me/?text=${encoded}`;
+        emailNotifyLink.href = `mailto:${encodeURIComponent(RECEPTION_EMAIL)}?subject=${encodeURIComponent("Nueva reserva de oficina")}&body=${encoded}`;
       }
 
       function isEditingReservationForm() {
@@ -368,10 +420,15 @@
           return false;
         }
         setStatus("Reserva guardada.", "ok");
-        if (clearForm) bookingTitle.value = "";
+        setNotificationMessage(buildReservationMessage(data && data.row ? data.row : payload));
+        if (clearForm) {
+          bookingBroker.value = "";
+          bookingClient.value = "";
+        }
         if (closeInline) {
           state.inlineDraftKey = "";
-          state.inlineDraftTitle = "";
+          state.inlineDraftBroker = "";
+          state.inlineDraftClient = "";
         }
         state.weekStart = getMonday(parseIsoDate(payload.date) || new Date());
         await loadRows();
@@ -462,7 +519,10 @@
                 card.className = "reservation";
                 const title = document.createElement("div");
                 title.className = "reservation-title";
-                title.textContent = reservation.title;
+                title.textContent = reservation.broker || reservation.title;
+                const client = document.createElement("div");
+                client.className = "reservation-meta";
+                client.textContent = `Cliente: ${reservation.client || "-"}`;
                 const author = document.createElement("div");
                 author.className = "reservation-author";
                 author.textContent = reservation.createdByName
@@ -472,6 +532,7 @@
                 meta.className = "reservation-meta";
                 meta.textContent = `${reservation.hour} - ${addMinutesToHour(reservation.hour, 60)}`;
                 card.appendChild(title);
+                card.appendChild(client);
                 card.appendChild(author);
                 card.appendChild(meta);
                 if (canDelete(reservation)) {
@@ -505,13 +566,24 @@
                     const label = document.createElement("div");
                     label.className = "slot-inline-label";
                     label.textContent = `${ROOM_LABELS[roomId]} · ${hour} - ${addMinutesToHour(hour, 60)}`;
-                    const input = document.createElement("input");
-                    input.className = "slot-inline-input";
-                    input.placeholder = "Broker y detalle";
-                    input.value = state.inlineDraftTitle || "";
-                    input.addEventListener("input", (event) => {
-                      state.inlineDraftTitle = event.target.value;
+                    const inputs = document.createElement("div");
+                    inputs.className = "slot-inline-grid";
+                    const brokerInput = document.createElement("input");
+                    brokerInput.className = "slot-inline-input";
+                    brokerInput.placeholder = "Broker";
+                    brokerInput.value = state.inlineDraftBroker || "";
+                    brokerInput.addEventListener("input", (event) => {
+                      state.inlineDraftBroker = event.target.value;
                     });
+                    const clientInput = document.createElement("input");
+                    clientInput.className = "slot-inline-input";
+                    clientInput.placeholder = "Cliente";
+                    clientInput.value = state.inlineDraftClient || "";
+                    clientInput.addEventListener("input", (event) => {
+                      state.inlineDraftClient = event.target.value;
+                    });
+                    inputs.appendChild(brokerInput);
+                    inputs.appendChild(clientInput);
                     const rowButtons = document.createElement("div");
                     rowButtons.className = "slot-inline-row";
                     const saveInlineBtn = document.createElement("button");
@@ -519,16 +591,18 @@
                     saveInlineBtn.type = "button";
                     saveInlineBtn.textContent = "Guardar";
                     saveInlineBtn.addEventListener("click", async () => {
-                      const title = String(state.inlineDraftTitle || "").trim();
-                      if (!title) {
-                        setStatus("Escribe broker y detalle para guardar la reserva.", "error");
+                      const broker = String(state.inlineDraftBroker || "").trim();
+                      const client = String(state.inlineDraftClient || "").trim();
+                      if (!broker) {
+                        setStatus("Escribe el broker para guardar la reserva.", "error");
                         return;
                       }
                       await submitReservation({
                         date: dateStr,
                         room: roomId,
                         hour,
-                        title
+                        broker,
+                        client
                       }, { closeInline: true });
                     });
                     const cancelInlineBtn = document.createElement("button");
@@ -537,13 +611,14 @@
                     cancelInlineBtn.textContent = "Cancelar";
                     cancelInlineBtn.addEventListener("click", () => {
                       state.inlineDraftKey = "";
-                      state.inlineDraftTitle = "";
+                      state.inlineDraftBroker = "";
+                      state.inlineDraftClient = "";
                       renderSchedule();
                     });
                     rowButtons.appendChild(saveInlineBtn);
                     rowButtons.appendChild(cancelInlineBtn);
                     wrapper.appendChild(label);
-                    wrapper.appendChild(input);
+                    wrapper.appendChild(inputs);
                     wrapper.appendChild(rowButtons);
                   } else {
                     const reserveBtn = document.createElement("button");
@@ -552,7 +627,8 @@
                     reserveBtn.textContent = "Reservar";
                     reserveBtn.addEventListener("click", () => {
                       state.inlineDraftKey = inlineKey;
-                      state.inlineDraftTitle = "";
+                      state.inlineDraftBroker = "";
+                      state.inlineDraftClient = "";
                       renderSchedule();
                     });
                     wrapper.appendChild(reserveBtn);
@@ -608,10 +684,15 @@
           date: bookingDate.value,
           room: bookingRoom.value,
           hour: bookingHour.value,
-          title: bookingTitle.value
+          broker: bookingBroker.value,
+          client: bookingClient.value
         };
         if (!payload.hour) {
           setStatus("No hay horarios disponibles para esa fecha y sala.", "error");
+          return;
+        }
+        if (!String(payload.broker || "").trim()) {
+          setStatus("Escribe el broker para guardar la reserva.", "error");
           return;
         }
         await submitReservation(payload, { clearForm: true });
@@ -627,6 +708,16 @@
       state.weekStart = getMonday(new Date());
 
       saveBtn.addEventListener("click", saveReservation);
+      copyNotifyBtn.addEventListener("click", async () => {
+        const text = String(state.lastNotificationMessage || "").trim();
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus("Mensaje copiado para WhatsApp.", "ok");
+        } catch {
+          setStatus("No se pudo copiar el mensaje.", "error");
+        }
+      });
       reloadBtn.addEventListener("click", loadRows);
       bookingDate.addEventListener("change", syncWeekFromDate);
       bookingRoom.addEventListener("change", () => refreshHourOptions(bookingHour.value));
