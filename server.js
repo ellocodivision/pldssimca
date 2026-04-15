@@ -2523,9 +2523,20 @@ function normalizeReservationTitle(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 160);
 }
 
+function normalizeReservationPax(value) {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return '';
+  const amount = Number(digits);
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  return String(Math.min(amount, 999));
+}
+
 function normalizeRoomReservationRow(row) {
   const broker = normalizeReservationTitle(row && (row.broker || row.title));
   const client = normalizeReservationTitle(row && row.client);
+  const pax = normalizeReservationPax(row && row.pax);
   return {
     id: String(row && row.id || '').trim(),
     date: normalizeReservationDate(row && row.date),
@@ -2534,6 +2545,7 @@ function normalizeRoomReservationRow(row) {
     title: broker,
     broker,
     client,
+    pax,
     createdByEmail: String(row && row.createdByEmail || '').trim().toLowerCase(),
     createdByName: String(row && row.createdByName || '').trim(),
     updatedAt: String(row && row.updatedAt || '').trim() || new Date().toISOString()
@@ -5904,6 +5916,7 @@ app.post('/api/viceroy/reservas', (req, res) => {
   const hour = normalizeReservationHour(body.hour);
   const broker = normalizeReservationTitle(body.broker || body.title);
   const client = normalizeReservationTitle(body.client);
+  const pax = normalizeReservationPax(body.pax);
 
   if (!date || !room || !hour || !broker) {
     return res.status(400).json({ error: 'Faltan datos obligatorios de la reserva.' });
@@ -5929,6 +5942,7 @@ app.post('/api/viceroy/reservas', (req, res) => {
     hour,
     broker,
     client,
+    pax,
     createdByEmail: currentEmail,
     createdByName: currentName,
     updatedAt: new Date().toISOString()

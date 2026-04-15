@@ -128,6 +128,10 @@
           <label class="label" for="bookingClient">Cliente</label>
           <input id="bookingClient" class="cell-input" placeholder="Ej: ANA LOPEZ" />
         </div>
+        <div style="margin-top:10px">
+          <label class="label" for="bookingPax">Pax</label>
+          <input id="bookingPax" class="cell-input" type="number" min="1" max="999" step="1" placeholder="Ej: 4" />
+        </div>
         <div class="row" style="margin-top:12px">
           <button id="saveBtn" class="btn primary" type="button">Reservar horario</button>
         </div>
@@ -197,6 +201,7 @@
         inlineDraftKey: "",
         inlineDraftBroker: "",
         inlineDraftClient: "",
+        inlineDraftPax: "",
         autoRefreshTimer: null,
         lastNotificationMessage: ""
       };
@@ -206,6 +211,7 @@
       const bookingHour = document.getElementById("bookingHour");
       const bookingBroker = document.getElementById("bookingBroker");
       const bookingClient = document.getElementById("bookingClient");
+      const bookingPax = document.getElementById("bookingPax");
       const saveBtn = document.getElementById("saveBtn");
       const reloadBtn = document.getElementById("reloadBtn");
       const prevWeekBtn = document.getElementById("prevWeekBtn");
@@ -314,6 +320,7 @@
           `Hora: ${payload.hour ? `${payload.hour} - ${addMinutesToHour(payload.hour, 60)}` : "-"}`,
           `Broker: ${payload.broker || "-"}`,
           `Cliente: ${payload.client || "-"}`,
+          `Pax: ${payload.pax || "-"}`,
           `Sala: ${ROOM_LABELS[payload.room] || payload.room || "-"}`
         ].join("\n");
       }
@@ -424,11 +431,13 @@
         if (clearForm) {
           bookingBroker.value = "";
           bookingClient.value = "";
+          bookingPax.value = "";
         }
         if (closeInline) {
           state.inlineDraftKey = "";
           state.inlineDraftBroker = "";
           state.inlineDraftClient = "";
+          state.inlineDraftPax = "";
         }
         state.weekStart = getMonday(parseIsoDate(payload.date) || new Date());
         await loadRows();
@@ -523,6 +532,9 @@
                 const client = document.createElement("div");
                 client.className = "reservation-meta";
                 client.textContent = `Cliente: ${reservation.client || "-"}`;
+                const pax = document.createElement("div");
+                pax.className = "reservation-meta";
+                pax.textContent = `Pax: ${reservation.pax || "-"}`;
                 const author = document.createElement("div");
                 author.className = "reservation-author";
                 author.textContent = reservation.createdByName
@@ -533,6 +545,7 @@
                 meta.textContent = `${reservation.hour} - ${addMinutesToHour(reservation.hour, 60)}`;
                 card.appendChild(title);
                 card.appendChild(client);
+                card.appendChild(pax);
                 card.appendChild(author);
                 card.appendChild(meta);
                 if (canDelete(reservation)) {
@@ -582,8 +595,20 @@
                     clientInput.addEventListener("input", (event) => {
                       state.inlineDraftClient = event.target.value;
                     });
+                    const paxInput = document.createElement("input");
+                    paxInput.className = "slot-inline-input";
+                    paxInput.placeholder = "Pax";
+                    paxInput.type = "number";
+                    paxInput.min = "1";
+                    paxInput.max = "999";
+                    paxInput.step = "1";
+                    paxInput.value = state.inlineDraftPax || "";
+                    paxInput.addEventListener("input", (event) => {
+                      state.inlineDraftPax = event.target.value;
+                    });
                     inputs.appendChild(brokerInput);
                     inputs.appendChild(clientInput);
+                    inputs.appendChild(paxInput);
                     const rowButtons = document.createElement("div");
                     rowButtons.className = "slot-inline-row";
                     const saveInlineBtn = document.createElement("button");
@@ -593,6 +618,7 @@
                     saveInlineBtn.addEventListener("click", async () => {
                       const broker = String(state.inlineDraftBroker || "").trim();
                       const client = String(state.inlineDraftClient || "").trim();
+                      const pax = String(state.inlineDraftPax || "").trim();
                       if (!broker) {
                         setStatus("Escribe el broker para guardar la reserva.", "error");
                         return;
@@ -602,7 +628,8 @@
                         room: roomId,
                         hour,
                         broker,
-                        client
+                        client,
+                        pax
                       }, { closeInline: true });
                     });
                     const cancelInlineBtn = document.createElement("button");
@@ -613,6 +640,7 @@
                       state.inlineDraftKey = "";
                       state.inlineDraftBroker = "";
                       state.inlineDraftClient = "";
+                      state.inlineDraftPax = "";
                       renderSchedule();
                     });
                     rowButtons.appendChild(saveInlineBtn);
@@ -629,6 +657,7 @@
                       state.inlineDraftKey = inlineKey;
                       state.inlineDraftBroker = "";
                       state.inlineDraftClient = "";
+                      state.inlineDraftPax = "";
                       renderSchedule();
                     });
                     wrapper.appendChild(reserveBtn);
@@ -685,7 +714,8 @@
           room: bookingRoom.value,
           hour: bookingHour.value,
           broker: bookingBroker.value,
-          client: bookingClient.value
+          client: bookingClient.value,
+          pax: bookingPax.value
         };
         if (!payload.hour) {
           setStatus("No hay horarios disponibles para esa fecha y sala.", "error");
