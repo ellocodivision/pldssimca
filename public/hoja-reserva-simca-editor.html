@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editor PDF · Hoja de Reserva SIMCA</title>
+  <style>
+    :root{--bg:#f4efe5;--card:#fffdf9;--line:#d8d1c1;--ink:#1f1f1a;--muted:#666459;--accent:#f0c419}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(180deg,#f4efe5 0%, #e7e1d4 100%);color:var(--ink)}
+    .wrap{max-width:1480px;margin:0 auto;padding:28px 24px 32px}
+    .head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    h1{margin:0;font-size:30px}
+    .sub{margin:6px 0 0;color:var(--muted);max-width:860px;line-height:1.5}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 14px;border:1px solid #bdb8a9;border-radius:999px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+    .btn.primary{border-color:#1d1c18;background:var(--accent)}
+    .layout{display:grid;grid-template-columns:460px minmax(0,1fr);gap:14px;align-items:start}
+    .panel,.preview-panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+    .preview-panel{position:sticky;top:14px;align-self:start;max-height:calc(100vh - 28px);overflow:auto}
+    .section + .section{margin-top:16px;padding-top:16px;border-top:1px solid #e7e1d4}
+    .section h2{margin:0 0 10px;font-size:16px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .grid-1{display:grid;gap:10px}
+    label{display:grid;gap:5px;font-size:12px;font-weight:700;color:#615f56}
+    input[type="number"],input[type="color"],input[type="text"],input[type="file"],select{width:100%;min-height:38px;border:1px solid #cbc3b4;border-radius:10px;padding:0 10px;background:#fff;font-size:14px}
+    input[type="file"]{padding:7px 10px;min-height:auto}
+    .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+    .status{color:var(--muted);font-size:13px}
+    .preview-stage{width:100%;overflow:auto;border:1px solid #d8d1c1;border-radius:16px;background:#d9dbe2;padding:24px 12px}
+    .preview-shell{width:816px;height:1056px;margin:0 auto;transform-origin:top center}
+    .preview-frame{width:816px;height:1056px;border:0;background:#fff;display:block;box-shadow:0 0 0 1px rgba(160,166,176,.75),0 8px 24px rgba(36,39,46,.12)}
+    .hint{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+    .actions-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .small-btn{min-height:34px;padding:0 12px;border:1px solid #c9c2b3;border-radius:999px;background:#fff;font-size:12px;font-weight:700;cursor:pointer}
+    .line-list{display:grid;gap:12px;margin-top:10px}
+    .line-item{border:1px solid #ddd5c7;border-radius:14px;padding:12px;background:#fffdfa}
+    .line-item-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .line-title{font-size:13px;font-weight:700;color:#3d3a32}
+    .line-remove{min-height:30px;padding:0 10px;border:1px solid #d6ccbc;border-radius:999px;background:#fff;font-size:12px;font-weight:700;cursor:pointer}
+    @media (max-width:1180px){.wrap{padding:20px 14px 28px}.layout{grid-template-columns:1fr}.preview-panel{position:static;max-height:none;overflow:visible}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="head">
+      <div>
+        <h1>Editor PDF · Hoja de Reserva SIMCA</h1>
+        <p class="sub">Aquí puedes mover el logo, el cuadro amarillo, las líneas y los bloques principales de cada hoja. El preview de la derecha usa el mismo HTML que genera el PDF final.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/hoja-reserva-simca">Volver a hoja de reserva</a>
+        <button class="btn" type="button" id="resetBtn">Restaurar default</button>
+        <button class="btn primary" type="button" id="saveBtn">Guardar layout</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="section">
+          <h2>Marca</h2>
+          <div class="grid-1">
+            <label>Subir logo<input id="logoFile" type="file" accept="image/*"></label>
+            <div class="actions-inline">
+              <button class="small-btn" type="button" id="removeLogoBtn">Quitar logo</button>
+              <span class="hint">Si no hay logo cargado, la hoja usa el texto SIMCA.</span>
+            </div>
+          </div>
+          <div class="grid" style="margin-top:10px">
+            <label>Texto barra<input id="railText" type="text"></label>
+            <label>Ancho barra<input id="railWidth" type="number" min="30" max="120" step="1"></label>
+            <label>Barra Y<input id="railOffsetY" type="number" min="0" max="300" step="1"></label>
+            <label>Barra alto<input id="railHeight" type="number" min="40" max="320" step="1"></label>
+            <label>Color barra<input id="railAccentColor" type="color"></label>
+            <label>Color texto barra<input id="railTextColor" type="color"></label>
+            <label>Logo ancho<input id="logoWidth" type="number" min="120" max="520" step="1"></label>
+            <label>Logo mover X<input id="logoOffsetX" type="number" min="-220" max="220" step="1"></label>
+            <label>Logo mover Y<input id="logoOffsetY" type="number" min="-120" max="120" step="1"></label>
+            <label>Título mover X<input id="titleOffsetX" type="number" min="-220" max="220" step="1"></label>
+            <label>Título mover Y<input id="titleOffsetY" type="number" min="-120" max="120" step="1"></label>
+            <label>Color líneas<input id="lineColor" type="color"></label>
+            <label>Color texto<input id="textColor" type="color"></label>
+            <label>Color papel<input id="paperColor" type="color"></label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Hoja 1</h2>
+          <div class="grid">
+            <label>Escala hoja 1<input id="page1Scale" type="number" min="0.7" max="1.1" step="0.01"></label>
+            <label>Offset Y hoja 1<input id="page1OffsetY" type="number" min="-160" max="160" step="1"></label>
+            <label>Alto observaciones<input id="observationsHeight" type="number" min="40" max="180" step="1"></label>
+            <label>Tabla pagos Y<input id="paymentsOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Escala pagos<input id="paymentsScale" type="number" min="0.65" max="1.15" step="0.01"></label>
+            <label>Tarjeta Y<input id="cardSectionOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Escala tarjeta<input id="cardSectionScale" type="number" min="0.65" max="1.15" step="0.01"></label>
+            <label>Firma Y<input id="signatureOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Footer Y<input id="footerOffsetY" type="number" min="-180" max="180" step="1"></label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Hoja 2</h2>
+          <div class="grid">
+            <label>Escala hoja 2<input id="page2Scale" type="number" min="0.7" max="1.1" step="0.01"></label>
+            <label>Offset Y hoja 2<input id="page2OffsetY" type="number" min="-160" max="160" step="1"></label>
+            <label>Titular Y<input id="holderOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Copropietario Y<input id="coOwnerOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Documentos Y<input id="docsOffsetY" type="number" min="-180" max="180" step="1"></label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Líneas libres</h2>
+          <div class="actions-inline">
+            <button class="small-btn" type="button" id="addLineBtn">Agregar línea</button>
+            <span class="hint">Puedes poner líneas horizontales o verticales en cualquiera de las dos hojas.</span>
+          </div>
+          <div class="line-list" id="lineList"></div>
+        </div>
+      </section>
+
+      <section class="preview-panel">
+        <div class="toolbar">
+          <div>
+            <strong>Vista previa real</strong>
+            <div class="status">Todo lo que muevas aquí pega al PDF final.</div>
+          </div>
+          <div class="status" id="status">Cargando layout...</div>
+        </div>
+        <div class="preview-stage" id="previewStage">
+          <div class="preview-shell" id="previewShell">
+            <iframe id="previewFrame" class="preview-frame" src="/hoja-reserva-simca?editorPreview=print"></iframe>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const defaultLayout = {
+        logoDataUrl: '',
+        railText: 'simca.mx',
+        railWidth: 50,
+        railOffsetY: 88,
+        railHeight: 162,
+        railAccentColor: '#ffd91a',
+        railTextColor: '#1d1c18',
+        logoWidth: 320,
+        logoOffsetX: 0,
+        logoOffsetY: 0,
+        titleOffsetX: 0,
+        titleOffsetY: 0,
+        page1Scale: 0.92,
+        page1OffsetY: -10,
+        page2Scale: 0.94,
+        page2OffsetY: -10,
+        observationsHeight: 82,
+        paymentsOffsetY: -8,
+        paymentsScale: 0.9,
+        cardSectionOffsetY: -12,
+        cardSectionScale: 0.94,
+        signatureOffsetY: -6,
+        footerOffsetY: 0,
+        holderOffsetY: 0,
+        coOwnerOffsetY: 0,
+        docsOffsetY: 0,
+        bodyFontFamily: '"Akkurat","Segoe UI",Tahoma,sans-serif',
+        headingFontFamily: '"Akkurat","Segoe UI",Tahoma,sans-serif',
+        lineColor: '#2d2d2d',
+        textColor: '#222222',
+        paperColor: '#fffef9',
+        lines: []
+      };
+
+      const els = {
+        saveBtn: document.getElementById('saveBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        addLineBtn: document.getElementById('addLineBtn'),
+        removeLogoBtn: document.getElementById('removeLogoBtn'),
+        logoFile: document.getElementById('logoFile'),
+        lineList: document.getElementById('lineList'),
+        status: document.getElementById('status'),
+        previewFrame: document.getElementById('previewFrame'),
+        railText: document.getElementById('railText'),
+        railWidth: document.getElementById('railWidth'),
+        railOffsetY: document.getElementById('railOffsetY'),
+        railHeight: document.getElementById('railHeight'),
+        railAccentColor: document.getElementById('railAccentColor'),
+        railTextColor: document.getElementById('railTextColor'),
+        logoWidth: document.getElementById('logoWidth'),
+        logoOffsetX: document.getElementById('logoOffsetX'),
+        logoOffsetY: document.getElementById('logoOffsetY'),
+        titleOffsetX: document.getElementById('titleOffsetX'),
+        titleOffsetY: document.getElementById('titleOffsetY'),
+        lineColor: document.getElementById('lineColor'),
+        textColor: document.getElementById('textColor'),
+        paperColor: document.getElementById('paperColor'),
+        page1Scale: document.getElementById('page1Scale'),
+        page1OffsetY: document.getElementById('page1OffsetY'),
+        observationsHeight: document.getElementById('observationsHeight'),
+        paymentsOffsetY: document.getElementById('paymentsOffsetY'),
+        paymentsScale: document.getElementById('paymentsScale'),
+        cardSectionOffsetY: document.getElementById('cardSectionOffsetY'),
+        cardSectionScale: document.getElementById('cardSectionScale'),
+        signatureOffsetY: document.getElementById('signatureOffsetY'),
+        footerOffsetY: document.getElementById('footerOffsetY'),
+        page2Scale: document.getElementById('page2Scale'),
+        page2OffsetY: document.getElementById('page2OffsetY'),
+        holderOffsetY: document.getElementById('holderOffsetY'),
+        coOwnerOffsetY: document.getElementById('coOwnerOffsetY'),
+        docsOffsetY: document.getElementById('docsOffsetY')
+      };
+
+      const fieldNames = Object.keys(els).filter(function (key) {
+        return !['saveBtn','resetBtn','addLineBtn','removeLogoBtn','logoFile','lineList','status','previewFrame'].includes(key);
+      });
+      let currentLogoDataUrl = '';
+      let currentLines = [];
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function normalizeLayout(input) {
+        const src = input && typeof input === 'object' ? input : {};
+        return {
+          logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
+          railText: typeof src.railText === 'string' ? src.railText : defaultLayout.railText,
+          railWidth: clamp(Number(src.railWidth) || defaultLayout.railWidth, 30, 120),
+          railOffsetY: clamp(Number(src.railOffsetY) || defaultLayout.railOffsetY, 0, 300),
+          railHeight: clamp(Number(src.railHeight) || defaultLayout.railHeight, 40, 320),
+          railAccentColor: typeof src.railAccentColor === 'string' ? src.railAccentColor : defaultLayout.railAccentColor,
+          railTextColor: typeof src.railTextColor === 'string' ? src.railTextColor : defaultLayout.railTextColor,
+          logoWidth: clamp(Number(src.logoWidth) || defaultLayout.logoWidth, 120, 520),
+          logoOffsetX: clamp(Number(src.logoOffsetX) || defaultLayout.logoOffsetX, -220, 220),
+          logoOffsetY: clamp(Number(src.logoOffsetY) || defaultLayout.logoOffsetY, -120, 120),
+          titleOffsetX: clamp(Number(src.titleOffsetX) || defaultLayout.titleOffsetX, -220, 220),
+          titleOffsetY: clamp(Number(src.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120),
+          lineColor: typeof src.lineColor === 'string' ? src.lineColor : defaultLayout.lineColor,
+          textColor: typeof src.textColor === 'string' ? src.textColor : defaultLayout.textColor,
+          paperColor: typeof src.paperColor === 'string' ? src.paperColor : defaultLayout.paperColor,
+          page1Scale: clamp(Number(src.page1Scale) || defaultLayout.page1Scale, 0.7, 1.1),
+          page1OffsetY: clamp(Number(src.page1OffsetY) || defaultLayout.page1OffsetY, -160, 160),
+          observationsHeight: clamp(Number(src.observationsHeight) || defaultLayout.observationsHeight, 40, 180),
+          paymentsOffsetY: clamp(Number(src.paymentsOffsetY) || defaultLayout.paymentsOffsetY, -180, 180),
+          paymentsScale: clamp(Number(src.paymentsScale) || defaultLayout.paymentsScale, 0.65, 1.15),
+          cardSectionOffsetY: clamp(Number(src.cardSectionOffsetY) || defaultLayout.cardSectionOffsetY, -180, 180),
+          cardSectionScale: clamp(Number(src.cardSectionScale) || defaultLayout.cardSectionScale, 0.65, 1.15),
+          signatureOffsetY: clamp(Number(src.signatureOffsetY) || defaultLayout.signatureOffsetY, -180, 180),
+          footerOffsetY: clamp(Number(src.footerOffsetY) || defaultLayout.footerOffsetY, -180, 180),
+          page2Scale: clamp(Number(src.page2Scale) || defaultLayout.page2Scale, 0.7, 1.1),
+          page2OffsetY: clamp(Number(src.page2OffsetY) || defaultLayout.page2OffsetY, -160, 160),
+          holderOffsetY: clamp(Number(src.holderOffsetY) || defaultLayout.holderOffsetY, -180, 180),
+          coOwnerOffsetY: clamp(Number(src.coOwnerOffsetY) || defaultLayout.coOwnerOffsetY, -180, 180),
+          docsOffsetY: clamp(Number(src.docsOffsetY) || defaultLayout.docsOffsetY, -180, 180),
+          lines: Array.isArray(src.lines) ? src.lines.slice(0, 60).map(function (line, index) {
+            const item = line && typeof line === 'object' ? line : {};
+            return {
+              id: typeof item.id === 'string' && item.id ? item.id : 'line-' + (index + 1),
+              page: String(item.page || '1') === '2' ? '2' : '1',
+              orientation: String(item.orientation || 'horizontal') === 'vertical' ? 'vertical' : 'horizontal',
+              x: clamp(Number(item.x) || 10, 0, 100),
+              y: clamp(Number(item.y) || 10, 0, 100),
+              length: clamp(Number(item.length) || 40, 0, 100),
+              width: clamp(Number(item.width) || 1, 1, 12),
+              color: typeof item.color === 'string' ? item.color : '#2d2d2d',
+              opacity: clamp(Number(item.opacity) || 1, 0.1, 1)
+            };
+          }) : []
+        };
+      }
+
+      function renderLinesEditor() {
+        els.lineList.innerHTML = currentLines.map(function (line, index) {
+          return '<div class="line-item">' +
+            '<div class="line-item-head"><div class="line-title">Línea ' + (index + 1) + '</div><button class="line-remove" type="button" data-remove-line="' + line.id + '">Quitar</button></div>' +
+            '<div class="grid">' +
+            '<label>Hoja<select data-line-id="' + line.id + '" data-line-field="page"><option value="1"' + (line.page === '1' ? ' selected' : '') + '>Hoja 1</option><option value="2"' + (line.page === '2' ? ' selected' : '') + '>Hoja 2</option></select></label>' +
+            '<label>Orientación<select data-line-id="' + line.id + '" data-line-field="orientation"><option value="horizontal"' + (line.orientation === 'horizontal' ? ' selected' : '') + '>Horizontal</option><option value="vertical"' + (line.orientation === 'vertical' ? ' selected' : '') + '>Vertical</option></select></label>' +
+            '<label>X %<input type="number" min="0" max="100" step="0.1" data-line-id="' + line.id + '" data-line-field="x" value="' + line.x + '"></label>' +
+            '<label>Y %<input type="number" min="0" max="100" step="0.1" data-line-id="' + line.id + '" data-line-field="y" value="' + line.y + '"></label>' +
+            '<label>Largo %<input type="number" min="0" max="100" step="0.1" data-line-id="' + line.id + '" data-line-field="length" value="' + line.length + '"></label>' +
+            '<label>Grosor<input type="number" min="1" max="12" step="0.1" data-line-id="' + line.id + '" data-line-field="width" value="' + line.width + '"></label>' +
+            '<label>Color<input type="color" data-line-id="' + line.id + '" data-line-field="color" value="' + line.color + '"></label>' +
+            '<label>Opacidad<input type="number" min="0.1" max="1" step="0.1" data-line-id="' + line.id + '" data-line-field="opacity" value="' + line.opacity + '"></label>' +
+            '</div></div>';
+        }).join('');
+      }
+
+      function setForm(layoutInput) {
+        const layout = normalizeLayout(layoutInput);
+        currentLogoDataUrl = layout.logoDataUrl || '';
+        currentLines = layout.lines.slice();
+        fieldNames.forEach(function (name) {
+          els[name].value = String(layout[name]);
+        });
+        renderLinesEditor();
+      }
+
+      function getFormLayout() {
+        const out = { logoDataUrl: currentLogoDataUrl, lines: currentLines.slice() };
+        fieldNames.forEach(function (name) {
+          out[name] = els[name].value;
+        });
+        out.logoDataUrl = currentLogoDataUrl;
+        out.lines = currentLines.slice();
+        return normalizeLayout(out);
+      }
+
+      function pushPreview() {
+        if (!els.previewFrame.contentWindow) return;
+        els.previewFrame.contentWindow.postMessage({
+          type: 'hoja-reserva-simca-layout-preview',
+          layout: getFormLayout()
+        }, window.location.origin);
+      }
+
+      async function loadLayout() {
+        els.status.textContent = 'Cargando layout...';
+        try {
+          const res = await fetch('/api/hoja-reserva-simca/layout', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          setForm(res.ok && data && data.ok && data.layout ? data.layout : defaultLayout);
+          els.status.textContent = 'Layout listo.';
+          pushPreview();
+        } catch (_) {
+          setForm(defaultLayout);
+          els.status.textContent = 'No se pudo cargar layout. Se usó default.';
+          pushPreview();
+        }
+      }
+
+      async function saveLayout() {
+        els.status.textContent = 'Guardando layout...';
+        const layout = getFormLayout();
+        try {
+          const res = await fetch('/api/hoja-reserva-simca/layout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ layout: layout })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            els.status.textContent = data.error || 'No se pudo guardar.';
+            return;
+          }
+          setForm(data.layout || layout);
+          els.status.textContent = 'Layout guardado.';
+          pushPreview();
+        } catch (_) {
+          els.status.textContent = 'Error de red guardando layout.';
+        }
+      }
+
+      function loadLogoFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+          currentLogoDataUrl = typeof reader.result === 'string' ? reader.result : '';
+          els.status.textContent = 'Logo cargado en preview. Guarda layout si quieres dejarlo fijo.';
+          pushPreview();
+        };
+        reader.onerror = function () {
+          els.status.textContent = 'No se pudo leer el logo.';
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function addLine() {
+        currentLines = currentLines.concat([{
+          id: 'line-' + Date.now(),
+          page: '1',
+          orientation: 'horizontal',
+          x: 10,
+          y: 10,
+          length: 40,
+          width: 1,
+          color: '#2d2d2d',
+          opacity: 1
+        }]);
+        renderLinesEditor();
+        pushPreview();
+      }
+
+      function updateLine(id, field, value) {
+        currentLines = currentLines.map(function (line) {
+          if (line.id !== id) return line;
+          const next = Object.assign({}, line);
+          if (field === 'page') next.page = String(value) === '2' ? '2' : '1';
+          else if (field === 'orientation') next.orientation = String(value) === 'vertical' ? 'vertical' : 'horizontal';
+          else if (field === 'color') next.color = String(value || '#2d2d2d');
+          else next[field] = value;
+          return next;
+        });
+        pushPreview();
+      }
+
+      function removeLine(id) {
+        currentLines = currentLines.filter(function (line) { return line.id !== id; });
+        renderLinesEditor();
+        pushPreview();
+      }
+
+      fieldNames.forEach(function (name) {
+        els[name].addEventListener('input', pushPreview);
+      });
+      els.logoFile.addEventListener('change', function () { loadLogoFile(els.logoFile.files && els.logoFile.files[0]); });
+      els.removeLogoBtn.addEventListener('click', function () { currentLogoDataUrl = ''; pushPreview(); });
+      els.addLineBtn.addEventListener('click', addLine);
+      els.lineList.addEventListener('input', function (event) {
+        const t = event.target;
+        if (!t || !t.dataset) return;
+        updateLine(t.dataset.lineId, t.dataset.lineField, t.value);
+      });
+      els.lineList.addEventListener('click', function (event) {
+        const btn = event.target.closest('[data-remove-line]');
+        if (!btn) return;
+        removeLine(btn.getAttribute('data-remove-line'));
+      });
+      els.saveBtn.addEventListener('click', saveLayout);
+      els.resetBtn.addEventListener('click', function () {
+        setForm(defaultLayout);
+        currentLogoDataUrl = '';
+        currentLines = [];
+        renderLinesEditor();
+        pushPreview();
+        els.status.textContent = 'Preview restaurado. Guarda si quieres dejarlo fijo.';
+      });
+      loadLayout();
+    })();
+  </script>
+</body>
+</html>

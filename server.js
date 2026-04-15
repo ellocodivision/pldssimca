@@ -107,6 +107,7 @@ const SOLAR_MIDTOWN_LAYOUT_SEED_PATH = path.join(__dirname, 'seed-data', 'presen
 const SOLAR_MIDTOWN_CROPS_SEED_PATH = path.join(__dirname, 'seed-data', 'presentaciones-solar-midtown-crops.json');
 const TABLA_PAGOS_LAYOUT_PATH = path.join(DATA_DIR, 'tabla-pagos-layout.json');
 const FINANCIAMIENTO_SIMCA_LAYOUT_PATH = path.join(DATA_DIR, 'financiamiento-simca-layout.json');
+const HOJA_RESERVA_SIMCA_LAYOUT_PATH = path.join(DATA_DIR, 'hoja-reserva-simca-layout.json');
 const HORARIOS_SIMCA_OVERRIDES_PATH = path.join(DATA_DIR, 'horarios-simca-overrides.json');
 const VICEROY_PAYMENT_PLAN_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-payment-plan-layout.json');
 const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
@@ -1837,6 +1838,69 @@ function readFinanciamientoSimcaLayout() {
 function saveFinanciamientoSimcaLayout(layout) {
   const normalized = normalizeTablaPagosLayout(layout);
   writeJson(FINANCIAMIENTO_SIMCA_LAYOUT_PATH, normalized);
+  return normalized;
+}
+
+function normalizeHojaReservaSimcaLayout(input) {
+  const src = input && typeof input === 'object' ? input : {};
+  const out = {
+    version: 1,
+    logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
+    railText: typeof src.railText === 'string' ? src.railText : 'simca.mx',
+    railWidth: clampNumber(src.railWidth, 50, 30, 120),
+    railOffsetY: clampNumber(src.railOffsetY, 88, 0, 300),
+    railHeight: clampNumber(src.railHeight, 162, 40, 320),
+    railAccentColor: typeof src.railAccentColor === 'string' ? src.railAccentColor : '#ffd91a',
+    railTextColor: typeof src.railTextColor === 'string' ? src.railTextColor : '#1d1c18',
+    logoWidth: clampNumber(src.logoWidth, 320, 120, 520),
+    logoOffsetX: clampNumber(src.logoOffsetX, 0, -220, 220),
+    logoOffsetY: clampNumber(src.logoOffsetY, 0, -120, 120),
+    titleOffsetX: clampNumber(src.titleOffsetX, 0, -220, 220),
+    titleOffsetY: clampNumber(src.titleOffsetY, 0, -120, 120),
+    page1Scale: clampNumber(src.page1Scale, 0.92, 0.7, 1.1),
+    page1OffsetY: clampNumber(src.page1OffsetY, -10, -160, 160),
+    page2Scale: clampNumber(src.page2Scale, 0.94, 0.7, 1.1),
+    page2OffsetY: clampNumber(src.page2OffsetY, -10, -160, 160),
+    observationsHeight: clampNumber(src.observationsHeight, 82, 40, 180),
+    paymentsOffsetY: clampNumber(src.paymentsOffsetY, -8, -180, 180),
+    paymentsScale: clampNumber(src.paymentsScale, 0.9, 0.65, 1.15),
+    cardSectionOffsetY: clampNumber(src.cardSectionOffsetY, -12, -180, 180),
+    cardSectionScale: clampNumber(src.cardSectionScale, 0.94, 0.65, 1.15),
+    signatureOffsetY: clampNumber(src.signatureOffsetY, -6, -180, 180),
+    footerOffsetY: clampNumber(src.footerOffsetY, 0, -180, 180),
+    holderOffsetY: clampNumber(src.holderOffsetY, 0, -180, 180),
+    coOwnerOffsetY: clampNumber(src.coOwnerOffsetY, 0, -180, 180),
+    docsOffsetY: clampNumber(src.docsOffsetY, 0, -180, 180),
+    bodyFontFamily: typeof src.bodyFontFamily === 'string' ? src.bodyFontFamily : '"Akkurat","Segoe UI",Tahoma,sans-serif',
+    headingFontFamily: typeof src.headingFontFamily === 'string' ? src.headingFontFamily : '"Akkurat","Segoe UI",Tahoma,sans-serif',
+    lineColor: typeof src.lineColor === 'string' ? src.lineColor : '#2d2d2d',
+    textColor: typeof src.textColor === 'string' ? src.textColor : '#222222',
+    paperColor: typeof src.paperColor === 'string' ? src.paperColor : '#fffef9',
+    lines: Array.isArray(src.lines) ? src.lines.slice(0, 60).map(function (line, index) {
+      const item = line && typeof line === 'object' ? line : {};
+      return {
+        id: typeof item.id === 'string' && item.id ? item.id : 'line-' + (index + 1),
+        page: String(item.page || '').trim() === '2' ? '2' : '1',
+        orientation: String(item.orientation || '').trim() === 'vertical' ? 'vertical' : 'horizontal',
+        x: clampNumber(item.x, 10, 0, 100),
+        y: clampNumber(item.y, 10, 0, 100),
+        length: clampNumber(item.length, 40, 0, 100),
+        width: clampNumber(item.width, 1, 1, 12),
+        color: typeof item.color === 'string' ? item.color : '#2d2d2d',
+        opacity: clampNumber(item.opacity, 1, 0.1, 1)
+      };
+    }) : []
+  };
+  return out;
+}
+
+function readHojaReservaSimcaLayout() {
+  return normalizeHojaReservaSimcaLayout(readJson(HOJA_RESERVA_SIMCA_LAYOUT_PATH, null));
+}
+
+function saveHojaReservaSimcaLayout(layout) {
+  const normalized = normalizeHojaReservaSimcaLayout(layout);
+  writeJson(HOJA_RESERVA_SIMCA_LAYOUT_PATH, normalized);
   return normalized;
 }
 
@@ -3904,6 +3968,12 @@ function renderSimcaHome(req, res, options) {
           <h2 class="name">Editor PDF Financiamiento</h2>
           <p class="desc">Ajusta el layout de impresión del módulo Financiamiento SIMCA.</p>
         </a>` : '';
+  const hojaReservaEditorCard = isGerente ? `
+        <a class="card" href="/hoja-reserva-simca/editor">
+          <span class="tag">Editor</span>
+          <h2 class="name">Editor PDF Hoja de Reserva</h2>
+          <p class="desc">Mueve logo, líneas, cuadro amarillo y bloques del PDF de reserva.</p>
+        </a>` : '';
   const tablaPagosCard = `
         <a class="card" href="/tabla-pagos">
           <span class="tag">Módulo</span>
@@ -3929,7 +3999,8 @@ function renderSimcaHome(req, res, options) {
           <span class="tag">Módulo</span>
           <h2 class="name">Hoja de Reserva</h2>
           <p class="desc">Captura los datos de reserva y descarga el PDF exacto con layout SIMCA.</p>
-        </a>`;
+        </a>
+        ${hojaReservaEditorCard}`;
   const brokersCard = isGerente ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
@@ -4349,6 +4420,10 @@ app.get('/financiamiento-simca/editor', requireGerente, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'financiamiento-simca-editor.html'));
 });
 
+app.get('/hoja-reserva-simca/editor', requireGerente, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'hoja-reserva-simca-editor.html'));
+});
+
 app.get('/api/financiamiento-simca/layout', (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
   return res.json({
@@ -4366,6 +4441,28 @@ app.post('/api/financiamiento-simca/layout', requireGerente, (req, res) => {
   } catch (err) {
     return res.status(500).json({
       error: 'No se pudo guardar el layout de Financiamiento SIMCA',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/hoja-reserva-simca/layout', (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  return res.json({
+    ok: true,
+    layout: readHojaReservaSimcaLayout(),
+    isGerente: Boolean(currentEmail && currentEmail === GERENTE_EMAIL)
+  });
+});
+
+app.post('/api/hoja-reserva-simca/layout', requireGerente, (req, res) => {
+  try {
+    const incoming = req.body && req.body.layout ? req.body.layout : req.body;
+    const saved = saveHojaReservaSimcaLayout(incoming);
+    return res.json({ ok: true, layout: saved });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo guardar el layout de Hoja de Reserva',
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
