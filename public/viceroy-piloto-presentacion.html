@@ -1196,14 +1196,10 @@
       }
 
       function getAssignableWhisperlistRows() {
-        const rows = state.isGerente
-          ? (state.whisperlistRows || []).filter(function (row) { return !!row; })
-          : getUserEditableWhisperlistRows();
-        const currentEmail = String(state.currentEmail || '').trim().toLowerCase();
-        if (state.isGerente || !currentEmail) return rows;
-        return rows.filter(function (row) {
-          return String(row && row.correo || '').trim().toLowerCase() === currentEmail;
-        });
+        if (state.isGerente) {
+          return (state.whisperlistRows || []).filter(function (row) { return !!row; });
+        }
+        return getUserEditableWhisperlistRows();
       }
 
       function getSelectedWhisperRow() {

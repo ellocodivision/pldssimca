@@ -2136,6 +2136,18 @@ function whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente = f
   const emailAlias = normalizeWhisperlistAsesor(email.split('@')[0] || '');
   if (emailAlias && normalizedAsesor && emailAlias === normalizedAsesor) return true;
 
+  const currentFirst = String(normalizedCurrentName.split(/\s+/)[0] || '').trim();
+  const asesorFirst = String(normalizedAsesor.split(/\s+/)[0] || '').trim();
+  const aliasFirst = String(emailAlias.split(/\s+/)[0] || '').trim();
+  const hasClosePrefix = function (a, b) {
+    if (!a || !b) return false;
+    const minLen = Math.min(a.length, b.length);
+    if (minLen < 5) return false;
+    return a.startsWith(b) || b.startsWith(a);
+  };
+  if (hasClosePrefix(currentFirst, asesorFirst)) return true;
+  if (hasClosePrefix(aliasFirst, asesorFirst)) return true;
+
   return false;
 }
 
