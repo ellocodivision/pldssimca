@@ -225,7 +225,18 @@
       };
 
       const fieldNames = Object.keys(els).filter(function (key) {
-        return !['saveBtn','resetBtn','addLineBtn','removeLogoBtn','logoFile','lineList','status','previewFrame'].includes(key);
+        return ![
+          'saveBtn',
+          'resetBtn',
+          'addLineBtn',
+          'removeLogoBtn',
+          'removeFooterLogoBtn',
+          'logoFile',
+          'footerLogoFile',
+          'lineList',
+          'status',
+          'previewFrame'
+        ].includes(key);
       });
       let currentLogoDataUrl = '';
       let currentFooterLogoDataUrl = '';
@@ -233,6 +244,10 @@
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
+      }
+
+      function safeColor(value, fallback) {
+        return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
       }
 
       function normalizeLayout(input) {
@@ -244,17 +259,17 @@
           railWidth: clamp(Number(src.railWidth) || defaultLayout.railWidth, 30, 120),
           railOffsetY: clamp(Number(src.railOffsetY) || defaultLayout.railOffsetY, 0, 300),
           railHeight: clamp(Number(src.railHeight) || defaultLayout.railHeight, 40, 320),
-          railAccentColor: typeof src.railAccentColor === 'string' ? src.railAccentColor : defaultLayout.railAccentColor,
-          railTextColor: typeof src.railTextColor === 'string' ? src.railTextColor : defaultLayout.railTextColor,
+          railAccentColor: safeColor(src.railAccentColor, defaultLayout.railAccentColor),
+          railTextColor: safeColor(src.railTextColor, defaultLayout.railTextColor),
           logoWidth: clamp(Number(src.logoWidth) || defaultLayout.logoWidth, 120, 520),
           logoOffsetX: clamp(Number(src.logoOffsetX) || defaultLayout.logoOffsetX, -220, 220),
           logoOffsetY: clamp(Number(src.logoOffsetY) || defaultLayout.logoOffsetY, -120, 120),
           footerLogoWidth: clamp(Number(src.footerLogoWidth) || defaultLayout.footerLogoWidth, 24, 140),
           titleOffsetX: clamp(Number(src.titleOffsetX) || defaultLayout.titleOffsetX, -220, 220),
           titleOffsetY: clamp(Number(src.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120),
-          lineColor: typeof src.lineColor === 'string' ? src.lineColor : defaultLayout.lineColor,
-          textColor: typeof src.textColor === 'string' ? src.textColor : defaultLayout.textColor,
-          paperColor: typeof src.paperColor === 'string' ? src.paperColor : defaultLayout.paperColor,
+          lineColor: safeColor(src.lineColor, defaultLayout.lineColor),
+          textColor: safeColor(src.textColor, defaultLayout.textColor),
+          paperColor: safeColor(src.paperColor, defaultLayout.paperColor),
           page1Scale: clamp(Number(src.page1Scale) || defaultLayout.page1Scale, 0.7, 1.1),
           page1OffsetY: clamp(Number(src.page1OffsetY) || defaultLayout.page1OffsetY, -160, 160),
           observationsHeight: clamp(Number(src.observationsHeight) || defaultLayout.observationsHeight, 40, 180),
@@ -279,7 +294,7 @@
               y: clamp(Number(item.y) || 10, 0, 100),
               length: clamp(Number(item.length) || 40, 0, 100),
               width: clamp(Number(item.width) || 1, 1, 12),
-              color: typeof item.color === 'string' ? item.color : '#2d2d2d',
+              color: safeColor(item.color, '#2d2d2d'),
               opacity: clamp(Number(item.opacity) || 1, 0.1, 1)
             };
           }) : []

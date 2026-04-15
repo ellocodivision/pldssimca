@@ -1843,6 +1843,9 @@ function saveFinanciamientoSimcaLayout(layout) {
 
 function normalizeHojaReservaSimcaLayout(input) {
   const src = input && typeof input === 'object' ? input : {};
+  const safeColor = (value, fallback) => (
+    typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
+  );
   const out = {
     version: 1,
     logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
@@ -1851,8 +1854,8 @@ function normalizeHojaReservaSimcaLayout(input) {
     railWidth: clampNumber(src.railWidth, 50, 30, 120),
     railOffsetY: clampNumber(src.railOffsetY, 88, 0, 300),
     railHeight: clampNumber(src.railHeight, 162, 40, 320),
-    railAccentColor: typeof src.railAccentColor === 'string' ? src.railAccentColor : '#ffd91a',
-    railTextColor: typeof src.railTextColor === 'string' ? src.railTextColor : '#1d1c18',
+    railAccentColor: safeColor(src.railAccentColor, '#ffd91a'),
+    railTextColor: safeColor(src.railTextColor, '#1d1c18'),
     logoWidth: clampNumber(src.logoWidth, 320, 120, 520),
     logoOffsetX: clampNumber(src.logoOffsetX, 0, -220, 220),
     logoOffsetY: clampNumber(src.logoOffsetY, 0, -120, 120),
@@ -1875,9 +1878,9 @@ function normalizeHojaReservaSimcaLayout(input) {
     docsOffsetY: clampNumber(src.docsOffsetY, 0, -180, 180),
     bodyFontFamily: typeof src.bodyFontFamily === 'string' ? src.bodyFontFamily : '"Akkurat","Segoe UI",Tahoma,sans-serif',
     headingFontFamily: typeof src.headingFontFamily === 'string' ? src.headingFontFamily : '"Akkurat","Segoe UI",Tahoma,sans-serif',
-    lineColor: typeof src.lineColor === 'string' ? src.lineColor : '#2d2d2d',
-    textColor: typeof src.textColor === 'string' ? src.textColor : '#222222',
-    paperColor: typeof src.paperColor === 'string' ? src.paperColor : '#fffef9',
+    lineColor: safeColor(src.lineColor, '#2d2d2d'),
+    textColor: safeColor(src.textColor, '#222222'),
+    paperColor: safeColor(src.paperColor, '#fffef9'),
     lines: Array.isArray(src.lines) ? src.lines.slice(0, 60).map(function (line, index) {
       const item = line && typeof line === 'object' ? line : {};
       return {
@@ -1888,7 +1891,7 @@ function normalizeHojaReservaSimcaLayout(input) {
         y: clampNumber(item.y, 10, 0, 100),
         length: clampNumber(item.length, 40, 0, 100),
         width: clampNumber(item.width, 1, 1, 12),
-        color: typeof item.color === 'string' ? item.color : '#2d2d2d',
+      color: safeColor(item.color, '#2d2d2d'),
         opacity: clampNumber(item.opacity, 1, 0.1, 1)
       };
     }) : []
