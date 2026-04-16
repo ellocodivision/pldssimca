@@ -623,8 +623,9 @@
 
   <script>
     (function () {
-      const previewMode = new URLSearchParams(window.location.search || '').get('editorPreview') === 'print';
-      if (previewMode) document.body.classList.add('preview-mode');
+      const previewMode = new URLSearchParams(window.location.search || '').get('editorPreview');
+      if (previewMode === 'print') document.body.classList.add('preview-mode');
+      if (previewMode === 'pdf') document.body.classList.add('print-preview-mode');
       const state = {
         fullName: "",
         email: "",
