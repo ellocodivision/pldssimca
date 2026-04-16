@@ -394,14 +394,21 @@
     .page-scale{
       display:flex;
       flex-direction:column;
+      min-height:0;
+      transform:none;
+      width:100%;
+    }
+    .page-flow{
+      display:flex;
+      flex-direction:column;
       min-height:calc(var(--page-height) - var(--header-height));
       transform-origin:top left;
     }
-    .page-1-scale{
+    .page-1-flow{
       transform:translateY(var(--page1-offset-y)) scale(var(--page1-scale));
       width:calc(100% / var(--page1-scale));
     }
-    .page-2-scale{
+    .page-2-flow{
       transform:translateY(var(--page2-offset-y)) scale(var(--page2-scale));
       width:calc(100% / var(--page2-scale));
     }
@@ -1147,8 +1154,9 @@
               ${renderFreeLines()}
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
+                <div class="page-flow page-1-flow">
                 ${pageHeader("Reservation Form / Formato de Reserva")}
-                <div class="page-scale page-1-scale">
+                <div class="page-scale">
                 <div class="body">
                   <div class="stack">
                     ${field("*Full Name / Nombre Completo:", state.fullName)}
@@ -1205,8 +1213,9 @@
                     <div class="signature-note">I hereby authorize collection of payment for the charges as indicated above. / Autorizo el cargo de la cuota de reserva descrita arriba.</div>
                   </div>
                 </div>
-                ${footerOne()}
                 </div>
+                </div>
+                ${footerOne()}
               </div>
             </div>
           </div>
@@ -1216,8 +1225,9 @@
               ${renderFreeLines()}
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
+                <div class="page-flow page-2-flow">
                 ${pageHeader("Know your Client / Conoce a tu Cliente")}
-                <div class="page-scale page-2-scale">
+                <div class="page-scale">
                 <div class="body">
                   <div class="holder-block">
                   <div class="subsection-title">Holder / Titular</div>
@@ -1285,8 +1295,9 @@
                     </div>
                   </div>
                 </div>
-                ${footerTwo()}
                 </div>
+                </div>
+                ${footerTwo()}
               </div>
             </div>
           </div>
