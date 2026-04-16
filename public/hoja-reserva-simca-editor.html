@@ -115,6 +115,7 @@
             <label>X bloque<input id="page1OffsetX" type="number" min="-240" max="240" step="1"></label>
             <label>Y bloque<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
             <label>Escala bloque<input id="page1Scale" type="number" min="0.70" max="1.15" step="0.01"></label>
+            <label>Firma Y<input id="signatureOffsetY" type="number" min="-180" max="180" step="1"></label>
             <label>Alto observaciones<input id="observationsHeight" type="number" min="40" max="180" step="1"></label>
             <label>Footer X<input id="footerOffsetX" type="number" min="-240" max="240" step="1"></label>
             <label>Footer Y<input id="footerOffsetY" type="number" min="-320" max="320" step="1"></label>
@@ -129,6 +130,7 @@
             <label>X bloque<input id="page2OffsetX" type="number" min="-240" max="240" step="1"></label>
             <label>Y bloque<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
             <label>Escala bloque<input id="page2Scale" type="number" min="0.70" max="1.15" step="0.01"></label>
+            <label>Documentos Y<input id="docsOffsetY" type="number" min="-180" max="180" step="1"></label>
           </div>
         </div>
 
@@ -181,11 +183,13 @@
         page1Scale: 0.92,
         page1OffsetX: 0,
         page1OffsetY: -10,
+        signatureOffsetY: -24,
         page2HeaderOffsetX: 0,
         page2HeaderOffsetY: 0,
         page2Scale: 0.94,
         page2OffsetX: 0,
         page2OffsetY: -10,
+        docsOffsetY: -24,
         observationsHeight: 82,
         paymentsOffsetY: -8,
         paymentsScale: 0.9,
@@ -246,6 +250,7 @@
         page1Scale: document.getElementById('page1Scale'),
         page1OffsetX: document.getElementById('page1OffsetX'),
         page1OffsetY: document.getElementById('page1OffsetY'),
+        signatureOffsetY: document.getElementById('signatureOffsetY'),
         observationsHeight: document.getElementById('observationsHeight'),
         footerOffsetX: document.getElementById('footerOffsetX'),
         footerOffsetY: document.getElementById('footerOffsetY'),
@@ -254,6 +259,7 @@
         page2Scale: document.getElementById('page2Scale'),
         page2OffsetX: document.getElementById('page2OffsetX'),
         page2OffsetY: document.getElementById('page2OffsetY'),
+        docsOffsetY: document.getElementById('docsOffsetY'),
       };
 
       const editableFieldNames = [
@@ -274,11 +280,13 @@
           'page1Scale',
           'page1OffsetX',
           'page1OffsetY',
+          'signatureOffsetY',
           'page2HeaderOffsetX',
           'page2HeaderOffsetY',
           'page2Scale',
           'page2OffsetX',
           'page2OffsetY',
+          'docsOffsetY',
           'observationsHeight',
           'footerOffsetX',
           'footerOffsetY',
