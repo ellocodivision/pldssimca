@@ -163,6 +163,56 @@
       color:var(--muted);
       font-size:14px;
     }
+    .history-box{
+      margin-bottom:14px;
+      border:1px solid #e0d7c8;
+      border-radius:16px;
+      background:#fff;
+      padding:14px;
+    }
+    .history-head{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      margin-bottom:10px;
+      flex-wrap:wrap;
+    }
+    .history-title{
+      font-size:13px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:#4d463b;
+    }
+    .history-list{
+      display:grid;
+      gap:8px;
+      max-height:220px;
+      overflow:auto;
+      padding-right:4px;
+    }
+    .history-item{
+      border:1px solid #e7e1d4;
+      border-radius:12px;
+      padding:10px;
+      background:#fffdfa;
+    }
+    .history-item strong{display:block;font-size:13px;margin-bottom:4px}
+    .history-meta{font-size:12px;color:var(--muted);line-height:1.4}
+    .history-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .history-btn{
+      appearance:none;
+      border:1px solid #c9c2b3;
+      border-radius:999px;
+      background:#fff;
+      color:#1d1c18;
+      min-height:32px;
+      padding:0 10px;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
     .editor{
       display:grid;
       gap:14px;
@@ -220,6 +270,17 @@
       overflow:auto;
       max-height:calc(100vh - 108px);
       padding-right:6px;
+    }
+    .page-divider{
+      margin:14px 0 18px;
+      padding:8px 0 6px;
+      border-top:2px solid rgba(95,91,80,.18);
+      border-bottom:2px solid rgba(95,91,80,.18);
+      text-align:center;
+      color:#6c6558;
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
     }
     .page{
       width:var(--page-width);
@@ -569,6 +630,16 @@
         <h1>Editor</h1>
         <p>Llena la hoja y la vista previa se actualiza al instante.</p>
       </div>
+      <div class="history-box">
+        <div class="history-head">
+          <div class="history-title">Versiones guardadas</div>
+          <div class="actions-inline">
+            <button class="small-btn" type="button" id="restoreLatestBtn">Recuperar ultima</button>
+            <button class="small-btn" type="button" id="refreshHistoryBtn">Actualizar lista</button>
+          </div>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </div>
       <div class="editor">
         <section class="section">
           <h2>Reserva</h2>
@@ -745,6 +816,10 @@
         coOwnerEmail: "",
         coOwnerNotes: ""
       };
+      const DRAFT_KEY = 'hoja-reserva-simca-draft-v1';
+      const HISTORY_KEY = 'hoja-reserva-simca-history-v1';
+      const HISTORY_LIMIT = 8;
+      let autosaveTimer = null;
       const defaultLayout = {
         logoDataUrl: '',
         footerLogoDataUrl: '',
@@ -798,6 +873,138 @@
       const printRoot = document.getElementById("printRoot");
       const editorBtn = document.getElementById("editorBtn");
       const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+      const historyList = document.getElementById("historyList");
+      const restoreLatestBtn = document.getElementById("restoreLatestBtn");
+      const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+
+      function readJson(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      function writeJson(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+
+      function cloneState() {
+        return Object.keys(state).reduce(function (acc, key) {
+          acc[key] = state[key];
+          return acc;
+        }, {});
+      }
+
+      function applyState(nextState) {
+        Object.keys(state).forEach(function (key) {
+          if (Object.prototype.hasOwnProperty.call(nextState, key)) {
+            state[key] = nextState[key] == null ? "" : String(nextState[key]);
+          }
+        });
+        document.querySelectorAll("[data-bind]").forEach(function (input) {
+          const key = input.getAttribute("data-bind");
+          if (!key) return;
+          if (Object.prototype.hasOwnProperty.call(state, key)) {
+            input.value = state[key];
+          }
+        });
+        renderPreview();
+      }
+
+      function loadDraftState() {
+        const draft = readJson(DRAFT_KEY, null);
+        if (!draft || typeof draft !== 'object') return;
+        applyState(draft);
+      }
+
+      function loadHistory() {
+        const items = readJson(HISTORY_KEY, []);
+        return Array.isArray(items) ? items : [];
+      }
+
+      function persistHistory(items) {
+        writeJson(HISTORY_KEY, items.slice(0, HISTORY_LIMIT));
+      }
+
+      function persistDraft() {
+        writeJson(DRAFT_KEY, cloneState());
+      }
+
+      function snapshotSignature(payload) {
+        return JSON.stringify(payload);
+      }
+
+      function saveSnapshot(reason) {
+        const payload = cloneState();
+        persistDraft();
+        const items = loadHistory();
+        const signature = snapshotSignature(payload);
+        const latest = items[0];
+        if (latest && latest.signature === signature) return;
+        const record = {
+          id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+          createdAt: new Date().toISOString(),
+          label: reason || 'Version guardada',
+          fullName: payload.fullName || '',
+          unitNumber: payload.unitNumber || '',
+          signature,
+          payload
+        };
+        items.unshift(record);
+        persistHistory(items);
+        renderHistory();
+      }
+
+      function scheduleAutosave() {
+        persistDraft();
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(function () {
+          saveSnapshot('Auto');
+        }, 900);
+      }
+
+      function renderHistory() {
+        const items = loadHistory();
+        if (!historyList) return;
+        historyList.innerHTML = '';
+        if (!items.length) {
+          historyList.innerHTML = '<div class="history-item"><div class="history-meta">Sin versiones guardadas todavia.</div></div>';
+          return;
+        }
+        items.forEach(function (item, idx) {
+          const row = document.createElement('div');
+          row.className = 'history-item';
+          const dateTxt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
+          row.innerHTML = `
+            <strong>${item.label || 'Version'}</strong>
+            <div class="history-meta">${dateTxt}</div>
+            <div class="history-meta">Nombre: ${item.fullName || 'N/A'} | Unidad: ${item.unitNumber || 'N/A'}</div>
+            <div class="history-actions">
+              <button class="history-btn" type="button" data-load-history="${idx}">Cargar</button>
+              <button class="history-btn" type="button" data-delete-history="${idx}">Eliminar</button>
+            </div>
+          `;
+          historyList.appendChild(row);
+        });
+      }
+
+      function restoreHistoryItem(index) {
+        const items = loadHistory();
+        const item = items[index];
+        if (!item || !item.payload) return;
+        applyState(item.payload);
+        persistDraft();
+      }
+
+      function deleteHistoryItem(index) {
+        const items = loadHistory();
+        if (!items[index]) return;
+        items.splice(index, 1);
+        persistHistory(items);
+        renderHistory();
+      }
 
       function applyLayout(layoutInput) {
         currentLayout = Object.assign({}, defaultLayout, layoutInput || {});
@@ -1136,8 +1343,38 @@
         input.addEventListener("input", () => {
           state[key] = input.value;
           renderPreview();
+          scheduleAutosave();
         });
       });
+
+      loadDraftState();
+      renderHistory();
+
+      if (historyList) {
+        historyList.addEventListener('click', function (event) {
+          const loadBtn = event.target.closest('[data-load-history]');
+          if (loadBtn) {
+            restoreHistoryItem(Number(loadBtn.getAttribute('data-load-history')));
+            return;
+          }
+          const deleteBtn = event.target.closest('[data-delete-history]');
+          if (deleteBtn) {
+            deleteHistoryItem(Number(deleteBtn.getAttribute('data-delete-history')));
+          }
+        });
+      }
+
+      if (restoreLatestBtn) {
+        restoreLatestBtn.addEventListener('click', function () {
+          restoreHistoryItem(0);
+        });
+      }
+
+      if (refreshHistoryBtn) {
+        refreshHistoryBtn.addEventListener('click', function () {
+          renderHistory();
+        });
+      }
 
       window.addEventListener('message', function (event) {
         if (event.origin !== window.location.origin) return;
@@ -1188,6 +1425,7 @@
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
+          saveSnapshot('Descarga');
           statusText.textContent = "PDF generado correctamente.";
         } catch (err) {
           statusText.textContent = err && err.message ? err.message : "No se pudo generar el PDF.";
