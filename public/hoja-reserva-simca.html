@@ -28,8 +28,10 @@
       --title-offset-x:0px;
       --title-offset-y:0px;
       --page1-scale:.92;
+      --page1-offset-x:0px;
       --page1-offset-y:-10px;
       --page2-scale:.94;
+      --page2-offset-x:0px;
       --page2-offset-y:-10px;
       --obs-height:82px;
       --payments-offset-y:-8px;
@@ -396,7 +398,7 @@
       flex-direction:column;
       min-height:0;
       flex:1 1 auto;
-      transform:none;
+      transform-origin:top left;
       width:100%;
     }
     .page-flow{
@@ -404,15 +406,29 @@
       flex-direction:column;
       min-height:0;
       flex:1 1 auto;
+      width:100%;
       transform-origin:top left;
+      will-change:transform;
     }
     .page-1-flow{
-      transform:translateY(var(--page1-offset-y)) scale(var(--page1-scale));
+      transform:translate(var(--page1-offset-x), var(--page1-offset-y));
+    }
+    .page-1-flow .page-scale{
+      transform:scale(var(--page1-scale));
       width:calc(100% / var(--page1-scale));
     }
     .page-2-flow{
-      transform:translateY(var(--page2-offset-y)) scale(var(--page2-scale));
+      transform:translate(var(--page2-offset-x), var(--page2-offset-y));
+    }
+    .page-2-flow .page-scale{
+      transform:scale(var(--page2-scale));
       width:calc(100% / var(--page2-scale));
+    }
+    .page-block{
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+      width:100%;
     }
     .stack{display:grid; gap:12px}
     .row-2{
@@ -845,8 +861,10 @@
         titleOffsetX: 0,
         titleOffsetY: 0,
         page1Scale: 0.92,
+        page1OffsetX: 0,
         page1OffsetY: -10,
         page2Scale: 0.94,
+        page2OffsetX: 0,
         page2OffsetY: -10,
         observationsHeight: 82,
         paymentsOffsetY: -8,
@@ -1039,8 +1057,10 @@
         root.style.setProperty('--title-offset-x', String(numberOr(currentLayout.titleOffsetX, defaultLayout.titleOffsetX)) + 'px');
         root.style.setProperty('--title-offset-y', String(numberOr(currentLayout.titleOffsetY, defaultLayout.titleOffsetY)) + 'px');
         root.style.setProperty('--page1-scale', String(numberOr(currentLayout.page1Scale, defaultLayout.page1Scale)));
+        root.style.setProperty('--page1-offset-x', String(numberOr(currentLayout.page1OffsetX, defaultLayout.page1OffsetX)) + 'px');
         root.style.setProperty('--page1-offset-y', String(numberOr(currentLayout.page1OffsetY, defaultLayout.page1OffsetY)) + 'px');
         root.style.setProperty('--page2-scale', String(numberOr(currentLayout.page2Scale, defaultLayout.page2Scale)));
+        root.style.setProperty('--page2-offset-x', String(numberOr(currentLayout.page2OffsetX, defaultLayout.page2OffsetX)) + 'px');
         root.style.setProperty('--page2-offset-y', String(numberOr(currentLayout.page2OffsetY, defaultLayout.page2OffsetY)) + 'px');
         root.style.setProperty('--obs-height', String(numberOr(currentLayout.observationsHeight, defaultLayout.observationsHeight)) + 'px');
         root.style.setProperty('--payments-offset-y', String(numberOr(currentLayout.paymentsOffsetY, defaultLayout.paymentsOffsetY)) + 'px');
@@ -1161,63 +1181,65 @@
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
                 <div class="page-flow page-1-flow">
-                  ${pageHeader("Reservation Form / Formato de Reserva")}
                   <div class="page-scale">
-                    <div class="body">
-                  <div class="stack">
-                    ${field("*Full Name / Nombre Completo:", state.fullName)}
-                    ${field("*E-mail:", state.email)}
-                    ${field("*Phone / Teléfono:", state.phone)}
-                    <div class="row-2">
-                      ${field("Development / Desarrollo :", state.development)}
-                      ${field("Unit # / No. Unidad :", state.unitNumber)}
-                    </div>
-                    ${field("Price Listed / Precio de Lista:", state.priceListed)}
-                    ${field("Observations / Observaciones:", state.observations, { className: "xl" })}
-                  </div>
+                    <div class="page-block">
+                      ${pageHeader("Reservation Form / Formato de Reserva")}
+                      <div class="body">
+                        <div class="stack">
+                          ${field("*Full Name / Nombre Completo:", state.fullName)}
+                          ${field("*E-mail:", state.email)}
+                          ${field("*Phone / Teléfono:", state.phone)}
+                          <div class="row-2">
+                            ${field("Development / Desarrollo :", state.development)}
+                            ${field("Unit # / No. Unidad :", state.unitNumber)}
+                          </div>
+                          ${field("Price Listed / Precio de Lista:", state.priceListed)}
+                          ${field("Observations / Observaciones:", state.observations, { className: "xl" })}
+                        </div>
 
-                  <div class="payments">
-                    <table class="payments-table">
-                      <thead>
-                        <tr>
-                          <th>Paymente / Pago</th>
-                          <th>%</th>
-                          <th>Amount / Monto</th>
-                          <th>Date / Fecha</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${paymentRow(1)}
-                        ${paymentRow(2)}
-                        ${paymentRow(3)}
-                        ${paymentRow(4)}
-                        ${paymentRow(5)}
-                      </tbody>
-                    </table>
-                  </div>
+                        <div class="payments">
+                          <table class="payments-table">
+                            <thead>
+                              <tr>
+                                <th>Paymente / Pago</th>
+                                <th>%</th>
+                                <th>Amount / Monto</th>
+                                <th>Date / Fecha</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              ${paymentRow(1)}
+                              ${paymentRow(2)}
+                              ${paymentRow(3)}
+                              ${paymentRow(4)}
+                              ${paymentRow(5)}
+                            </tbody>
+                          </table>
+                        </div>
 
-                  <div class="stack card-block" style="margin-top:26px">
-                    <div class="row-2">
-                      ${field("Amount & currency / Monto & moneda:", state.amountCurrency, { className: "small" })}
-                      ${field("Card Number / Número de tarjeta:", state.cardNumber, { className: "small" })}
-                    </div>
-                    <div class="row-2">
-                      ${field("Name in the Card / Nombre en la tarjeta:", state.cardName, { className: "small" })}
-                      ${field("VISA / MASTER CARD:", state.cardType, { className: "small" })}
-                    </div>
-                    ${field("Address / Dirección:", state.cardAddress, { className: "small" })}
-                    ${field("City, Estate & Zip Code / Ciudad, Edo y C.P.:", state.cardCityStateZip, { className: "small" })}
-                    <div class="row-2">
-                      ${field("Expiration Date / Fecha Expiración:", state.expirationDate, { className: "small" })}
-                      ${field("Security Code / Código de Seguridad:", state.securityCode, { className: "small" })}
-                    </div>
-                  </div>
+                        <div class="stack card-block" style="margin-top:26px">
+                          <div class="row-2">
+                            ${field("Amount & currency / Monto & moneda:", state.amountCurrency, { className: "small" })}
+                            ${field("Card Number / Número de tarjeta:", state.cardNumber, { className: "small" })}
+                          </div>
+                          <div class="row-2">
+                            ${field("Name in the Card / Nombre en la tarjeta:", state.cardName, { className: "small" })}
+                            ${field("VISA / MASTER CARD:", state.cardType, { className: "small" })}
+                          </div>
+                          ${field("Address / Dirección:", state.cardAddress, { className: "small" })}
+                          ${field("City, Estate & Zip Code / Ciudad, Edo y C.P.:", state.cardCityStateZip, { className: "small" })}
+                          <div class="row-2">
+                            ${field("Expiration Date / Fecha Expiración:", state.expirationDate, { className: "small" })}
+                            ${field("Security Code / Código de Seguridad:", state.securityCode, { className: "small" })}
+                          </div>
+                        </div>
 
-                  <div class="signature">
-                    <div class="signature-line">${esc(state.signature)}</div>
-                    <div class="signature-title">Sign / Firma</div>
-                    <div class="signature-note">I hereby authorize collection of payment for the charges as indicated above. / Autorizo el cargo de la cuota de reserva descrita arriba.</div>
-                  </div>
+                        <div class="signature">
+                          <div class="signature-line">${esc(state.signature)}</div>
+                          <div class="signature-title">Sign / Firma</div>
+                          <div class="signature-note">I hereby authorize collection of payment for the charges as indicated above. / Autorizo el cargo de la cuota de reserva descrita arriba.</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1232,74 +1254,76 @@
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
                 <div class="page-flow page-2-flow">
-                  ${pageHeader("Know your Client / Conoce a tu Cliente")}
                   <div class="page-scale">
-                    <div class="body">
-                  <div class="holder-block">
-                  <div class="subsection-title">Holder / Titular</div>
-                  <div class="stack" style="margin-top:6px">
-                    ${field("Name as in Passport  / Nombre como el Pasaporte:", state.holderName)}
-                    ${field("Day & Place of Birth  / Día y Lugar de Nacimiento:", state.holderBirth)}
-                    <div class="row-2">
-                      ${field("Occupation / Ocupación:", state.holderOccupation)}
-                      ${field("Nationality / Nacionalidad:", state.holderNationality)}
-                    </div>
-                    <div class="row-2">
-                      ${field("Passport/ Pasaporte:", state.holderPassport)}
-                      ${field("Marital Status / Edo. Civil :", state.holderMaritalStatus)}
-                    </div>
-                    ${field("Address / Dirección:", state.holderAddress)}
-                    ${field("City, Estate & Zip Code / Ciudad, Estado y C.P.:", state.holderCityStateZip)}
-                    <div class="row-2">
-                      ${field("Phone / Teléfono:", state.holderPhone)}
-                      ${field("Email:", state.holderEmail)}
-                    </div>
-                    ${field("Notes / RFC y CURP (solo ciudadanos Mexicanos):", state.holderNotes)}
-                  </div>
-                  </div>
+                    <div class="page-block">
+                      ${pageHeader("Know your Client / Conoce a tu Cliente")}
+                      <div class="body">
+                        <div class="holder-block">
+                          <div class="subsection-title">Holder / Titular</div>
+                          <div class="stack" style="margin-top:6px">
+                            ${field("Name as in Passport  / Nombre como el Pasaporte:", state.holderName)}
+                            ${field("Day & Place of Birth  / Día y Lugar de Nacimiento:", state.holderBirth)}
+                            <div class="row-2">
+                              ${field("Occupation / Ocupación:", state.holderOccupation)}
+                              ${field("Nationality / Nacionalidad:", state.holderNationality)}
+                            </div>
+                            <div class="row-2">
+                              ${field("Passport/ Pasaporte:", state.holderPassport)}
+                              ${field("Marital Status / Edo. Civil :", state.holderMaritalStatus)}
+                            </div>
+                            ${field("Address / Dirección:", state.holderAddress)}
+                            ${field("City, Estate & Zip Code / Ciudad, Estado y C.P.:", state.holderCityStateZip)}
+                            <div class="row-2">
+                              ${field("Phone / Teléfono:", state.holderPhone)}
+                              ${field("Email:", state.holderEmail)}
+                            </div>
+                            ${field("Notes / RFC y CURP (solo ciudadanos Mexicanos):", state.holderNotes)}
+                          </div>
+                        </div>
 
-                  <div class="coowner-block">
-                  <div class="subsection-title" style="margin-top:18px">Co-owner / Copropietario</div>
-                  <div class="stack" style="margin-top:6px">
-                    ${field("Name as in Passport  / Nombre como el Pasaporte:", state.coOwnerName)}
-                    ${field("Day & Place of Birth  / Día y Lugar de Nacimiento:", state.coOwnerBirth)}
-                    <div class="row-2">
-                      ${field("Occupation / Ocupación:", state.coOwnerOccupation)}
-                      ${field("Nationality / Nacionalidad:", state.coOwnerNationality)}
-                    </div>
-                    <div class="row-2">
-                      ${field("Passport/ Pasaporte:", state.coOwnerPassport)}
-                      ${field("Marital Status / Edo. Civil :", state.coOwnerMaritalStatus)}
-                    </div>
-                    ${field("Address / Dirección:", state.coOwnerAddress)}
-                    ${field("City, Estate & Zip Code / Ciudad, Estado y C.P.:", state.coOwnerCityStateZip)}
-                    <div class="row-2">
-                      ${field("Phone / Teléfono:", state.coOwnerPhone)}
-                      ${field("Email:", state.coOwnerEmail)}
-                    </div>
-                    ${field("Notes / RFC y CURP (solo ciudadanos Mexicanos):", state.coOwnerNotes)}
-                  </div>
-                  </div>
+                        <div class="coowner-block">
+                          <div class="subsection-title" style="margin-top:18px">Co-owner / Copropietario</div>
+                          <div class="stack" style="margin-top:6px">
+                            ${field("Name as in Passport  / Nombre como el Pasaporte:", state.coOwnerName)}
+                            ${field("Day & Place of Birth  / Día y Lugar de Nacimiento:", state.coOwnerBirth)}
+                            <div class="row-2">
+                              ${field("Occupation / Ocupación:", state.coOwnerOccupation)}
+                              ${field("Nationality / Nacionalidad:", state.coOwnerNationality)}
+                            </div>
+                            <div class="row-2">
+                              ${field("Passport/ Pasaporte:", state.coOwnerPassport)}
+                              ${field("Marital Status / Edo. Civil :", state.coOwnerMaritalStatus)}
+                            </div>
+                            ${field("Address / Dirección:", state.coOwnerAddress)}
+                            ${field("City, Estate & Zip Code / Ciudad, Estado y C.P.:", state.coOwnerCityStateZip)}
+                            <div class="row-2">
+                              ${field("Phone / Teléfono:", state.coOwnerPhone)}
+                              ${field("Email:", state.coOwnerEmail)}
+                            </div>
+                            ${field("Notes / RFC y CURP (solo ciudadanos Mexicanos):", state.coOwnerNotes)}
+                          </div>
+                        </div>
 
-                  <div class="docs">
-                    <div class="docs-title">Please provide LEGIBLE copies of the following documents / Enviar copias LEGIBLES de los siguientes documentos:</div>
-                    <div class="docs-cols">
-                      <div>
-                        <span class="docs-item">Completed and signed Unit Reservation Form</span>
-                        <span class="docs-item">Copy of Passport</span>
-                        <span class="docs-item">Proof of Address</span>
-                        <span class="docs-item">Bank Statement</span>
+                        <div class="docs">
+                          <div class="docs-title">Please provide LEGIBLE copies of the following documents / Enviar copias LEGIBLES de los siguientes documentos:</div>
+                          <div class="docs-cols">
+                            <div>
+                              <span class="docs-item">Completed and signed Unit Reservation Form</span>
+                              <span class="docs-item">Copy of Passport</span>
+                              <span class="docs-item">Proof of Address</span>
+                              <span class="docs-item">Bank Statement</span>
+                            </div>
+                            <div>
+                              <span class="docs-item">Carta de Reservación de la Unidad llenada y firmada</span>
+                              <span class="docs-item">Copia de INE (solo mexicanos) o pasaporte</span>
+                              <span class="docs-item">Comprobante de Domicilio.</span>
+                              <span class="docs-item">Carátula Bancaria</span>
+                              <span class="docs-item">Copia de la Constancia de RFC</span>
+                              <span class="docs-item">Copia de CURP</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span class="docs-item">Carta de Reservación de la Unidad llenada y firmada</span>
-                        <span class="docs-item">Copia de INE (solo mexicanos) o pasaporte</span>
-                        <span class="docs-item">Comprobante de Domicilio.</span>
-                        <span class="docs-item">Carátula Bancaria</span>
-                        <span class="docs-item">Copia de la Constancia de RFC</span>
-                        <span class="docs-item">Copia de CURP</span>
-                      </div>
-                    </div>
-                  </div>
                     </div>
                   </div>
                 </div>
@@ -1461,4 +1485,5 @@
 </html>
     .page-footer{
       flex:0 0 auto;
+      margin-top:auto;
     }

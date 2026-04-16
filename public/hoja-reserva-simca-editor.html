@@ -55,7 +55,7 @@
     <div class="head">
       <div>
         <h1>Editor PDF · Hoja de Reserva SIMCA</h1>
-        <p class="sub">Aquí puedes mover el logo, el cuadro amarillo, las líneas y los bloques principales de cada hoja. El preview de la derecha usa el mismo HTML que genera el PDF final.</p>
+        <p class="sub">Aquí puedes mover el logo, el cuadro amarillo, las líneas, el bloque completo de cada hoja y el footer. El preview de la derecha usa el mismo HTML que genera el PDF final.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/hoja-reserva-simca">Volver a hoja de reserva</a>
@@ -100,15 +100,11 @@
         </div>
 
         <div class="section">
-          <h2>Tamanos Hoja 1</h2>
+          <h2>Bloque Hoja 1</h2>
           <div class="grid">
-            <label>Bloque hoja 1 Y<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
-            <label>Titulo campo hoja 1<input id="page1LabelSize" type="number" min="12" max="28" step="1"></label>
-            <label>Texto hoja 1<input id="page1ValueSize" type="number" min="10" max="24" step="1"></label>
-            <label>Header tabla pagos<input id="tableHeaderSize" type="number" min="10" max="22" step="1"></label>
-            <label>Texto tabla pagos<input id="tableBodySize" type="number" min="10" max="22" step="1"></label>
-            <label>Titulo firma<input id="signatureTitleSize" type="number" min="12" max="28" step="1"></label>
-            <label>Texto firma<input id="signatureNoteSize" type="number" min="8" max="18" step="1"></label>
+            <label>X bloque<input id="page1OffsetX" type="number" min="-240" max="240" step="1"></label>
+            <label>Y bloque<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
+            <label>Escala bloque<input id="page1Scale" type="number" min="0.70" max="1.15" step="0.01"></label>
             <label>Alto observaciones<input id="observationsHeight" type="number" min="40" max="180" step="1"></label>
             <label>Footer X<input id="footerOffsetX" type="number" min="-240" max="240" step="1"></label>
             <label>Footer Y<input id="footerOffsetY" type="number" min="-320" max="320" step="1"></label>
@@ -118,13 +114,11 @@
         <div class="preview-divider">Separacion entre hojas</div>
 
         <div class="section">
-          <h2>Tamanos Hoja 2</h2>
+          <h2>Bloque Hoja 2</h2>
           <div class="grid">
-            <label>Bloque hoja 2 Y<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
-            <label>Titulo campo hoja 2<input id="page2LabelSize" type="number" min="12" max="28" step="1"></label>
-            <label>Texto hoja 2<input id="page2ValueSize" type="number" min="10" max="24" step="1"></label>
-            <label>Titulo documentos<input id="docsTitleSize" type="number" min="10" max="22" step="1"></label>
-            <label>Texto documentos<input id="docsTextSize" type="number" min="10" max="22" step="1"></label>
+            <label>X bloque<input id="page2OffsetX" type="number" min="-240" max="240" step="1"></label>
+            <label>Y bloque<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
+            <label>Escala bloque<input id="page2Scale" type="number" min="0.70" max="1.15" step="0.01"></label>
           </div>
         </div>
 
@@ -173,8 +167,10 @@
         titleOffsetX: 0,
         titleOffsetY: 0,
         page1Scale: 0.92,
+        page1OffsetX: 0,
         page1OffsetY: -10,
         page2Scale: 0.94,
+        page2OffsetX: 0,
         page2OffsetY: -10,
         observationsHeight: 82,
         paymentsOffsetY: -8,
@@ -231,40 +227,47 @@
         lineColor: document.getElementById('lineColor'),
         textColor: document.getElementById('textColor'),
         paperColor: document.getElementById('paperColor'),
+        page1Scale: document.getElementById('page1Scale'),
+        page1OffsetX: document.getElementById('page1OffsetX'),
+        page1OffsetY: document.getElementById('page1OffsetY'),
         observationsHeight: document.getElementById('observationsHeight'),
         footerOffsetX: document.getElementById('footerOffsetX'),
         footerOffsetY: document.getElementById('footerOffsetY'),
-        page1OffsetY: document.getElementById('page1OffsetY'),
-        page1LabelSize: document.getElementById('page1LabelSize'),
-        page1ValueSize: document.getElementById('page1ValueSize'),
+        page2Scale: document.getElementById('page2Scale'),
+        page2OffsetX: document.getElementById('page2OffsetX'),
         page2OffsetY: document.getElementById('page2OffsetY'),
-        page2LabelSize: document.getElementById('page2LabelSize'),
-        page2ValueSize: document.getElementById('page2ValueSize'),
-        tableHeaderSize: document.getElementById('tableHeaderSize'),
-        tableBodySize: document.getElementById('tableBodySize'),
-        signatureTitleSize: document.getElementById('signatureTitleSize'),
-        signatureNoteSize: document.getElementById('signatureNoteSize'),
-        docsTitleSize: document.getElementById('docsTitleSize'),
-        docsTextSize: document.getElementById('docsTextSize')
       };
 
-      const fieldNames = Object.keys(els).filter(function (key) {
-        return ![
-          'saveBtn',
-          'resetBtn',
-          'addLineBtn',
-          'removeLogoBtn',
-          'removeFooterLogoBtn',
-          'logoFile',
-          'footerLogoFile',
-          'lineList',
-          'status',
-          'previewFrame'
-        ].includes(key);
-      });
+      const editableFieldNames = [
+          'railText',
+          'railWidth',
+          'railOffsetY',
+          'railHeight',
+          'railAccentColor',
+          'railTextColor',
+          'logoWidth',
+          'logoOffsetX',
+          'logoOffsetY',
+          'footerLogoWidth',
+          'titleOffsetX',
+          'titleOffsetY',
+          'page1Scale',
+          'page1OffsetX',
+          'page1OffsetY',
+          'page2Scale',
+          'page2OffsetX',
+          'page2OffsetY',
+          'observationsHeight',
+          'footerOffsetX',
+          'footerOffsetY',
+          'lineColor',
+          'textColor',
+          'paperColor'
+        ];
       let currentLogoDataUrl = '';
       let currentFooterLogoDataUrl = '';
       let currentLines = [];
+      let currentLayout = Object.assign({}, defaultLayout);
 
       function syncPreviewHeight(nextHeight) {
         const height = Math.max(1056, Number(nextHeight) || 0);
@@ -302,6 +305,20 @@
           footerLogoWidth: clamp(numberOr(src.footerLogoWidth, defaultLayout.footerLogoWidth), 24, 140),
           titleOffsetX: clamp(numberOr(src.titleOffsetX, defaultLayout.titleOffsetX), -220, 220),
           titleOffsetY: clamp(numberOr(src.titleOffsetY, defaultLayout.titleOffsetY), -120, 120),
+          page1Scale: clamp(numberOr(src.page1Scale, defaultLayout.page1Scale), 0.7, 1.15),
+          page1OffsetX: clamp(numberOr(src.page1OffsetX, defaultLayout.page1OffsetX), -240, 240),
+          page1OffsetY: clamp(numberOr(src.page1OffsetY, defaultLayout.page1OffsetY), -320, 320),
+          page2Scale: clamp(numberOr(src.page2Scale, defaultLayout.page2Scale), 0.7, 1.15),
+          page2OffsetX: clamp(numberOr(src.page2OffsetX, defaultLayout.page2OffsetX), -240, 240),
+          page2OffsetY: clamp(numberOr(src.page2OffsetY, defaultLayout.page2OffsetY), -320, 320),
+          paymentsOffsetY: clamp(numberOr(src.paymentsOffsetY, defaultLayout.paymentsOffsetY), -180, 180),
+          paymentsScale: clamp(numberOr(src.paymentsScale, defaultLayout.paymentsScale), 0.65, 1.15),
+          cardSectionOffsetY: clamp(numberOr(src.cardSectionOffsetY, defaultLayout.cardSectionOffsetY), -180, 180),
+          cardSectionScale: clamp(numberOr(src.cardSectionScale, defaultLayout.cardSectionScale), 0.65, 1.15),
+          signatureOffsetY: clamp(numberOr(src.signatureOffsetY, defaultLayout.signatureOffsetY), -180, 180),
+          holderOffsetY: clamp(numberOr(src.holderOffsetY, defaultLayout.holderOffsetY), -180, 180),
+          coOwnerOffsetY: clamp(numberOr(src.coOwnerOffsetY, defaultLayout.coOwnerOffsetY), -180, 180),
+          docsOffsetY: clamp(numberOr(src.docsOffsetY, defaultLayout.docsOffsetY), -180, 180),
           lineColor: safeColor(src.lineColor, defaultLayout.lineColor),
           textColor: safeColor(src.textColor, defaultLayout.textColor),
           paperColor: safeColor(src.paperColor, defaultLayout.paperColor),
@@ -353,19 +370,24 @@
 
       function setForm(layoutInput) {
         const layout = normalizeLayout(layoutInput);
+        currentLayout = Object.assign({}, defaultLayout, layout);
         currentLogoDataUrl = layout.logoDataUrl || '';
         currentFooterLogoDataUrl = layout.footerLogoDataUrl || '';
         currentLines = layout.lines.slice();
-        fieldNames.forEach(function (name) {
-          els[name].value = String(layout[name]);
+        editableFieldNames.forEach(function (name) {
+          if (els[name]) els[name].value = String(layout[name]);
         });
         renderLinesEditor();
       }
 
       function getFormLayout() {
-        const out = { logoDataUrl: currentLogoDataUrl, footerLogoDataUrl: currentFooterLogoDataUrl, lines: currentLines.slice() };
-        fieldNames.forEach(function (name) {
-          out[name] = els[name].value;
+        const out = Object.assign({}, currentLayout, {
+          logoDataUrl: currentLogoDataUrl,
+          footerLogoDataUrl: currentFooterLogoDataUrl,
+          lines: currentLines.slice()
+        });
+        editableFieldNames.forEach(function (name) {
+          if (els[name]) out[name] = els[name].value;
         });
         out.logoDataUrl = currentLogoDataUrl;
         out.footerLogoDataUrl = currentFooterLogoDataUrl;
@@ -480,8 +502,8 @@
         pushPreview();
       }
 
-      fieldNames.forEach(function (name) {
-        els[name].addEventListener('input', pushPreview);
+      editableFieldNames.forEach(function (name) {
+        if (els[name]) els[name].addEventListener('input', pushPreview);
       });
       els.logoFile.addEventListener('change', function () { loadLogoFile(els.logoFile.files && els.logoFile.files[0]); });
       els.footerLogoFile.addEventListener('change', function () { loadFooterLogoFile(els.footerLogoFile.files && els.footerLogoFile.files[0]); });
