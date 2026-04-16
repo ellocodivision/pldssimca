@@ -1063,19 +1063,31 @@
         renderPreview();
       });
 
+      function buildPdfSnapshotHtml() {
+        const clone = document.documentElement.cloneNode(true);
+        const body = clone.querySelector('body');
+        if (body) {
+          body.classList.remove('preview-mode', 'print-preview-mode');
+          body.classList.add('print-preview-mode');
+        }
+        clone.querySelectorAll('script').forEach(function (node) {
+          node.remove();
+        });
+        return '<!doctype html>\n' + clone.outerHTML;
+      }
+
       async function downloadPdf() {
         const original = downloadPdfBtn.textContent;
         downloadPdfBtn.disabled = true;
         downloadPdfBtn.textContent = "Generando PDF...";
         statusText.textContent = "Generando PDF exacto...";
         try {
-          const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hoja de Reserva SIMCA</title><style>${document.querySelector("style").textContent}</style></head><body class="print-preview-mode"><main class="preview-wrap">${buildPreviewHtml()}</main></body></html>`;
           const res = await fetch("/api/hoja-reserva-simca/render-pdf", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "same-origin",
             body: JSON.stringify({
-              html,
+              html: buildPdfSnapshotHtml(),
               fileNamePrefix: `hoja-reserva-${state.fullName || "simca"}`
             })
           });
