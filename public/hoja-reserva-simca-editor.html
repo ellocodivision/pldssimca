@@ -101,6 +101,7 @@
             <label>Tarjeta Y<input id="cardSectionOffsetY" type="number" min="-180" max="180" step="1"></label>
             <label>Escala tarjeta<input id="cardSectionScale" type="number" min="0.65" max="1.15" step="0.01"></label>
             <label>Firma Y<input id="signatureOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Footer X<input id="footerOffsetX" type="number" min="-180" max="180" step="1"></label>
             <label>Footer Y<input id="footerOffsetY" type="number" min="-180" max="180" step="1"></label>
           </div>
         </div>
@@ -120,7 +121,7 @@
           <h2>Líneas libres</h2>
           <div class="actions-inline">
             <button class="small-btn" type="button" id="addLineBtn">Agregar línea</button>
-            <span class="hint">Puedes poner líneas horizontales o verticales en cualquiera de las dos hojas.</span>
+            <span class="hint">Las líneas que edites aquí se reflejan en ambas hojas.</span>
           </div>
           <div class="line-list" id="lineList"></div>
         </div>
@@ -170,6 +171,7 @@
         cardSectionOffsetY: -12,
         cardSectionScale: 0.94,
         signatureOffsetY: -6,
+        footerOffsetX: 0,
         footerOffsetY: 0,
         holderOffsetY: 0,
         coOwnerOffsetY: 0,
@@ -216,6 +218,7 @@
         cardSectionOffsetY: document.getElementById('cardSectionOffsetY'),
         cardSectionScale: document.getElementById('cardSectionScale'),
         signatureOffsetY: document.getElementById('signatureOffsetY'),
+        footerOffsetX: document.getElementById('footerOffsetX'),
         footerOffsetY: document.getElementById('footerOffsetY'),
         page2Scale: document.getElementById('page2Scale'),
         page2OffsetY: document.getElementById('page2OffsetY'),
@@ -246,6 +249,11 @@
         return Math.max(min, Math.min(max, value));
       }
 
+      function numberOr(value, fallback) {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : fallback;
+      }
+
       function safeColor(value, fallback) {
         return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
       }
@@ -256,46 +264,47 @@
           logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
           footerLogoDataUrl: typeof src.footerLogoDataUrl === 'string' ? src.footerLogoDataUrl : '',
           railText: typeof src.railText === 'string' ? src.railText : defaultLayout.railText,
-          railWidth: clamp(Number(src.railWidth) || defaultLayout.railWidth, 30, 120),
-          railOffsetY: clamp(Number(src.railOffsetY) || defaultLayout.railOffsetY, 0, 300),
-          railHeight: clamp(Number(src.railHeight) || defaultLayout.railHeight, 40, 320),
+          railWidth: clamp(numberOr(src.railWidth, defaultLayout.railWidth), 30, 120),
+          railOffsetY: clamp(numberOr(src.railOffsetY, defaultLayout.railOffsetY), 0, 300),
+          railHeight: clamp(numberOr(src.railHeight, defaultLayout.railHeight), 40, 320),
           railAccentColor: safeColor(src.railAccentColor, defaultLayout.railAccentColor),
           railTextColor: safeColor(src.railTextColor, defaultLayout.railTextColor),
-          logoWidth: clamp(Number(src.logoWidth) || defaultLayout.logoWidth, 120, 520),
-          logoOffsetX: clamp(Number(src.logoOffsetX) || defaultLayout.logoOffsetX, -220, 220),
-          logoOffsetY: clamp(Number(src.logoOffsetY) || defaultLayout.logoOffsetY, -120, 120),
-          footerLogoWidth: clamp(Number(src.footerLogoWidth) || defaultLayout.footerLogoWidth, 24, 140),
-          titleOffsetX: clamp(Number(src.titleOffsetX) || defaultLayout.titleOffsetX, -220, 220),
-          titleOffsetY: clamp(Number(src.titleOffsetY) || defaultLayout.titleOffsetY, -120, 120),
+          logoWidth: clamp(numberOr(src.logoWidth, defaultLayout.logoWidth), 120, 520),
+          logoOffsetX: clamp(numberOr(src.logoOffsetX, defaultLayout.logoOffsetX), -220, 220),
+          logoOffsetY: clamp(numberOr(src.logoOffsetY, defaultLayout.logoOffsetY), -120, 120),
+          footerLogoWidth: clamp(numberOr(src.footerLogoWidth, defaultLayout.footerLogoWidth), 24, 140),
+          titleOffsetX: clamp(numberOr(src.titleOffsetX, defaultLayout.titleOffsetX), -220, 220),
+          titleOffsetY: clamp(numberOr(src.titleOffsetY, defaultLayout.titleOffsetY), -120, 120),
           lineColor: safeColor(src.lineColor, defaultLayout.lineColor),
           textColor: safeColor(src.textColor, defaultLayout.textColor),
           paperColor: safeColor(src.paperColor, defaultLayout.paperColor),
-          page1Scale: clamp(Number(src.page1Scale) || defaultLayout.page1Scale, 0.7, 1.1),
-          page1OffsetY: clamp(Number(src.page1OffsetY) || defaultLayout.page1OffsetY, -160, 160),
-          observationsHeight: clamp(Number(src.observationsHeight) || defaultLayout.observationsHeight, 40, 180),
-          paymentsOffsetY: clamp(Number(src.paymentsOffsetY) || defaultLayout.paymentsOffsetY, -180, 180),
-          paymentsScale: clamp(Number(src.paymentsScale) || defaultLayout.paymentsScale, 0.65, 1.15),
-          cardSectionOffsetY: clamp(Number(src.cardSectionOffsetY) || defaultLayout.cardSectionOffsetY, -180, 180),
-          cardSectionScale: clamp(Number(src.cardSectionScale) || defaultLayout.cardSectionScale, 0.65, 1.15),
-          signatureOffsetY: clamp(Number(src.signatureOffsetY) || defaultLayout.signatureOffsetY, -180, 180),
-          footerOffsetY: clamp(Number(src.footerOffsetY) || defaultLayout.footerOffsetY, -180, 180),
-          page2Scale: clamp(Number(src.page2Scale) || defaultLayout.page2Scale, 0.7, 1.1),
-          page2OffsetY: clamp(Number(src.page2OffsetY) || defaultLayout.page2OffsetY, -160, 160),
-          holderOffsetY: clamp(Number(src.holderOffsetY) || defaultLayout.holderOffsetY, -180, 180),
-          coOwnerOffsetY: clamp(Number(src.coOwnerOffsetY) || defaultLayout.coOwnerOffsetY, -180, 180),
-          docsOffsetY: clamp(Number(src.docsOffsetY) || defaultLayout.docsOffsetY, -180, 180),
+          page1Scale: clamp(numberOr(src.page1Scale, defaultLayout.page1Scale), 0.7, 1.1),
+          page1OffsetY: clamp(numberOr(src.page1OffsetY, defaultLayout.page1OffsetY), -160, 160),
+          observationsHeight: clamp(numberOr(src.observationsHeight, defaultLayout.observationsHeight), 40, 180),
+          paymentsOffsetY: clamp(numberOr(src.paymentsOffsetY, defaultLayout.paymentsOffsetY), -180, 180),
+          paymentsScale: clamp(numberOr(src.paymentsScale, defaultLayout.paymentsScale), 0.65, 1.15),
+          cardSectionOffsetY: clamp(numberOr(src.cardSectionOffsetY, defaultLayout.cardSectionOffsetY), -180, 180),
+          cardSectionScale: clamp(numberOr(src.cardSectionScale, defaultLayout.cardSectionScale), 0.65, 1.15),
+          signatureOffsetY: clamp(numberOr(src.signatureOffsetY, defaultLayout.signatureOffsetY), -180, 180),
+          footerOffsetX: clamp(numberOr(src.footerOffsetX, defaultLayout.footerOffsetX), -180, 180),
+          footerOffsetY: clamp(numberOr(src.footerOffsetY, defaultLayout.footerOffsetY), -180, 180),
+          page2Scale: clamp(numberOr(src.page2Scale, defaultLayout.page2Scale), 0.7, 1.1),
+          page2OffsetY: clamp(numberOr(src.page2OffsetY, defaultLayout.page2OffsetY), -160, 160),
+          holderOffsetY: clamp(numberOr(src.holderOffsetY, defaultLayout.holderOffsetY), -180, 180),
+          coOwnerOffsetY: clamp(numberOr(src.coOwnerOffsetY, defaultLayout.coOwnerOffsetY), -180, 180),
+          docsOffsetY: clamp(numberOr(src.docsOffsetY, defaultLayout.docsOffsetY), -180, 180),
           lines: Array.isArray(src.lines) ? src.lines.slice(0, 60).map(function (line, index) {
             const item = line && typeof line === 'object' ? line : {};
             return {
               id: typeof item.id === 'string' && item.id ? item.id : 'line-' + (index + 1),
               page: String(item.page || '1') === '2' ? '2' : '1',
               orientation: String(item.orientation || 'horizontal') === 'vertical' ? 'vertical' : 'horizontal',
-              x: clamp(Number(item.x) || 10, 0, 100),
-              y: clamp(Number(item.y) || 10, 0, 100),
-              length: clamp(Number(item.length) || 40, 0, 100),
-              width: clamp(Number(item.width) || 1, 1, 12),
+              x: clamp(numberOr(item.x, 10), 0, 100),
+              y: clamp(numberOr(item.y, 10), 0, 100),
+              length: clamp(numberOr(item.length, 40), 0, 100),
+              width: clamp(numberOr(item.width, 1), 1, 12),
               color: safeColor(item.color, '#2d2d2d'),
-              opacity: clamp(Number(item.opacity) || 1, 0.1, 1)
+              opacity: clamp(numberOr(item.opacity, 1), 0.1, 1)
             };
           }) : []
         };

@@ -37,6 +37,7 @@
       --card-offset-y:-12px;
       --card-scale:.94;
       --signature-offset-y:-6px;
+      --footer-offset-x:0px;
       --footer-offset-y:0px;
       --holder-offset-y:0px;
       --coowner-offset-y:0px;
@@ -370,7 +371,7 @@
       font-size:12px;
       line-height:1.28;
       text-align:center;
-      transform:translateY(var(--footer-offset-y));
+      transform:translate(var(--footer-offset-x), var(--footer-offset-y));
     }
     .footer-mark{
       width:var(--footer-logo-width);
@@ -447,6 +448,10 @@
       .preview-wrap{overflow:visible}
     }
     @media print{
+      @page{
+        size:816px 1056px;
+        margin:0;
+      }
       body{background:#fff}
       .topbar,.panel{display:none !important}
       .app{display:block;width:auto;padding:0}
@@ -674,6 +679,7 @@
         cardSectionOffsetY: -12,
         cardSectionScale: 0.94,
         signatureOffsetY: -6,
+        footerOffsetX: 0,
         footerOffsetY: 0,
         holderOffsetY: 0,
         coOwnerOffsetY: 0,
@@ -695,36 +701,41 @@
       function applyLayout(layoutInput) {
         currentLayout = Object.assign({}, defaultLayout, layoutInput || {});
         const root = document.documentElement;
+        const numberOr = function (value, fallback) {
+          const num = Number(value);
+          return Number.isFinite(num) ? num : fallback;
+        };
         root.style.setProperty('--paper', currentLayout.paperColor || defaultLayout.paperColor);
         root.style.setProperty('--line', currentLayout.lineColor || defaultLayout.lineColor);
         root.style.setProperty('--ink', currentLayout.textColor || defaultLayout.textColor);
         root.style.setProperty('--accent', currentLayout.railAccentColor || defaultLayout.railAccentColor);
         root.style.setProperty('--font', currentLayout.bodyFontFamily || defaultLayout.bodyFontFamily);
         root.style.setProperty('--heading-font', currentLayout.headingFontFamily || defaultLayout.headingFontFamily);
-        root.style.setProperty('--side-rail', String(currentLayout.railWidth || defaultLayout.railWidth) + 'px');
-        root.style.setProperty('--rail-offset-y', String(currentLayout.railOffsetY || defaultLayout.railOffsetY) + 'px');
-        root.style.setProperty('--rail-height', String(currentLayout.railHeight || defaultLayout.railHeight) + 'px');
+        root.style.setProperty('--side-rail', String(numberOr(currentLayout.railWidth, defaultLayout.railWidth)) + 'px');
+        root.style.setProperty('--rail-offset-y', String(numberOr(currentLayout.railOffsetY, defaultLayout.railOffsetY)) + 'px');
+        root.style.setProperty('--rail-height', String(numberOr(currentLayout.railHeight, defaultLayout.railHeight)) + 'px');
         root.style.setProperty('--rail-text-color', currentLayout.railTextColor || defaultLayout.railTextColor);
-        root.style.setProperty('--logo-width', String(currentLayout.logoWidth || defaultLayout.logoWidth) + 'px');
-        root.style.setProperty('--logo-offset-x', String(currentLayout.logoOffsetX || defaultLayout.logoOffsetX) + 'px');
-        root.style.setProperty('--logo-offset-y', String(currentLayout.logoOffsetY || defaultLayout.logoOffsetY) + 'px');
-        root.style.setProperty('--footer-logo-width', String(currentLayout.footerLogoWidth || defaultLayout.footerLogoWidth || 52) + 'px');
-        root.style.setProperty('--title-offset-x', String(currentLayout.titleOffsetX || defaultLayout.titleOffsetX) + 'px');
-        root.style.setProperty('--title-offset-y', String(currentLayout.titleOffsetY || defaultLayout.titleOffsetY) + 'px');
-        root.style.setProperty('--page1-scale', String(currentLayout.page1Scale || defaultLayout.page1Scale));
-        root.style.setProperty('--page1-offset-y', String(currentLayout.page1OffsetY || defaultLayout.page1OffsetY) + 'px');
-        root.style.setProperty('--page2-scale', String(currentLayout.page2Scale || defaultLayout.page2Scale));
-        root.style.setProperty('--page2-offset-y', String(currentLayout.page2OffsetY || defaultLayout.page2OffsetY) + 'px');
-        root.style.setProperty('--obs-height', String(currentLayout.observationsHeight || defaultLayout.observationsHeight) + 'px');
-        root.style.setProperty('--payments-offset-y', String(currentLayout.paymentsOffsetY || defaultLayout.paymentsOffsetY) + 'px');
-        root.style.setProperty('--payments-scale', String(currentLayout.paymentsScale || defaultLayout.paymentsScale));
-        root.style.setProperty('--card-offset-y', String(currentLayout.cardSectionOffsetY || defaultLayout.cardSectionOffsetY) + 'px');
-        root.style.setProperty('--card-scale', String(currentLayout.cardSectionScale || defaultLayout.cardSectionScale));
-        root.style.setProperty('--signature-offset-y', String(currentLayout.signatureOffsetY || defaultLayout.signatureOffsetY) + 'px');
-        root.style.setProperty('--footer-offset-y', String(currentLayout.footerOffsetY || defaultLayout.footerOffsetY) + 'px');
-        root.style.setProperty('--holder-offset-y', String(currentLayout.holderOffsetY || defaultLayout.holderOffsetY) + 'px');
-        root.style.setProperty('--coowner-offset-y', String(currentLayout.coOwnerOffsetY || defaultLayout.coOwnerOffsetY) + 'px');
-        root.style.setProperty('--docs-offset-y', String(currentLayout.docsOffsetY || defaultLayout.docsOffsetY) + 'px');
+        root.style.setProperty('--logo-width', String(numberOr(currentLayout.logoWidth, defaultLayout.logoWidth)) + 'px');
+        root.style.setProperty('--logo-offset-x', String(numberOr(currentLayout.logoOffsetX, defaultLayout.logoOffsetX)) + 'px');
+        root.style.setProperty('--logo-offset-y', String(numberOr(currentLayout.logoOffsetY, defaultLayout.logoOffsetY)) + 'px');
+        root.style.setProperty('--footer-logo-width', String(numberOr(currentLayout.footerLogoWidth, defaultLayout.footerLogoWidth || 52)) + 'px');
+        root.style.setProperty('--title-offset-x', String(numberOr(currentLayout.titleOffsetX, defaultLayout.titleOffsetX)) + 'px');
+        root.style.setProperty('--title-offset-y', String(numberOr(currentLayout.titleOffsetY, defaultLayout.titleOffsetY)) + 'px');
+        root.style.setProperty('--page1-scale', String(numberOr(currentLayout.page1Scale, defaultLayout.page1Scale)));
+        root.style.setProperty('--page1-offset-y', String(numberOr(currentLayout.page1OffsetY, defaultLayout.page1OffsetY)) + 'px');
+        root.style.setProperty('--page2-scale', String(numberOr(currentLayout.page2Scale, defaultLayout.page2Scale)));
+        root.style.setProperty('--page2-offset-y', String(numberOr(currentLayout.page2OffsetY, defaultLayout.page2OffsetY)) + 'px');
+        root.style.setProperty('--obs-height', String(numberOr(currentLayout.observationsHeight, defaultLayout.observationsHeight)) + 'px');
+        root.style.setProperty('--payments-offset-y', String(numberOr(currentLayout.paymentsOffsetY, defaultLayout.paymentsOffsetY)) + 'px');
+        root.style.setProperty('--payments-scale', String(numberOr(currentLayout.paymentsScale, defaultLayout.paymentsScale)));
+        root.style.setProperty('--card-offset-y', String(numberOr(currentLayout.cardSectionOffsetY, defaultLayout.cardSectionOffsetY)) + 'px');
+        root.style.setProperty('--card-scale', String(numberOr(currentLayout.cardSectionScale, defaultLayout.cardSectionScale)));
+        root.style.setProperty('--signature-offset-y', String(numberOr(currentLayout.signatureOffsetY, defaultLayout.signatureOffsetY)) + 'px');
+        root.style.setProperty('--footer-offset-x', String(numberOr(currentLayout.footerOffsetX, defaultLayout.footerOffsetX || 0)) + 'px');
+        root.style.setProperty('--footer-offset-y', String(numberOr(currentLayout.footerOffsetY, defaultLayout.footerOffsetY)) + 'px');
+        root.style.setProperty('--holder-offset-y', String(numberOr(currentLayout.holderOffsetY, defaultLayout.holderOffsetY)) + 'px');
+        root.style.setProperty('--coowner-offset-y', String(numberOr(currentLayout.coOwnerOffsetY, defaultLayout.coOwnerOffsetY)) + 'px');
+        root.style.setProperty('--docs-offset-y', String(numberOr(currentLayout.docsOffsetY, defaultLayout.docsOffsetY)) + 'px');
       }
 
       function esc(value) {
@@ -765,9 +776,7 @@
       }
 
       function renderFreeLines(page) {
-        const items = (currentLayout.lines || []).filter(function (line) {
-          return String(line && line.page || '1') === String(page);
-        });
+        const items = currentLayout.lines || [];
         if (!items.length) return '';
         return '<div class="free-lines">' + items.map(function (line) {
           const horizontal = String(line.orientation || 'horizontal') !== 'vertical';
@@ -1019,7 +1028,7 @@
         downloadPdfBtn.textContent = "Generando PDF...";
         statusText.textContent = "Generando PDF exacto...";
         try {
-          const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hoja de Reserva SIMCA</title><style>${document.querySelector("style").textContent}</style></head><body><main class="preview-wrap">${buildPreviewHtml()}</main></body></html>`;
+          const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hoja de Reserva SIMCA</title><style>${document.querySelector("style").textContent}</style></head><body class="preview-mode"><main class="preview-wrap">${buildPreviewHtml()}</main></body></html>`;
           const res = await fetch("/api/hoja-reserva-simca/render-pdf", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

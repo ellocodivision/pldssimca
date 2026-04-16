@@ -1872,6 +1872,7 @@ function normalizeHojaReservaSimcaLayout(input) {
     cardSectionOffsetY: clampNumber(src.cardSectionOffsetY, -12, -180, 180),
     cardSectionScale: clampNumber(src.cardSectionScale, 0.94, 0.65, 1.15),
     signatureOffsetY: clampNumber(src.signatureOffsetY, -6, -180, 180),
+    footerOffsetX: clampNumber(src.footerOffsetX, 0, -180, 180),
     footerOffsetY: clampNumber(src.footerOffsetY, 0, -180, 180),
     holderOffsetY: clampNumber(src.holderOffsetY, 0, -180, 180),
     coOwnerOffsetY: clampNumber(src.coOwnerOffsetY, 0, -180, 180),
@@ -1891,7 +1892,7 @@ function normalizeHojaReservaSimcaLayout(input) {
         y: clampNumber(item.y, 10, 0, 100),
         length: clampNumber(item.length, 40, 0, 100),
         width: clampNumber(item.width, 1, 1, 12),
-      color: safeColor(item.color, '#2d2d2d'),
+        color: safeColor(item.color, '#2d2d2d'),
         opacity: clampNumber(item.opacity, 1, 0.1, 1)
       };
     }) : []
