@@ -91,29 +91,27 @@
         </div>
 
         <div class="section">
-          <h2>Hoja 1</h2>
+          <h2>Tamanos Hoja 1</h2>
           <div class="grid">
-            <label>Escala hoja 1<input id="page1Scale" type="number" min="0.7" max="1.1" step="0.01"></label>
-            <label>Offset Y hoja 1<input id="page1OffsetY" type="number" min="-160" max="160" step="1"></label>
+            <label>Titulo campo hoja 1<input id="page1LabelSize" type="number" min="12" max="28" step="1"></label>
+            <label>Texto hoja 1<input id="page1ValueSize" type="number" min="10" max="24" step="1"></label>
+            <label>Header tabla pagos<input id="tableHeaderSize" type="number" min="10" max="22" step="1"></label>
+            <label>Texto tabla pagos<input id="tableBodySize" type="number" min="10" max="22" step="1"></label>
+            <label>Titulo firma<input id="signatureTitleSize" type="number" min="12" max="28" step="1"></label>
+            <label>Texto firma<input id="signatureNoteSize" type="number" min="8" max="18" step="1"></label>
             <label>Alto observaciones<input id="observationsHeight" type="number" min="40" max="180" step="1"></label>
-            <label>Tabla pagos Y<input id="paymentsOffsetY" type="number" min="-180" max="180" step="1"></label>
-            <label>Escala pagos<input id="paymentsScale" type="number" min="0.65" max="1.15" step="0.01"></label>
-            <label>Tarjeta Y<input id="cardSectionOffsetY" type="number" min="-180" max="180" step="1"></label>
-            <label>Escala tarjeta<input id="cardSectionScale" type="number" min="0.65" max="1.15" step="0.01"></label>
-            <label>Firma Y<input id="signatureOffsetY" type="number" min="-180" max="180" step="1"></label>
             <label>Footer X<input id="footerOffsetX" type="number" min="-180" max="180" step="1"></label>
             <label>Footer Y<input id="footerOffsetY" type="number" min="-180" max="180" step="1"></label>
           </div>
         </div>
 
         <div class="section">
-          <h2>Hoja 2</h2>
+          <h2>Tamanos Hoja 2</h2>
           <div class="grid">
-            <label>Escala hoja 2<input id="page2Scale" type="number" min="0.7" max="1.1" step="0.01"></label>
-            <label>Offset Y hoja 2<input id="page2OffsetY" type="number" min="-160" max="160" step="1"></label>
-            <label>Titular Y<input id="holderOffsetY" type="number" min="-180" max="180" step="1"></label>
-            <label>Copropietario Y<input id="coOwnerOffsetY" type="number" min="-180" max="180" step="1"></label>
-            <label>Documentos Y<input id="docsOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Titulo campo hoja 2<input id="page2LabelSize" type="number" min="12" max="28" step="1"></label>
+            <label>Texto hoja 2<input id="page2ValueSize" type="number" min="10" max="24" step="1"></label>
+            <label>Titulo documentos<input id="docsTitleSize" type="number" min="10" max="22" step="1"></label>
+            <label>Texto documentos<input id="docsTextSize" type="number" min="10" max="22" step="1"></label>
           </div>
         </div>
 
@@ -176,6 +174,16 @@
         holderOffsetY: 0,
         coOwnerOffsetY: 0,
         docsOffsetY: 0,
+        page1LabelSize: 18,
+        page1ValueSize: 16,
+        page2LabelSize: 18,
+        page2ValueSize: 16,
+        tableHeaderSize: 14,
+        tableBodySize: 15,
+        signatureTitleSize: 20,
+        signatureNoteSize: 12,
+        docsTitleSize: 14,
+        docsTextSize: 14,
         bodyFontFamily: '"Akkurat","Segoe UI",Tahoma,sans-serif',
         headingFontFamily: '"Akkurat","Segoe UI",Tahoma,sans-serif',
         lineColor: '#2d2d2d',
@@ -210,21 +218,19 @@
         lineColor: document.getElementById('lineColor'),
         textColor: document.getElementById('textColor'),
         paperColor: document.getElementById('paperColor'),
-        page1Scale: document.getElementById('page1Scale'),
-        page1OffsetY: document.getElementById('page1OffsetY'),
         observationsHeight: document.getElementById('observationsHeight'),
-        paymentsOffsetY: document.getElementById('paymentsOffsetY'),
-        paymentsScale: document.getElementById('paymentsScale'),
-        cardSectionOffsetY: document.getElementById('cardSectionOffsetY'),
-        cardSectionScale: document.getElementById('cardSectionScale'),
-        signatureOffsetY: document.getElementById('signatureOffsetY'),
         footerOffsetX: document.getElementById('footerOffsetX'),
         footerOffsetY: document.getElementById('footerOffsetY'),
-        page2Scale: document.getElementById('page2Scale'),
-        page2OffsetY: document.getElementById('page2OffsetY'),
-        holderOffsetY: document.getElementById('holderOffsetY'),
-        coOwnerOffsetY: document.getElementById('coOwnerOffsetY'),
-        docsOffsetY: document.getElementById('docsOffsetY')
+        page1LabelSize: document.getElementById('page1LabelSize'),
+        page1ValueSize: document.getElementById('page1ValueSize'),
+        page2LabelSize: document.getElementById('page2LabelSize'),
+        page2ValueSize: document.getElementById('page2ValueSize'),
+        tableHeaderSize: document.getElementById('tableHeaderSize'),
+        tableBodySize: document.getElementById('tableBodySize'),
+        signatureTitleSize: document.getElementById('signatureTitleSize'),
+        signatureNoteSize: document.getElementById('signatureNoteSize'),
+        docsTitleSize: document.getElementById('docsTitleSize'),
+        docsTextSize: document.getElementById('docsTextSize')
       };
 
       const fieldNames = Object.keys(els).filter(function (key) {
@@ -284,21 +290,19 @@
           lineColor: safeColor(src.lineColor, defaultLayout.lineColor),
           textColor: safeColor(src.textColor, defaultLayout.textColor),
           paperColor: safeColor(src.paperColor, defaultLayout.paperColor),
-          page1Scale: clamp(numberOr(src.page1Scale, defaultLayout.page1Scale), 0.7, 1.1),
-          page1OffsetY: clamp(numberOr(src.page1OffsetY, defaultLayout.page1OffsetY), -160, 160),
           observationsHeight: clamp(numberOr(src.observationsHeight, defaultLayout.observationsHeight), 40, 180),
-          paymentsOffsetY: clamp(numberOr(src.paymentsOffsetY, defaultLayout.paymentsOffsetY), -180, 180),
-          paymentsScale: clamp(numberOr(src.paymentsScale, defaultLayout.paymentsScale), 0.65, 1.15),
-          cardSectionOffsetY: clamp(numberOr(src.cardSectionOffsetY, defaultLayout.cardSectionOffsetY), -180, 180),
-          cardSectionScale: clamp(numberOr(src.cardSectionScale, defaultLayout.cardSectionScale), 0.65, 1.15),
-          signatureOffsetY: clamp(numberOr(src.signatureOffsetY, defaultLayout.signatureOffsetY), -180, 180),
           footerOffsetX: clamp(numberOr(src.footerOffsetX, defaultLayout.footerOffsetX), -180, 180),
           footerOffsetY: clamp(numberOr(src.footerOffsetY, defaultLayout.footerOffsetY), -180, 180),
-          page2Scale: clamp(numberOr(src.page2Scale, defaultLayout.page2Scale), 0.7, 1.1),
-          page2OffsetY: clamp(numberOr(src.page2OffsetY, defaultLayout.page2OffsetY), -160, 160),
-          holderOffsetY: clamp(numberOr(src.holderOffsetY, defaultLayout.holderOffsetY), -180, 180),
-          coOwnerOffsetY: clamp(numberOr(src.coOwnerOffsetY, defaultLayout.coOwnerOffsetY), -180, 180),
-          docsOffsetY: clamp(numberOr(src.docsOffsetY, defaultLayout.docsOffsetY), -180, 180),
+          page1LabelSize: clamp(numberOr(src.page1LabelSize, defaultLayout.page1LabelSize), 12, 28),
+          page1ValueSize: clamp(numberOr(src.page1ValueSize, defaultLayout.page1ValueSize), 10, 24),
+          page2LabelSize: clamp(numberOr(src.page2LabelSize, defaultLayout.page2LabelSize), 12, 28),
+          page2ValueSize: clamp(numberOr(src.page2ValueSize, defaultLayout.page2ValueSize), 10, 24),
+          tableHeaderSize: clamp(numberOr(src.tableHeaderSize, defaultLayout.tableHeaderSize), 10, 22),
+          tableBodySize: clamp(numberOr(src.tableBodySize, defaultLayout.tableBodySize), 10, 22),
+          signatureTitleSize: clamp(numberOr(src.signatureTitleSize, defaultLayout.signatureTitleSize), 12, 28),
+          signatureNoteSize: clamp(numberOr(src.signatureNoteSize, defaultLayout.signatureNoteSize), 8, 18),
+          docsTitleSize: clamp(numberOr(src.docsTitleSize, defaultLayout.docsTitleSize), 10, 22),
+          docsTextSize: clamp(numberOr(src.docsTextSize, defaultLayout.docsTextSize), 10, 22),
           lines: Array.isArray(src.lines) ? src.lines.slice(0, 60).map(function (line, index) {
             const item = line && typeof line === 'object' ? line : {};
             return {
