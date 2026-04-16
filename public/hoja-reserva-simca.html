@@ -53,8 +53,15 @@
     body.preview-mode{
       background:#d9dbe2;
     }
+    body.print-preview-mode{
+      background:#fff;
+    }
     body.preview-mode .topbar,
+    body.print-preview-mode .topbar,
     body.preview-mode .panel{
+      display:none !important;
+    }
+    body.print-preview-mode .panel{
       display:none !important;
     }
     body.preview-mode .app{
@@ -62,7 +69,17 @@
       width:auto;
       padding:18px 0;
     }
+    body.print-preview-mode .app{
+      display:block;
+      width:auto;
+      padding:0;
+    }
     body.preview-mode .preview-wrap{
+      max-height:none;
+      overflow:visible;
+      padding-right:0;
+    }
+    body.print-preview-mode .preview-wrap{
       max-height:none;
       overflow:visible;
       padding-right:0;
@@ -241,12 +258,26 @@
       font-family:var(--heading-font);
     }
     .logo{
+      display:flex;
+      align-items:flex-end;
+      justify-content:flex-end;
       text-align:right;
       line-height:1;
       white-space:nowrap;
       transform:translate(var(--logo-offset-x), var(--logo-offset-y));
       width:var(--logo-width);
       margin-left:auto;
+      max-height:calc(var(--header-height) - 18px);
+      overflow:hidden;
+    }
+    .logo img{
+      display:block;
+      max-width:100%;
+      max-height:100%;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      object-position:right bottom;
     }
     .logo-main{
       font-size:58px;
@@ -776,7 +807,9 @@
       }
 
       function renderFreeLines(page) {
-        const items = currentLayout.lines || [];
+        const items = (currentLayout.lines || []).filter(function (line) {
+          return String(line && line.page || '1') === String(page);
+        });
         if (!items.length) return '';
         return '<div class="free-lines">' + items.map(function (line) {
           const horizontal = String(line.orientation || 'horizontal') !== 'vertical';
@@ -1028,7 +1061,7 @@
         downloadPdfBtn.textContent = "Generando PDF...";
         statusText.textContent = "Generando PDF exacto...";
         try {
-          const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hoja de Reserva SIMCA</title><style>${document.querySelector("style").textContent}</style></head><body class="preview-mode"><main class="preview-wrap">${buildPreviewHtml()}</main></body></html>`;
+          const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hoja de Reserva SIMCA</title><style>${document.querySelector("style").textContent}</style></head><body class="print-preview-mode"><main class="preview-wrap">${buildPreviewHtml()}</main></body></html>`;
           const res = await fetch("/api/hoja-reserva-simca/render-pdf", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
