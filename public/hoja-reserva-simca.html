@@ -228,6 +228,7 @@
       display:grid;
       grid-template-columns:var(--side-rail) 1fr;
       background:var(--paper);
+      position:relative;
     }
     .rail{
       position:relative;
@@ -852,10 +853,8 @@
         `;
       }
 
-      function renderFreeLines(page) {
-        const items = (currentLayout.lines || []).filter(function (line) {
-          return String(line && line.page || '1') === String(page);
-        });
+      function renderFreeLines() {
+        const items = currentLayout.lines || [];
         if (!items.length) return '';
         return '<div class="free-lines">' + items.map(function (line) {
           const horizontal = String(line.orientation || 'horizontal') !== 'vertical';
@@ -905,10 +904,10 @@
         return `
           <div class="page page-break">
             <div class="page-shell">
+              ${renderFreeLines()}
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
                 ${pageHeader("Reservation Form / Formato de Reserva")}
-                ${renderFreeLines(1)}
                 <div class="page-scale page-1-scale">
                 <div class="body">
                   <div class="stack">
@@ -974,10 +973,10 @@
 
           <div class="page">
             <div class="page-shell">
+              ${renderFreeLines()}
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
                 ${pageHeader("Know your Client / Conoce a tu Cliente")}
-                ${renderFreeLines(2)}
                 <div class="page-scale page-2-scale">
                 <div class="body">
                   <div class="holder-block">

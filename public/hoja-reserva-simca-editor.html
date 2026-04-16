@@ -297,7 +297,6 @@
             const item = line && typeof line === 'object' ? line : {};
             return {
               id: typeof item.id === 'string' && item.id ? item.id : 'line-' + (index + 1),
-              page: String(item.page || '1') === '2' ? '2' : '1',
               orientation: String(item.orientation || 'horizontal') === 'vertical' ? 'vertical' : 'horizontal',
               x: clamp(numberOr(item.x, 10), 0, 100),
               y: clamp(numberOr(item.y, 10), 0, 100),
@@ -315,7 +314,7 @@
           return '<div class="line-item">' +
             '<div class="line-item-head"><div class="line-title">Línea ' + (index + 1) + '</div><button class="line-remove" type="button" data-remove-line="' + line.id + '">Quitar</button></div>' +
             '<div class="grid">' +
-            '<label>Hoja<select data-line-id="' + line.id + '" data-line-field="page"><option value="1"' + (line.page === '1' ? ' selected' : '') + '>Hoja 1</option><option value="2"' + (line.page === '2' ? ' selected' : '') + '>Hoja 2</option></select></label>' +
+            '<label>Aplicación<input type="text" value="Ambas hojas" readonly></label>' +
             '<label>Orientación<select data-line-id="' + line.id + '" data-line-field="orientation"><option value="horizontal"' + (line.orientation === 'horizontal' ? ' selected' : '') + '>Horizontal</option><option value="vertical"' + (line.orientation === 'vertical' ? ' selected' : '') + '>Vertical</option></select></label>' +
             '<label>X %<input type="number" min="0" max="100" step="0.1" data-line-id="' + line.id + '" data-line-field="x" value="' + line.x + '"></label>' +
             '<label>Y %<input type="number" min="0" max="100" step="0.1" data-line-id="' + line.id + '" data-line-field="y" value="' + line.y + '"></label>' +
@@ -426,7 +425,6 @@
       function addLine() {
         currentLines = currentLines.concat([{
           id: 'line-' + Date.now(),
-          page: '1',
           orientation: 'horizontal',
           x: 10,
           y: 10,
@@ -443,8 +441,7 @@
         currentLines = currentLines.map(function (line) {
           if (line.id !== id) return line;
           const next = Object.assign({}, line);
-          if (field === 'page') next.page = String(value) === '2' ? '2' : '1';
-          else if (field === 'orientation') next.orientation = String(value) === 'vertical' ? 'vertical' : 'horizontal';
+          if (field === 'orientation') next.orientation = String(value) === 'vertical' ? 'vertical' : 'horizontal';
           else if (field === 'color') next.color = String(value || '#2d2d2d');
           else next[field] = value;
           return next;
