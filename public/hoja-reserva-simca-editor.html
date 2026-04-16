@@ -102,7 +102,7 @@
         <div class="section">
           <h2>Tamanos Hoja 1</h2>
           <div class="grid">
-            <label>Bloque hoja 1 Y<input id="page1OffsetY" type="number" min="-160" max="160" step="1"></label>
+            <label>Bloque hoja 1 Y<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
             <label>Titulo campo hoja 1<input id="page1LabelSize" type="number" min="12" max="28" step="1"></label>
             <label>Texto hoja 1<input id="page1ValueSize" type="number" min="10" max="24" step="1"></label>
             <label>Header tabla pagos<input id="tableHeaderSize" type="number" min="10" max="22" step="1"></label>
@@ -110,8 +110,8 @@
             <label>Titulo firma<input id="signatureTitleSize" type="number" min="12" max="28" step="1"></label>
             <label>Texto firma<input id="signatureNoteSize" type="number" min="8" max="18" step="1"></label>
             <label>Alto observaciones<input id="observationsHeight" type="number" min="40" max="180" step="1"></label>
-            <label>Footer X<input id="footerOffsetX" type="number" min="-180" max="180" step="1"></label>
-            <label>Footer Y<input id="footerOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Footer X<input id="footerOffsetX" type="number" min="-240" max="240" step="1"></label>
+            <label>Footer Y<input id="footerOffsetY" type="number" min="-320" max="320" step="1"></label>
           </div>
         </div>
 
@@ -120,7 +120,7 @@
         <div class="section">
           <h2>Tamanos Hoja 2</h2>
           <div class="grid">
-            <label>Bloque hoja 2 Y<input id="page2OffsetY" type="number" min="-160" max="160" step="1"></label>
+            <label>Bloque hoja 2 Y<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
             <label>Titulo campo hoja 2<input id="page2LabelSize" type="number" min="12" max="28" step="1"></label>
             <label>Texto hoja 2<input id="page2ValueSize" type="number" min="10" max="24" step="1"></label>
             <label>Titulo documentos<input id="docsTitleSize" type="number" min="10" max="22" step="1"></label>
@@ -306,8 +306,8 @@
           textColor: safeColor(src.textColor, defaultLayout.textColor),
           paperColor: safeColor(src.paperColor, defaultLayout.paperColor),
           observationsHeight: clamp(numberOr(src.observationsHeight, defaultLayout.observationsHeight), 40, 180),
-          footerOffsetX: clamp(numberOr(src.footerOffsetX, defaultLayout.footerOffsetX), -180, 180),
-          footerOffsetY: clamp(numberOr(src.footerOffsetY, defaultLayout.footerOffsetY), -180, 180),
+          footerOffsetX: clamp(numberOr(src.footerOffsetX, defaultLayout.footerOffsetX), -240, 240),
+          footerOffsetY: clamp(numberOr(src.footerOffsetY, defaultLayout.footerOffsetY), -320, 320),
           page1LabelSize: clamp(numberOr(src.page1LabelSize, defaultLayout.page1LabelSize), 12, 28),
           page1ValueSize: clamp(numberOr(src.page1ValueSize, defaultLayout.page1ValueSize), 10, 24),
           page2LabelSize: clamp(numberOr(src.page2LabelSize, defaultLayout.page2LabelSize), 12, 28),
