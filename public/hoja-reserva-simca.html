@@ -1055,6 +1055,20 @@
 
       function renderPreview() {
         printRoot.innerHTML = buildPreviewHtml();
+        notifyPreviewHeight();
+      }
+
+      function notifyPreviewHeight() {
+        if (window.parent === window) return;
+        const height = Math.max(
+          document.documentElement ? document.documentElement.scrollHeight : 0,
+          document.body ? document.body.scrollHeight : 0,
+          printRoot ? printRoot.scrollHeight : 0
+        );
+        window.parent.postMessage({
+          type: 'hoja-reserva-simca-preview-height',
+          height: height
+        }, window.location.origin);
       }
 
       async function loadLayout() {

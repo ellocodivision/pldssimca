@@ -28,8 +28,8 @@
     .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
     .status{color:var(--muted);font-size:13px}
     .preview-stage{width:100%;overflow:auto;border:1px solid #d8d1c1;border-radius:16px;background:#d9dbe2;padding:24px 12px}
-    .preview-shell{width:816px;height:1056px;margin:0 auto;transform-origin:top center}
-    .preview-frame{width:816px;height:1056px;border:0;background:#fff;display:block;box-shadow:0 0 0 1px rgba(160,166,176,.75),0 8px 24px rgba(36,39,46,.12)}
+    .preview-shell{width:816px;min-height:1056px;margin:0 auto;transform-origin:top center}
+    .preview-frame{width:816px;min-height:1056px;border:0;background:#fff;display:block;box-shadow:0 0 0 1px rgba(160,166,176,.75),0 8px 24px rgba(36,39,46,.12)}
     .hint{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
     .actions-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .small-btn{min-height:34px;padding:0 12px;border:1px solid #c9c2b3;border-radius:999px;background:#fff;font-size:12px;font-weight:700;cursor:pointer}
@@ -244,6 +244,12 @@
       let currentLogoDataUrl = '';
       let currentFooterLogoDataUrl = '';
       let currentLines = [];
+
+      function syncPreviewHeight(nextHeight) {
+        const height = Math.max(1056, Number(nextHeight) || 0);
+        els.previewFrame.style.height = String(height) + 'px';
+        if (els.previewShell) els.previewShell.style.height = String(height) + 'px';
+      }
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -482,6 +488,12 @@
         renderLinesEditor();
         pushPreview();
         els.status.textContent = 'Preview restaurado. Guarda si quieres dejarlo fijo.';
+      });
+      window.addEventListener('message', function (event) {
+        if (event.origin !== window.location.origin) return;
+        const payload = event.data || {};
+        if (payload.type !== 'hoja-reserva-simca-preview-height') return;
+        syncPreviewHeight(payload.height);
       });
       loadLayout();
     })();
