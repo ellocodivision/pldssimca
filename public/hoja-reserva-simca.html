@@ -27,9 +27,13 @@
       --footer-logo-width:52px;
       --title-offset-x:0px;
       --title-offset-y:0px;
+      --page1-header-offset-x:0px;
+      --page1-header-offset-y:0px;
       --page1-scale:.92;
       --page1-offset-x:0px;
       --page1-offset-y:-10px;
+      --page2-header-offset-x:0px;
+      --page2-header-offset-y:0px;
       --page2-scale:.94;
       --page2-offset-x:0px;
       --page2-offset-y:-10px;
@@ -361,6 +365,17 @@
       margin-left:auto;
       max-height:calc(var(--header-height) - 18px);
       overflow:hidden;
+    }
+    .page-header-block{
+      width:100%;
+      transform-origin:top left;
+      will-change:transform;
+    }
+    .page-header-1{
+      transform:translate(var(--page1-header-offset-x), var(--page1-header-offset-y));
+    }
+    .page-header-2{
+      transform:translate(var(--page2-header-offset-x), var(--page2-header-offset-y));
     }
     .logo img{
       display:block;
@@ -860,9 +875,13 @@
         footerLogoWidth: 52,
         titleOffsetX: 0,
         titleOffsetY: 0,
+        page1HeaderOffsetX: 0,
+        page1HeaderOffsetY: 0,
         page1Scale: 0.92,
         page1OffsetX: 0,
         page1OffsetY: -10,
+        page2HeaderOffsetX: 0,
+        page2HeaderOffsetY: 0,
         page2Scale: 0.94,
         page2OffsetX: 0,
         page2OffsetY: -10,
@@ -1056,9 +1075,13 @@
         root.style.setProperty('--footer-logo-width', String(numberOr(currentLayout.footerLogoWidth, defaultLayout.footerLogoWidth || 52)) + 'px');
         root.style.setProperty('--title-offset-x', String(numberOr(currentLayout.titleOffsetX, defaultLayout.titleOffsetX)) + 'px');
         root.style.setProperty('--title-offset-y', String(numberOr(currentLayout.titleOffsetY, defaultLayout.titleOffsetY)) + 'px');
+        root.style.setProperty('--page1-header-offset-x', String(numberOr(currentLayout.page1HeaderOffsetX, defaultLayout.page1HeaderOffsetX)) + 'px');
+        root.style.setProperty('--page1-header-offset-y', String(numberOr(currentLayout.page1HeaderOffsetY, defaultLayout.page1HeaderOffsetY)) + 'px');
         root.style.setProperty('--page1-scale', String(numberOr(currentLayout.page1Scale, defaultLayout.page1Scale)));
         root.style.setProperty('--page1-offset-x', String(numberOr(currentLayout.page1OffsetX, defaultLayout.page1OffsetX)) + 'px');
         root.style.setProperty('--page1-offset-y', String(numberOr(currentLayout.page1OffsetY, defaultLayout.page1OffsetY)) + 'px');
+        root.style.setProperty('--page2-header-offset-x', String(numberOr(currentLayout.page2HeaderOffsetX, defaultLayout.page2HeaderOffsetX)) + 'px');
+        root.style.setProperty('--page2-header-offset-y', String(numberOr(currentLayout.page2HeaderOffsetY, defaultLayout.page2HeaderOffsetY)) + 'px');
         root.style.setProperty('--page2-scale', String(numberOr(currentLayout.page2Scale, defaultLayout.page2Scale)));
         root.style.setProperty('--page2-offset-x', String(numberOr(currentLayout.page2OffsetX, defaultLayout.page2OffsetX)) + 'px');
         root.style.setProperty('--page2-offset-y', String(numberOr(currentLayout.page2OffsetY, defaultLayout.page2OffsetY)) + 'px');
@@ -1180,10 +1203,12 @@
               ${renderFreeLines()}
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
+                <div class="page-header-block page-header-1">
+                  ${pageHeader("Reservation Form / Formato de Reserva")}
+                </div>
                 <div class="page-flow page-1-flow">
                   <div class="page-scale">
                     <div class="page-block">
-                      ${pageHeader("Reservation Form / Formato de Reserva")}
                       <div class="body">
                         <div class="stack">
                           ${field("*Full Name / Nombre Completo:", state.fullName)}
@@ -1253,10 +1278,12 @@
               ${renderFreeLines()}
               <div class="rail"><div class="bar">${esc(currentLayout.railText || 'simca.mx')}</div></div>
               <div class="content">
+                <div class="page-header-block page-header-2">
+                  ${pageHeader("Know your Client / Conoce a tu Cliente")}
+                </div>
                 <div class="page-flow page-2-flow">
                   <div class="page-scale">
                     <div class="page-block">
-                      ${pageHeader("Know your Client / Conoce a tu Cliente")}
                       <div class="body">
                         <div class="holder-block">
                           <div class="subsection-title">Holder / Titular</div>
@@ -1483,7 +1510,3 @@
   </script>
 </body>
 </html>
-    .page-footer{
-      flex:0 0 auto;
-      margin-top:auto;
-    }

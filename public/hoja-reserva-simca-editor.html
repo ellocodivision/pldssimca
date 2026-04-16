@@ -100,6 +100,16 @@
         </div>
 
         <div class="section">
+          <h2>Encabezados</h2>
+          <div class="grid">
+            <label>Header hoja 1 X<input id="page1HeaderOffsetX" type="number" min="-240" max="240" step="1"></label>
+            <label>Header hoja 1 Y<input id="page1HeaderOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Header hoja 2 X<input id="page2HeaderOffsetX" type="number" min="-240" max="240" step="1"></label>
+            <label>Header hoja 2 Y<input id="page2HeaderOffsetY" type="number" min="-180" max="180" step="1"></label>
+          </div>
+        </div>
+
+        <div class="section">
           <h2>Bloque Hoja 1</h2>
           <div class="grid">
             <label>X bloque<input id="page1OffsetX" type="number" min="-240" max="240" step="1"></label>
@@ -166,9 +176,13 @@
         footerLogoWidth: 52,
         titleOffsetX: 0,
         titleOffsetY: 0,
+        page1HeaderOffsetX: 0,
+        page1HeaderOffsetY: 0,
         page1Scale: 0.92,
         page1OffsetX: 0,
         page1OffsetY: -10,
+        page2HeaderOffsetX: 0,
+        page2HeaderOffsetY: 0,
         page2Scale: 0.94,
         page2OffsetX: 0,
         page2OffsetY: -10,
@@ -227,12 +241,16 @@
         lineColor: document.getElementById('lineColor'),
         textColor: document.getElementById('textColor'),
         paperColor: document.getElementById('paperColor'),
+        page1HeaderOffsetX: document.getElementById('page1HeaderOffsetX'),
+        page1HeaderOffsetY: document.getElementById('page1HeaderOffsetY'),
         page1Scale: document.getElementById('page1Scale'),
         page1OffsetX: document.getElementById('page1OffsetX'),
         page1OffsetY: document.getElementById('page1OffsetY'),
         observationsHeight: document.getElementById('observationsHeight'),
         footerOffsetX: document.getElementById('footerOffsetX'),
         footerOffsetY: document.getElementById('footerOffsetY'),
+        page2HeaderOffsetX: document.getElementById('page2HeaderOffsetX'),
+        page2HeaderOffsetY: document.getElementById('page2HeaderOffsetY'),
         page2Scale: document.getElementById('page2Scale'),
         page2OffsetX: document.getElementById('page2OffsetX'),
         page2OffsetY: document.getElementById('page2OffsetY'),
@@ -251,9 +269,13 @@
           'footerLogoWidth',
           'titleOffsetX',
           'titleOffsetY',
+          'page1HeaderOffsetX',
+          'page1HeaderOffsetY',
           'page1Scale',
           'page1OffsetX',
           'page1OffsetY',
+          'page2HeaderOffsetX',
+          'page2HeaderOffsetY',
           'page2Scale',
           'page2OffsetX',
           'page2OffsetY',
@@ -305,9 +327,13 @@
           footerLogoWidth: clamp(numberOr(src.footerLogoWidth, defaultLayout.footerLogoWidth), 24, 140),
           titleOffsetX: clamp(numberOr(src.titleOffsetX, defaultLayout.titleOffsetX), -220, 220),
           titleOffsetY: clamp(numberOr(src.titleOffsetY, defaultLayout.titleOffsetY), -120, 120),
+          page1HeaderOffsetX: clamp(numberOr(src.page1HeaderOffsetX, defaultLayout.page1HeaderOffsetX), -240, 240),
+          page1HeaderOffsetY: clamp(numberOr(src.page1HeaderOffsetY, defaultLayout.page1HeaderOffsetY), -180, 180),
           page1Scale: clamp(numberOr(src.page1Scale, defaultLayout.page1Scale), 0.7, 1.15),
           page1OffsetX: clamp(numberOr(src.page1OffsetX, defaultLayout.page1OffsetX), -240, 240),
           page1OffsetY: clamp(numberOr(src.page1OffsetY, defaultLayout.page1OffsetY), -320, 320),
+          page2HeaderOffsetX: clamp(numberOr(src.page2HeaderOffsetX, defaultLayout.page2HeaderOffsetX), -240, 240),
+          page2HeaderOffsetY: clamp(numberOr(src.page2HeaderOffsetY, defaultLayout.page2HeaderOffsetY), -180, 180),
           page2Scale: clamp(numberOr(src.page2Scale, defaultLayout.page2Scale), 0.7, 1.15),
           page2OffsetX: clamp(numberOr(src.page2OffsetX, defaultLayout.page2OffsetX), -240, 240),
           page2OffsetY: clamp(numberOr(src.page2OffsetY, defaultLayout.page2OffsetY), -320, 320),
