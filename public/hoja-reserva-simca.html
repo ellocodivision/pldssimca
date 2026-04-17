@@ -1164,10 +1164,10 @@
         root.style.setProperty('--signature-offset-y', String(numberOr(currentLayout.signatureOffsetY, defaultLayout.signatureOffsetY)) + 'px');
         root.style.setProperty('--footer-offset-x', String(numberOr(currentLayout.footerOffsetX, defaultLayout.footerOffsetX || 0)) + 'px');
         root.style.setProperty('--footer-offset-y', String(numberOr(currentLayout.footerOffsetY, defaultLayout.footerOffsetY)) + 'px');
-        root.style.setProperty('--page1-footer-offset-x', String(numberOr(currentLayout.page1FooterOffsetX, currentLayout.footerOffsetX || defaultLayout.footerOffsetX || 0)) + 'px');
-        root.style.setProperty('--page1-footer-offset-y', String(numberOr(currentLayout.page1FooterOffsetY, currentLayout.footerOffsetY || defaultLayout.footerOffsetY || 0)) + 'px');
-        root.style.setProperty('--page2-footer-offset-x', String(numberOr(currentLayout.page2FooterOffsetX, currentLayout.footerOffsetX || defaultLayout.footerOffsetX || 0)) + 'px');
-        root.style.setProperty('--page2-footer-offset-y', String(numberOr(currentLayout.page2FooterOffsetY, currentLayout.footerOffsetY || defaultLayout.footerOffsetY || 0)) + 'px');
+        root.style.setProperty('--page1-footer-offset-x', String(numberOr(currentLayout.page1FooterOffsetX, defaultLayout.page1FooterOffsetX || 0)) + 'px');
+        root.style.setProperty('--page1-footer-offset-y', String(numberOr(currentLayout.page1FooterOffsetY, defaultLayout.page1FooterOffsetY || 0)) + 'px');
+        root.style.setProperty('--page2-footer-offset-x', String(numberOr(currentLayout.page2FooterOffsetX, defaultLayout.page2FooterOffsetX || 0)) + 'px');
+        root.style.setProperty('--page2-footer-offset-y', String(numberOr(currentLayout.page2FooterOffsetY, defaultLayout.page2FooterOffsetY || 0)) + 'px');
         root.style.setProperty('--holder-offset-y', String(numberOr(currentLayout.holderOffsetY, defaultLayout.holderOffsetY)) + 'px');
         root.style.setProperty('--coowner-offset-y', String(numberOr(currentLayout.coOwnerOffsetY, defaultLayout.coOwnerOffsetY)) + 'px');
         root.style.setProperty('--docs-offset-y', String(numberOr(currentLayout.docsOffsetY, defaultLayout.docsOffsetY)) + 'px');

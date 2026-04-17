@@ -280,9 +280,9 @@
           <div class="grid">
             <label>Footer logo ancho<input id="footerLogoWidth" type="number" min="24" max="140" step="1"></label>
             <label>Footer hoja 1 X<input id="page1FooterOffsetX" type="number" min="-240" max="240" step="1"></label>
-            <label>Footer hoja 1 Y<input id="page1FooterOffsetY" type="number" min="-320" max="320" step="1"></label>
+            <label>Footer hoja 1 Y<input id="page1FooterOffsetY" type="number" min="-320" max="40" step="1"></label>
             <label>Footer hoja 2 X<input id="page2FooterOffsetX" type="number" min="-240" max="240" step="1"></label>
-            <label>Footer hoja 2 Y<input id="page2FooterOffsetY" type="number" min="-320" max="320" step="1"></label>
+            <label>Footer hoja 2 Y<input id="page2FooterOffsetY" type="number" min="-320" max="40" step="1"></label>
           </div>
         </div>
       </section>
@@ -529,10 +529,10 @@
           observationsHeight: clamp(numberOr(src.observationsHeight, defaultLayout.observationsHeight), 40, 180),
           footerOffsetX: clamp(numberOr(src.footerOffsetX, defaultLayout.footerOffsetX), -240, 240),
           footerOffsetY: clamp(numberOr(src.footerOffsetY, defaultLayout.footerOffsetY), -320, 320),
-          page1FooterOffsetX: clamp(numberOr(src.page1FooterOffsetX, numberOr(src.footerOffsetX, defaultLayout.page1FooterOffsetX)), -240, 240),
-          page1FooterOffsetY: clamp(numberOr(src.page1FooterOffsetY, numberOr(src.footerOffsetY, defaultLayout.page1FooterOffsetY)), -320, 320),
-          page2FooterOffsetX: clamp(numberOr(src.page2FooterOffsetX, numberOr(src.footerOffsetX, defaultLayout.page2FooterOffsetX)), -240, 240),
-          page2FooterOffsetY: clamp(numberOr(src.page2FooterOffsetY, numberOr(src.footerOffsetY, defaultLayout.page2FooterOffsetY)), -320, 320),
+          page1FooterOffsetX: clamp(numberOr(src.page1FooterOffsetX, defaultLayout.page1FooterOffsetX), -240, 240),
+          page1FooterOffsetY: clamp(numberOr(src.page1FooterOffsetY, defaultLayout.page1FooterOffsetY), -320, 40),
+          page2FooterOffsetX: clamp(numberOr(src.page2FooterOffsetX, defaultLayout.page2FooterOffsetX), -240, 240),
+          page2FooterOffsetY: clamp(numberOr(src.page2FooterOffsetY, defaultLayout.page2FooterOffsetY), -320, 40),
           page1LabelSize: clamp(numberOr(src.page1LabelSize, defaultLayout.page1LabelSize), 12, 28),
           page1ValueSize: clamp(numberOr(src.page1ValueSize, defaultLayout.page1ValueSize), 10, 24),
           page2LabelSize: clamp(numberOr(src.page2LabelSize, defaultLayout.page2LabelSize), 12, 28),
