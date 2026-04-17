@@ -1879,7 +1879,7 @@ function normalizeHojaReservaSimcaLayout(input) {
     paymentsScale: clampNumber(src.paymentsScale, 0.86, 0.65, 1.15),
     cardSectionOffsetY: clampNumber(src.cardSectionOffsetY, -12, -180, 180),
     cardSectionScale: clampNumber(src.cardSectionScale, 0.92, 0.65, 1.15),
-    signatureOffsetY: clampNumber(src.signatureOffsetY, -96, -180, 180),
+    signatureOffsetY: clampNumber(src.signatureOffsetY, -6, -180, 180),
     footerOffsetX: clampNumber(src.footerOffsetX, 0, -240, 240),
     footerOffsetY: clampNumber(src.footerOffsetY, 0, -320, 320),
     page1FooterOffsetX: clampNumber(src.page1FooterOffsetX, 0, -240, 240),

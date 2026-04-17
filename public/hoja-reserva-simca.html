@@ -42,7 +42,7 @@
       --payments-scale:.9;
       --card-offset-y:-12px;
       --card-scale:.94;
-      --signature-offset-y:-96px;
+      --signature-offset-y:0px;
       --footer-offset-x:0px;
       --footer-offset-y:0px;
       --page1-footer-offset-x:0px;
@@ -563,7 +563,10 @@
     .signature{
       margin-top:8px;
       padding-top:0;
-      transform:translate(var(--page1-footer-offset-x), var(--page1-footer-offset-y));
+      transform:translate(
+        var(--page1-footer-offset-x),
+        calc(var(--page1-footer-offset-y) + var(--signature-offset-y))
+      );
       flex:0 0 auto;
       display:block;
     }
