@@ -134,6 +134,13 @@
       top: 0;
       z-index: 5;
     }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
     .topbar .label { font-size: 12px; color: #646771; text-transform: uppercase; letter-spacing: 0.07em; }
     .btn {
       border: 1px solid #b9beb1;
@@ -146,6 +153,18 @@
     }
     .btn:hover { border-color: #8f9587; }
     .btn.primary { background: #a6ac9b; border-color: #a6ac9b; color: #0d1015; font-weight: 700; }
+    .mini-select {
+      min-width: 210px;
+      max-width: 260px;
+      border: 1px solid #b9beb1;
+      background: #fff;
+      color: #242830;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.2;
+      appearance: auto;
+    }
 
     .tipo-wrap {
       max-width: 1200px;
@@ -586,7 +605,10 @@
   <section id="floorsView" class="floors-page hidden">
     <div class="topbar">
       <span class="label" id="floorsTopLabel">Plano interactivo</span>
-      <div>
+      <div class="topbar-actions">
+        <select id="advisorFilterSelect" class="mini-select">
+          <option value="">Todos los usuarios</option>
+        </select>
         <button id="backToTiposBtn" class="btn" type="button">Volver a tipologias</button>
         <button id="exportFloorsBtn" class="btn" type="button">Exportar 7 niveles</button>
         <button id="refreshViewBtn" class="btn" type="button">Refresh</button>
@@ -712,6 +734,7 @@
         selectedTipologia: '',
         showAllOnMap: false,
         showAllUnits: false,
+        whisperlistSellers: [],
         selectedWhisperRowId: '',
         selectedAdvisorEmail: '',
         selectedRecamarasFilter: '',
@@ -737,6 +760,7 @@
         tipoGrid: document.getElementById('tipoGrid'),
         tipoStatus: document.getElementById('tipoStatus'),
         floorsTopLabel: document.getElementById('floorsTopLabel'),
+        advisorFilterSelect: document.getElementById('advisorFilterSelect'),
         exportFloorsBtn: document.getElementById('exportFloorsBtn'),
         activeFilterChips: document.getElementById('activeFilterChips'),
         filterRecamarasSelect: document.getElementById('filterRecamarasSelect'),
@@ -820,7 +844,7 @@
         state.activeFloorId = String(route.get('floor') || '').trim();
         state.showAllUnits = boolFromParam(route.get('all'));
         state.showAllOnMap = state.showAllUnits;
-        state.selectedAdvisorEmail = '';
+        state.selectedAdvisorEmail = String(route.get('advisor') || '').trim().toLowerCase();
         state.selectedWhisperRowId = '';
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
@@ -839,7 +863,7 @@
         setOrDelete('tipologia', state.selectedTipologia);
         setOrDelete('floor', state.activeFloorId);
         if (state.showAllUnits) route.set('all', '1'); else route.delete('all');
-        route.delete('advisor');
+        setOrDelete('advisor', state.selectedAdvisorEmail);
         route.delete('client');
         setOrDelete('zone_rec', state.selectedRecamarasFilter);
         route.delete('zone_building');
@@ -1113,7 +1137,7 @@
         const price = row && row.price != null ? row.price : (row && row.precio != null ? row.precio : null);
         const planLink = String((row && (row.planLink || row.link || row.plano || row.urlPlano)) || '').trim() || getTipologiaImageUrl(tipologia);
         const asignacion = String((row && (row.asignacion || row.assignment || row.asesor || row.broker)) || zone.asesorAsignado || '').trim();
-        const whisperAssignment = getWhisperAssignmentDetails(u);
+        const whisperAssignment = getWhisperAssignmentDetails(u, state.selectedAdvisorEmail);
         return {
           unidad: zoneLabel || String((row && row.unidad) || '').trim() || u,
           hasInventoryMatch: !!row,
@@ -1136,17 +1160,20 @@
         };
       }
 
-      function getWhisperAssignmentDetails(unit) {
+      function getWhisperAssignmentDetails(unit, advisorEmailFilter) {
         const target = unitKey(unit);
         if (!target) return [];
+        const sellerFilter = String(advisorEmailFilter || '').trim().toLowerCase();
         const matches = [];
         for (const row of (state.whisperlistRows || [])) {
           const kpi = row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
           const clientName = String(row && row.nombreCliente || '').trim() || 'Cliente';
-          if (unitKey(kpi.opcionA) === target) matches.push({ optionKey: 'opcionA', optionLabel: 'Opción A', clientName, rowId: String(row.id || '') });
-          if (unitKey(kpi.opcionB) === target) matches.push({ optionKey: 'opcionB', optionLabel: 'Opción B', clientName, rowId: String(row.id || '') });
-          if (unitKey(kpi.opcionC) === target) matches.push({ optionKey: 'opcionC', optionLabel: 'Opción C', clientName, rowId: String(row.id || '') });
-          if (unitKey(kpi.opcionD) === target) matches.push({ optionKey: 'opcionD', optionLabel: 'Opción D', clientName, rowId: String(row.id || '') });
+          const sellerEmail = String(row && row.correo || '').trim().toLowerCase();
+          if (sellerFilter && sellerEmail !== sellerFilter) continue;
+          if (unitKey(kpi.opcionA) === target) matches.push({ optionKey: 'opcionA', optionLabel: 'Opción A', clientName, rowId: String(row.id || ''), sellerEmail, sellerName: String(row.asesor || '').trim() });
+          if (unitKey(kpi.opcionB) === target) matches.push({ optionKey: 'opcionB', optionLabel: 'Opción B', clientName, rowId: String(row.id || ''), sellerEmail, sellerName: String(row.asesor || '').trim() });
+          if (unitKey(kpi.opcionC) === target) matches.push({ optionKey: 'opcionC', optionLabel: 'Opción C', clientName, rowId: String(row.id || ''), sellerEmail, sellerName: String(row.asesor || '').trim() });
+          if (unitKey(kpi.opcionD) === target) matches.push({ optionKey: 'opcionD', optionLabel: 'Opción D', clientName, rowId: String(row.id || ''), sellerEmail, sellerName: String(row.asesor || '').trim() });
         }
         return matches;
       }
@@ -1308,8 +1335,28 @@
       }
 
       function renderWhisperFilters() {
-        state.selectedAdvisorEmail = '';
-        state.selectedWhisperRowId = '';
+        const select = els.advisorFilterSelect;
+        if (!select) return;
+        const sellers = Array.isArray(state.whisperlistSellers) ? state.whisperlistSellers : [];
+        const current = String(state.selectedAdvisorEmail || '').trim().toLowerCase();
+        const options = ['<option value="">Todos los usuarios</option>'].concat(
+          sellers.map(function (seller) {
+            const email = String(seller && seller.correo || '').trim().toLowerCase();
+            const name = String(seller && seller.asesor || '').trim() || 'Sin nombre';
+            const selected = email && email === current ? ' selected' : '';
+            return '<option value="' + esc(email) + '"' + selected + '>' + esc(name + (email ? (' · ' + email) : '')) + '</option>';
+          })
+        );
+        select.innerHTML = options.join('');
+        if (current && !sellers.some(function (seller) {
+          return String(seller && seller.correo || '').trim().toLowerCase() === current;
+        })) {
+          state.selectedAdvisorEmail = '';
+          persistRouteState();
+          select.value = '';
+        } else {
+          select.value = current;
+        }
       }
 
       function renderZoneAttributeFilters() {
@@ -1396,6 +1443,28 @@
         if (state.isGerente) return true;
         const owner = String(info.asesorAsignadoCorreo || '').trim().toLowerCase();
         return !!owner && !!state.currentEmail && owner === state.currentEmail;
+      }
+
+      function matchesSelectedSeller(info) {
+        const selectedEmail = String(state.selectedAdvisorEmail || '').trim().toLowerCase();
+        if (!selectedEmail) return true;
+        return Array.isArray(info && info.whisperAssignments) && info.whisperAssignments.some(function (item) {
+          return String(item && item.sellerEmail || '').trim().toLowerCase() === selectedEmail;
+        });
+      }
+
+      function getSelectedSellerLabel() {
+        const selectedEmail = String(state.selectedAdvisorEmail || '').trim().toLowerCase();
+        if (!selectedEmail) return 'TODOS';
+        const match = (Array.isArray(state.whisperlistSellers) ? state.whisperlistSellers : []).find(function (seller) {
+          return String(seller && seller.correo || '').trim().toLowerCase() === selectedEmail;
+        });
+        if (match) {
+          const name = String(match.asesor || '').trim();
+          const email = String(match.correo || '').trim().toLowerCase();
+          return name ? (name + (email ? (' · ' + email) : '')) : (email || 'TODOS');
+        }
+        return selectedEmail;
       }
 
       function userHasAssignedUnits() {
@@ -1778,6 +1847,7 @@
       }
 
       function matchesFilter(info) {
+        if (!matchesSelectedSeller(info)) return false;
         const selectedWhisperRow = getSelectedWhisperRow();
         if (selectedWhisperRow) {
           const allowedUnits = getWhisperRowOptionUnits(selectedWhisperRow);
@@ -1786,7 +1856,7 @@
         if (state.selectedRecamarasFilter && String(info && info.recamaras || '').trim() !== String(state.selectedRecamarasFilter || '').trim()) return false;
         if (state.selectedVistaFilter && String(info && info.vista || '').trim() !== String(state.selectedVistaFilter || '').trim()) return false;
         if (state.selectedAsignacionFilter && String(info && info.asignacion || '').trim() !== String(state.selectedAsignacionFilter || '').trim()) return false;
-        if (!state.showAllUnits && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
+        if (!state.showAllUnits && !state.selectedAdvisorEmail && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
         if (state.showAllOnMap || state.showAllUnits) return true;
         if (!state.selectedTipologia) return true;
         return norm(info.tipologia) === norm(state.selectedTipologia);
@@ -1797,6 +1867,7 @@
         const chips = [
           '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
           '<span class="chip">Tipologia: ' + esc((state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
+          '<span class="chip">Usuario: ' + esc(getSelectedSellerLabel()) + '</span>',
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Filtro recámaras: ' + esc(state.selectedRecamarasFilter || 'TODAS') + '</span>',
           '<span class="chip">Filtro vista: ' + esc(state.selectedVistaFilter || 'TODAS') + '</span>',
@@ -1990,6 +2061,17 @@
         const data = await res.json().catch(function () { return {}; });
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar presentacion');
         state.canUploadInventory = await permissionPromise;
+        try {
+          const sellersRes = await fetch('/api/whisperlist/sellers', { cache: 'no-store', credentials: 'same-origin' });
+          if (sellersRes.ok) {
+            const sellersData = await sellersRes.json().catch(function () { return {}; });
+            state.whisperlistSellers = Array.isArray(sellersData.sellers) ? sellersData.sellers : [];
+          } else {
+            state.whisperlistSellers = [];
+          }
+        } catch (_) {
+          state.whisperlistSellers = [];
+        }
         try {
           const whisperRes = await fetch('/api/whisperlist', { cache: 'no-store', credentials: 'same-origin' });
           if (whisperRes.ok) {
