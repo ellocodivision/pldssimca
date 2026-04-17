@@ -47,6 +47,122 @@
     .line-item-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
     .line-title{font-size:13px;font-weight:700;color:#3d3a32}
     .line-remove{min-height:30px;padding:0 10px;border:1px solid #d6ccbc;border-radius:999px;background:#fff;font-size:12px;font-weight:700;cursor:pointer}
+    .legacy-main-inputs{display:none}
+    .wysiwyg-shell{display:grid;gap:10px}
+    .wysiwyg-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .wysiwyg-tab{
+      min-height:34px;
+      padding:0 12px;
+      border:1px solid #cfc7b9;
+      border-radius:999px;
+      background:#fff;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .wysiwyg-tab.active{background:#1f1f1a;color:#fff;border-color:#1f1f1a}
+    .wysiwyg-toolbar{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:10px;
+      border:1px solid #ddd5c7;
+      border-radius:14px;
+      background:#fffdfa;
+    }
+    .wysiwyg-btn,.wysiwyg-select{
+      min-height:34px;
+      border:1px solid #cfc7b9;
+      border-radius:10px;
+      background:#fff;
+      color:#201f1a;
+      font:inherit;
+      font-size:13px;
+      padding:0 10px;
+    }
+    .wysiwyg-btn{cursor:pointer;font-weight:700}
+    .wysiwyg-btn.active{background:#f7e9b0;border-color:#cda742}
+    .wysiwyg-editor{
+      min-height:520px;
+      border:1px solid #d9d2c3;
+      border-radius:16px;
+      background:#fff;
+      padding:18px;
+      overflow:auto;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+      font-family:"Akkurat","Segoe UI",Tahoma,sans-serif;
+      color:#222222;
+    }
+    .wysiwyg-editor:focus{outline:2px solid rgba(240,196,25,.45);outline-offset:2px}
+    .wysiwyg-editor .body{
+      padding:18px 28px 24px;
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      min-height:100%;
+      background:#fffef9;
+    }
+    .wysiwyg-editor .stack{display:grid;gap:12px}
+    .wysiwyg-editor .row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .wysiwyg-editor .line-field{display:grid;gap:4px}
+    .wysiwyg-editor .line-field .label{font-size:15px;font-weight:600;line-height:1.15}
+    .wysiwyg-editor .line-field.small .label{font-size:13px}
+    .wysiwyg-editor .line-field .value{
+      min-height:29px;
+      border-bottom:1px solid #2d2d2d;
+      padding:2px 6px 3px 0;
+      font-size:13px;
+      line-height:1.25;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .wysiwyg-editor .line-field.tall .value{min-height:58px}
+    .wysiwyg-editor .line-field.xl .value{min-height:82px}
+    .wysiwyg-editor .payments{
+      margin-top:6px;
+      padding:0 86px;
+      transform:translateY(-8px) scale(.9);
+      transform-origin:top left;
+      width:calc(100% / .9);
+    }
+    .wysiwyg-editor .payments-table{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+      font-size:16px;
+    }
+    .wysiwyg-editor .payments-table th,
+    .wysiwyg-editor .payments-table td{
+      border-bottom:1px solid #2d2d2d;
+      border-right:1px solid #2d2d2d;
+      padding:4px 8px;
+      height:32px;
+      vertical-align:middle;
+    }
+    .wysiwyg-editor .payments-table th:last-child,
+    .wysiwyg-editor .payments-table td:last-child{border-right:none}
+    .wysiwyg-editor .payments-table th{font-size:12px;font-weight:700}
+    .wysiwyg-editor .payments-table td{font-size:12px}
+    .wysiwyg-editor .signature{
+      margin-top:8px;
+      padding-top:0;
+      display:block;
+    }
+    .wysiwyg-editor .signature-line{border-bottom:1px solid #2d2d2d;height:28px;margin-bottom:4px}
+    .wysiwyg-editor .signature-title{text-align:center;font-size:17px;font-weight:700;margin-bottom:2px}
+    .wysiwyg-editor .signature-note{text-align:center;font-size:10px;color:#47413a;line-height:1.3}
+    .wysiwyg-editor .subsection-title{margin-top:2px;font-size:15px;font-weight:800;line-height:1.2}
+    .wysiwyg-editor .docs{margin-top:14px;padding:10px 4px 14px;font-size:12px;line-height:1.25}
+    .wysiwyg-editor .docs-title{font-size:12px;font-weight:800;margin-bottom:10px}
+    .wysiwyg-editor .docs-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .wysiwyg-editor .docs-item{display:block}
+    .wysiwyg-editor .holder-block{transform:none}
+    .wysiwyg-editor .coowner-block{transform:none}
+    .wysiwyg-editor .card-block{
+      transform:none;
+      width:auto;
+    }
     @media (max-width:1180px){.wrap{padding:20px 14px 28px}.layout{grid-template-columns:1fr}.preview-panel{position:static;max-height:none;overflow:visible}}
   </style>
 </head>
@@ -55,7 +171,7 @@
     <div class="head">
       <div>
         <h1>Editor PDF · Hoja de Reserva SIMCA</h1>
-        <p class="sub">Aquí puedes mover el logo, el cuadro amarillo, las líneas, el bloque completo de cada hoja y el footer. El preview de la derecha usa el mismo HTML que genera el PDF final.</p>
+        <p class="sub">Aquí puedes mover el logo, el cuadro amarillo, las líneas, el encabezado, el footer y escribir el bloque central como si fuera Word. El preview de la derecha usa el mismo HTML que genera el PDF final.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/hoja-reserva-simca">Volver a hoja de reserva</a>
@@ -110,28 +226,47 @@
         </div>
 
         <div class="section">
-          <h2>Bloque Hoja 1</h2>
-          <div class="grid">
-            <label>X bloque<input id="page1OffsetX" type="number" min="-240" max="240" step="1"></label>
-            <label>Y bloque<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
-            <label>Escala bloque<input id="page1Scale" type="number" min="0.70" max="1.15" step="0.01"></label>
-            <label>Firma Y<input id="signatureOffsetY" type="number" min="-180" max="180" step="1"></label>
-            <label>Alto observaciones<input id="observationsHeight" type="number" min="40" max="180" step="1"></label>
-            <label>Footer X<input id="footerOffsetX" type="number" min="-240" max="240" step="1"></label>
-            <label>Footer Y<input id="footerOffsetY" type="number" min="-320" max="320" step="1"></label>
+          <h2>Bloque principal</h2>
+          <div class="wysiwyg-shell">
+            <div class="wysiwyg-tabs">
+              <button class="wysiwyg-tab active" type="button" data-body-tab="page1">Hoja 1</button>
+              <button class="wysiwyg-tab" type="button" data-body-tab="page2">Hoja 2</button>
+            </div>
+            <div class="wysiwyg-toolbar">
+              <button class="wysiwyg-btn" type="button" data-cmd="bold"><strong>B</strong></button>
+              <button class="wysiwyg-btn" type="button" data-cmd="italic"><em>I</em></button>
+              <button class="wysiwyg-btn" type="button" data-cmd="underline"><u>U</u></button>
+              <button class="wysiwyg-btn" type="button" data-cmd="justifyLeft">Izq.</button>
+              <button class="wysiwyg-btn" type="button" data-cmd="justifyCenter">Centro</button>
+              <button class="wysiwyg-btn" type="button" data-cmd="justifyRight">Der.</button>
+              <button class="wysiwyg-btn" type="button" data-cmd="undo">Deshacer</button>
+              <button class="wysiwyg-btn" type="button" data-cmd="redo">Rehacer</button>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#615f56;margin-left:auto">
+                Tamaño
+                <input id="richFontSize" type="number" min="8" max="36" step="1" value="16" style="width:72px;min-height:34px">
+              </label>
+            </div>
+            <div id="page1BodyEditor" class="wysiwyg-editor" contenteditable="true" spellcheck="false"></div>
+            <div id="page2BodyEditor" class="wysiwyg-editor" contenteditable="true" spellcheck="false" hidden></div>
+            <p class="hint">Selecciona un texto y usa la barra para darle formato. Ese HTML se guarda y se imprime igual.</p>
           </div>
         </div>
 
-        <div class="preview-divider">Separacion entre hojas</div>
-
+        <div class="legacy-main-inputs">
         <div class="section">
-          <h2>Bloque Hoja 2</h2>
+          <h2>Reserva</h2>
           <div class="grid">
-            <label>X bloque<input id="page2OffsetX" type="number" min="-240" max="240" step="1"></label>
-            <label>Y bloque<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
-            <label>Escala bloque<input id="page2Scale" type="number" min="0.70" max="1.15" step="0.01"></label>
-            <label>Documentos Y<input id="docsOffsetY" type="number" min="-180" max="180" step="1"></label>
+            <label>Full Name / Nombre Completo<input id="legacyFullName" type="text"></label>
+            <label>E-mail<input id="legacyEmail" type="text"></label>
+            <label>Phone / Teléfono<input id="legacyPhone" type="text"></label>
+            <label>Development / Desarrollo<input id="legacyDevelopment" type="text"></label>
+            <label>Unit # / No. Unidad<input id="legacyUnitNumber" type="text"></label>
+            <label>Price Listed / Precio de Lista<input id="legacyPriceListed" type="text"></label>
           </div>
+          <div class="grid one" style="margin-top:10px">
+            <label>Observations / Observaciones<textarea id="legacyObservations"></textarea></label>
+          </div>
+        </div>
         </div>
 
         <div class="section">
@@ -141,6 +276,15 @@
             <span class="hint">Las líneas que edites aquí se reflejan en ambas hojas.</span>
           </div>
           <div class="line-list" id="lineList"></div>
+        </div>
+
+        <div class="section">
+          <h2>Footer</h2>
+          <div class="grid">
+            <label>Footer logo ancho<input id="footerLogoWidth" type="number" min="24" max="140" step="1"></label>
+            <label>Footer X<input id="footerOffsetX" type="number" min="-240" max="240" step="1"></label>
+            <label>Footer Y<input id="footerOffsetY" type="number" min="-320" max="320" step="1"></label>
+          </div>
         </div>
       </section>
 
@@ -166,6 +310,8 @@
       const defaultLayout = {
         logoDataUrl: '',
         footerLogoDataUrl: '',
+        page1BodyHtml: '',
+        page2BodyHtml: '',
         railText: 'simca.mx',
         railWidth: 50,
         railOffsetY: 88,
@@ -230,6 +376,9 @@
         lineList: document.getElementById('lineList'),
         status: document.getElementById('status'),
         previewFrame: document.getElementById('previewFrame'),
+        page1BodyEditor: document.getElementById('page1BodyEditor'),
+        page2BodyEditor: document.getElementById('page2BodyEditor'),
+        richFontSize: document.getElementById('richFontSize'),
         railText: document.getElementById('railText'),
         railWidth: document.getElementById('railWidth'),
         railOffsetY: document.getElementById('railOffsetY'),
@@ -297,6 +446,10 @@
       let currentLogoDataUrl = '';
       let currentFooterLogoDataUrl = '';
       let currentLines = [];
+      let currentPage1BodyHtml = '';
+      let currentPage2BodyHtml = '';
+      let activeBodyPage = 'page1';
+      let savedBodyRange = null;
       let currentLayout = Object.assign({}, defaultLayout);
 
       function syncPreviewHeight(nextHeight) {
@@ -323,6 +476,8 @@
         return {
           logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
           footerLogoDataUrl: typeof src.footerLogoDataUrl === 'string' ? src.footerLogoDataUrl : '',
+          page1BodyHtml: typeof src.page1BodyHtml === 'string' ? src.page1BodyHtml : defaultLayout.page1BodyHtml,
+          page2BodyHtml: typeof src.page2BodyHtml === 'string' ? src.page2BodyHtml : defaultLayout.page2BodyHtml,
           railText: typeof src.railText === 'string' ? src.railText : defaultLayout.railText,
           railWidth: clamp(numberOr(src.railWidth, defaultLayout.railWidth), 30, 120),
           railOffsetY: clamp(numberOr(src.railOffsetY, defaultLayout.railOffsetY), 0, 300),
@@ -402,22 +557,142 @@
         }).join('');
       }
 
+      function saveBodySelection() {
+        const editor = getActiveBodyEditor();
+        const selection = window.getSelection();
+        if (!editor || !selection || !selection.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        if (!editor.contains(range.commonAncestorContainer)) return;
+        savedBodyRange = range.cloneRange();
+      }
+
+      function restoreBodySelection() {
+        const editor = getActiveBodyEditor();
+        if (!editor || !savedBodyRange) return;
+        const selection = window.getSelection();
+        if (!selection) return;
+        selection.removeAllRanges();
+        selection.addRange(savedBodyRange);
+        editor.focus();
+      }
+
+      function getActiveBodyEditor() {
+        return activeBodyPage === 'page2' ? els.page2BodyEditor : els.page1BodyEditor;
+      }
+
+      function setActiveBodyPage(page) {
+        activeBodyPage = page === 'page2' ? 'page2' : 'page1';
+        if (els.page1BodyEditor) els.page1BodyEditor.hidden = activeBodyPage !== 'page1';
+        if (els.page2BodyEditor) els.page2BodyEditor.hidden = activeBodyPage !== 'page2';
+        document.querySelectorAll('[data-body-tab]').forEach(function (btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-body-tab') === activeBodyPage);
+        });
+      }
+
+      function sanitizeBodyHtml(html) {
+        return String(html == null ? '' : html)
+          .replace(/\u200b/g, '')
+          .replace(/<span[^>]*>\s*<\/span>/gi, '')
+          .trim();
+      }
+
+      function syncBodyEditorsFromLayout() {
+        if (els.page1BodyEditor) {
+          els.page1BodyEditor.innerHTML = sanitizeBodyHtml(currentPage1BodyHtml || currentLayout.page1BodyHtml || '');
+        }
+        if (els.page2BodyEditor) {
+          els.page2BodyEditor.innerHTML = sanitizeBodyHtml(currentPage2BodyHtml || currentLayout.page2BodyHtml || '');
+        }
+      }
+
+      function syncLayoutFromBodyEditors() {
+        if (els.page1BodyEditor) currentPage1BodyHtml = sanitizeBodyHtml(els.page1BodyEditor.innerHTML);
+        if (els.page2BodyEditor) currentPage2BodyHtml = sanitizeBodyHtml(els.page2BodyEditor.innerHTML);
+        currentLayout.page1BodyHtml = currentPage1BodyHtml;
+        currentLayout.page2BodyHtml = currentPage2BodyHtml;
+      }
+
+      function captureBodyFromPreview() {
+        if (!els.previewFrame || !els.previewFrame.contentDocument) return false;
+        if (currentPage1BodyHtml && currentPage2BodyHtml) return false;
+        const page1Block = els.previewFrame.contentDocument.querySelector('.page-1-flow .page-block');
+        const page2Block = els.previewFrame.contentDocument.querySelector('.page-2-flow .page-block');
+        let changed = false;
+        if (!currentPage1BodyHtml && page1Block) {
+          currentPage1BodyHtml = sanitizeBodyHtml(page1Block.innerHTML);
+          changed = true;
+        }
+        if (!currentPage2BodyHtml && page2Block) {
+          currentPage2BodyHtml = sanitizeBodyHtml(page2Block.innerHTML);
+          changed = true;
+        }
+        if (changed) {
+          currentLayout.page1BodyHtml = currentPage1BodyHtml;
+          currentLayout.page2BodyHtml = currentPage2BodyHtml;
+          syncBodyEditorsFromLayout();
+        }
+        return changed;
+      }
+
+      function applyBodyCommand(command, value) {
+        const editor = getActiveBodyEditor();
+        if (!editor) return;
+        editor.focus();
+        if (command === 'fontSize') {
+          restoreBodySelection();
+          const selection = window.getSelection();
+          if (!selection || !selection.rangeCount) return;
+          const range = selection.getRangeAt(0);
+          if (range.collapsed) return;
+          const px = clamp(numberOr(value, 16), 8, 36);
+          const wrapper = document.createElement('span');
+          wrapper.style.fontSize = px + 'px';
+          try {
+            wrapper.appendChild(range.extractContents());
+            range.insertNode(wrapper);
+            range.setStartAfter(wrapper);
+            range.setEndAfter(wrapper);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } catch (_) {
+            document.execCommand('fontSize', false, '7');
+            editor.querySelectorAll('font[size="7"]').forEach(function (node) {
+              const span = document.createElement('span');
+              span.style.fontSize = px + 'px';
+              span.innerHTML = node.innerHTML;
+              node.parentNode.replaceChild(span, node);
+            });
+          }
+          syncLayoutFromBodyEditors();
+          pushPreview();
+          return;
+        }
+        document.execCommand(command, false, value || null);
+        syncLayoutFromBodyEditors();
+        pushPreview();
+      }
+
       function setForm(layoutInput) {
         const layout = normalizeLayout(layoutInput);
         currentLayout = Object.assign({}, defaultLayout, layout);
         currentLogoDataUrl = layout.logoDataUrl || '';
         currentFooterLogoDataUrl = layout.footerLogoDataUrl || '';
         currentLines = layout.lines.slice();
+        currentPage1BodyHtml = layout.page1BodyHtml || '';
+        currentPage2BodyHtml = layout.page2BodyHtml || '';
         editableFieldNames.forEach(function (name) {
           if (els[name]) els[name].value = String(layout[name]);
         });
         renderLinesEditor();
+        syncBodyEditorsFromLayout();
       }
 
       function getFormLayout() {
         const out = Object.assign({}, currentLayout, {
           logoDataUrl: currentLogoDataUrl,
           footerLogoDataUrl: currentFooterLogoDataUrl,
+          page1BodyHtml: currentPage1BodyHtml,
+          page2BodyHtml: currentPage2BodyHtml,
           lines: currentLines.slice()
         });
         editableFieldNames.forEach(function (name) {
@@ -425,11 +700,14 @@
         });
         out.logoDataUrl = currentLogoDataUrl;
         out.footerLogoDataUrl = currentFooterLogoDataUrl;
+        out.page1BodyHtml = currentPage1BodyHtml;
+        out.page2BodyHtml = currentPage2BodyHtml;
         out.lines = currentLines.slice();
         return normalizeLayout(out);
       }
 
       function pushPreview() {
+        syncLayoutFromBodyEditors();
         if (!els.previewFrame.contentWindow) return;
         els.previewFrame.contentWindow.postMessage({
           type: 'hoja-reserva-simca-layout-preview',
@@ -560,9 +838,51 @@
         currentLogoDataUrl = '';
         currentFooterLogoDataUrl = '';
         currentLines = [];
+        currentPage1BodyHtml = '';
+        currentPage2BodyHtml = '';
         renderLinesEditor();
         pushPreview();
         els.status.textContent = 'Preview restaurado. Guarda si quieres dejarlo fijo.';
+      });
+      if (els.page1BodyEditor) {
+        els.page1BodyEditor.addEventListener('focus', function () { setActiveBodyPage('page1'); });
+        els.page1BodyEditor.addEventListener('keyup', saveBodySelection);
+        els.page1BodyEditor.addEventListener('mouseup', saveBodySelection);
+        els.page1BodyEditor.addEventListener('input', function () {
+          syncLayoutFromBodyEditors();
+          pushPreview();
+        });
+      }
+      if (els.page2BodyEditor) {
+        els.page2BodyEditor.addEventListener('focus', function () { setActiveBodyPage('page2'); });
+        els.page2BodyEditor.addEventListener('keyup', saveBodySelection);
+        els.page2BodyEditor.addEventListener('mouseup', saveBodySelection);
+        els.page2BodyEditor.addEventListener('input', function () {
+          syncLayoutFromBodyEditors();
+          pushPreview();
+        });
+      }
+      document.querySelectorAll('[data-body-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          setActiveBodyPage(btn.getAttribute('data-body-tab'));
+        });
+      });
+      if (els.richFontSize) {
+        els.richFontSize.addEventListener('change', function () {
+          applyBodyCommand('fontSize', els.richFontSize.value);
+        });
+      }
+      document.querySelectorAll('[data-cmd]').forEach(function (btn) {
+        btn.addEventListener('mousedown', function (event) {
+          event.preventDefault();
+          saveBodySelection();
+        });
+        btn.addEventListener('click', function () {
+          applyBodyCommand(btn.getAttribute('data-cmd'));
+        });
+      });
+      els.previewFrame.addEventListener('load', function () {
+        if (captureBodyFromPreview()) pushPreview();
       });
       window.addEventListener('message', function (event) {
         if (event.origin !== window.location.origin) return;
@@ -570,7 +890,11 @@
         if (payload.type !== 'hoja-reserva-simca-preview-height') return;
         syncPreviewHeight(payload.height);
       });
+      setActiveBodyPage('page1');
       loadLayout();
+      setTimeout(function () {
+        if (captureBodyFromPreview()) pushPreview();
+      }, 150);
     })();
   </script>
 </body>

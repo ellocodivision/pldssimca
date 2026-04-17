@@ -1850,6 +1850,8 @@ function normalizeHojaReservaSimcaLayout(input) {
     version: 1,
     logoDataUrl: typeof src.logoDataUrl === 'string' ? src.logoDataUrl : '',
     footerLogoDataUrl: typeof src.footerLogoDataUrl === 'string' ? src.footerLogoDataUrl : '',
+    page1BodyHtml: typeof src.page1BodyHtml === 'string' ? src.page1BodyHtml : '',
+    page2BodyHtml: typeof src.page2BodyHtml === 'string' ? src.page2BodyHtml : '',
     railText: typeof src.railText === 'string' ? src.railText : 'simca.mx',
     railWidth: clampNumber(src.railWidth, 50, 30, 120),
     railOffsetY: clampNumber(src.railOffsetY, 88, 0, 300),
