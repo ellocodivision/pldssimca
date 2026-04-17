@@ -249,6 +249,11 @@
             <div id="page1BodyEditor" class="wysiwyg-editor" contenteditable="true" spellcheck="false"></div>
             <div id="page2BodyEditor" class="wysiwyg-editor" contenteditable="true" spellcheck="false" hidden></div>
             <p class="hint">Selecciona un texto y usa la barra para darle formato. Ese HTML se guarda y se imprime igual.</p>
+            <div class="grid" style="margin-top:12px">
+              <label>Comprimir hoja 1<input id="page1Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
+              <label>Comprimir hoja 2<input id="page2Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
+            </div>
+            <p class="hint">Esto escala todo el bloque principal de cada hoja para que entre completo sin editar campo por campo.</p>
           </div>
         </div>
 
@@ -503,12 +508,12 @@
           titleOffsetY: clamp(numberOr(src.titleOffsetY, defaultLayout.titleOffsetY), -120, 120),
           page1HeaderOffsetX: clamp(numberOr(src.page1HeaderOffsetX, defaultLayout.page1HeaderOffsetX), -240, 240),
           page1HeaderOffsetY: clamp(numberOr(src.page1HeaderOffsetY, defaultLayout.page1HeaderOffsetY), -180, 180),
-          page1Scale: clamp(numberOr(src.page1Scale, defaultLayout.page1Scale), 0.7, 1.15),
+          page1Scale: clamp(numberOr(src.page1Scale, defaultLayout.page1Scale), 0.45, 1.15),
           page1OffsetX: clamp(numberOr(src.page1OffsetX, defaultLayout.page1OffsetX), -240, 240),
           page1OffsetY: clamp(numberOr(src.page1OffsetY, defaultLayout.page1OffsetY), -320, 320),
           page2HeaderOffsetX: clamp(numberOr(src.page2HeaderOffsetX, defaultLayout.page2HeaderOffsetX), -240, 240),
           page2HeaderOffsetY: clamp(numberOr(src.page2HeaderOffsetY, defaultLayout.page2HeaderOffsetY), -180, 180),
-          page2Scale: clamp(numberOr(src.page2Scale, defaultLayout.page2Scale), 0.7, 1.15),
+          page2Scale: clamp(numberOr(src.page2Scale, defaultLayout.page2Scale), 0.45, 1.15),
           page2OffsetX: clamp(numberOr(src.page2OffsetX, defaultLayout.page2OffsetX), -240, 240),
           page2OffsetY: clamp(numberOr(src.page2OffsetY, defaultLayout.page2OffsetY), -320, 320),
           paymentsOffsetY: clamp(numberOr(src.paymentsOffsetY, defaultLayout.paymentsOffsetY), -180, 180),
