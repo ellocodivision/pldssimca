@@ -723,7 +723,7 @@
   </style>
 </head>
 <body>
-  <div class="topbar">
+    <div class="topbar">
     <div>
       <strong>Hoja de Reserva SIMCA</strong>
       <div class="status" id="statusText">Captura los datos y descarga el PDF exacto.</div>
@@ -731,6 +731,8 @@
     <div class="top-actions">
       <a class="link-btn" href="/simca">Volver</a>
       <a class="link-btn" href="/hoja-reserva-simca/editor" id="editorBtn" hidden>Editor PDF Martin SIMCA</a>
+      <button class="btn" type="button" id="saveVersionBtn">Guardar versión</button>
+      <button class="btn" type="button" id="clearAllBtn">Borrar todo</button>
       <button class="btn primary" type="button" id="downloadPdfBtn">Descargar PDF exacto</button>
     </div>
   </div>
@@ -867,7 +869,7 @@
       const previewMode = new URLSearchParams(window.location.search || '').get('editorPreview');
       if (previewMode === 'print') document.body.classList.add('preview-mode');
       if (previewMode === 'pdf') document.body.classList.add('print-preview-mode');
-      const state = {
+      const defaultState = {
         fullName: "",
         email: "",
         phone: "",
@@ -927,10 +929,10 @@
         coOwnerEmail: "",
         coOwnerNotes: ""
       };
+      const state = Object.assign({}, defaultState);
       const DRAFT_KEY = 'hoja-reserva-simca-draft-v1';
       const HISTORY_KEY = 'hoja-reserva-simca-history-v1';
       const HISTORY_LIMIT = 8;
-      let autosaveTimer = null;
       const defaultLayout = {
         logoDataUrl: '',
         footerLogoDataUrl: '',
@@ -992,6 +994,8 @@
       const statusText = document.getElementById("statusText");
       const printRoot = document.getElementById("printRoot");
       const editorBtn = document.getElementById("editorBtn");
+      const saveVersionBtn = document.getElementById("saveVersionBtn");
+      const clearAllBtn = document.getElementById("clearAllBtn");
       const downloadPdfBtn = document.getElementById("downloadPdfBtn");
       const historyList = document.getElementById("historyList");
       const restoreLatestBtn = document.getElementById("restoreLatestBtn");
@@ -1080,12 +1084,20 @@
         renderHistory();
       }
 
-      function scheduleAutosave() {
-        persistDraft();
-        if (autosaveTimer) clearTimeout(autosaveTimer);
-        autosaveTimer = setTimeout(function () {
-          saveSnapshot('Auto');
-        }, 900);
+      function resetCurrentForm() {
+        Object.keys(defaultState).forEach(function (key) {
+          state[key] = defaultState[key];
+        });
+        state.payment1 = FIXED_PAYMENT_LABEL;
+        localStorage.removeItem(DRAFT_KEY);
+        document.querySelectorAll("[data-bind]").forEach(function (input) {
+          const key = input.getAttribute("data-bind");
+          if (!key) return;
+          const rawValue = key === 'payment1' ? FIXED_PAYMENT_LABEL : state[key];
+          input.value = input.hasAttribute('data-money') ? formatMoneyInputValue(rawValue) : rawValue;
+          if (key === 'payment1') input.readOnly = true;
+        });
+        renderPreview();
       }
 
       function renderHistory() {
@@ -1661,7 +1673,6 @@
             input.value = formatMoneyInputValue(state[key]);
           }
           renderPreview();
-          scheduleAutosave();
         });
       });
 
@@ -1685,6 +1696,22 @@
       if (restoreLatestBtn) {
         restoreLatestBtn.addEventListener('click', function () {
           restoreHistoryItem(0);
+        });
+      }
+
+      if (saveVersionBtn) {
+        saveVersionBtn.addEventListener('click', function () {
+          saveSnapshot('Manual');
+          statusText.textContent = 'Versión guardada manualmente.';
+        });
+      }
+
+      if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', function () {
+          const ok = window.confirm('Esto borrará la captura actual. ¿Quieres continuar?');
+          if (!ok) return;
+          resetCurrentForm();
+          statusText.textContent = 'Formulario borrado.';
         });
       }
 
@@ -1746,7 +1773,6 @@
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
-          saveSnapshot('Descarga');
           statusText.textContent = "PDF generado correctamente.";
         } catch (err) {
           statusText.textContent = err && err.message ? err.message : "No se pudo generar el PDF.";
