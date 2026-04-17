@@ -119,6 +119,11 @@
     }
     .wysiwyg-editor .line-field.tall .value{min-height:58px}
     .wysiwyg-editor .line-field.xl .value{min-height:82px}
+    .wysiwyg-editor .editor-line-spacer{
+      min-height:28px;
+      border-bottom:1px solid #2d2d2d;
+      width:100%;
+    }
     .wysiwyg-editor .payments{
       margin-top:6px;
       padding:0 86px;
@@ -239,6 +244,10 @@
               <button class="wysiwyg-btn" type="button" data-cmd="justifyLeft">Izq.</button>
               <button class="wysiwyg-btn" type="button" data-cmd="justifyCenter">Centro</button>
               <button class="wysiwyg-btn" type="button" data-cmd="justifyRight">Der.</button>
+              <button class="wysiwyg-btn" type="button" data-insert="field">Campo + línea</button>
+              <button class="wysiwyg-btn" type="button" data-insert="line">Línea simple</button>
+              <button class="wysiwyg-btn" type="button" data-insert="observations">Observaciones</button>
+              <button class="wysiwyg-btn" type="button" data-insert="clean-lines">Limpiar líneas</button>
               <button class="wysiwyg-btn" type="button" data-cmd="undo">Deshacer</button>
               <button class="wysiwyg-btn" type="button" data-cmd="redo">Rehacer</button>
               <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#615f56;margin-left:auto">
@@ -251,7 +260,9 @@
             <p class="hint">Selecciona un texto y usa la barra para darle formato. Ese HTML se guarda y se imprime igual.</p>
             <div class="grid" style="margin-top:12px">
               <label>Comprimir hoja 1<input id="page1Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
+              <label>Mover bloque hoja 1 Y<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
               <label>Comprimir hoja 2<input id="page2Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
+              <label>Mover bloque hoja 2 Y<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
             </div>
             <p class="hint">Esto escala todo el bloque principal de cada hoja para que entre completo sin editar campo por campo.</p>
           </div>
@@ -699,6 +710,63 @@
         pushPreview();
       }
 
+      function insertBodyHtml(html) {
+        const editor = getActiveBodyEditor();
+        if (!editor) return;
+        editor.focus();
+        restoreBodySelection();
+        document.execCommand('insertHTML', false, html);
+        syncLayoutFromBodyEditors();
+        pushPreview();
+      }
+
+      function insertControlledBodyBlock(type) {
+        if (type === 'clean-lines') {
+          cleanEmptyBodyLines();
+          return;
+        }
+        if (type === 'line') {
+          insertBodyHtml('<div class="editor-line-spacer"><br></div>');
+          return;
+        }
+        if (type === 'observations') {
+          insertBodyHtml(
+            '<div class="line-field xl">' +
+              '<div class="label">Observations / Observaciones:</div>' +
+              '<div class="value"><br></div>' +
+            '</div>'
+          );
+          return;
+        }
+        const label = window.prompt('Texto del campo', 'Nuevo campo:');
+        if (label == null) return;
+        const safeLabel = String(label || '').replace(/[&<>"']/g, function (ch) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+        });
+        insertBodyHtml(
+          '<div class="line-field">' +
+            '<div class="label">' + safeLabel + '</div>' +
+            '<div class="value"><br></div>' +
+          '</div>'
+        );
+      }
+
+      function cleanEmptyBodyLines() {
+        const editor = getActiveBodyEditor();
+        if (!editor) return;
+        editor.querySelectorAll('.line-field .value').forEach(function (value) {
+          value.querySelectorAll('div,p').forEach(function (child) {
+            const hasVisual = child.querySelector('img,table,hr,.line-field,.editor-line-spacer');
+            if (!hasVisual && !String(child.textContent || '').trim()) child.remove();
+          });
+          if (!String(value.textContent || '').trim() && !value.querySelector('img,table')) {
+            value.innerHTML = '';
+          }
+        });
+        syncLayoutFromBodyEditors();
+        pushPreview();
+      }
+
       function setForm(layoutInput) {
         const layout = normalizeLayout(layoutInput);
         currentLayout = Object.assign({}, defaultLayout, layout);
@@ -906,6 +974,15 @@
         });
         btn.addEventListener('click', function () {
           applyBodyCommand(btn.getAttribute('data-cmd'));
+        });
+      });
+      document.querySelectorAll('[data-insert]').forEach(function (btn) {
+        btn.addEventListener('mousedown', function (event) {
+          event.preventDefault();
+          saveBodySelection();
+        });
+        btn.addEventListener('click', function () {
+          insertControlledBodyBlock(btn.getAttribute('data-insert'));
         });
       });
       els.previewFrame.addEventListener('load', function () {
