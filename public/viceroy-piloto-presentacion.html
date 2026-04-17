@@ -508,6 +508,54 @@
       flex: 0 0 auto;
       min-width: 72px;
     }
+    .assign-similar {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(102,105,119,0.18);
+      display: grid;
+      gap: 8px;
+    }
+    .assign-similar.hidden {
+      display: none !important;
+    }
+    .assign-similar-title {
+      margin: 0;
+      font-size: 11px;
+      color: #666977;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .assign-similar-list {
+      display: grid;
+      gap: 6px;
+    }
+    .assign-similar-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #d7dbcf;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.92);
+      cursor: pointer;
+    }
+    .assign-similar-item:hover {
+      border-color: #9da395;
+      background: #ffffff;
+    }
+    .assign-similar-copy {
+      font-size: 12px;
+      color: #2d323a;
+      line-height: 1.35;
+    }
+    .assign-similar-score {
+      font-size: 11px;
+      color: #6b707d;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
     .unit-hover-tooltip {
       position: fixed;
       z-index: 40;
@@ -674,6 +722,7 @@
                 </div>
                 <div class="assign-actions">
                   <button id="assignPlanBtn" class="btn hidden" type="button">Ver plano</button>
+                  <button id="assignSimilarBtn" class="btn" type="button">Ver unidades similares</button>
                   <button id="assignSaveBtn" class="btn primary" type="button">Guardar</button>
                   <button id="assignDeleteBtn" class="btn" type="button">Borrar</button>
                   <button id="assignCloseBtn" class="btn" type="button">Cerrar</button>
@@ -682,6 +731,10 @@
                 <div id="assignExistingBox" class="assign-existing hidden">
                   <p class="assign-existing-title">Ya seleccionaron esta unidad</p>
                   <div id="assignExistingList" class="assign-existing-list"></div>
+                </div>
+                <div id="assignSimilarBox" class="assign-similar hidden">
+                  <p class="assign-similar-title">Unidades similares disponibles</p>
+                  <div id="assignSimilarList" class="assign-similar-list"></div>
                 </div>
                 <p class="assign-help">Solo verás tus clientes y tus unidades asignadas. Puedes cambiar a “ver todas” cuando necesites revisar el plano completo.</p>
               </div>
@@ -782,12 +835,15 @@
         assignClientSelect: document.getElementById('assignClientSelect'),
         assignOptionSelect: document.getElementById('assignOptionSelect'),
         assignPlanBtn: document.getElementById('assignPlanBtn'),
+        assignSimilarBtn: document.getElementById('assignSimilarBtn'),
         assignSaveBtn: document.getElementById('assignSaveBtn'),
         assignDeleteBtn: document.getElementById('assignDeleteBtn'),
         assignCloseBtn: document.getElementById('assignCloseBtn'),
         assignStatus: document.getElementById('assignStatus'),
         assignExistingBox: document.getElementById('assignExistingBox'),
         assignExistingList: document.getElementById('assignExistingList'),
+        assignSimilarBox: document.getElementById('assignSimilarBox'),
+        assignSimilarList: document.getElementById('assignSimilarList'),
         unitHoverTooltip: document.getElementById('unitHoverTooltip'),
         inventoryUploadInput: document.getElementById('inventoryUploadInput'),
         inventoryUploadBtn: document.getElementById('inventoryUploadBtn'),
@@ -1551,6 +1607,8 @@
         if (els.assignStatus) els.assignStatus.textContent = '';
         if (els.assignExistingBox) els.assignExistingBox.classList.add('hidden');
         if (els.assignExistingList) els.assignExistingList.innerHTML = '';
+        if (els.assignSimilarBox) els.assignSimilarBox.classList.add('hidden');
+        if (els.assignSimilarList) els.assignSimilarList.innerHTML = '';
         if (els.assignUnitLabel) els.assignUnitLabel.textContent = 'Unidad -';
         if (els.assignClientSelect) els.assignClientSelect.value = '';
         if (els.assignOptionSelect) els.assignOptionSelect.value = 'opcionA';
@@ -1628,6 +1686,186 @@
         els.assignExistingBox.classList.remove('hidden');
       }
 
+      function normalizeNumberLike(value) {
+        const num = Number(String(value == null ? '' : value).replace(/[^0-9.\-]/g, ''));
+        return Number.isFinite(num) ? num : null;
+      }
+
+      function polygonMetrics(points) {
+        const pts = Array.isArray(points) ? points : [];
+        if (!pts.length) return { area: null, width: null, height: null, ratio: null, count: 0 };
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        let area = 0;
+        pts.forEach(function (pt, idx) {
+          const x = Number(pt && pt[0] || 0);
+          const y = Number(pt && pt[1] || 0);
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+          const next = pts[(idx + 1) % pts.length] || [0, 0];
+          area += (x * Number(next[1] || 0)) - (Number(next[0] || 0) * y);
+        });
+        area = Math.abs(area / 2);
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        return {
+          area: area,
+          width: width,
+          height: height,
+          ratio: width / height,
+          count: pts.length
+        };
+      }
+
+      function floorUnitRecords() {
+        const records = [];
+        state.floors.forEach(function (floor) {
+          const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
+          zones.forEach(function (zone) {
+            const info = resolveZoneInfo(zone);
+            if (!info || !info.unidad) return;
+            records.push({
+              floorId: String(floor && floor.id || ''),
+              floorName: String(floor && floor.floorDisplay || floor && floor.name || floor && floor.id || ''),
+              zone: zone,
+              info: info,
+              rawAssignments: getWhisperAssignmentDetails(info.unidad, '')
+            });
+          });
+        });
+        return records;
+      }
+
+      function getAvailableCandidateInfos(baseInfo) {
+        const baseUnit = unitKey(baseInfo && baseInfo.unidad);
+        const currentFloor = activeFloor();
+        const currentZone = currentFloor && Array.isArray(currentFloor.zones)
+          ? currentFloor.zones.find(function (zone) { return unitKey(zone && zone.label) === baseUnit; })
+          : null;
+        const baseMetrics = polygonMetrics(currentZone && currentZone.points);
+        const basePrice = normalizeNumberLike(baseInfo && baseInfo.price);
+        const baseM2 = normalizeNumberLike(baseInfo && baseInfo.m2);
+        const baseTip = norm(baseInfo && baseInfo.tipologia);
+        const baseRec = norm(baseInfo && baseInfo.recamaras);
+        const records = floorUnitRecords();
+        return records.filter(function (record) {
+          const info = record.info || {};
+          const unit = unitKey(info.unidad);
+          if (!unit || unit === baseUnit) return false;
+          if (String(info.status || '').toLowerCase() === 'vendida') return false;
+          if ((record.rawAssignments || []).length) return false;
+          return true;
+        }).map(function (record) {
+          const info = record.info || {};
+          const candidateMetrics = polygonMetrics(record.zone && record.zone.points);
+          const candidatePrice = normalizeNumberLike(info.price);
+          const candidateM2 = normalizeNumberLike(info.m2);
+          const candidateTip = norm(info.tipologia);
+          const candidateRec = norm(info.recamaras);
+
+          let score = 0;
+          const reasons = [];
+
+          if (baseTip && candidateTip && baseTip === candidateTip) {
+            score += 1000;
+            reasons.push('misma tipología');
+          }
+
+          if (baseRec && candidateRec && baseRec === candidateRec) {
+            score += 420;
+            reasons.push('misma recámara');
+          }
+
+          if (baseM2 != null && candidateM2 != null) {
+            const diff = Math.abs(baseM2 - candidateM2);
+            const maxRef = Math.max(Math.abs(baseM2), Math.abs(candidateM2), 1);
+            const closeness = Math.max(0, 1 - (diff / maxRef));
+            score += Math.round(closeness * 260);
+            reasons.push('m2 cercano');
+          }
+
+          if (basePrice != null && candidatePrice != null) {
+            const diff = Math.abs(basePrice - candidatePrice);
+            const maxRef = Math.max(Math.abs(basePrice), Math.abs(candidatePrice), 1);
+            const closeness = Math.max(0, 1 - (diff / maxRef));
+            score += Math.round(closeness * 220);
+            reasons.push('precio parecido');
+          }
+
+          if (baseMetrics.area != null && candidateMetrics.area != null) {
+            const areaDiff = Math.abs(baseMetrics.area - candidateMetrics.area);
+            const areaRef = Math.max(baseMetrics.area, candidateMetrics.area, 1);
+            const areaCloseness = Math.max(0, 1 - (areaDiff / areaRef));
+            score += Math.round(areaCloseness * 180);
+          }
+
+          if (baseMetrics.ratio != null && candidateMetrics.ratio != null) {
+            const ratioDiff = Math.abs(baseMetrics.ratio - candidateMetrics.ratio);
+            const ratioRef = Math.max(baseMetrics.ratio, candidateMetrics.ratio, 1);
+            const ratioCloseness = Math.max(0, 1 - (ratioDiff / ratioRef));
+            score += Math.round(ratioCloseness * 90);
+          }
+
+          if (baseMetrics.count && candidateMetrics.count) {
+            const countDiff = Math.abs(baseMetrics.count - candidateMetrics.count);
+            score += Math.max(0, 40 - (countDiff * 10));
+          }
+
+          if (!score) return null;
+          return {
+            floorId: record.floorId,
+            floorName: record.floorName,
+            unidad: info.unidad,
+            tipologia: info.tipologia || 'N/D',
+            recamaras: info.recamaras || 'N/D',
+            m2: info.m2 != null ? info.m2 : 'N/D',
+            price: info.price != null ? info.price : 'N/D',
+            score: score,
+            reasons: reasons.join(', ')
+          };
+        }).filter(Boolean).sort(function (a, b) {
+          if (b.score !== a.score) return b.score - a.score;
+          return String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+        }).slice(0, 8);
+      }
+
+      function renderSimilarUnits(info) {
+        if (!els.assignSimilarBox || !els.assignSimilarList) return;
+        const candidates = getAvailableCandidateInfos(info || state.selectedUnitInfo || null);
+        if (!candidates.length) {
+          els.assignSimilarList.innerHTML = '<div class="assign-similar-copy">No encontré unidades libres con similitud suficiente.</div>';
+          els.assignSimilarBox.classList.remove('hidden');
+          return;
+        }
+        els.assignSimilarList.innerHTML = candidates.map(function (item) {
+          return '<div class="assign-similar-item" data-similar-unit="' + esc(item.unidad || '') + '" data-similar-floor="' + esc(item.floorId || '') + '">' +
+            '<div class="assign-similar-copy"><strong>' + esc(item.unidad || '') + '</strong> · ' + esc(item.floorName || '') + '<br>' +
+              esc(item.tipologia || 'N/D') + ' · ' + esc(item.recamaras || 'N/D') + ' · ' + esc(item.m2 || 'N/D') + 'm2 · ' + esc(item.price || 'N/D') + '</div>' +
+            '<div class="assign-similar-score">Score ' + esc(item.score) + '</div>' +
+          '</div>';
+        }).join('');
+        els.assignSimilarBox.classList.remove('hidden');
+      }
+
+      function openSimilarCandidate(item) {
+        if (!item) return;
+        const targetFloor = state.floors.find(function (floor) {
+          return String(floor && floor.id || '') === String(item.floorId || '');
+        }) || null;
+        if (!targetFloor) return;
+        state.activeFloorId = targetFloor.id;
+        persistRouteState();
+        showView('floors');
+        renderFloorTabs();
+        drawFloor();
+        const nextInfo = getFloorUnitInfo(item.unidad);
+        if (nextInfo) focusUnitInfo(nextInfo);
+      }
+
       function showAssignmentBox(info) {
         state.selectedUnitInfo = info || null;
         fillClientOptions();
@@ -1642,6 +1880,8 @@
           if (info && info.planLink) els.assignPlanBtn.classList.remove('hidden');
           else els.assignPlanBtn.classList.add('hidden');
         }
+        if (els.assignSimilarBox) els.assignSimilarBox.classList.add('hidden');
+        if (els.assignSimilarList) els.assignSimilarList.innerHTML = '';
         els.unitAssignmentBox.classList.remove('hidden');
       }
 
@@ -2395,6 +2635,23 @@
             return;
           }
           window.open(url, '_blank', 'noopener,noreferrer');
+        });
+      }
+
+      if (els.assignSimilarBtn) {
+        els.assignSimilarBtn.addEventListener('click', function () {
+          renderSimilarUnits(state.selectedUnitInfo || null);
+        });
+      }
+
+      if (els.assignSimilarList) {
+        els.assignSimilarList.addEventListener('click', function (ev) {
+          const item = ev.target.closest('[data-similar-unit][data-similar-floor]');
+          if (!item) return;
+          openSimilarCandidate({
+            unidad: item.getAttribute('data-similar-unit') || '',
+            floorId: item.getAttribute('data-similar-floor') || ''
+          });
         });
       }
 
