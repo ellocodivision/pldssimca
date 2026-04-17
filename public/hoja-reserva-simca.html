@@ -1175,6 +1175,100 @@
         `;
       }
 
+      function normalizeFieldText(value) {
+        return String(value || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+      }
+
+      function setFieldValue(root, labelHint, key, scope) {
+        const area = scope ? root.querySelector(scope) : root;
+        if (!area) return;
+        const wanted = normalizeFieldText(labelHint);
+        const wantedTokens = wanted.split(/\s+/).filter(Boolean);
+        const fieldNode = Array.from(area.querySelectorAll('.line-field')).find(function (node) {
+          const label = node.querySelector('.label');
+          if (!label) return false;
+          const actual = normalizeFieldText(label.textContent);
+          return wantedTokens.every(function (token) { return actual.includes(token); });
+        });
+        if (!fieldNode) return;
+        const valueNode = fieldNode.querySelector('.value');
+        if (valueNode) valueNode.textContent = state[key] || '';
+      }
+
+      function hydratePayments(root) {
+        const rows = Array.from(root.querySelectorAll('.payments-table tbody tr'));
+        rows.slice(0, 5).forEach(function (row, index) {
+          const num = index + 1;
+          const cells = row.querySelectorAll('td');
+          if (cells[0]) cells[0].textContent = state[`payment${num}`] || '';
+          if (cells[1]) cells[1].textContent = state[`paymentPercent${num}`] || '';
+          if (cells[2]) cells[2].textContent = state[`paymentAmount${num}`] || '';
+          if (cells[3]) cells[3].textContent = state[`paymentDate${num}`] || '';
+        });
+      }
+
+      function hydrateBodyHtml(html, page) {
+        const template = document.createElement('template');
+        template.innerHTML = String(html || '');
+        const root = template.content;
+        if (page === 1) {
+          [
+            ['full name nombre completo', 'fullName'],
+            ['e mail', 'email'],
+            ['phone telefono', 'phone'],
+            ['development desarrollo', 'development'],
+            ['unit no unidad', 'unitNumber'],
+            ['price listed precio de lista', 'priceListed'],
+            ['observations observaciones', 'observations'],
+            ['amount currency monto moneda', 'amountCurrency'],
+            ['card number numero de tarjeta', 'cardNumber'],
+            ['name in the card nombre en la tarjeta', 'cardName'],
+            ['visa master card', 'cardType'],
+            ['address direccion', 'cardAddress'],
+            ['city estate zip code ciudad edo c p', 'cardCityStateZip'],
+            ['city state zip code ciudad edo c p', 'cardCityStateZip'],
+            ['expiration date fecha expiracion', 'expirationDate'],
+            ['security code codigo de seguridad', 'securityCode']
+          ].forEach(function (item) { setFieldValue(root, item[0], item[1]); });
+          const signature = root.querySelector('.signature-line');
+          if (signature) signature.textContent = state.signature || '';
+          hydratePayments(root);
+        } else {
+          [
+            ['name as in passport nombre como el pasaporte', 'holderName', '.holder-block'],
+            ['day place of birth dia lugar de nacimiento', 'holderBirth', '.holder-block'],
+            ['occupation ocupacion', 'holderOccupation', '.holder-block'],
+            ['nationality nacionalidad', 'holderNationality', '.holder-block'],
+            ['passport pasaporte', 'holderPassport', '.holder-block'],
+            ['marital status edo civil', 'holderMaritalStatus', '.holder-block'],
+            ['address direccion', 'holderAddress', '.holder-block'],
+            ['city estate zip code ciudad estado c p', 'holderCityStateZip', '.holder-block'],
+            ['city state zip code ciudad estado c p', 'holderCityStateZip', '.holder-block'],
+            ['phone telefono', 'holderPhone', '.holder-block'],
+            ['email', 'holderEmail', '.holder-block'],
+            ['notes rfc curp', 'holderNotes', '.holder-block'],
+            ['name as in passport nombre como el pasaporte', 'coOwnerName', '.coowner-block'],
+            ['day place of birth dia lugar de nacimiento', 'coOwnerBirth', '.coowner-block'],
+            ['occupation ocupacion', 'coOwnerOccupation', '.coowner-block'],
+            ['nationality nacionalidad', 'coOwnerNationality', '.coowner-block'],
+            ['passport pasaporte', 'coOwnerPassport', '.coowner-block'],
+            ['marital status edo civil', 'coOwnerMaritalStatus', '.coowner-block'],
+            ['address direccion', 'coOwnerAddress', '.coowner-block'],
+            ['city estate zip code ciudad estado c p', 'coOwnerCityStateZip', '.coowner-block'],
+            ['city state zip code ciudad estado c p', 'coOwnerCityStateZip', '.coowner-block'],
+            ['phone telefono', 'coOwnerPhone', '.coowner-block'],
+            ['email', 'coOwnerEmail', '.coowner-block'],
+            ['notes rfc curp', 'coOwnerNotes', '.coowner-block']
+          ].forEach(function (item) { setFieldValue(root, item[0], item[1], item[2]); });
+        }
+        return template.innerHTML;
+      }
+
       function hasPage1BodyMarkup(html) {
         const text = String(html || '');
         return text.includes('Sign / Firma') && text.includes('Expiration Date / Fecha Expiración');
@@ -1382,12 +1476,14 @@
       }
 
       function buildPreviewHtml() {
-        const page1BodyHtml = hasPage1BodyMarkup(currentLayout.page1BodyHtml)
+        const rawPage1BodyHtml = hasPage1BodyMarkup(currentLayout.page1BodyHtml)
           ? currentLayout.page1BodyHtml
           : buildDefaultPage1BodyHtml();
-        const page2BodyHtml = hasPage2BodyMarkup(currentLayout.page2BodyHtml)
+        const rawPage2BodyHtml = hasPage2BodyMarkup(currentLayout.page2BodyHtml)
           ? currentLayout.page2BodyHtml
           : buildDefaultPage2BodyHtml();
+        const page1BodyHtml = hydrateBodyHtml(rawPage1BodyHtml, 1);
+        const page2BodyHtml = hydrateBodyHtml(rawPage2BodyHtml, 2);
         return `
           <div class="page page-break">
             <div class="page-shell">
