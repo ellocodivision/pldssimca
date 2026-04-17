@@ -29,14 +29,14 @@
       --title-offset-y:0px;
       --page1-header-offset-x:0px;
       --page1-header-offset-y:0px;
-      --page1-scale:.8;
+      --page1-scale:.78;
       --page1-offset-x:0px;
-      --page1-offset-y:-24px;
+      --page1-offset-y:-20px;
       --page2-header-offset-x:0px;
       --page2-header-offset-y:0px;
-      --page2-scale:.82;
+      --page2-scale:.8;
       --page2-offset-x:0px;
-      --page2-offset-y:-26px;
+      --page2-offset-y:-22px;
       --obs-height:82px;
       --payments-offset-y:-8px;
       --payments-scale:.9;
@@ -54,13 +54,13 @@
       --docs-offset-y:-96px;
       --preview-guide-y:88px;
       --page1-label-size:15px;
-      --page1-value-size:13px;
+      --page1-value-size:12px;
       --page2-label-size:15px;
-      --page2-value-size:13px;
-      --table-header-size:12px;
-      --table-body-size:12px;
+      --page2-value-size:12px;
+      --table-header-size:11px;
+      --table-body-size:11px;
       --signature-title-size:17px;
-      --signature-note-size:10px;
+      --signature-note-size:9px;
       --docs-title-size:12px;
       --docs-text-size:12px;
     }
@@ -439,7 +439,7 @@
       transform:translateY(10px);
     }
     .body{
-      padding:18px 28px 0;
+      padding:14px 24px 0;
       flex:1 1 auto;
       min-height:0;
       overflow:visible;
@@ -500,22 +500,25 @@
     .line-field.small .label{font-size:calc(var(--page1-label-size) - 2px)}
     .page-2-scale .line-field.small .label{font-size:calc(var(--page2-label-size) - 2px)}
     .line-field .value{
-      min-height:29px;
+      min-height:27px;
       border-bottom:1px solid var(--line);
       padding:2px 6px 3px 0;
       font-size:var(--page1-value-size);
-      line-height:1.25;
+      line-height:1.12;
       white-space:pre-wrap;
       word-break:break-word;
+      overflow-wrap:anywhere;
+      hyphens:auto;
+      font-variant-numeric:tabular-nums;
     }
     .page-2-scale .line-field .value{font-size:var(--page2-value-size)}
     .line-field.tall .value{min-height:58px}
     .line-field.xl .value{min-height:var(--obs-height)}
     .line-field.observations .value{
-      min-height:52px;
-      line-height:26px;
-      background-image:linear-gradient(to bottom, transparent 25px, var(--line) 25px, var(--line) 26px, transparent 26px);
-      background-size:100% 26px;
+      min-height:48px;
+      line-height:22px;
+      background-image:linear-gradient(to bottom, transparent 21px, var(--line) 21px, var(--line) 22px, transparent 22px);
+      background-size:100% 22px;
       border-bottom:none;
     }
     .editor-line-spacer{
@@ -524,8 +527,8 @@
       width:100%;
     }
     .payments{
-      margin-top:6px;
-      padding:0 86px;
+      margin-top:4px;
+      padding:0 80px;
       transform:translateY(var(--payments-offset-y)) scale(var(--payments-scale));
       transform-origin:top left;
       width:calc(100% / var(--payments-scale));
@@ -540,8 +543,8 @@
     .payments-table td{
       border-bottom:1px solid var(--line);
       border-right:1px solid var(--line);
-      padding:4px 8px;
-      height:32px;
+      padding:3px 8px;
+      height:30px;
       vertical-align:middle;
     }
     .payments-table th:last-child,
@@ -757,7 +760,7 @@
             <div><label>Phone / Teléfono</label><input data-bind="phone"></div>
             <div><label>Development / Desarrollo</label><input data-bind="development"></div>
             <div><label>Unit # / No. Unidad</label><input data-bind="unitNumber"></div>
-            <div><label>Price Listed / Precio de Lista</label><input data-bind="priceListed"></div>
+            <div><label>Price Listed / Precio de Lista</label><input data-bind="priceListed" data-money="1"></div>
           </div>
           <div class="grid one" style="margin-top:10px">
             <div><label>Observations / Observaciones</label><textarea data-bind="observations"></textarea></div>
@@ -768,38 +771,38 @@
           <h2>Pago</h2>
           <div class="payments-grid">
             <div class="payment-row">
-              <div><label>Payment / Pago</label><input data-bind="payment1" value="Reservation Fee / Reserva"></div>
+              <div><label>Payment / Pago</label><input data-bind="payment1" value="Reservation Fee / Reserva" readonly></div>
               <div><label>%</label><input data-bind="paymentPercent1"></div>
-              <div><label>Amount / Monto</label><input data-bind="paymentAmount1"></div>
+              <div><label>Amount / Monto</label><input data-bind="paymentAmount1" data-money="1"></div>
               <div><label>Date / Fecha</label><input data-bind="paymentDate1"></div>
             </div>
             <div class="payment-row">
               <div><label>Payment / Pago</label><input data-bind="payment2"></div>
               <div><label>%</label><input data-bind="paymentPercent2"></div>
-              <div><label>Amount / Monto</label><input data-bind="paymentAmount2"></div>
+              <div><label>Amount / Monto</label><input data-bind="paymentAmount2" data-money="1"></div>
               <div><label>Date / Fecha</label><input data-bind="paymentDate2"></div>
             </div>
             <div class="payment-row">
               <div><label>Payment / Pago</label><input data-bind="payment3"></div>
               <div><label>%</label><input data-bind="paymentPercent3"></div>
-              <div><label>Amount / Monto</label><input data-bind="paymentAmount3"></div>
+              <div><label>Amount / Monto</label><input data-bind="paymentAmount3" data-money="1"></div>
               <div><label>Date / Fecha</label><input data-bind="paymentDate3"></div>
             </div>
             <div class="payment-row">
               <div><label>Payment / Pago</label><input data-bind="payment4"></div>
               <div><label>%</label><input data-bind="paymentPercent4"></div>
-              <div><label>Amount / Monto</label><input data-bind="paymentAmount4"></div>
+              <div><label>Amount / Monto</label><input data-bind="paymentAmount4" data-money="1"></div>
               <div><label>Date / Fecha</label><input data-bind="paymentDate4"></div>
             </div>
             <div class="payment-row">
               <div><label>Payment / Pago</label><input data-bind="payment5"></div>
               <div><label>%</label><input data-bind="paymentPercent5"></div>
-              <div><label>Amount / Monto</label><input data-bind="paymentAmount5"></div>
+              <div><label>Amount / Monto</label><input data-bind="paymentAmount5" data-money="1"></div>
               <div><label>Date / Fecha</label><input data-bind="paymentDate5"></div>
             </div>
           </div>
           <div class="grid" style="margin-top:12px">
-            <div><label>Amount & currency / Monto & moneda</label><input data-bind="amountCurrency"></div>
+            <div><label>Amount & currency / Monto & moneda</label><input data-bind="amountCurrency" data-money="1"></div>
             <div><label>Card Number / Número de tarjeta</label><input data-bind="cardNumber"></div>
             <div><label>Name in the Card / Nombre en la tarjeta</label><input data-bind="cardName"></div>
             <div><label>VISA / MASTER CARD</label><input data-bind="cardType"></div>
@@ -947,19 +950,19 @@
         titleOffsetY: 0,
         page1HeaderOffsetX: 0,
         page1HeaderOffsetY: 0,
-        page1Scale: 0.92,
+        page1Scale: 0.78,
         page1OffsetX: 0,
-        page1OffsetY: -10,
+        page1OffsetY: -20,
         page2HeaderOffsetX: 0,
         page2HeaderOffsetY: 0,
-        page2Scale: 0.94,
+        page2Scale: 0.8,
         page2OffsetX: 0,
-        page2OffsetY: -10,
+        page2OffsetY: -22,
         observationsHeight: 82,
         paymentsOffsetY: -8,
-        paymentsScale: 0.9,
+        paymentsScale: 0.86,
         cardSectionOffsetY: -12,
-        cardSectionScale: 0.94,
+        cardSectionScale: 0.92,
         signatureOffsetY: -6,
         footerOffsetX: 0,
         footerOffsetY: 0,
@@ -968,13 +971,13 @@
         docsOffsetY: 0,
         previewGuideY: 88,
         page1LabelSize: 18,
-        page1ValueSize: 16,
+        page1ValueSize: 12,
         page2LabelSize: 18,
-        page2ValueSize: 16,
-        tableHeaderSize: 14,
-        tableBodySize: 15,
+        page2ValueSize: 12,
+        tableHeaderSize: 11,
+        tableBodySize: 11,
         signatureTitleSize: 20,
-        signatureNoteSize: 12,
+        signatureNoteSize: 9,
         docsTitleSize: 14,
         docsTextSize: 14,
         bodyFontFamily: '"Akkurat","Segoe UI",Tahoma,sans-serif',
@@ -1020,11 +1023,14 @@
             state[key] = nextState[key] == null ? "" : String(nextState[key]);
           }
         });
+        state.payment1 = FIXED_PAYMENT_LABEL;
         document.querySelectorAll("[data-bind]").forEach(function (input) {
           const key = input.getAttribute("data-bind");
           if (!key) return;
           if (Object.prototype.hasOwnProperty.call(state, key)) {
-            input.value = state[key];
+            const rawValue = key === 'payment1' ? FIXED_PAYMENT_LABEL : state[key];
+            input.value = input.hasAttribute('data-money') ? formatMoneyInputValue(rawValue) : rawValue;
+            if (key === 'payment1') input.readOnly = true;
           }
         });
         renderPreview();
@@ -1193,17 +1199,48 @@
           .replace(/'/g, "&#39;");
       }
 
+      const MONEY_KEYS = new Set([
+        'priceListed',
+        'amountCurrency',
+        'paymentAmount1',
+        'paymentAmount2',
+        'paymentAmount3',
+        'paymentAmount4',
+        'paymentAmount5'
+      ]);
+      const FIXED_PAYMENT_LABEL = 'Reservation Fee / Reserva';
+
+      function formatMoneyValue(value) {
+        const text = String(value == null ? '' : value).trim();
+        if (!text) return '$';
+        const normalized = text.replace(/^\$\s*/, '');
+        if (!normalized) return '$';
+        return `$ ${normalized}`;
+      }
+
+      function formatMoneyInputValue(value) {
+        const text = String(value == null ? '' : value).trim();
+        const normalized = text.replace(/^\$\s*/, '');
+        return normalized ? `$ ${normalized}` : '$ ';
+      }
+
+      function normalizeMoneyInputValue(value) {
+        return String(value == null ? '' : value).replace(/^\$\s*/, '').trim();
+      }
+
       function field(label, value, options) {
         const className = options && options.className ? ` ${options.className}` : "";
-        return `<div class="line-field${className}"><div class="label">${label}</div><div class="value">${esc(value || "")}</div></div>`;
+        const displayValue = options && options.money ? formatMoneyValue(value) : (value == null ? "" : value);
+        return `<div class="line-field${className}"><div class="label">${label}</div><div class="value">${esc(displayValue)}</div></div>`;
       }
 
       function paymentRow(index) {
+        const paymentLabel = index === 1 ? FIXED_PAYMENT_LABEL : (state[`payment${index}`] == null ? '' : state[`payment${index}`]);
         return `
           <tr>
-            <td>${esc(state[`payment${index}`])}</td>
+            <td>${esc(paymentLabel)}</td>
             <td>${esc(state[`paymentPercent${index}`])}</td>
-            <td>${esc(state[`paymentAmount${index}`])}</td>
+            <td>${esc(formatMoneyValue(state[`paymentAmount${index}`]))}</td>
             <td>${esc(state[`paymentDate${index}`])}</td>
           </tr>
         `;
@@ -1324,7 +1361,7 @@
                 ${field("Development / Desarrollo :", state.development)}
                 ${field("Unit # / No. Unidad :", state.unitNumber)}
               </div>
-              ${field("Price Listed / Precio de Lista:", state.priceListed)}
+              ${field("Price Listed / Precio de Lista:", state.priceListed, { money: true })}
               ${field("Observations / Observaciones:", state.observations, { className: "observations" })}
             </div>
 
@@ -1350,7 +1387,7 @@
 
             <div class="stack card-block" style="margin-top:14px">
               <div class="row-2">
-                ${field("Amount & currency / Monto & moneda:", state.amountCurrency, { className: "small" })}
+                ${field("Amount & currency / Monto & moneda:", state.amountCurrency, { className: "small", money: true })}
                 ${field("Card Number / Número de tarjeta:", state.cardNumber, { className: "small" })}
               </div>
               <div class="row-2">
@@ -1602,13 +1639,27 @@
 
       document.querySelectorAll("[data-bind]").forEach((input) => {
         const key = input.getAttribute("data-bind");
+        if (key === 'payment1') {
+          input.readOnly = true;
+          input.value = FIXED_PAYMENT_LABEL;
+          state[key] = FIXED_PAYMENT_LABEL;
+        }
         if (Object.prototype.hasOwnProperty.call(state, key) && !state[key] && input.value) {
-          state[key] = input.value;
+          state[key] = input.hasAttribute('data-money') ? normalizeMoneyInputValue(input.value) : input.value;
         } else if (Object.prototype.hasOwnProperty.call(state, key)) {
-          input.value = state[key];
+          const rawValue = key === 'payment1' ? FIXED_PAYMENT_LABEL : state[key];
+          input.value = input.hasAttribute('data-money') ? formatMoneyInputValue(rawValue) : rawValue;
         }
         input.addEventListener("input", () => {
-          state[key] = input.value;
+          if (key === 'payment1') {
+            input.value = FIXED_PAYMENT_LABEL;
+            state[key] = FIXED_PAYMENT_LABEL;
+            return;
+          }
+          state[key] = input.hasAttribute('data-money') ? normalizeMoneyInputValue(input.value) : input.value;
+          if (input.hasAttribute('data-money')) {
+            input.value = formatMoneyInputValue(state[key]);
+          }
           renderPreview();
           scheduleAutosave();
         });
