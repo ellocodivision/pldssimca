@@ -621,6 +621,7 @@
         return String(html == null ? '' : html)
           .replace(/\u200b/g, '')
           .replace(/<span[^>]*>\s*<\/span>/gi, '')
+          .replace(/<div class="editor-line-spacer"><br><\/div>(\s*<div class="line-field)/gi, '$1')
           .trim();
       }
 
@@ -675,14 +676,27 @@
       function applyBodyCommand(command, value) {
         const editor = getActiveBodyEditor();
         if (!editor) return;
-        editor.focus();
         if (command === 'fontSize') {
           restoreBodySelection();
           const selection = window.getSelection();
           if (!selection || !selection.rangeCount) return;
           const range = selection.getRangeAt(0);
-          if (range.collapsed) return;
+          if (!editor.contains(range.commonAncestorContainer)) return;
           const px = clamp(numberOr(value, 16), 8, 36);
+          if (range.collapsed) {
+            const span = document.createElement('span');
+            span.style.fontSize = px + 'px';
+            span.appendChild(document.createTextNode('\u200b'));
+            range.insertNode(span);
+            range.setStart(span.firstChild, 1);
+            range.setEnd(span.firstChild, 1);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            savedBodyRange = range.cloneRange();
+            syncLayoutFromBodyEditors();
+            pushPreview();
+            return;
+          }
           const wrapper = document.createElement('span');
           wrapper.style.fontSize = px + 'px';
           try {
@@ -702,9 +716,11 @@
             });
           }
           syncLayoutFromBodyEditors();
+          syncBodyEditorsFromLayout();
           pushPreview();
           return;
         }
+        editor.focus();
         document.execCommand(command, false, value || null);
         syncLayoutFromBodyEditors();
         pushPreview();
@@ -754,6 +770,12 @@
       function cleanEmptyBodyLines() {
         const editor = getActiveBodyEditor();
         if (!editor) return;
+        editor.querySelectorAll('.editor-line-spacer').forEach(function (line) {
+          const prev = line.previousElementSibling;
+          const next = line.nextElementSibling;
+          const betweenFields = prev && next && prev.classList.contains('line-field') && next.classList.contains('line-field');
+          if (betweenFields && !String(line.textContent || '').trim()) line.remove();
+        });
         editor.querySelectorAll('.line-field .value').forEach(function (value) {
           value.querySelectorAll('div,p').forEach(function (child) {
             const hasVisual = child.querySelector('img,table,hr,.line-field,.editor-line-spacer');
@@ -764,6 +786,7 @@
           }
         });
         syncLayoutFromBodyEditors();
+        syncBodyEditorsFromLayout();
         pushPreview();
       }
 
@@ -963,8 +986,16 @@
         });
       });
       if (els.richFontSize) {
+        els.richFontSize.addEventListener('mousedown', saveBodySelection);
+        els.richFontSize.addEventListener('focus', saveBodySelection);
         els.richFontSize.addEventListener('change', function () {
           applyBodyCommand('fontSize', els.richFontSize.value);
+        });
+        els.richFontSize.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            applyBodyCommand('fontSize', els.richFontSize.value);
+          }
         });
       }
       document.querySelectorAll('[data-cmd]').forEach(function (btn) {
