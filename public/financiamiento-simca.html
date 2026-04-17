@@ -1011,8 +1011,7 @@
     'GRAN TULUM',
     'COSTA CARIBE',
     'MARILA',
-    'SINGULAR JOY',
-    'CRUZ CON MAR'
+    'SINGULAR JOY'
   ];
   const DEVELOPMENT_RULES = {
     'IPANA': { minDownPayment: 30, terms: [3, 5, 7] },
@@ -1132,6 +1131,7 @@
   const COL = {
     DEVELOPMENT: 3,
     UNIT: 4,
+    BEDROOMS: 5,
     FINAL_PRICE: 11
   };
 
@@ -1260,6 +1260,28 @@
 
   function clean(value) {
     return String(value || '').trim();
+  }
+
+  function isOneBedroomRecamaras(value) {
+    const txt = normalizeText(value);
+    if (!txt) return false;
+    return (
+      txt === '1' ||
+      txt === '1B' ||
+      txt === '1 REC' ||
+      txt === '1 RECAMARA' ||
+      txt === '1 RECAMARAS' ||
+      txt === '1 BEDROOM' ||
+      txt === '1 BEDROOM + DEN' ||
+      txt.startsWith('1B') ||
+      txt.startsWith('1 REC')
+    );
+  }
+
+  function isHiddenDevelopmentUnit(row) {
+    const development = clean(get(row, COL.DEVELOPMENT));
+    if (development !== 'MARILA') return false;
+    return isOneBedroomRecamaras(get(row, COL.BEDROOMS));
   }
 
   function normalizeText(value) {
@@ -1618,6 +1640,7 @@
 
     const units = rows
       .filter((row) => clean(get(row, COL.DEVELOPMENT)) === selectedDev)
+      .filter((row) => !isHiddenDevelopmentUnit(row))
       .map((row) => clean(get(row, COL.UNIT)))
       .filter(Boolean);
 
@@ -1834,7 +1857,7 @@
         const development = clean(get(row, COL.DEVELOPMENT));
         const unit = clean(get(row, COL.UNIT));
         const finalPrice = toNumber(get(row, COL.FINAL_PRICE));
-        return ELIGIBLE_DEVELOPMENTS.includes(development) && unit && finalPrice > 0;
+        return ELIGIBLE_DEVELOPMENTS.includes(development) && unit && finalPrice > 0 && !isHiddenDevelopmentUnit(row);
       });
 
       rows = dataRows;
