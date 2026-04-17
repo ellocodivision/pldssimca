@@ -1691,6 +1691,37 @@
         return Number.isFinite(num) ? num : null;
       }
 
+      function normalizeViewLike(value) {
+        return norm(String(value == null ? '' : value).replace(/\b(vista|view)\b/g, ' ').replace(/\s+/g, ' ').trim());
+      }
+
+      function isPreferredView(view) {
+        const key = normalizeViewLike(view);
+        return new Set([
+          'jardin_central',
+          'jardin_central_poniente',
+          'manglar_parcial_al_mar'
+        ]).has(key);
+      }
+
+      function viewPriorityScore(baseView, candidateView) {
+        const base = normalizeViewLike(baseView);
+        const candidate = normalizeViewLike(candidateView);
+        if (!base || !candidate) return 0;
+        if (base === candidate) {
+          return 260;
+        }
+        const basePreferred = isPreferredView(baseView);
+        const candidatePreferred = isPreferredView(candidateView);
+        if (basePreferred && candidatePreferred) {
+          return 200;
+        }
+        if (candidatePreferred) {
+          return 120;
+        }
+        return 0;
+      }
+
       function polygonMetrics(points) {
         const pts = Array.isArray(points) ? points : [];
         if (!pts.length) return { area: null, width: null, height: null, ratio: null, count: 0 };
@@ -1749,6 +1780,7 @@
         const baseMetrics = polygonMetrics(currentZone && currentZone.points);
         const basePrice = normalizeNumberLike(baseInfo && baseInfo.price);
         const baseM2 = normalizeNumberLike(baseInfo && baseInfo.m2);
+        const baseView = String(baseInfo && baseInfo.vista || '').trim();
         const baseTip = norm(baseInfo && baseInfo.tipologia);
         const baseRec = norm(baseInfo && baseInfo.recamaras);
         const records = floorUnitRecords();
@@ -1765,6 +1797,7 @@
           const candidateMetrics = polygonMetrics(record.zone && record.zone.points);
           const candidatePrice = normalizeNumberLike(info.price);
           const candidateM2 = normalizeNumberLike(info.m2);
+          const candidateView = String(info.vista || '').trim();
           const candidateTip = norm(info.tipologia);
           const candidateRec = norm(info.recamaras);
 
@@ -1779,6 +1812,12 @@
           if (baseRec && candidateRec && baseRec === candidateRec) {
             score += 420;
             reasons.push('misma recámara');
+          }
+
+          const viewScore = viewPriorityScore(baseView, candidateView);
+          if (viewScore > 0) {
+            score += viewScore;
+            reasons.push('vista similar');
           }
 
           if (baseM2 != null && candidateM2 != null) {
@@ -1858,13 +1897,22 @@
           return String(floor && floor.id || '') === String(item.floorId || '');
         }) || null;
         if (!targetFloor) return;
+        state.showAllUnits = true;
+        state.showAllOnMap = true;
+        state.focusedUnitKey = unitKey(item.unidad || '');
+        state.selectedUnitInfo = null;
         state.activeFloorId = targetFloor.id;
         persistRouteState();
         showView('floors');
         renderFloorTabs();
         drawFloor();
         const nextInfo = getFloorUnitInfo(item.unidad);
-        if (nextInfo) focusUnitInfo(nextInfo);
+        if (nextInfo) {
+          state.focusedUnitKey = unitKey(nextInfo.unidad || '');
+          renderUnitsTable(state.selectedFloorRows);
+          showAssignmentBox(nextInfo);
+          drawFloor();
+        }
       }
 
       function showAssignmentBox(info) {
