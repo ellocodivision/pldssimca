@@ -1885,6 +1885,7 @@ function normalizeHojaReservaSimcaLayout(input) {
     holderOffsetY: clampNumber(src.holderOffsetY, 0, -180, 180),
     coOwnerOffsetY: clampNumber(src.coOwnerOffsetY, 0, -180, 180),
     docsOffsetY: clampNumber(src.docsOffsetY, -96, -180, 180),
+    previewGuideY: clampNumber(src.previewGuideY, 88, 24, 240),
     page1LabelSize: clampNumber(src.page1LabelSize, 15, 12, 28),
     page1ValueSize: clampNumber(src.page1ValueSize, 13, 10, 24),
     page2LabelSize: clampNumber(src.page2LabelSize, 15, 12, 28),

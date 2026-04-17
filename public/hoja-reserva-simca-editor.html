@@ -279,6 +279,14 @@
         </div>
 
         <div class="section">
+          <h2>Guía vista previa</h2>
+          <div class="grid one">
+            <label>Margen inferior guía<input id="previewGuideY" type="number" min="24" max="240" step="1"></label>
+          </div>
+          <p class="hint">Esta línea punteada solo se ve en la vista previa del editor para marcar el margen inferior.</p>
+        </div>
+
+        <div class="section">
           <h2>Footer</h2>
           <div class="grid">
             <label>Footer logo ancho<input id="footerLogoWidth" type="number" min="24" max="140" step="1"></label>
@@ -347,6 +355,7 @@
         holderOffsetY: 0,
         coOwnerOffsetY: 0,
         docsOffsetY: 0,
+        previewGuideY: 88,
         page1LabelSize: 15,
         page1ValueSize: 13,
         page2LabelSize: 15,
@@ -389,6 +398,7 @@
         logoOffsetX: document.getElementById('logoOffsetX'),
         logoOffsetY: document.getElementById('logoOffsetY'),
         footerLogoWidth: document.getElementById('footerLogoWidth'),
+        previewGuideY: document.getElementById('previewGuideY'),
         titleOffsetX: document.getElementById('titleOffsetX'),
         titleOffsetY: document.getElementById('titleOffsetY'),
         lineColor: document.getElementById('lineColor'),
@@ -422,6 +432,7 @@
           'logoOffsetX',
           'logoOffsetY',
           'footerLogoWidth',
+          'previewGuideY',
           'titleOffsetX',
           'titleOffsetY',
           'page1HeaderOffsetX',
@@ -508,6 +519,7 @@
           holderOffsetY: clamp(numberOr(src.holderOffsetY, defaultLayout.holderOffsetY), -180, 180),
           coOwnerOffsetY: clamp(numberOr(src.coOwnerOffsetY, defaultLayout.coOwnerOffsetY), -180, 180),
           docsOffsetY: clamp(numberOr(src.docsOffsetY, defaultLayout.docsOffsetY), -180, 180),
+          previewGuideY: clamp(numberOr(src.previewGuideY, defaultLayout.previewGuideY), 24, 240),
           lineColor: safeColor(src.lineColor, defaultLayout.lineColor),
           textColor: safeColor(src.textColor, defaultLayout.textColor),
           paperColor: safeColor(src.paperColor, defaultLayout.paperColor),
@@ -596,6 +608,16 @@
           .trim();
       }
 
+      function looksLikePage1BodyHtml(html) {
+        const text = String(html || '');
+        return text.includes('Sign / Firma') && text.includes('Expiration Date / Fecha Expiración');
+      }
+
+      function looksLikePage2BodyHtml(html) {
+        const text = String(html || '');
+        return text.includes('Please provide LEGIBLE copies') && text.includes('Co-owner / Copropietario');
+      }
+
       function syncBodyEditorsFromLayout() {
         if (els.page1BodyEditor) {
           els.page1BodyEditor.innerHTML = sanitizeBodyHtml(currentPage1BodyHtml || currentLayout.page1BodyHtml || '');
@@ -678,8 +700,8 @@
         currentLogoDataUrl = layout.logoDataUrl || '';
         currentFooterLogoDataUrl = layout.footerLogoDataUrl || '';
         currentLines = layout.lines.slice();
-        currentPage1BodyHtml = layout.page1BodyHtml || '';
-        currentPage2BodyHtml = layout.page2BodyHtml || '';
+        currentPage1BodyHtml = looksLikePage1BodyHtml(layout.page1BodyHtml) ? layout.page1BodyHtml : '';
+        currentPage2BodyHtml = looksLikePage2BodyHtml(layout.page2BodyHtml) ? layout.page2BodyHtml : '';
         editableFieldNames.forEach(function (name) {
           if (els[name]) els[name].value = String(layout[name]);
         });
