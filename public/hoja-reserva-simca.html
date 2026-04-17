@@ -45,6 +45,10 @@
       --signature-offset-y:-96px;
       --footer-offset-x:0px;
       --footer-offset-y:0px;
+      --page1-footer-offset-x:0px;
+      --page1-footer-offset-y:0px;
+      --page2-footer-offset-x:0px;
+      --page2-footer-offset-y:0px;
       --holder-offset-y:0px;
       --coowner-offset-y:0px;
       --docs-offset-y:-96px;
@@ -593,8 +597,20 @@
       font-size:12px;
       line-height:1.28;
       text-align:center;
-      transform:translate(var(--footer-offset-x), var(--footer-offset-y));
       flex:0 0 auto;
+    }
+    .page-footer{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:2;
+    }
+    .page-footer-1 .footer{
+      transform:translate(var(--page1-footer-offset-x), var(--page1-footer-offset-y));
+    }
+    .page-footer-2 .footer{
+      transform:translate(var(--page2-footer-offset-x), var(--page2-footer-offset-y));
     }
     .footer-mark{
       width:var(--footer-logo-width);
@@ -1148,6 +1164,10 @@
         root.style.setProperty('--signature-offset-y', String(numberOr(currentLayout.signatureOffsetY, defaultLayout.signatureOffsetY)) + 'px');
         root.style.setProperty('--footer-offset-x', String(numberOr(currentLayout.footerOffsetX, defaultLayout.footerOffsetX || 0)) + 'px');
         root.style.setProperty('--footer-offset-y', String(numberOr(currentLayout.footerOffsetY, defaultLayout.footerOffsetY)) + 'px');
+        root.style.setProperty('--page1-footer-offset-x', String(numberOr(currentLayout.page1FooterOffsetX, currentLayout.footerOffsetX || defaultLayout.footerOffsetX || 0)) + 'px');
+        root.style.setProperty('--page1-footer-offset-y', String(numberOr(currentLayout.page1FooterOffsetY, currentLayout.footerOffsetY || defaultLayout.footerOffsetY || 0)) + 'px');
+        root.style.setProperty('--page2-footer-offset-x', String(numberOr(currentLayout.page2FooterOffsetX, currentLayout.footerOffsetX || defaultLayout.footerOffsetX || 0)) + 'px');
+        root.style.setProperty('--page2-footer-offset-y', String(numberOr(currentLayout.page2FooterOffsetY, currentLayout.footerOffsetY || defaultLayout.footerOffsetY || 0)) + 'px');
         root.style.setProperty('--holder-offset-y', String(numberOr(currentLayout.holderOffsetY, defaultLayout.holderOffsetY)) + 'px');
         root.style.setProperty('--coowner-offset-y', String(numberOr(currentLayout.coOwnerOffsetY, defaultLayout.coOwnerOffsetY)) + 'px');
         root.style.setProperty('--docs-offset-y', String(numberOr(currentLayout.docsOffsetY, defaultLayout.docsOffsetY)) + 'px');
@@ -1464,7 +1484,7 @@
           ? `<img src="${esc(currentLayout.footerLogoDataUrl)}" alt="SIMCA footer logo">`
           : '';
         return `
-          <div class="page-footer">
+          <div class="page-footer page-footer-1">
             <div class="footer">
               <div></div>
               <div class="footer-mark">${footerLogo}</div>
@@ -1478,7 +1498,7 @@
           ? `<img src="${esc(currentLayout.footerLogoDataUrl)}" alt="SIMCA footer logo">`
           : '';
         return `
-          <div class="page-footer">
+          <div class="page-footer page-footer-2">
             <div class="footer">
               <div>
                 The refund will be made within 45 business days of withdrawal from the purchase, the entire amount will be refund in the same way as the payment was made.
