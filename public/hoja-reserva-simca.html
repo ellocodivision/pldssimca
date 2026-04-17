@@ -507,6 +507,13 @@
     .page-2-scale .line-field .value{font-size:var(--page2-value-size)}
     .line-field.tall .value{min-height:58px}
     .line-field.xl .value{min-height:var(--obs-height)}
+    .line-field.observations .value{
+      min-height:52px;
+      line-height:26px;
+      background-image:linear-gradient(to bottom, transparent 25px, var(--line) 25px, var(--line) 26px, transparent 26px);
+      background-size:100% 26px;
+      border-bottom:none;
+    }
     .editor-line-spacer{
       min-height:28px;
       border-bottom:1px solid var(--line);
@@ -569,6 +576,13 @@
       font-size:var(--signature-note-size);
       color:#47413a;
       line-height:1.3;
+    }
+    .signature-refund{
+      margin-top:16px;
+      text-align:center;
+      font-size:var(--signature-note-size);
+      color:#47413a;
+      line-height:1.35;
     }
     .footer{
       padding:18px 24px 16px;
@@ -1291,7 +1305,7 @@
                 ${field("Unit # / No. Unidad :", state.unitNumber)}
               </div>
               ${field("Price Listed / Precio de Lista:", state.priceListed)}
-              ${field("Observations / Observaciones:", state.observations, { className: "xl" })}
+              ${field("Observations / Observaciones:", state.observations, { className: "observations" })}
             </div>
 
             <div class="payments">
@@ -1335,6 +1349,10 @@
               <div class="signature-line">${esc(state.signature)}</div>
               <div class="signature-title">Sign / Firma</div>
               <div class="signature-note">I hereby authorize collection of payment for the charges as indicated above. / Autorizo el cargo de la cuota de reserva descrita arriba.</div>
+              <div class="signature-refund">
+                This payment will be considered as part of the purchase final price, and it is fully refundable at client’s request up to 15 days.
+                / Este pago será considerado como parte del total de la compra y es 100 % reembolsable si el cliente lo pide hasta 15 días a partir de la fecha de reserva.
+              </div>
             </div>
           </div>
         `;
@@ -1448,10 +1466,7 @@
         return `
           <div class="page-footer">
             <div class="footer">
-              <div>
-                This payment will be considered as part of the purchase final price, and it is fully refundable at client’s request up to 15 days.
-                / Este pago será considerado como parte del total de la compra y es 100 % reembolsable si el cliente lo pide hasta 15 días a partir de la fecha de reserva.
-              </div>
+              <div></div>
               <div class="footer-mark">${footerLogo}</div>
             </div>
           </div>
@@ -1467,7 +1482,7 @@
             <div class="footer">
               <div>
                 The refund will be made within 45 business days of withdrawal from the purchase, the entire amount will be refund in the same way as the payment was made.
-                / El reembolso se realizará dentro de los 45 días hábiles al desistimiento de la compra, el reembolso se realizará en su totalidad de la misma manera como fue realizado el pago.
+                / El reembolso se realizara dentro de los 45 dias habiles al desistimiento de la compra, el reembolso se realizara en su totalidad de la misma manera como fue reaizado el pago.
               </div>
               <div class="footer-mark">${footerLogo}</div>
             </div>
