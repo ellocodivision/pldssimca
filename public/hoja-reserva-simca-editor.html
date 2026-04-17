@@ -232,40 +232,13 @@
 
         <div class="section">
           <h2>Bloque principal</h2>
-          <div class="wysiwyg-shell">
-            <div class="wysiwyg-tabs">
-              <button class="wysiwyg-tab active" type="button" data-body-tab="page1">Hoja 1</button>
-              <button class="wysiwyg-tab" type="button" data-body-tab="page2">Hoja 2</button>
-            </div>
-            <div class="wysiwyg-toolbar">
-              <button class="wysiwyg-btn" type="button" data-cmd="bold"><strong>B</strong></button>
-              <button class="wysiwyg-btn" type="button" data-cmd="italic"><em>I</em></button>
-              <button class="wysiwyg-btn" type="button" data-cmd="underline"><u>U</u></button>
-              <button class="wysiwyg-btn" type="button" data-cmd="justifyLeft">Izq.</button>
-              <button class="wysiwyg-btn" type="button" data-cmd="justifyCenter">Centro</button>
-              <button class="wysiwyg-btn" type="button" data-cmd="justifyRight">Der.</button>
-              <button class="wysiwyg-btn" type="button" data-insert="field">Campo + línea</button>
-              <button class="wysiwyg-btn" type="button" data-insert="line">Línea simple</button>
-              <button class="wysiwyg-btn" type="button" data-insert="observations">Observaciones</button>
-              <button class="wysiwyg-btn" type="button" data-insert="clean-lines">Limpiar líneas</button>
-              <button class="wysiwyg-btn" type="button" data-cmd="undo">Deshacer</button>
-              <button class="wysiwyg-btn" type="button" data-cmd="redo">Rehacer</button>
-              <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#615f56;margin-left:auto">
-                Tamaño
-                <input id="richFontSize" type="number" min="8" max="36" step="1" value="16" style="width:72px;min-height:34px">
-              </label>
-            </div>
-            <div id="page1BodyEditor" class="wysiwyg-editor" contenteditable="true" spellcheck="false"></div>
-            <div id="page2BodyEditor" class="wysiwyg-editor" contenteditable="true" spellcheck="false" hidden></div>
-            <p class="hint">Selecciona un texto y usa la barra para darle formato. Ese HTML se guarda y se imprime igual.</p>
-            <div class="grid" style="margin-top:12px">
-              <label>Comprimir hoja 1<input id="page1Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
-              <label>Mover bloque hoja 1 Y<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
-              <label>Comprimir hoja 2<input id="page2Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
-              <label>Mover bloque hoja 2 Y<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
-            </div>
-            <p class="hint">Esto escala todo el bloque principal de cada hoja para que entre completo sin editar campo por campo.</p>
+          <div class="grid">
+            <label>Comprimir hoja 1<input id="page1Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
+            <label>Mover bloque hoja 1 Y<input id="page1OffsetY" type="number" min="-320" max="320" step="1"></label>
+            <label>Comprimir hoja 2<input id="page2Scale" type="number" min="0.45" max="1.15" step="0.01"></label>
+            <label>Mover bloque hoja 2 Y<input id="page2OffsetY" type="number" min="-320" max="320" step="1"></label>
           </div>
+          <p class="hint">La plantilla principal queda fija para que los datos de la hoja de reserva se autocompleten siempre. Aquí solo ajustas escala y posición.</p>
         </div>
 
         <div class="legacy-main-inputs">
@@ -652,25 +625,7 @@
       }
 
       function captureBodyFromPreview() {
-        if (!els.previewFrame || !els.previewFrame.contentDocument) return false;
-        if (currentPage1BodyHtml && currentPage2BodyHtml) return false;
-        const page1Block = els.previewFrame.contentDocument.querySelector('.page-1-flow .page-block');
-        const page2Block = els.previewFrame.contentDocument.querySelector('.page-2-flow .page-block');
-        let changed = false;
-        if (!currentPage1BodyHtml && page1Block) {
-          currentPage1BodyHtml = sanitizeBodyHtml(page1Block.innerHTML);
-          changed = true;
-        }
-        if (!currentPage2BodyHtml && page2Block) {
-          currentPage2BodyHtml = sanitizeBodyHtml(page2Block.innerHTML);
-          changed = true;
-        }
-        if (changed) {
-          currentLayout.page1BodyHtml = currentPage1BodyHtml;
-          currentLayout.page2BodyHtml = currentPage2BodyHtml;
-          syncBodyEditorsFromLayout();
-        }
-        return changed;
+        return false;
       }
 
       function applyBodyCommand(command, value) {
@@ -796,8 +751,8 @@
         currentLogoDataUrl = layout.logoDataUrl || '';
         currentFooterLogoDataUrl = layout.footerLogoDataUrl || '';
         currentLines = layout.lines.slice();
-        currentPage1BodyHtml = looksLikePage1BodyHtml(layout.page1BodyHtml) ? layout.page1BodyHtml : '';
-        currentPage2BodyHtml = looksLikePage2BodyHtml(layout.page2BodyHtml) ? layout.page2BodyHtml : '';
+        currentPage1BodyHtml = '';
+        currentPage2BodyHtml = '';
         editableFieldNames.forEach(function (name) {
           if (els[name]) els[name].value = String(layout[name]);
         });
@@ -809,8 +764,8 @@
         const out = Object.assign({}, currentLayout, {
           logoDataUrl: currentLogoDataUrl,
           footerLogoDataUrl: currentFooterLogoDataUrl,
-          page1BodyHtml: currentPage1BodyHtml,
-          page2BodyHtml: currentPage2BodyHtml,
+          page1BodyHtml: '',
+          page2BodyHtml: '',
           lines: currentLines.slice()
         });
         editableFieldNames.forEach(function (name) {
@@ -818,8 +773,8 @@
         });
         out.logoDataUrl = currentLogoDataUrl;
         out.footerLogoDataUrl = currentFooterLogoDataUrl;
-        out.page1BodyHtml = currentPage1BodyHtml;
-        out.page2BodyHtml = currentPage2BodyHtml;
+        out.page1BodyHtml = '';
+        out.page2BodyHtml = '';
         out.lines = currentLines.slice();
         return normalizeLayout(out);
       }

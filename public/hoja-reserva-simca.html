@@ -1476,14 +1476,8 @@
       }
 
       function buildPreviewHtml() {
-        const rawPage1BodyHtml = hasPage1BodyMarkup(currentLayout.page1BodyHtml)
-          ? currentLayout.page1BodyHtml
-          : buildDefaultPage1BodyHtml();
-        const rawPage2BodyHtml = hasPage2BodyMarkup(currentLayout.page2BodyHtml)
-          ? currentLayout.page2BodyHtml
-          : buildDefaultPage2BodyHtml();
-        const page1BodyHtml = hydrateBodyHtml(rawPage1BodyHtml, 1);
-        const page2BodyHtml = hydrateBodyHtml(rawPage2BodyHtml, 2);
+        const page1BodyHtml = buildDefaultPage1BodyHtml();
+        const page2BodyHtml = buildDefaultPage2BodyHtml();
         return `
           <div class="page page-break">
             <div class="page-shell">
