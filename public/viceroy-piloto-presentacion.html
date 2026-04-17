@@ -1756,6 +1756,7 @@
           const info = record.info || {};
           const unit = unitKey(info.unidad);
           if (!unit || unit === baseUnit) return false;
+          if (!info.hasInventoryMatch) return false;
           if (String(info.status || '').toLowerCase() === 'vendida') return false;
           if ((record.rawAssignments || []).length) return false;
           return true;
@@ -2274,6 +2275,7 @@
           }
 
           const match = matchesFilter(info);
+          const isFocused = unitKey(state.focusedUnitKey || '') === unitKey(info.unidad || '');
 
           if (!match) {
             return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="rgba(108,116,130,0.08)" stroke="rgba(108,116,130,0.35)" stroke-width="1" style="cursor:pointer"></polygon>';
@@ -2286,10 +2288,12 @@
           const color = info.status === 'vendida'
             ? '#d65353'
             : getUnitOptionColor(info);
+          const fillColor = isFocused ? '#4dbd74' : color;
+          const strokeColor = isFocused ? '#ffe600' : color;
           const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
           const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
 
-          return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="' + color + '" fill-opacity="0.38" stroke="' + color + '" stroke-width="2" style="cursor:pointer"></polygon>' +
+          return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="' + fillColor + '" fill-opacity="' + (isFocused ? '0.62' : '0.38') + '" stroke="' + strokeColor + '" stroke-width="' + (isFocused ? '4' : '2') + '" style="cursor:pointer"></polygon>' +
             (state.showUnitLabels
               ? ('<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#0f1014" style="cursor:pointer">' + esc(info.unidad || '') + '</text>')
               : '');
