@@ -1204,6 +1204,17 @@
         });
       }
 
+      function truncateCanvasText(ctx, text, maxWidth) {
+        const value = String(text || '');
+        if (!value) return '';
+        if (ctx.measureText(value).width <= maxWidth) return value;
+        let output = value;
+        while (output.length > 1 && ctx.measureText(output + '…').width > maxWidth) {
+          output = output.slice(0, -1);
+        }
+        return output + '…';
+      }
+
       async function exportPaintedFloorsImage() {
         if (!state.floors.length) {
           if (els.homeStatus) els.homeStatus.textContent = 'No hay pisos para exportar.';
@@ -1226,8 +1237,9 @@
           const titleHeight = 58;
           const gap = 28;
           const scale = Math.min(1.2, (exportWidth - (padding * 2)) / Math.max.apply(Math, cards.map(function (card) { return card.width; })));
+          const sellerHeaderBoost = state.selectedAdvisorEmail ? 20 : 0;
           const totalHeight = cards.reduce(function (sum, card) {
-            return sum + titleHeight + Math.round(card.height * scale) + gap;
+            return sum + titleHeight + sellerHeaderBoost + Math.round(card.height * scale) + gap;
           }, padding);
           const canvas = document.createElement('canvas');
           canvas.width = exportWidth;
@@ -1241,20 +1253,28 @@
             const drawWidth = Math.round(card.width * scale);
             const drawHeight = Math.round(card.height * scale);
             const x = Math.round((exportWidth - drawWidth) / 2);
+            const sellerLabel = getSelectedSellerLabel();
 
             ctx.fillStyle = '#36363f';
             ctx.font = '700 30px Akkurat, Segoe UI, sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText(String(card.floor.floorDisplay || card.floor.name || card.floor.id || ''), x, y + 22);
 
+            if (state.selectedAdvisorEmail) {
+              ctx.font = '600 16px Akkurat, Segoe UI, sans-serif';
+              ctx.fillStyle = '#6c7482';
+              ctx.fillText('Usuario: ' + sellerLabel, x, y + 48);
+            }
+
             ctx.strokeStyle = '#d4d6cc';
             ctx.lineWidth = 2;
+            const lineTop = state.selectedAdvisorEmail ? 58 : 38;
             ctx.beginPath();
-            ctx.moveTo(x, y + 38);
-            ctx.lineTo(x + drawWidth, y + 38);
+            ctx.moveTo(x, y + lineTop);
+            ctx.lineTo(x + drawWidth, y + lineTop);
             ctx.stroke();
 
-            const imageTop = y + titleHeight;
+            const imageTop = y + titleHeight + sellerHeaderBoost;
             ctx.drawImage(card.img, x, imageTop, drawWidth, drawHeight);
 
             card.zones.forEach(function (zone) {
@@ -1277,9 +1297,59 @@
               ctx.lineWidth = 2;
               ctx.fill();
               ctx.stroke();
+
+              if (state.selectedAdvisorEmail && info && Array.isArray(info.whisperAssignments) && info.whisperAssignments.length) {
+                const filteredAssignments = info.whisperAssignments.filter(function (item) {
+                  return String(item && item.sellerEmail || '').trim().toLowerCase() === String(state.selectedAdvisorEmail || '').trim().toLowerCase();
+                });
+                const labelSource = filteredAssignments.length ? filteredAssignments : info.whisperAssignments;
+                const labelClient = String((labelSource[0] && labelSource[0].clientName) || '').trim();
+                if (labelClient) {
+                  const cx = points.reduce(function (acc, point) { return acc + Number(point[0] || 0); }, 0) / points.length;
+                  const cy = points.reduce(function (acc, point) { return acc + Number(point[1] || 0); }, 0) / points.length;
+                  const px = x + (cx * scale);
+                  const py = imageTop + (cy * scale);
+                  const text1 = 'Cliente: ' + labelClient;
+                  const text2 = String(labelSource[0] && labelSource[0].optionLabel || '');
+                  ctx.save();
+                  ctx.font = '600 14px Akkurat, Segoe UI, sans-serif';
+                  const maxWidth = Math.max(120, drawWidth * 0.22);
+                  const line1 = truncateCanvasText(ctx, text1, maxWidth);
+                  const line2 = text2 ? truncateCanvasText(ctx, text2, maxWidth) : '';
+                  const paddingX = 8;
+                  const paddingY = 6;
+                  const textWidth = Math.max(ctx.measureText(line1).width, line2 ? ctx.measureText(line2).width : 0);
+                  const boxWidth = Math.min(drawWidth * 0.42, textWidth + (paddingX * 2));
+                  const boxHeight = (line2 ? 34 : 22) + (paddingY * 2);
+                  const boxX = Math.max(x + 6, Math.min(x + drawWidth - boxWidth - 6, px - (boxWidth / 2)));
+                  const boxY = Math.max(imageTop + 6, Math.min(imageTop + drawHeight - boxHeight - 6, py - boxHeight - 10));
+                  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                  ctx.strokeStyle = 'rgba(54,54,63,0.55)';
+                  ctx.lineWidth = 1.5;
+                  ctx.beginPath();
+                  if (typeof ctx.roundRect === 'function') {
+                    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8);
+                  } else {
+                    ctx.rect(boxX, boxY, boxWidth, boxHeight);
+                  }
+                  ctx.fill();
+                  ctx.stroke();
+                  ctx.fillStyle = '#2e3138';
+                  ctx.textAlign = 'left';
+                  ctx.textBaseline = 'top';
+                  ctx.font = '700 14px Akkurat, Segoe UI, sans-serif';
+                  ctx.fillText(line1, boxX + paddingX, boxY + paddingY);
+                  if (line2) {
+                    ctx.font = '500 11px Akkurat, Segoe UI, sans-serif';
+                    ctx.fillStyle = '#6b707d';
+                    ctx.fillText(line2, boxX + paddingX, boxY + paddingY + 16);
+                  }
+                  ctx.restore();
+                }
+              }
             });
 
-            y += titleHeight + drawHeight + gap;
+            y += titleHeight + sellerHeaderBoost + drawHeight + gap;
           });
 
           const link = document.createElement('a');
