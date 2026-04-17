@@ -1978,6 +1978,7 @@
     }
 
     const layout = activeLayout || normalizeLayout(defaultLayout);
+    const exportLayout = Object.assign({}, layout, { pageMarginMm: 0 });
     const t = translations[currentLang];
     const development = clean(get(currentRow, COL.DEVELOPMENT));
     const unit = clean(get(currentRow, COL.UNIT));
@@ -1985,12 +1986,12 @@
     const downPctValue = Number(downPaymentSelect.value);
     const years = Number(termSelect.value);
     const data = buildSchedule(price, downPctValue / 100, years);
-    const overlaySvg = renderExportOverlayLines(layout.lines || []);
-    const rowTargets = computePdfRowTargets(layout);
+    const overlaySvg = renderExportOverlayLines(exportLayout.lines || []);
+    const rowTargets = computePdfRowTargets(exportLayout);
     const firstPageRows = rowTargets.firstPageRows;
     const nextPageRows = rowTargets.nextPageRows;
     const schedulePages = chunkRows(data.schedule, firstPageRows, nextPageRows);
-    const logoHtml = layout.logoDataUrl ? `<img class="brand-logo" src="${escapeHtml(layout.logoDataUrl)}" alt="">` : '';
+    const logoHtml = exportLayout.logoDataUrl ? `<img class="brand-logo" src="${escapeHtml(exportLayout.logoDataUrl)}" alt="">` : '';
 
     const firstPageCards = [
       [t.project, development, 'detail'],
@@ -2017,11 +2018,11 @@
         <section class="pdf-page">
           <div class="pdf-frame">
             <aside class="pdf-rail">
-              <div class="pdf-rail-accent"><span>${escapeHtml(layout.railText || 'simca.mx')}</span></div>
+              <div class="pdf-rail-accent"><span>${escapeHtml(exportLayout.railText || 'simca.mx')}</span></div>
             </aside>
             <div class="pdf-main">
               <div class="pdf-top">
-                <div class="pdf-logo-wrap ${layout.logoDataUrl ? '' : 'is-empty'}">${logoHtml}</div>
+                <div class="pdf-logo-wrap ${exportLayout.logoDataUrl ? '' : 'is-empty'}">${logoHtml}</div>
               </div>
               <div class="pdf-body">
                 ${isFirst ? `
@@ -2072,42 +2073,42 @@
   :root{
     --page-width:816px;
     --page-height:1056px;
-    --page-margin-mm:${layout.pageMarginMm};
-    --rail-width:${layout.railWidth}px;
-    --brand-top-height:${layout.brandTopHeight}px;
-    --rail-offset-y:${layout.railOffsetY}px;
-    --rail-height:${layout.railHeight}px;
-    --logo-width:${layout.logoWidth}px;
-    --logo-height:${layout.logoHeight}px;
-    --logo-offset-x:${layout.logoOffsetX}px;
-    --logo-offset-y:${layout.logoOffsetY}px;
-    --surface:${layout.surfaceColor};
-    --paper:${layout.paperColor};
-    --paper-soft:${layout.paperSoftColor};
-    --summary-card:${layout.summaryCardColor || layout.paperSoftColor};
-    --detail-card:${layout.detailCardColor || '#ffffff'};
-    --ink:${layout.textColor};
-    --title-color:${layout.titleColor};
-    --muted:${layout.mutedColor};
-    --line:${layout.lineColor};
-    --rail-accent:${layout.railAccentColor};
-    --rail-text:${layout.railTextColor};
-    --font-body:${layout.bodyFontFamily};
-    --font-heading:${layout.headingFontFamily};
-    --font-table:${layout.tableFontFamily};
-    --title-size:${layout.titleSize}px;
-    --subtitle-size:${layout.subtitleSize}px;
-    --header-padding-top:${layout.headerPaddingTop}px;
-    --header-padding-sides:${layout.headerPaddingSides}px;
-    --header-padding-bottom:${layout.headerPaddingBottom}px;
-    --content-padding-top:${layout.contentPaddingTop}px;
-    --content-padding-sides:${layout.contentPaddingSides}px;
-    --content-padding-bottom:${layout.contentPaddingBottom}px;
-    --content-gap:${layout.contentGap}px;
-    --card-gap:${layout.cardGap}px;
-    --card-padding:${layout.cardPadding}px;
-    --title-offset-x:${layout.titleOffsetX}px;
-    --title-offset-y:${layout.titleOffsetY}px;
+    --page-margin-mm:${exportLayout.pageMarginMm};
+    --rail-width:${exportLayout.railWidth}px;
+    --brand-top-height:${exportLayout.brandTopHeight}px;
+    --rail-offset-y:${exportLayout.railOffsetY}px;
+    --rail-height:${exportLayout.railHeight}px;
+    --logo-width:${exportLayout.logoWidth}px;
+    --logo-height:${exportLayout.logoHeight}px;
+    --logo-offset-x:${exportLayout.logoOffsetX}px;
+    --logo-offset-y:${exportLayout.logoOffsetY}px;
+    --surface:${exportLayout.surfaceColor};
+    --paper:${exportLayout.paperColor};
+    --paper-soft:${exportLayout.paperSoftColor};
+    --summary-card:${exportLayout.summaryCardColor || exportLayout.paperSoftColor};
+    --detail-card:${exportLayout.detailCardColor || '#ffffff'};
+    --ink:${exportLayout.textColor};
+    --title-color:${exportLayout.titleColor};
+    --muted:${exportLayout.mutedColor};
+    --line:${exportLayout.lineColor};
+    --rail-accent:${exportLayout.railAccentColor};
+    --rail-text:${exportLayout.railTextColor};
+    --font-body:${exportLayout.bodyFontFamily};
+    --font-heading:${exportLayout.headingFontFamily};
+    --font-table:${exportLayout.tableFontFamily};
+    --title-size:${exportLayout.titleSize}px;
+    --subtitle-size:${exportLayout.subtitleSize}px;
+    --header-padding-top:${exportLayout.headerPaddingTop}px;
+    --header-padding-sides:${exportLayout.headerPaddingSides}px;
+    --header-padding-bottom:${exportLayout.headerPaddingBottom}px;
+    --content-padding-top:${exportLayout.contentPaddingTop}px;
+    --content-padding-sides:${exportLayout.contentPaddingSides}px;
+    --content-padding-bottom:${exportLayout.contentPaddingBottom}px;
+    --content-gap:${exportLayout.contentGap}px;
+    --card-gap:${exportLayout.cardGap}px;
+    --card-padding:${exportLayout.cardPadding}px;
+    --title-offset-x:${exportLayout.titleOffsetX}px;
+    --title-offset-y:${exportLayout.titleOffsetY}px;
   }
   *{box-sizing:border-box}
   @page{size:portrait;margin:0}
@@ -2118,15 +2119,15 @@
     position:relative;
     overflow:hidden;
     background:#fff;
-    padding:calc(var(--page-margin-mm) * 1mm);
+    padding:0;
     page-break-after:always;
     break-after:page;
     break-inside:avoid;
   }
   .pdf-page:last-child{page-break-after:auto}
   .pdf-frame{
-    width:calc(var(--page-width) - (var(--page-margin-mm) * 2mm));
-    height:calc(var(--page-height) - (var(--page-margin-mm) * 2mm));
+    width:100%;
+    height:100%;
     display:grid;
     grid-template-columns:var(--rail-width) minmax(0, 1fr);
     position:relative;
@@ -2136,7 +2137,7 @@
   .pdf-rail{position:relative;background:var(--surface);height:100%}
   .pdf-rail::after{content:"";position:absolute;top:0;right:0;width:1px;height:100%;background:rgba(141,135,119,.92)}
   .pdf-rail-accent{position:absolute;top:var(--rail-offset-y);left:0;width:var(--rail-width);height:var(--rail-height);background:var(--rail-accent);display:flex;align-items:center;justify-content:center}
-  .pdf-rail-accent span{writing-mode:vertical-rl;text-orientation:mixed;font-size:${layout.railTextSize}px;color:var(--rail-text)}
+  .pdf-rail-accent span{writing-mode:vertical-rl;text-orientation:mixed;font-size:${exportLayout.railTextSize}px;color:var(--rail-text)}
   .pdf-main{
     display:grid;
     grid-template-rows:var(--brand-top-height) minmax(0,1fr);
