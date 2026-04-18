@@ -473,6 +473,8 @@
     ['ayrton', 'abi']
   ];
 
+  const TEAM_PHASE_OFFSETS = [0, 2, 1];
+
   const ADVISORS = [
     { id: 'rodrigo', name: 'Rodrigo', team: 'alpha', phaseOffset: 0 },
     { id: 'andres', name: 'Andrés Castro', team: 'alpha', phaseOffset: 1 },
@@ -490,7 +492,7 @@
       id: advisors[0] ? advisors[0].team : `team-${index + 1}`,
       memberIds,
       advisors,
-      phaseOffset: index
+      phaseOffset: TEAM_PHASE_OFFSETS[index] ?? index
     };
   });
 
