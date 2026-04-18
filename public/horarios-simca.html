@@ -524,16 +524,6 @@
       abi:     ['M','M','M','M','M','F','F'],
       lu:      ['T','G','M','T','T','F','F'],
       claudia: ['T','T','T','O','O','M','M']
-    },
-    '2026-04-20': {
-      rodrigo: ['M','M','G','T','T','F','F'],
-      andres:  ['M','M','M','M','M','F','F'],
-      angeles: ['T','T','T','T','T','F','F'],
-      rafa:    ['T','T','T','O','O','T','T'],
-      ayrton:  ['X','X','X','X','X','F','F'],
-      abi:     ['G','X','X','O','O','M','M'],
-      lu:      ['M','M','M','M','M','F','F'],
-      claudia: ['M','G','M','M','M','F','F']
     }
   };
 
@@ -723,6 +713,9 @@
     return ADVISORS.slice().sort((a, b) => {
       const aRecord = history[a.id];
       const bRecord = history[b.id];
+      const aCount = kind === 'gt' ? aRecord.gt : aRecord.weekend;
+      const bCount = kind === 'gt' ? bRecord.gt : bRecord.weekend;
+      if (aCount !== bCount) return aCount - bCount;
       const aOrder = kind === 'gt' ? aRecord.lastGtOrder : aRecord.lastWeekendOrder;
       const bOrder = kind === 'gt' ? bRecord.lastGtOrder : bRecord.lastWeekendOrder;
       if (aOrder !== bOrder) return aOrder - bOrder;
