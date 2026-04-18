@@ -24,6 +24,7 @@
     --team-a:#d56d6d;
     --team-b:#f1c232;
     --team-c:#8d7bd1;
+    --row-height:86px;
   }
 
   *{box-sizing:border-box}
@@ -150,6 +151,8 @@
     min-width:1180px;
     display:grid;
     grid-template-columns:250px repeat(7, minmax(150px, 1fr));
+    grid-auto-rows:var(--row-height);
+    align-items:stretch;
     border:1px solid var(--line);
     border-radius:24px;
     overflow:hidden;
@@ -161,12 +164,13 @@
   .shift-cell{
     border-right:1px solid var(--line);
     border-bottom:1px solid var(--line);
+    height:var(--row-height);
+    overflow:hidden;
   }
 
   .head-cell{
     padding:12px 12px 10px;
     background:#f8f3e7;
-    min-height:86px;
   }
 
   .head-cell.blank{
@@ -188,7 +192,6 @@
   }
 
   .person-cell{
-    min-height:86px;
     padding:14px 16px;
     background:#fff;
     display:flex;
@@ -201,6 +204,9 @@
     font-size:18px;
     font-weight:800;
     line-height:1.05;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 
   .person-theory{
@@ -217,7 +223,6 @@
   }
 
   .shift-cell{
-    min-height:86px;
     padding:10px;
     background:#fff;
   }
@@ -246,6 +251,7 @@
     color:#15120e;
     font-weight:800;
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+    overflow:hidden;
   }
 
   .shift-card .title{
@@ -253,6 +259,10 @@
     line-height:1.15;
     letter-spacing:.04em;
     text-transform:uppercase;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
   }
 
   .shift-card .meta{
@@ -374,11 +384,13 @@
   }
 
   .count-cell{
-    min-height:78px;
+    min-height:var(--row-height);
+    height:var(--row-height);
     padding:12px 14px;
     background:#faf7f1;
     border-right:1px solid var(--line);
     border-bottom:1px solid var(--line);
+    overflow:hidden;
   }
 
   .count-cell.label{
@@ -511,7 +523,7 @@
       rodrigo: ['G','X','X','T','X','F','F'],
       andres:  ['X','X','G','X','T','F','F'],
       angeles: ['M','G','M','M','M','F','F'],
-      rafa:    ['M','M','M','M','M','T','T'],
+      rafa:    ['M','M','M','M','M','F','F'],
       ayrton:  ['T','T','T','O','O','T','T'],
       abi:     ['T','T','T','T','T','F','F'],
       lu:      ['M','M','X','O','O','M','M'],
