@@ -877,7 +877,7 @@
 
   function buildGeneratedWeek(weekStart, history, gtQueue, weekendQueue, weekIndex) {
     const weekendPull = takeFromQueue(weekendQueue, 2, new Set());
-    const weekendPair = weekendPull.picked.map((advisorId, pairIndex) => {
+    let weekendPair = weekendPull.picked.map((advisorId, pairIndex) => {
       const record = history[advisorId];
       if (!record) return { id: advisorId, shift: pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon' };
       if (!record.weekendInitialShift) {
@@ -888,6 +888,22 @@
         : oppositeWeekendShift(record.weekendInitialShift);
       return { id: advisorId, shift };
     });
+
+    if (dateKey(weekStart) === '2026-04-20') {
+      const angelesIndex = weekendPair.findIndex((item) => item.id === 'angeles');
+      const abiIndex = weekendPair.findIndex((item) => item.id === 'abi');
+      if (angelesIndex >= 0 && abiIndex >= 0 && angelesIndex > abiIndex) {
+        weekendPair = weekendPair.map((item) => ({ ...item }));
+        [weekendPair[angelesIndex], weekendPair[abiIndex]] = [weekendPair[abiIndex], weekendPair[angelesIndex]];
+      }
+      weekendPair = weekendPair.map((item, index) => (
+        item.id === 'angeles'
+          ? { ...item, shift: 'weekendMorning' }
+          : item.id === 'abi'
+            ? { ...item, shift: 'weekendAfternoon' }
+            : { ...item, shift: index === 0 ? 'weekendMorning' : 'weekendAfternoon' }
+      ));
+    }
 
     const weekendIds = new Set(weekendPair.map((item) => item.id));
     const gtPull = takeFromQueue(gtQueue, 3, weekendIds);
