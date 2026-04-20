@@ -1107,9 +1107,9 @@
         root.style.setProperty('--col-w-3', String(Number(layout.colWVista || 20)) + '%');
         root.style.setProperty('--col-w-4', String(Number(layout.colWM2 || 12)) + '%');
         root.style.setProperty('--col-w-5', String(Number(layout.colWPrecio || 32)) + '%');
-        root.style.setProperty('--map-scale', '1');
-        root.style.setProperty('--map-shift-x', '0px');
-        root.style.setProperty('--map-shift-y', '0px');
+        root.style.setProperty('--map-scale', String(Number(layout.mapScale || 1)));
+        root.style.setProperty('--map-shift-x', scaledPx(layout.mapShiftX, '0px', sx));
+        root.style.setProperty('--map-shift-y', scaledPx(layout.mapShiftY, '0px', sy));
         const overlayImageUrl = String(layout.overlayImageUrl || '').trim();
         if (overlayImageUrl) {
           els.overlayHeaderImageTag.src = overlayImageUrl;
