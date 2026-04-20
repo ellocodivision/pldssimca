@@ -694,7 +694,7 @@
       { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
     ];
     const EXCEL_CACHE_KEY = `planoExcelCacheV1:${DEV}`;
-    const MAX_FLOORS = 6;
+    const MAX_FLOORS = DEV === "viceroy-piloto" ? 7 : 6;
     const LOCAL_STATE_KEYS = [`plataformaUnidadesState:${DEV}`, `selectorUnidadesState:${DEV}`, `planoInteractivoState:${DEV}`];
     if (DEV === "ceiba") {
       LOCAL_STATE_KEYS.push("plataformaUnidadesState", "selectorUnidadesState", "planoInteractivoState");
@@ -895,7 +895,7 @@
       const raw = String(value || "").trim();
       if (!raw) return [];
       const out = [];
-      const primary = normalizeUnitKey(raw);
+      const primary = normalizeUnitKey(extractUnitCode(raw));
       if (primary) out.push(primary);
 
       const normalized = raw.replace(/\s+/g, "");
@@ -907,6 +907,8 @@
 
       const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (compact && !out.includes(compact)) out.push(compact);
+      const extracted = normalizeUnitKey(extractUnitCode(raw));
+      if (extracted && !out.includes(extracted)) out.push(extracted);
       return out;
     }
 
