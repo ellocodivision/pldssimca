@@ -3543,38 +3543,44 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
   if (!Array.isArray(matrix) || !matrix.length) return out;
 
   matrix.forEach((row) => {
-    const unidad = String(rowDataByIndex(row, 1) || '').trim(); // B
+    const unidad = extractUnitCode(
+      rowDataByIndex(row, 3) ||
+      rowDataByIndex(row, 1) ||
+      rowDataByIndex(row, 0) ||
+      ''
+    ); // D preferred, then B/A fallbacks
     if (!unidad) return;
     const unitKey = normalizeHeaderKey(unidad);
     if (!unitKey) return;
     if (['unidad', 'unit', 'departamento', 'depto', 'no', 'numero_de_unidad', 'numerodeunidad'].includes(unitKey)) return;
 
-    const tipologia = String(rowDataByIndex(row, 2) || '').trim(); // C
-    const recRaw = rowDataByIndex(row, 3); // D
-    const den = String(rowDataByIndex(row, 4) || '').trim(); // E
-    const vista = String(rowDataByIndex(row, 12) || '').trim(); // M
-    const m2 = rowDataByIndex(row, 13); // N
+    const development = String(rowDataByIndex(row, 2) || '').trim(); // C
+    const recRaw = rowDataByIndex(row, 4) || rowDataByIndex(row, 3) || rowDataByIndex(row, 1); // E preferred, then D/B
+    const den = String(rowDataByIndex(row, 5) || rowDataByIndex(row, 4) || '').trim(); // F preferred for old sheet, fallback E
+    const vista = String(rowDataByIndex(row, 12) || rowDataByIndex(row, 6) || '').trim(); // M preferred, fallback G
+    const m2 = rowDataByIndex(row, 13) || rowDataByIndex(row, 5) || rowDataByIndex(row, 6); // N preferred, then F/G
+    const price = rowDataByIndex(row, 7) || rowDataByIndex(row, 13); // H preferred in new sheet, fallback N
     const m2Value = parseCurrencyLike(m2);
-    const computedPrice = Number.isFinite(m2Value) ? (m2Value * 7100) : '';
+    const computedPrice = parseCurrencyLike(price);
 
-    const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
+    const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: development });
     const recamarasLabel = baseRecamaras && hasViceroyDen(den)
       ? `${baseRecamaras} + DEN`
       : baseRecamaras;
 
     out.push({
-      development: '',
+      development,
       unidad,
       planLink: '',
       recamaras: recamarasLabel,
       edificio: '',
-      tipologia,
+      tipologia: development,
       den,
       vista,
       asignacion: '',
       m2: m2 === '' ? '' : m2,
       sqft: '',
-      price: computedPrice === '' ? '' : computedPrice,
+      price: Number.isFinite(computedPrice) ? computedPrice : (Number.isFinite(m2Value) ? (m2Value * 7100) : ''),
       status: 'disponible'
     });
   });
