@@ -845,6 +845,9 @@
     }
 
     function getTargetDevKeys() {
+      if (DEV === "viceroy-piloto") {
+        return new Set([normalizeDevKey("VICEROY")]);
+      }
       const aliases = DEV_ALIASES_BY_SLUG[DEV] || [DEV_LABEL];
       const keys = aliases
         .map((alias) => normalizeDevKey(alias))
