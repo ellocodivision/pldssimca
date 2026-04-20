@@ -3573,8 +3573,11 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const denRaw = rowDataByIndex(row, 4); // E
     const vista = String(rowDataByIndex(row, 12) || '').trim(); // M
     const m2Raw = rowDataByIndex(row, 13); // N
+    const pricePerM2Raw = rowDataByIndex(row, 15); // P
     const m2Value = parseCurrencyLike(m2Raw);
-    const price = Number.isFinite(m2Value) ? (m2Value * 7100) : '';
+    const pricePerM2 = parseCurrencyLike(pricePerM2Raw);
+    const effectivePricePerM2 = Number.isFinite(pricePerM2) && pricePerM2 > 7100 ? pricePerM2 : 7100;
+    const price = Number.isFinite(m2Value) ? (m2Value * effectivePricePerM2) : '';
     const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
     const den = hasViceroyDen(denRaw) ? '1' : '';
 
