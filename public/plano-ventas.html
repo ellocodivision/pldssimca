@@ -867,6 +867,18 @@
       return normalized.toLowerCase();
     }
 
+    function extractUnitCode(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      const compact = raw.replace(/\s+/g, " ").trim();
+      const phMatch = compact.match(/^(PH\s*\d+(?:\.\d+)?|PH\d+(?:\.\d+)?)/i);
+      if (phMatch) return phMatch[1].replace(/\s+/g, "").toUpperCase();
+      const numericMatch = compact.match(/^(\d+(?:\.\d+)?)/);
+      if (numericMatch) return String(parseInt(numericMatch[1], 10));
+      const firstToken = compact.split(/\s+/)[0];
+      return firstToken || "";
+    }
+
     function getUnitNumberSizePx() {
       const value = Number(state.unitNumberSizePx);
       if (!Number.isFinite(value)) return 20;
@@ -3216,10 +3228,11 @@
       const matrix = lines.map((line) => parseLine(line));
       const rows = matrix.slice(1).map((values) => {
         const development = String(values[CEIBA_COL.DEVELOPMENT] || "").trim();
+        const unitCode = extractUnitCode(values[CEIBA_COL.D] || "");
         return {
           DEV: development,
           LINK: values[CEIBA_COL.LINK] || "",
-          UNIDAD: String(values[CEIBA_COL.D] || "").trim(),
+          UNIDAD: unitCode,
           REC: normalizeBedrooms(values[CEIBA_COL.E] || ""),
           TOTAL_M2: values[CEIBA_COL.F] || "",
           TOTAL_SQFT: values[CEIBA_COL.G] || "",
@@ -3261,11 +3274,12 @@
           const link = linkCell && linkCell.l && linkCell.l.Target
             ? String(linkCell.l.Target)
             : getValue(CEIBA_COL.LINK);
+          const unitCode = extractUnitCode(getValue(CEIBA_COL.D));
 
           const row = {
             DEV: development,
             LINK: link || "",
-            UNIDAD: getValue(CEIBA_COL.D),
+            UNIDAD: unitCode,
             REC: normalizeBedrooms(getValue(CEIBA_COL.E)),
             TOTAL_M2: getValue(CEIBA_COL.F),
             TOTAL_SQFT: getValue(CEIBA_COL.G),
