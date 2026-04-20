@@ -671,6 +671,7 @@
         lastOfficeShift: null,
         weekendAssignments: 0,
         weekendInitialShift: null,
+        lastWeekendShift: null,
         lastRebalanceWeek: -1,
         lastGtWeek: -1,
         lastWeekendWeek: -1,
@@ -714,6 +715,7 @@
       if (!record.weekendInitialShift) {
         record.weekendInitialShift = effectiveType;
       }
+      record.lastWeekendShift = effectiveType;
       if (record.lastWeekendWeek !== weekIndex) {
         record.weekend += 1;
         record.weekendAssignments += 1;
@@ -883,9 +885,10 @@
       if (!record.weekendInitialShift) {
         record.weekendInitialShift = pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon';
       }
-      const shift = record.weekendAssignments % 2 === 0
-        ? record.weekendInitialShift
-        : oppositeWeekendShift(record.weekendInitialShift);
+      const previousWeekendShift = record.lastWeekendShift || record.weekendInitialShift;
+      const shift = previousWeekendShift
+        ? oppositeWeekendShift(previousWeekendShift)
+        : (pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon');
       return { id: advisorId, shift };
     });
 
