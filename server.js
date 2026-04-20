@@ -125,7 +125,6 @@ const VICEROY_REGISTROS_JSON_PATH = path.join(DATA_DIR, 'viceroy-registros.json'
 const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx');
 const VICEROY_ROOM_RESERVATIONS_PATH = path.join(DATA_DIR, 'viceroy-room-reservations.json');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
-const VICEROY_PILOTO_INVENTORY_BASENAME = '2026.04.01 VICEROY PDC PRICE LIST V1 EFB';
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
 const SEED_DEVELOPMENTS_DIR = path.join(__dirname, 'seed-data', 'developments');
@@ -973,14 +972,6 @@ function sanitizeExcelFileName(rawName) {
   const ext = (base.split('.').pop() || '').toLowerCase();
   if (!['xls', 'xlsx', 'csv'].includes(ext)) return '';
   return base;
-}
-
-function normalizeInventoryBasename(fileName) {
-  return normalizeHeaderKey(path.basename(String(fileName || '').trim(), path.extname(String(fileName || '').trim())));
-}
-
-function isAllowedViceroyInventoryFile(fileName) {
-  return normalizeInventoryBasename(fileName) === normalizeHeaderKey(VICEROY_PILOTO_INVENTORY_BASENAME);
 }
 
 function csvCellToString(raw) {
@@ -3668,9 +3659,18 @@ function resolveInventoryCandidatesByDevSlug(devSlug) {
       });
     } catch {}
   });
-  return files
-    .filter((f) => isAllowedViceroyInventoryFile(f.name))
+  const canonicalNames = new Set([
+    'inventariomaestrowix.xls',
+    'inventariomaestrowix.xlsx',
+    'inventariomaestrowix.csv'
+  ]);
+  const canonical = files
+    .filter((f) => canonicalNames.has(String(f.name || '').toLowerCase()))
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  const latest = files
+    .filter((f) => !canonicalNames.has(String(f.name || '').toLowerCase()))
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return [...canonical, ...latest];
 }
 
 function readMergedFloorsByDevelopment(devSlug) {
@@ -6883,6 +6883,11 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
       inventoryFileName = candidates[0].name;
     } catch {}
   }
+  if (!inventoryRows.length) {
+    const cached = readViceroyInventoryCache();
+    inventoryRows = cached.rows;
+    inventoryFileName = cached.fileName || inventoryFileName;
+  }
   return res.json({
     ok: true,
     dev: devSlug,
@@ -7022,6 +7027,14 @@ app.get('/api/viceroy-piloto/inventory', (req, res) => {
       rows
     });
   } catch (err) {
+    const cached = readViceroyInventoryCache();
+    if (cached.rows.length) {
+      return res.json({
+        ok: true,
+        fileName: cached.fileName || file.name,
+        rows: cached.rows
+      });
+    }
     return res.status(500).json({
       error: 'No se pudo leer inventario',
       details: err && err.message ? err.message : 'error desconocido'
@@ -7039,11 +7052,6 @@ app.post('/api/viceroy-piloto/inventory', (req, res) => {
   if (!rawFileName || !base64Content) {
     return res.status(400).json({ error: 'Archivo inventario inválido' });
   }
-  if (!isAllowedViceroyInventoryFile(rawFileName)) {
-    return res.status(400).json({
-      error: `Solo se permite el archivo ${VICEROY_PILOTO_INVENTORY_BASENAME}.xlsx`
-    });
-  }
   const commaIndex = base64Content.indexOf(',');
   const payload = commaIndex >= 0 ? base64Content.slice(commaIndex + 1) : base64Content;
   const buffer = Buffer.from(payload, 'base64');
@@ -7052,24 +7060,25 @@ app.post('/api/viceroy-piloto/inventory', (req, res) => {
   }
   const devDir = path.join(DEVELOPMENTS_DIR, 'viceroy-piloto');
   if (!fs.existsSync(devDir)) fs.mkdirSync(devDir, { recursive: true });
-  const exactName = path.basename(rawFileName);
-  const exactPath = path.join(devDir, exactName);
-  fs.writeFileSync(exactPath, buffer);
+  const ext = (rawFileName.split('.').pop() || '').toLowerCase();
+  const canonicalName = `INVENTARIOMAESTROWIX.${ext}`;
+  const canonicalPath = path.join(devDir, canonicalName);
+  fs.writeFileSync(canonicalPath, buffer);
   // Mirror write to repo data path when runtime storage points elsewhere.
   const repoDevDir = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto');
   if (repoDevDir !== devDir) {
     try {
       if (!fs.existsSync(repoDevDir)) fs.mkdirSync(repoDevDir, { recursive: true });
-      fs.writeFileSync(path.join(repoDevDir, exactName), buffer);
+      fs.writeFileSync(path.join(repoDevDir, canonicalName), buffer);
     } catch {}
   }
   // Verify file is readable right away so frontend does not show false-positive success.
   try {
-    const persistedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(exactPath));
+    const persistedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(canonicalPath));
     if (!persistedRows.length) {
       return res.status(500).json({ error: 'Se guardó archivo pero no se pudo leer inventario persistido' });
     }
-    writeViceroyInventoryCache(persistedRows, exactName);
+    writeViceroyInventoryCache(persistedRows, canonicalName);
   } catch (err) {
     return res.status(500).json({
       error: 'Archivo guardado pero lectura de verificación falló',
@@ -7078,7 +7087,7 @@ app.post('/api/viceroy-piloto/inventory', (req, res) => {
   }
   return res.json({
     ok: true,
-    fileName: exactName
+    fileName: canonicalName
   });
 });
 
