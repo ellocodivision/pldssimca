@@ -28,9 +28,6 @@
       --overlay-bg: rgba(255,255,255,0.88);
       --overlay-border: #cdd2c6;
       --overlay-gutter: 408px;
-      --map-scale: 1;
-      --map-shift-x: 0px;
-      --map-shift-y: 0px;
     }
     * { box-sizing: border-box; }
     body {
@@ -97,29 +94,13 @@
       line-height: 0;
       min-width: 720px;
     }
-    .map-canvas {
-      background: transparent;
-      border: 0;
-      border-radius: 0;
-      width: min(96vw, 1500px);
-      max-width: min(96vw, 1500px);
-      overflow: hidden;
-      margin-left: var(--overlay-gutter);
-      line-height: 0;
-    }
-    .map-stage {
-      position: relative;
-      display: inline-block;
-      line-height: 0;
-      transform-origin: top left;
-      transform: translate3d(var(--map-shift-x), var(--map-shift-y), 0) scale(var(--map-scale));
-    }
     #baseImage {
       width: auto;
-      max-width: none;
+      max-width: 1500px;
       height: auto;
       display: block;
       background: #ddd;
+      margin-left: var(--overlay-gutter);
     }
     .overlay-box {
       position: absolute;
@@ -318,11 +299,7 @@
 
     <main class="stage-wrap">
       <div class="stage" id="stage">
-        <div class="map-canvas">
-          <div id="mapStage" class="map-stage">
-            <img id="baseImage" alt="Plano preview">
-          </div>
-        </div>
+        <img id="baseImage" alt="Plano preview">
         <div id="overlayBox" class="overlay-box">
           <div id="overlayImageWrap" class="overlay-image-wrap hidden">
             <img id="overlayImagePreview" alt="Imagen lateral">
@@ -367,9 +344,6 @@
         tableHeaderAlign: 'left',
         overlayRefWidth: 1500,
         overlayRefHeight: 900,
-        mapScale: 1.08,
-        mapShiftX: -120,
-        mapShiftY: 0,
         colWUnidad: 24,
         colWRec: 12,
         colWVista: 20,
@@ -461,7 +435,6 @@
         saveStatus: document.getElementById('saveStatus'),
         jsonStatus: document.getElementById('jsonStatus'),
         stage: document.getElementById('stage'),
-        mapStage: document.getElementById('mapStage'),
         baseImage: document.getElementById('baseImage'),
         overlayBox: document.getElementById('overlayBox'),
         overlayImageWrap: document.getElementById('overlayImageWrap'),
@@ -684,24 +657,6 @@
       function applyLayoutToPreview() {
         const p = ensureLayout();
         const scaled = scaledOverlayValues(p);
-        const imgW = Number(els.baseImage && els.baseImage.clientWidth || 0);
-        const imgH = Number(els.baseImage && els.baseImage.clientHeight || 0);
-        const fallbackW = Number(els.baseImage && els.baseImage.naturalWidth || 1500);
-        const fallbackH = Number(els.baseImage && els.baseImage.naturalHeight || 900);
-        const currentW = imgW > 0 ? imgW : fallbackW;
-        const currentH = imgH > 0 ? imgH : fallbackH;
-        const refW = Number(p.overlayRefWidth || currentW || 1500);
-        const refH = Number(p.overlayRefHeight || currentH || 900);
-        const sx = refW > 0 ? (currentW / refW) : 1;
-        const sy = refH > 0 ? (currentH / refH) : 1;
-        const scaledPx = function (v, fallback, scale) {
-          const n = Number(v);
-          if (!Number.isFinite(n)) return fallback;
-          return (Math.max(0, n * scale) + 'px');
-        };
-        document.documentElement.style.setProperty('--map-scale', String(Number(p.mapScale || 1)));
-        document.documentElement.style.setProperty('--map-shift-x', scaledPx(p.mapShiftX, '0px', sx));
-        document.documentElement.style.setProperty('--map-shift-y', scaledPx(p.mapShiftY, '0px', sy));
         document.documentElement.style.setProperty('--overlay-gutter', String(Math.max(260, Number(scaled.w || 360) + 48)) + 'px');
         els.overlayBox.style.left = String(Math.max(0, Number(scaled.x || 18))) + 'px';
         els.overlayBox.style.top = String(Math.max(0, Number(scaled.y || 18))) + 'px';

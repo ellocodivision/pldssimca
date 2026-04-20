@@ -37,9 +37,6 @@
       --col-w-3: 20%;
       --col-w-4: 12%;
       --col-w-5: 32%;
-      --map-scale: 1;
-      --map-shift-x: 0px;
-      --map-shift-y: 0px;
     }
     * { box-sizing: border-box; }
     body {
@@ -367,23 +364,15 @@
     .map-canvas {
       position: relative;
       display: block;
-      width: min(96vw, 1500px);
+      width: fit-content;
       max-width: min(96vw, 1500px);
-      overflow: hidden;
       margin-left: var(--overlay-gutter);
       line-height: 0;
-    }
-    .map-stage {
-      position: relative;
-      display: inline-block;
-      line-height: 0;
-      transform-origin: top left;
-      transform: translate3d(var(--map-shift-x), var(--map-shift-y), 0) scale(var(--map-scale));
     }
     #baseImage {
       display: block;
       width: auto;
-      max-width: none;
+      max-width: 100%;
       height: auto;
       border-radius: 0;
       background: #ffffff;
@@ -751,10 +740,8 @@
               </div>
             </div>
             <div class="map-canvas">
-              <div id="mapStage" class="map-stage">
-                <img id="baseImage" alt="Plano">
-                <svg id="overlay"></svg>
-              </div>
+              <img id="baseImage" alt="Plano">
+              <svg id="overlay"></svg>
             </div>
           </div>
         </div>
@@ -1107,9 +1094,6 @@
         root.style.setProperty('--col-w-3', String(Number(layout.colWVista || 20)) + '%');
         root.style.setProperty('--col-w-4', String(Number(layout.colWM2 || 12)) + '%');
         root.style.setProperty('--col-w-5', String(Number(layout.colWPrecio || 32)) + '%');
-        root.style.setProperty('--map-scale', String(Number(layout.mapScale || 1)));
-        root.style.setProperty('--map-shift-x', scaledPx(layout.mapShiftX, '0px', sx));
-        root.style.setProperty('--map-shift-y', scaledPx(layout.mapShiftY, '0px', sy));
         const overlayImageUrl = String(layout.overlayImageUrl || '').trim();
         if (overlayImageUrl) {
           els.overlayHeaderImageTag.src = overlayImageUrl;
