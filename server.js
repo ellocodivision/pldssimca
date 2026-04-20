@@ -3462,7 +3462,7 @@ function normalizeViceroyInventoryRow(rawRow) {
   Object.entries(rawRow || {}).forEach(([key, value]) => {
     row[normalizeHeaderKey(key)] = value;
   });
-  const unit = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit) || '').trim();
+  const unit = extractUnitCode(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit) || '');
   if (!unit) return null;
   const development = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.development) || '').trim();
   const planLink = normalizeViceroyPlanLink(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.planLink));
@@ -3533,43 +3533,64 @@ function rowDataByIndex(row, index) {
   return value === undefined || value === null ? '' : value;
 }
 
+function extractUnitCode(rawValue) {
+  const text = String(rawValue == null ? '' : rawValue).trim().toUpperCase();
+  if (!text) return '';
+  const firstToken = text.split(/[\s,;|/\\-]+/).find(Boolean) || '';
+  const raw = firstToken.replace(/[^A-Z0-9.]/g, '');
+  if (!raw) return '';
+  const normalizedChars = raw
+    .replace(/^[IL]$/g, '1')
+    .replace(/(?<=\d)[IL](?=\d|$)/g, '1')
+    .replace(/(?<=^|0)[IL](?=\d)/g, '1');
+  if (/^\d+$/.test(normalizedChars)) {
+    const num = String(Number(normalizedChars));
+    return num === 'NaN' ? normalizedChars : num;
+  }
+  const match = normalizedChars.match(/^0*(\d+)([A-Z]+)?$/);
+  if (match) {
+    const num = String(Number(match[1]));
+    return (num === 'NaN' ? match[1] : num) + (match[2] || '');
+  }
+  return normalizedChars;
+}
+
 function parseViceroyRowsByListaPreciosV0(sheet) {
   const out = [];
   const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
   if (!Array.isArray(matrix) || !matrix.length) return out;
 
   matrix.forEach((row) => {
-    const development = String(rowDataByIndex(row, 2) || '').trim(); // C
-    if (normalizeHeaderKey(development) !== normalizeHeaderKey('VICEROY')) return;
-    const unidad = extractUnitCode(rowDataByIndex(row, 3) || ''); // D
+    const location = String(rowDataByIndex(row, 0) || '').trim(); // A
+    const unidad = extractUnitCode(rowDataByIndex(row, 1) || ''); // B
     if (!unidad) return;
     const unitKey = normalizeHeaderKey(unidad);
     if (!unitKey) return;
     if (['unidad', 'unit', 'departamento', 'depto', 'no', 'numero_de_unidad', 'numerodeunidad'].includes(unitKey)) return;
 
-    const location = String(rowDataByIndex(row, 0) || '').trim(); // A
-    const recRaw = rowDataByIndex(row, 4); // E
-    const m2 = rowDataByIndex(row, 5); // F
-    const sqft = rowDataByIndex(row, 6); // G
-    const price = rowDataByIndex(row, 7); // H
-    const m2Value = parseCurrencyLike(m2);
-    const computedPrice = parseCurrencyLike(price);
-
-    const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: development });
+    const tipologia = String(rowDataByIndex(row, 2) || '').trim(); // C
+    const recRaw = rowDataByIndex(row, 3); // D
+    const denRaw = rowDataByIndex(row, 4); // E
+    const vista = String(rowDataByIndex(row, 12) || '').trim(); // M
+    const m2Raw = rowDataByIndex(row, 13); // N
+    const m2Value = parseCurrencyLike(m2Raw);
+    const price = Number.isFinite(m2Value) ? (m2Value * 7100) : '';
+    const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
+    const den = hasViceroyDen(denRaw) ? '1' : '';
 
     out.push({
-      development,
+      development: 'VICEROY',
       unidad,
       planLink: '',
       recamaras: baseRecamaras,
       edificio: location,
-      tipologia: baseRecamaras || development,
-      den: '',
-      vista: '',
+      tipologia,
+      den,
+      vista,
       asignacion: '',
-      m2: m2 === '' ? '' : m2,
-      sqft: sqft === '' ? '' : sqft,
-      price: Number.isFinite(computedPrice) ? computedPrice : (Number.isFinite(m2Value) ? (m2Value * 7100) : ''),
+      m2: m2Raw === '' ? '' : m2Raw,
+      sqft: Number.isFinite(m2Value) ? String(Math.round(m2Value * 10.7639)) : '',
+      price,
       status: 'disponible'
     });
   });
@@ -3592,7 +3613,7 @@ function pickRicherViceroyRow(current, next) {
 function dedupeViceroyRows(rows) {
   const byUnit = new Map();
   rows.forEach((row) => {
-    const key = String(row && row.unidad || '').trim().toUpperCase();
+    const key = extractUnitCode(row && row.unidad || '');
     if (!key) return;
     byUnit.set(key, pickRicherViceroyRow(byUnit.get(key), row));
   });
@@ -3611,22 +3632,14 @@ function parseViceroyInventoryFile(filePath) {
   }
 
   const workbook = XLSX.readFile(filePath);
-  const preferredSheetName = workbook.SheetNames.find((sheetName) => normalizeHeaderKey(sheetName) === normalizeHeaderKey('Lista de Precios V0'));
-  if (preferredSheetName && workbook.Sheets[preferredSheetName]) {
-    return dedupeViceroyRows(parseViceroyRowsByListaPreciosV0(workbook.Sheets[preferredSheetName]));
-  }
-  const out = [];
-  workbook.SheetNames.forEach((sheetName) => {
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) return;
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-    rows.forEach((row) => {
-      const normalized = normalizeViceroyInventoryRow(row);
-      if (normalized) out.push(normalized);
-    });
-    out.push(...parseViceroyRowsByListaPreciosV0(sheet));
+  const targetSheetKey = normalizeHeaderKey('Lista de Precios V0');
+  const preferredSheetName = workbook.SheetNames.find((sheetName) => {
+    const key = normalizeHeaderKey(sheetName);
+    return key === targetSheetKey || key.includes(targetSheetKey) || targetSheetKey.includes(key);
   });
-  return dedupeViceroyRows(out);
+  const sheetName = preferredSheetName || workbook.SheetNames[0];
+  if (!sheetName || !workbook.Sheets[sheetName]) return [];
+  return dedupeViceroyRows(parseViceroyRowsByListaPreciosV0(workbook.Sheets[sheetName]));
 }
 
 function filterViceroyInventoryRows(rows) {
@@ -6877,10 +6890,14 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
   const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
   let inventoryRows = [];
   let inventoryFileName = '';
-  if (candidates.length) {
+  for (const candidate of candidates) {
     try {
-      inventoryRows = filterViceroyInventoryRows(parseViceroyInventoryFile(candidates[0].fullPath));
-      inventoryFileName = candidates[0].name;
+      const parsedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(candidate.fullPath));
+      if (parsedRows.length) {
+        inventoryRows = parsedRows;
+        inventoryFileName = candidate.name;
+        break;
+      }
     } catch {}
   }
   if (!inventoryRows.length) {
@@ -7017,8 +7034,29 @@ app.get('/api/viceroy-piloto/inventory', (req, res) => {
       expectedDir: path.join(DEVELOPMENTS_DIR, devSlug)
     });
   }
-  const file = candidates[0];
+  for (const file of candidates) {
+    try {
+      const rows = filterViceroyInventoryRows(parseViceroyInventoryFile(file.fullPath));
+      if (rows.length) {
+        writeViceroyInventoryCache(rows, file.name);
+        return res.json({
+          ok: true,
+          fileName: file.name,
+          rows
+        });
+      }
+    } catch (err) {}
+  }
+  const cached = readViceroyInventoryCache();
+  if (cached.rows.length) {
+    return res.json({
+      ok: true,
+      fileName: cached.fileName || (candidates[0] && candidates[0].name) || '',
+      rows: cached.rows
+    });
+  }
   try {
+    const file = candidates[0];
     const rows = filterViceroyInventoryRows(parseViceroyInventoryFile(file.fullPath));
     if (rows.length) writeViceroyInventoryCache(rows, file.name);
     return res.json({
@@ -7031,7 +7069,7 @@ app.get('/api/viceroy-piloto/inventory', (req, res) => {
     if (cached.rows.length) {
       return res.json({
         ok: true,
-        fileName: cached.fileName || file.name,
+        fileName: cached.fileName || (candidates[0] && candidates[0].name) || '',
         rows: cached.rows
       });
     }
