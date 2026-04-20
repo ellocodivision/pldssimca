@@ -640,7 +640,7 @@
       planHeight: "185mm",
       planOffset: "0mm",
       tableOffset: "2.5mm",
-      pageContentMode: "single",
+      pageContentMode: DEV === "viceroy-piloto" ? "split" : "single",
       cellPadding: "1.05mm 0.75mm",
       minScale: 0.58,
       headerFontKey: "arial",
@@ -3740,13 +3740,17 @@
       setPdfLivePanelHeight(620);
       await loadServerProjectVersions();
       refreshProjectSelector();
-      const loadedLatestVersion = await loadLatestProjectVersionSilently();
-      if (!loadedLatestVersion) {
-        const loadedLocal = tryLoadLocalSilently();
-        if (!loadedLocal) {
-          const loadedDefaultJson = await loadDefaultJsonOnOpen();
-          if (!loadedDefaultJson && projectStatus) {
-            projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON.";
+      if (DEV === "viceroy-piloto") {
+        if (projectStatus) projectStatus.textContent = "Sin JSON cargado. Importa un archivo para empezar.";
+      } else {
+        const loadedLatestVersion = await loadLatestProjectVersionSilently();
+        if (!loadedLatestVersion) {
+          const loadedLocal = tryLoadLocalSilently();
+          if (!loadedLocal) {
+            const loadedDefaultJson = await loadDefaultJsonOnOpen();
+            if (!loadedDefaultJson && projectStatus) {
+              projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON.";
+            }
           }
         }
       }
