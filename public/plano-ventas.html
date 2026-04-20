@@ -713,7 +713,7 @@
       { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
     ];
     const EXCEL_CACHE_KEY = `planoExcelCacheV1:${DEV}`;
-    const MAX_FLOORS = 6;
+    const MAX_FLOORS = 12;
     const LOCAL_STATE_KEYS = [`plataformaUnidadesState:${DEV}`, `selectorUnidadesState:${DEV}`, `planoInteractivoState:${DEV}`];
     if (DEV === "ceiba") {
       LOCAL_STATE_KEYS.push("plataformaUnidadesState", "selectorUnidadesState", "planoInteractivoState");
@@ -2128,6 +2128,7 @@
         return;
       }
 
+      const blankOption = `<option value="">Selecciona una versión</option>`;
       const options = projects.map((project) => {
         const stamp = formatProjectDate(project.updatedAt);
         const label = `${project.name} (${project.floorCount} pisos${stamp ? `, ${stamp}` : ""})`;
@@ -2140,14 +2141,11 @@
         const selected = selectedId && selectedId === value ? "selected" : "";
         return `<option value="${escapeAttr(value)}" ${selected}>${escapeHtml(label)}</option>`;
       });
-      const allOptions = options.concat(serverOptions).join("");
+      const allOptions = [blankOption].concat(options, serverOptions).join("");
 
       projectSelect.innerHTML = allOptions;
       projectSelect.disabled = false;
-      if (!selectedId) {
-        if (projects[0]) projectSelect.value = projects[0].id;
-        else if (serverVersions[0]) projectSelect.value = `__srv__:${serverVersions[0]}`;
-      }
+      projectSelect.value = selectedId || "";
       if (projectStatus) {
         projectStatus.textContent = `${projects.length} version(es) local(es), ${serverVersions.length} en servidor.`;
       }
@@ -3779,16 +3777,9 @@
       applyPdfLiveZoom();
       setPdfLivePanelHeight(620);
       await loadServerProjectVersions();
-      refreshProjectSelector();
-      const loadedLatestVersion = await loadLatestProjectVersionSilently();
-      if (!loadedLatestVersion) {
-        const loadedLocal = tryLoadLocalSilently();
-        if (!loadedLocal) {
-          const loadedDefaultJson = await loadDefaultJsonOnOpen();
-          if (!loadedDefaultJson && projectStatus) {
-            projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON.";
-          }
-        }
+      refreshProjectSelector("");
+      if (projectStatus) {
+        projectStatus.textContent = "Sin carga automática. Importa un JSON o selecciona una versión.";
       }
       updateHint();
       render();
