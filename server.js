@@ -3243,17 +3243,6 @@ function normalizeHeaderKey(raw) {
     .replace(/^_+|_+$/g, '');
 }
 
-function extractUnitCode(rawValue) {
-  const raw = String(rawValue || '').trim();
-  if (!raw) return '';
-  const compact = raw.replace(/\s+/g, ' ').trim();
-  const phMatch = compact.match(/^(PH\s*\d+(?:\.\d+)?|PH\d+(?:\.\d+)?)/i);
-  if (phMatch) return phMatch[1].replace(/\s+/g, '').toUpperCase();
-  const numericMatch = compact.match(/^(\d+(?:\.\d+)?)/);
-  if (numericMatch) return String(parseInt(numericMatch[1], 10));
-  return compact.split(/\s+/)[0] || '';
-}
-
 function parseBooleanValue(raw) {
   if (typeof raw === 'boolean') return raw;
   const value = String(raw || '').trim().toLowerCase();
@@ -3554,19 +3543,17 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
   if (!Array.isArray(matrix) || !matrix.length) return out;
 
   matrix.forEach((row) => {
-    const unidadRaw = String(rowDataByIndex(row, 3) || rowDataByIndex(row, 1) || '').trim(); // D preferred, fallback B
-    const unidad = extractUnitCode(unidadRaw || '');
+    const unidad = String(rowDataByIndex(row, 1) || '').trim(); // B
     if (!unidad) return;
     const unitKey = normalizeHeaderKey(unidad);
     if (!unitKey) return;
     if (['unidad', 'unit', 'departamento', 'depto', 'no', 'numero_de_unidad', 'numerodeunidad'].includes(unitKey)) return;
 
-    const development = String(rowDataByIndex(row, 2) || '').trim(); // C
-    const tipologia = String(rowDataByIndex(row, 2) || '').trim(); // C in current file contains VICEROY
-    const recRaw = rowDataByIndex(row, 4) || rowDataByIndex(row, 3); // E preferred, fallback D
-    const den = String(rowDataByIndex(row, 5) || '').trim(); // F when present
-    const vista = String(rowDataByIndex(row, 12) || rowDataByIndex(row, 6) || '').trim(); // M preferred, fallback G
-    const m2 = rowDataByIndex(row, 13) || rowDataByIndex(row, 7); // N preferred, fallback H
+    const tipologia = String(rowDataByIndex(row, 2) || '').trim(); // C
+    const recRaw = rowDataByIndex(row, 3); // D
+    const den = String(rowDataByIndex(row, 4) || '').trim(); // E
+    const vista = String(rowDataByIndex(row, 12) || '').trim(); // M
+    const m2 = rowDataByIndex(row, 13); // N
     const m2Value = parseCurrencyLike(m2);
     const computedPrice = Number.isFinite(m2Value) ? (m2Value * 7100) : '';
 
@@ -3576,7 +3563,7 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
       : baseRecamaras;
 
     out.push({
-      development,
+      development: '',
       unidad,
       planLink: '',
       recamaras: recamarasLabel,
