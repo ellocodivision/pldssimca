@@ -640,7 +640,7 @@
       planHeight: "185mm",
       planOffset: "0mm",
       tableOffset: "2.5mm",
-      pageContentMode: DEV === "viceroy-piloto" ? "split" : "single",
+      pageContentMode: "single",
       cellPadding: "1.05mm 0.75mm",
       minScale: 0.58,
       headerFontKey: "arial",
@@ -694,7 +694,7 @@
       { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
     ];
     const EXCEL_CACHE_KEY = `planoExcelCacheV1:${DEV}`;
-    const MAX_FLOORS = DEV === "viceroy-piloto" ? 7 : 6;
+    const MAX_FLOORS = 6;
     const LOCAL_STATE_KEYS = [`plataformaUnidadesState:${DEV}`, `selectorUnidadesState:${DEV}`, `planoInteractivoState:${DEV}`];
     if (DEV === "ceiba") {
       LOCAL_STATE_KEYS.push("plataformaUnidadesState", "selectorUnidadesState", "planoInteractivoState");
@@ -845,9 +845,6 @@
     }
 
     function getTargetDevKeys() {
-      if (DEV === "viceroy-piloto") {
-        return new Set([normalizeDevKey("VICEROY")]);
-      }
       const aliases = DEV_ALIASES_BY_SLUG[DEV] || [DEV_LABEL];
       const keys = aliases
         .map((alias) => normalizeDevKey(alias))
@@ -867,18 +864,6 @@
       return normalized.toLowerCase();
     }
 
-    function extractUnitCode(value) {
-      const raw = String(value || "").trim();
-      if (!raw) return "";
-      const compact = raw.replace(/\s+/g, " ").trim();
-      const phMatch = compact.match(/^(PH\s*\d+(?:\.\d+)?|PH\d+(?:\.\d+)?)/i);
-      if (phMatch) return phMatch[1].replace(/\s+/g, "").toUpperCase();
-      const numericMatch = compact.match(/^(\d+(?:\.\d+)?)/);
-      if (numericMatch) return String(parseInt(numericMatch[1], 10));
-      const firstToken = compact.split(/\s+/)[0];
-      return firstToken || "";
-    }
-
     function getUnitNumberSizePx() {
       const value = Number(state.unitNumberSizePx);
       if (!Number.isFinite(value)) return 20;
@@ -895,7 +880,7 @@
       const raw = String(value || "").trim();
       if (!raw) return [];
       const out = [];
-      const primary = normalizeUnitKey(extractUnitCode(raw));
+      const primary = normalizeUnitKey(raw);
       if (primary) out.push(primary);
 
       const normalized = raw.replace(/\s+/g, "");
@@ -907,8 +892,6 @@
 
       const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (compact && !out.includes(compact)) out.push(compact);
-      const extracted = normalizeUnitKey(extractUnitCode(raw));
-      if (extracted && !out.includes(extracted)) out.push(extracted);
       return out;
     }
 
@@ -3230,11 +3213,10 @@
       const matrix = lines.map((line) => parseLine(line));
       const rows = matrix.slice(1).map((values) => {
         const development = String(values[CEIBA_COL.DEVELOPMENT] || "").trim();
-        const unitCode = extractUnitCode(values[CEIBA_COL.D] || "");
         return {
           DEV: development,
           LINK: values[CEIBA_COL.LINK] || "",
-          UNIDAD: unitCode,
+          UNIDAD: String(values[CEIBA_COL.D] || "").trim(),
           REC: normalizeBedrooms(values[CEIBA_COL.E] || ""),
           TOTAL_M2: values[CEIBA_COL.F] || "",
           TOTAL_SQFT: values[CEIBA_COL.G] || "",
@@ -3276,12 +3258,11 @@
           const link = linkCell && linkCell.l && linkCell.l.Target
             ? String(linkCell.l.Target)
             : getValue(CEIBA_COL.LINK);
-          const unitCode = extractUnitCode(getValue(CEIBA_COL.D));
 
           const row = {
             DEV: development,
             LINK: link || "",
-            UNIDAD: unitCode,
+            UNIDAD: getValue(CEIBA_COL.D),
             REC: normalizeBedrooms(getValue(CEIBA_COL.E)),
             TOTAL_M2: getValue(CEIBA_COL.F),
             TOTAL_SQFT: getValue(CEIBA_COL.G),
@@ -3759,17 +3740,13 @@
       setPdfLivePanelHeight(620);
       await loadServerProjectVersions();
       refreshProjectSelector();
-      if (DEV === "viceroy-piloto") {
-        if (projectStatus) projectStatus.textContent = "Sin JSON cargado. Importa un archivo para empezar.";
-      } else {
-        const loadedLatestVersion = await loadLatestProjectVersionSilently();
-        if (!loadedLatestVersion) {
-          const loadedLocal = tryLoadLocalSilently();
-          if (!loadedLocal) {
-            const loadedDefaultJson = await loadDefaultJsonOnOpen();
-            if (!loadedDefaultJson && projectStatus) {
-              projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON.";
-            }
+      const loadedLatestVersion = await loadLatestProjectVersionSilently();
+      if (!loadedLatestVersion) {
+        const loadedLocal = tryLoadLocalSilently();
+        if (!loadedLocal) {
+          const loadedDefaultJson = await loadDefaultJsonOnOpen();
+          if (!loadedDefaultJson && projectStatus) {
+            projectStatus.textContent = "No hay version guardada auto cargada. Usa Importar JSON.";
           }
         }
       }
