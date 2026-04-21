@@ -683,7 +683,18 @@
       G: 6,
       H: 7,
       I: 8,
-      K: 10
+      K: 10,
+      PRECIO: 7,      // H
+      PRECIO_FINAL: 10
+    };
+    const RELATED_COL = {
+      DEVELOPMENT: 2, // C
+      UNIT: 3,        // D
+      REC: 4,         // E
+      TOTAL_M2: 5,    // F
+      TOTAL_SQFT: 6,  // G
+      PRECIO: 7,      // H
+      PRECIO_FINAL: 7 // H
     };
 
     const REPORT_COLUMNS = [
@@ -3186,9 +3197,14 @@
       }
     }
 
+    function getExcelColumnMap() {
+      return DEV === "related" ? RELATED_COL : CEIBA_COL;
+    }
+
     function parseCsvText(text) {
       const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
       if (!lines.length) return { headers: [], rows: [] };
+      const COL = getExcelColumnMap();
 
       const parseLine = (line) => {
         const out = [];
@@ -3215,17 +3231,21 @@
 
       const matrix = lines.map((line) => parseLine(line));
       const rows = matrix.slice(1).map((values) => {
-        const development = String(values[CEIBA_COL.DEVELOPMENT] || "").trim();
+        const development = String(values[COL.DEVELOPMENT] || "").trim();
+        const precio = formatUsdValue(values[COL.PRECIO] || "");
+        const precioFinalValue = DEV === "related"
+          ? precio
+          : formatUsdValue(values[CEIBA_COL.K] || "");
         return {
           DEV: development,
-          LINK: values[CEIBA_COL.LINK] || "",
-          UNIDAD: String(values[CEIBA_COL.D] || "").trim(),
-          REC: normalizeBedrooms(values[CEIBA_COL.E] || ""),
-          TOTAL_M2: values[CEIBA_COL.F] || "",
-          TOTAL_SQFT: values[CEIBA_COL.G] || "",
-          PRECIO: formatUsdValue(values[CEIBA_COL.H] || ""),
-          DESCUENTO: values[CEIBA_COL.I] || "",
-          PRECIO_FINAL: formatUsdValue(values[CEIBA_COL.K] || "")
+          LINK: DEV === "related" ? "" : (values[CEIBA_COL.LINK] || ""),
+          UNIDAD: String(values[COL.UNIT] || "").trim(),
+          REC: normalizeBedrooms(values[COL.REC] || ""),
+          TOTAL_M2: values[COL.TOTAL_M2] || "",
+          TOTAL_SQFT: values[COL.TOTAL_SQFT] || "",
+          PRECIO: precio,
+          DESCUENTO: "",
+          PRECIO_FINAL: precioFinalValue
         };
       }).filter((row) => row && row.UNIDAD);
 
@@ -3240,6 +3260,7 @@
         alert("No se pudo cargar la librería de Excel. Intenta con CSV o recarga la página.");
         return { headers: [], rows: [] };
       }
+      const COL = getExcelColumnMap();
       const workbook = XLSX.read(buffer, { type: "array" });
       const rows = [];
       workbook.SheetNames.forEach((sheetName) => {
@@ -3255,23 +3276,27 @@
             return String(cell.w !== undefined ? cell.w : cell.v).trim();
           };
 
-          const development = getValue(CEIBA_COL.DEVELOPMENT);
+          const development = getValue(COL.DEVELOPMENT);
 
-          const linkCell = getCell(CEIBA_COL.LINK);
+          const linkCell = DEV === "related" ? null : getCell(CEIBA_COL.LINK);
           const link = linkCell && linkCell.l && linkCell.l.Target
             ? String(linkCell.l.Target)
-            : getValue(CEIBA_COL.LINK);
+            : (DEV === "related" ? "" : getValue(CEIBA_COL.LINK));
+          const precio = formatUsdValue(getValue(COL.PRECIO));
+          const precioFinalValue = DEV === "related"
+            ? precio
+            : formatUsdValue(getValue(CEIBA_COL.K));
 
           const row = {
             DEV: development,
             LINK: link || "",
-            UNIDAD: getValue(CEIBA_COL.D),
-            REC: normalizeBedrooms(getValue(CEIBA_COL.E)),
-            TOTAL_M2: getValue(CEIBA_COL.F),
-            TOTAL_SQFT: getValue(CEIBA_COL.G),
-            PRECIO: formatUsdValue(getValue(CEIBA_COL.H)),
-            DESCUENTO: getValue(CEIBA_COL.I),
-            PRECIO_FINAL: formatUsdValue(getValue(CEIBA_COL.K))
+            UNIDAD: getValue(COL.UNIT),
+            REC: normalizeBedrooms(getValue(COL.REC)),
+            TOTAL_M2: getValue(COL.TOTAL_M2),
+            TOTAL_SQFT: getValue(COL.TOTAL_SQFT),
+            PRECIO: precio,
+            DESCUENTO: "",
+            PRECIO_FINAL: precioFinalValue
           };
           if (!row.UNIDAD) continue;
           rows.push(row);
