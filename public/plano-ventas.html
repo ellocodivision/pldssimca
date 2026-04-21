@@ -594,7 +594,8 @@
       serenada: "SERENADA",
       "singular-joy": "SINGULAR JOY",
       solar: "SOLAR",
-      "solar-mt": "SOLAR MT"
+      "solar-mt": "SOLAR MT",
+      related: "RELATED"
     };
     const DEV_LABEL = DEV_NAME_BY_SLUG[DEV] || String(DEV || "CEIBA").replace(/[-_]+/g, " ").toUpperCase();
     const DEV_ALIASES_BY_SLUG = {
@@ -611,9 +612,11 @@
       serenada: ["SERENADA"],
       "singular-joy": ["SINGULAR JOY"],
       solar: ["SOLAR"],
-      "solar-mt": ["SOLAR MT", "SOLARMIDTOWN", "SOLAR MIDTOWN"]
+      "solar-mt": ["SOLAR MT", "SOLARMIDTOWN", "SOLAR MIDTOWN"],
+      related: ["RELATED"]
     };
     const QUICK_EXPORT_MODE = URL_PARAMS.get("quick_export") === "1";
+    const DEFAULT_SPLIT_PAGE_CONTENT = new Set(["solar-mt", "related"]);
 
     const statusColors = {
       disponible: "#2f8f47",
@@ -640,7 +643,7 @@
       planHeight: "185mm",
       planOffset: "0mm",
       tableOffset: "2.5mm",
-      pageContentMode: "single",
+      pageContentMode: DEFAULT_SPLIT_PAGE_CONTENT.has(DEV) ? "split" : "single",
       cellPadding: "1.05mm 0.75mm",
       minScale: 0.58,
       headerFontKey: "arial",
@@ -694,7 +697,7 @@
       { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
     ];
     const EXCEL_CACHE_KEY = `planoExcelCacheV1:${DEV}`;
-    const MAX_FLOORS = 6;
+    const MAX_FLOORS = 7;
     const LOCAL_STATE_KEYS = [`plataformaUnidadesState:${DEV}`, `selectorUnidadesState:${DEV}`, `planoInteractivoState:${DEV}`];
     if (DEV === "ceiba") {
       LOCAL_STATE_KEYS.push("plataformaUnidadesState", "selectorUnidadesState", "planoInteractivoState");
