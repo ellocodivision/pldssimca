@@ -707,6 +707,12 @@
       { key: "DESCUENTO", label: "DESC / DISC %" },
       { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
     ];
+    function getReportColumns() {
+      if (DEV === "related") {
+        return REPORT_COLUMNS.filter((col) => !["LINK", "DESCUENTO", "PRECIO_FINAL"].includes(col.key));
+      }
+      return REPORT_COLUMNS;
+    }
     const EXCEL_CACHE_KEY = `planoExcelCacheV1:${DEV}`;
     const MAX_FLOORS = 7;
     const LOCAL_STATE_KEYS = [`plataformaUnidadesState:${DEV}`, `selectorUnidadesState:${DEV}`, `planoInteractivoState:${DEV}`];
@@ -1670,8 +1676,8 @@
       return `<a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener noreferrer" title="Abrir plano" aria-label="Abrir plano" class="plan-link-badge"><span class="plan-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="8" width="19" height="8" rx="1.5"></rect><path d="M6 8v3 M9 8v2 M12 8v3 M15 8v2 M18 8v3"></path></svg></span></a>`;
     }
 
-    function computeTableColWidths(rows) {
-      const metrics = REPORT_COLUMNS.map((col) => {
+    function computeTableColWidths(rows, columns = getReportColumns()) {
+      const metrics = columns.map((col) => {
         const bi = toBilingualHeader(col.label);
         const headerLength = Math.max(String(bi.top || "").length, String(bi.bottom || "").length, 4);
         return { key: col.key, weight: Math.max(4, headerLength) };
@@ -1756,23 +1762,17 @@
         return;
       }
       const rows = getRowsForFloorTable(floor, { availableOnly: true });
+      const reportColumns = getReportColumns();
       const availableCount = rows.filter((r) => r.ESTADO === "disponible").length;
-      const colWidths = computeTableColWidths(rows);
+      const colWidths = computeTableColWidths(rows, reportColumns);
       const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
       const rowsHtml = rows.map((row) => {
         const cls = row.ESTADO === "disponible" ? "matched" : "";
-        const linkCell = buildPlanLinkCell(row.LINK);
-        return `<tr class="${cls}">
-          <td>${linkCell}</td>
-          <td>${escapeHtml(row.UNIDAD)}</td>
-          <td>${escapeHtml(displayCellValue(row, "REC"))}</td>
-          <td>${escapeHtml(row.TOTAL_M2)}</td>
-          <td>${escapeHtml(row.TOTAL_SQFT)}</td>
-          <td>${escapeHtml(displayCellValue(row, "PRECIO"))}</td>
-          <td>${escapeHtml(row.DESCUENTO)}</td>
-          <td>${escapeHtml(displayCellValue(row, "PRECIO_FINAL"))}</td>
-          <td>${statusPill(row.ESTADO)}</td>
-        </tr>`;
+        const cells = reportColumns.map((col) => {
+          if (col.key === "LINK") return `<td>${buildPlanLinkCell(row.LINK)}</td>`;
+          return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
+        }).join("");
+        return `<tr class="${cls}">${cells}<td>${statusPill(row.ESTADO)}</td></tr>`;
       }).join("");
 
       tableSummary.innerHTML = [
@@ -1785,18 +1785,11 @@
           <colgroup>${colsHtml}</colgroup>
           <thead>
             <tr>
-              <th>PLANO</th>
-              <th>UNIDAD / UNIT</th>
-              <th>REC / BED</th>
-              <th>TOTAL M2</th>
-              <th>TOTAL SQFT</th>
-              <th>PRECIO / PRICE</th>
-              <th>DESC / DISC %</th>
-              <th>PRECIO FINAL / FINAL PRICE</th>
+              ${reportColumns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("")}
               <th>ESTADO</th>
             </tr>
           </thead>
-          <tbody>${rowsHtml || `<tr><td colspan="9">Sin unidades disponibles en este piso.</td></tr>`}</tbody>
+          <tbody>${rowsHtml || `<tr><td colspan="${reportColumns.length + 1}">Sin unidades disponibles en este piso.</td></tr>`}</tbody>
         </table>
       `;
     }
@@ -2675,15 +2668,16 @@
         ? `<p class="brand-text">${escapeHtml(layout.brandText)}</p>`
         : "";
 
-      const tableHead = REPORT_COLUMNS.map((col) => {
+      const reportColumns = getReportColumns();
+      const tableHead = reportColumns.map((col) => {
         const bi = toBilingualHeader(col.label);
         return `<th><span class="th-top">${escapeHtml(bi.top)}</span><span class="th-bottom">${escapeHtml(bi.bottom)}</span></th>`;
       }).join("");
-      const colCount = REPORT_COLUMNS.length + 1;
+      const colCount = reportColumns.length + 1;
 
       const pagesHtml = floors.map((floor, index) => {
         const exportRows = buildExportRowsForFloor(floor);
-        const colWidths = computeTableColWidths(exportRows.map((entry) => entry.row || {}));
+        const colWidths = computeTableColWidths(exportRows.map((entry) => entry.row || {}), reportColumns);
         const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
         const defaultTitle = `INVENTARIO / INVENTORY - ${String((floor && floor.name) || `Piso ${index + 1}`).toUpperCase()}`;
         const pageTitle = String((floor && floor.pdfTitle) || defaultTitle).trim();
@@ -2720,7 +2714,7 @@
             </div>
         `;
         const tableBody = exportRows.map(({ row }) => {
-          const cells = REPORT_COLUMNS.map((col) => {
+          const cells = reportColumns.map((col) => {
             if (col.key === "LINK") {
               const icon = buildPlanLinkCell(row.LINK);
               return `<td>${icon}</td>`;
