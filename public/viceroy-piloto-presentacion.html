@@ -19,9 +19,9 @@
       --accent: #a6ac9b;
       --overlay-left: 18px;
       --overlay-top: 18px;
-      --overlay-width: 360px;
+      --overlay-width: 430px;
       --overlay-bg: rgba(255,255,255,0.88);
-      --overlay-gutter: 408px;
+      --overlay-gutter: 498px;
       --overlay-border: #cdd2c6;
       --table-header-bg: #ecece4;
       --table-header-text: #666a75;
@@ -363,13 +363,13 @@
       position: relative;
       display: block;
       line-height: 0;
-      max-width: calc(96vw + var(--overlay-gutter));
+      max-width: calc(92vw + var(--overlay-gutter));
     }
     .map-canvas {
       position: relative;
       display: block;
       width: fit-content;
-      max-width: min(96vw, 1500px);
+      max-width: min(86vw, 1280px);
       margin-left: var(--overlay-gutter);
       line-height: 0;
     }
@@ -1080,7 +1080,7 @@
         };
         const overlayWidthPx = Number(layout.overlayWidth);
         const scaledOverlayWidth = Number.isFinite(overlayWidthPx) ? Math.max(220, overlayWidthPx * sx) : 360;
-        root.style.setProperty('--overlay-gutter', String(Math.max(260, scaledOverlayWidth + 48)) + 'px');
+        root.style.setProperty('--overlay-gutter', String(Math.max(320, scaledOverlayWidth + 64)) + 'px');
         root.style.setProperty('--overlay-left', scaledPx(layout.overlayX, '18px', sx));
         root.style.setProperty('--overlay-top', scaledPx(layout.overlayY, '18px', sy));
         root.style.setProperty('--overlay-width', scaledPx(layout.overlayWidth, '360px', sx));
