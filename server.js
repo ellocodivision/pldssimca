@@ -3581,12 +3581,13 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const price = Number.isFinite(m2Value) ? (m2Value * effectivePricePerM2) : '';
     const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
     const den = hasViceroyDen(denRaw) ? '1' : '';
+    const recamaras = den && baseRecamaras ? `${baseRecamaras}+DEN` : baseRecamaras;
 
     out.push({
       development: 'VICEROY',
       unidad,
       planLink: '',
-      recamaras: baseRecamaras,
+      recamaras,
       edificio: location,
       tipologia,
       den,
