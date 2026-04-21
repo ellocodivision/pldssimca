@@ -2573,7 +2573,8 @@
       }).join("");
 
       return `
-        <svg viewBox="0 0 ${width} ${height}" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 ${width} ${height}" width="100%" xmlns="http://www.w3.org/2000/svg" style="background:#fff">
+          <rect x="0" y="0" width="${width}" height="${height}" fill="#fff"></rect>
           <image href="${escapeAttr(floor.imageDataUrl)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet"></image>
           ${zonesMarkup}
         </svg>
