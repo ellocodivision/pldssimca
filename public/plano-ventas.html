@@ -871,11 +871,11 @@
     function normalizeUnitKey(value) {
       const raw = String(value || "").trim();
       if (!raw) return "";
-      const normalized = raw.replace(/\s+/g, "");
+      const normalized = raw.replace(/\s+/g, "").toLowerCase();
       if (/^\d+(\.0+)?$/.test(normalized)) {
         return String(parseInt(normalized, 10));
       }
-      return normalized.toLowerCase();
+      return normalized.replace(/^0+(?=\d)/, "");
     }
 
     function getUnitNumberSizePx() {
