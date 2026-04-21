@@ -148,6 +148,7 @@ const DEVELOPMENTS = [
   { slug: 'singular-joy', name: 'SINGULAR JOY' },
   { slug: 'solar', name: 'SOLAR' },
   { slug: 'solar-mt', name: 'SOLAR MT' },
+  { slug: 'related', name: 'RELATED' },
   { slug: 'viceroy-piloto', name: 'VICEROY PILOTO' }
 ];
 const DEVELOPMENTS_BY_SLUG = DEVELOPMENTS.reduce((acc, item) => {
