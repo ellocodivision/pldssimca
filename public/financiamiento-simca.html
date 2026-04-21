@@ -1006,6 +1006,7 @@
   const isPrintPreviewMode = previewQuery === 'print';
   let currentLang = query.get('lang') === 'en' ? 'en' : 'es';
   const ELIGIBLE_DEVELOPMENTS = [
+    'CEIBA',
     'IPANA',
     'SERENADA',
     'GRAN TULUM',
@@ -1014,6 +1015,7 @@
     'SINGULAR JOY'
   ];
   const DEVELOPMENT_RULES = {
+    'CEIBA': { minDownPayment: 30, terms: [3, 5, 7] },
     'IPANA': { minDownPayment: 30, terms: [3, 5, 7] },
     'SERENADA': { minDownPayment: 30, terms: [3, 5, 7] },
     'MARILA': { minDownPayment: 30, terms: [3, 5, 7] },
