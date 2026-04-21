@@ -270,6 +270,10 @@
       width: 100%;
       margin-bottom: 8px;
     }
+    .zone-filter-box .btn {
+      width: 100%;
+      margin-top: 2px;
+    }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 
     .table-wrap {
@@ -687,6 +691,7 @@
                 <select id="filterAsignacionSelect">
                   <option value="">Todas</option>
                 </select>
+                <button id="clearFloorFiltersBtn" class="btn" type="button">Borrar filtros</button>
               </div>
               <div class="table-wrap">
                 <table>
@@ -819,6 +824,7 @@
         filterRecamarasSelect: document.getElementById('filterRecamarasSelect'),
         filterVistaSelect: document.getElementById('filterVistaSelect'),
         filterAsignacionSelect: document.getElementById('filterAsignacionSelect'),
+        clearFloorFiltersBtn: document.getElementById('clearFloorFiltersBtn'),
         refreshViewBtn: document.getElementById('refreshViewBtn'),
         unitsTableBody: document.getElementById('unitsTableBody'),
         overlayHeaderImage: document.getElementById('overlayHeaderImage'),
@@ -1555,6 +1561,26 @@
           els.filterAsignacionSelect.value = String(state.selectedAsignacionFilter || '');
         }
         if (didResetFilter) persistRouteState();
+      }
+
+      function resetFloorFilters() {
+        state.selectedAdvisorEmail = '';
+        state.selectedWhisperRowId = '';
+        state.selectedBedroom = '';
+        state.selectedTipologia = '';
+        state.showAllOnMap = false;
+        state.showAllUnits = false;
+        state.selectedRecamarasFilter = '';
+        state.selectedVistaFilter = '';
+        state.selectedAsignacionFilter = '';
+        state.selectedUnitInfo = null;
+        state.focusedUnitKey = '';
+        persistRouteState();
+        renderWhisperFilters();
+        renderZoneAttributeFilters();
+        hideAssignmentBox();
+        renderFloorTabs();
+        drawFloor();
       }
 
       function isUnitAssignedToCurrentUser(info) {
@@ -2582,6 +2608,12 @@
         hideAssignmentBox();
         drawFloor();
       });
+
+      if (els.clearFloorFiltersBtn) {
+        els.clearFloorFiltersBtn.addEventListener('click', function () {
+          resetFloorFilters();
+        });
+      }
 
       if (els.advisorFilterSelect) {
         els.advisorFilterSelect.addEventListener('change', function () {
