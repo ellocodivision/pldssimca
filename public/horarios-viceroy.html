@@ -15,6 +15,8 @@
     --accent:#dcb64f;
     --accent-ink:#2f250f;
     --shadow:0 24px 60px rgba(64, 46, 18, .08);
+    --fixed-early-917:#8b6a18;
+    --fixed-early-916:#9b7412;
     --fixed-early:#a57c1a;
     --fixed-late:#6fae48;
     --rot-morning:#efc13a;
@@ -242,6 +244,8 @@
   }
 
   .shift-card.fixed1018{ background:var(--fixed-early); color:#fff6dc; }
+  .shift-card.fixed0917{ background:var(--fixed-early-917); color:#fff6dc; }
+  .shift-card.fixed0916{ background:var(--fixed-early-916); color:#fff6dc; }
   .shift-card.fixed1220{ background:var(--fixed-late); color:#15210f; }
   .shift-card.rot1015{ background:var(--rot-morning); color:#2b2108; }
   .shift-card.rot1520{ background:var(--rot-afternoon); color:#28170a; }
@@ -466,6 +470,8 @@
   ];
 
   const SHIFT_META = {
+    fixed0917: { title: '09:00 a 17:00', short: '9 a 5', tone: 'fixed0917' },
+    fixed0916: { title: '09:00 a 16:00', short: '9 a 4', tone: 'fixed0916' },
     fixed1018: { title: '10:00 a 18:00', short: '10 a 18', tone: 'fixed1018' },
     fixed1220: { title: '12:00 a 20:00', short: '12 a 20', tone: 'fixed1220' },
     rot1015: { title: '10:00 a 15:00', short: '10 a 15', tone: 'rot1015' },
@@ -474,6 +480,8 @@
   };
 
   const MANUAL_SHIFT_OPTIONS = [
+    { value: 'fixed0917', label: '09:00 a 17:00' },
+    { value: 'fixed0916', label: '09:00 a 16:00' },
     { value: 'fixed1018', label: '10:00 a 18:00' },
     { value: 'fixed1220', label: '12:00 a 20:00' },
     { value: 'rot1015', label: '10:00 a 15:00' },
@@ -497,10 +505,10 @@
     5: 'Mié / Vie · 10:00-15:00'
   };
 
-  const FIXED_WEEKDAY = {
-    karenka: 'fixed1018',
-    laura: 'fixed1220',
-    santiago: 'fixed1220'
+  const FIXED_SCHEDULES = {
+    karenka: { type: 'fixed0916', offDayIndex: 5 },
+    laura: { type: 'fixed1220', offDayIndex: 6 },
+    santiago: { type: 'fixed0917', offDayIndex: 5 }
   };
 
   const boardEl = document.getElementById('board');
@@ -580,9 +588,9 @@
 
   function getTheoryLabel(advisor, weekIndex) {
     if (advisor.kind === 'fixed') {
-      if (advisor.id === 'karenka') return 'Teórico: 10 a 18';
+      if (advisor.id === 'karenka') return 'Teórico: 9 a 4 · Descanso sáb';
       if (advisor.id === 'laura') return 'Teórico: 12 a 20';
-      if (advisor.id === 'santiago') return 'Teórico: 12 a 20';
+      if (advisor.id === 'santiago') return 'Teórico: 9 a 5 · Descanso sáb';
       return 'Teórico: Fijo';
     }
     const role = getRoleForAdvisor(advisor, weekIndex);
@@ -625,9 +633,13 @@
 
       ADVISORS.forEach((advisor) => {
         if (advisor.kind === 'fixed') {
-          if (dayIndex <= 4 && FIXED_WEEKDAY[advisor.id]) {
-            const fixedMeta = advisor.id === 'santiago' ? 'Lun-Sáb' : 'Lun-Vie';
-            cells[advisor.id] = buildCell(FIXED_WEEKDAY[advisor.id], fixedMeta, false);
+          const fixedConfig = FIXED_SCHEDULES[advisor.id];
+          if (fixedConfig) {
+            if (dayIndex === fixedConfig.offDayIndex) {
+              cells[advisor.id] = buildCell('free', 'Descanso fijo', false);
+            } else {
+              cells[advisor.id] = buildCell(fixedConfig.type, 'Horario fijo', false);
+            }
           }
           return;
         }
@@ -637,35 +649,6 @@
         const type = pattern[dayIndex] || 'free';
         cells[advisor.id] = buildCell(type, role ? `Semana ${weekIndex + 1} · Rol ${role}` : '', false);
       });
-
-      if (dayIndex === 5 || dayIndex === 6) {
-        const saturday = dayIndex === 5;
-        const sunday = dayIndex === 6;
-        if (weekIndex % 2 === 0) {
-          if (saturday) {
-            cells.karenka = buildCell('fixed1220', 'Sábado', false);
-          }
-          if (sunday) {
-            cells.laura = buildCell('fixed1220', 'Domingo', false);
-            cells.santiago = buildCell('free', '', false);
-          }
-        } else {
-          if (saturday) {
-            cells.laura = buildCell('fixed1220', 'Sábado', false);
-          }
-          if (sunday) {
-            cells.karenka = buildCell('fixed1220', 'Domingo', false);
-            cells.santiago = buildCell('free', '', false);
-          }
-        }
-        if (saturday) {
-          cells.santiago = buildCell('fixed1220', 'Sábado', false);
-        }
-        if (sunday) {
-          cells.santiago = buildCell('free', '', false);
-        }
-      }
-
       days.push({ date, cells });
     }
 
@@ -693,6 +676,8 @@
 
   function summarizeDay(cells) {
     const summary = {
+      fixed0917: 0,
+      fixed0916: 0,
       fixed1018: 0,
       fixed1220: 0,
       rot1015: 0,
@@ -709,6 +694,8 @@
 
   function summarizeWeek(sim) {
     const summary = {
+      fixed0917: 0,
+      fixed0916: 0,
       fixed1018: 0,
       fixed1220: 0,
       rot1015: 0,
@@ -772,6 +759,8 @@
       cells.push(`
         <div class="count-cell">
           <div class="count-stack">
+            <div class="count-line"><span>9 a 5</span><strong>${summary.fixed0917}</strong></div>
+            <div class="count-line"><span>9 a 4</span><strong>${summary.fixed0916}</strong></div>
             <div class="count-line"><span>10 a 18</span><strong>${summary.fixed1018}</strong></div>
             <div class="count-line"><span>12 a 20</span><strong>${summary.fixed1220}</strong></div>
             <div class="count-line"><span>10 a 15</span><strong>${summary.rot1015}</strong></div>
@@ -789,16 +778,28 @@
     const summary = summarizeWeek(sim);
     summaryStripEl.innerHTML = [
       {
+        key: 'fixed0917',
+        title: '9 a 5',
+        value: summary.fixed0917,
+        subtitle: 'Santiago · fijo'
+      },
+      {
+        key: 'fixed0916',
+        title: '9 a 4',
+        value: summary.fixed0916,
+        subtitle: 'Karenka · fijo'
+      },
+      {
         key: 'fixed1018',
         title: '10 a 18',
         value: summary.fixed1018,
-        subtitle: 'Karenka y bloques fijos'
+        subtitle: 'Disponible para ajustes'
       },
       {
         key: 'fixed1220',
         title: '12 a 20',
         value: summary.fixed1220,
-        subtitle: 'Laura y Santiago / guardias'
+        subtitle: 'Laura · fijo'
       },
       {
         key: 'rot1015',
