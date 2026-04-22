@@ -9,6 +9,7 @@ const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
 const { PDFDocument } = require('pdf-lib');
 const QRCode = require('qrcode');
+const nodemailer = require('nodemailer');
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -39,6 +40,16 @@ const LOCAL_NO_AUTH = String(process.env.LOCAL_NO_AUTH || '') === '1';
 const ALLOWED_DOMAIN = String(process.env.ALLOWED_DOMAIN || 'simca.mx').toLowerCase();
 const GERENTE_EMAIL = String(process.env.GERENTE_EMAIL || 'martin@simca.mx').toLowerCase();
 const VICEROY_RECEPTION_EMAIL = 'reception@viceroyplayadelcarmen.com';
+const APP_TIMEZONE = String(process.env.APP_TIMEZONE || 'America/Cancun').trim() || 'America/Cancun';
+const VICEROY_RESERVAS_DAILY_EMAIL_ENABLED = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_ENABLED || '1') !== '0';
+const VICEROY_RESERVAS_DAILY_EMAIL_TO = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_TO || `${VICEROY_RECEPTION_EMAIL},${GERENTE_EMAIL}`).trim();
+const VICEROY_RESERVAS_DAILY_EMAIL_CC = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_CC || '').trim();
+const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = String(process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true' || SMTP_PORT === 465;
+const SMTP_USER = String(process.env.SMTP_USER || '').trim();
+const SMTP_PASS = String(process.env.SMTP_PASS || '').trim();
+const SMTP_FROM = String(process.env.SMTP_FROM || '').trim();
 const EXTRA_ALLOWED_EMAILS = new Set(
   String(process.env.ALLOWED_EMAILS || '')
     .split(',')
@@ -126,6 +137,7 @@ const WHISPERLIST_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY WHISPERLIST.xlsx');
 const VICEROY_REGISTROS_JSON_PATH = path.join(DATA_DIR, 'viceroy-registros.json');
 const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx');
 const VICEROY_ROOM_RESERVATIONS_PATH = path.join(DATA_DIR, 'viceroy-room-reservations.json');
+const VICEROY_RESERVAS_DAILY_REPORT_STATE_PATH = path.join(DATA_DIR, 'viceroy-reservas-daily-report-state.json');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
@@ -2721,6 +2733,208 @@ function saveViceroyRoomReservations(rows) {
     rows: normalizedRows,
     updatedAt: new Date().toISOString()
   });
+}
+
+let viceroyDailyMailerTransport = null;
+let viceroyDailyReportTimer = null;
+
+function getTimePartsInTimeZone(dateValue, timeZone) {
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(date).reduce((acc, part) => {
+    if (part && part.type && part.value != null) acc[part.type] = part.value;
+    return acc;
+  }, {});
+  const year = String(parts.year || '0000');
+  const month = String(parts.month || '01');
+  const day = String(parts.day || '01');
+  const hour = Number(parts.hour || 0);
+  const minute = Number(parts.minute || 0);
+  return {
+    year,
+    month,
+    day,
+    hour: Number.isFinite(hour) ? hour : 0,
+    minute: Number.isFinite(minute) ? minute : 0,
+    dateKey: `${year}-${month}-${day}`
+  };
+}
+
+function reservationRoomLabel(room) {
+  if (room === 'sala-grande') return 'Sala grande';
+  if (room === 'sala-chica') return 'Sala chica';
+  if (room === 'reserva-sin-oficina') return 'Reserva sin sala';
+  return String(room || 'Sin sala');
+}
+
+function readViceroyDailyReportState() {
+  const raw = readJson(VICEROY_RESERVAS_DAILY_REPORT_STATE_PATH, {});
+  return {
+    lastSentDate: String(raw && raw.lastSentDate || '').trim(),
+    lastSentAt: String(raw && raw.lastSentAt || '').trim()
+  };
+}
+
+function saveViceroyDailyReportState(nextState) {
+  writeJson(VICEROY_RESERVAS_DAILY_REPORT_STATE_PATH, {
+    lastSentDate: String(nextState && nextState.lastSentDate || '').trim(),
+    lastSentAt: String(nextState && nextState.lastSentAt || '').trim() || new Date().toISOString()
+  });
+}
+
+function isViceroyDailyEmailConfigured() {
+  return Boolean(
+    VICEROY_RESERVAS_DAILY_EMAIL_TO &&
+    SMTP_HOST &&
+    SMTP_PORT &&
+    SMTP_USER &&
+    SMTP_PASS &&
+    SMTP_FROM
+  );
+}
+
+function getViceroyDailyMailerTransport() {
+  if (viceroyDailyMailerTransport) return viceroyDailyMailerTransport;
+  if (!isViceroyDailyEmailConfigured()) return null;
+  viceroyDailyMailerTransport = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS
+    }
+  });
+  return viceroyDailyMailerTransport;
+}
+
+function buildViceroyDailyReservationsEmail(todayKey, rows) {
+  const sorted = sortRoomReservationRows(Array.isArray(rows) ? rows : []);
+  const count = sorted.length;
+  const titleDate = new Date(`${todayKey}T00:00:00`);
+  const dateLabel = Number.isNaN(titleDate.getTime())
+    ? todayKey
+    : titleDate.toLocaleDateString('es-MX', { timeZone: APP_TIMEZONE, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  if (!count) {
+    const subject = `Viceroy · Reservas del día (${todayKey})`;
+    const text = `Resumen de reservas del ${dateLabel}\n\nNo hubo reservas registradas hoy.`;
+    const html = `<p><strong>Resumen de reservas del ${escapeHtml(dateLabel)}</strong></p><p>No hubo reservas registradas hoy.</p>`;
+    return { subject, text, html };
+  }
+
+  const lines = sorted.map((row, idx) => {
+    const advisor = String(row.createdByName || row.createdByEmail || '-').trim();
+    return `${idx + 1}. ${row.hour} - ${reservationRoomLabel(row.room)} | Broker: ${row.broker || '-'} | Cliente: ${row.client || '-'} | Pax: ${row.pax || '-'} | Asesor: ${advisor}`;
+  });
+
+  const subject = `Viceroy · Reservas del día (${todayKey}) · ${count} total`;
+  const text = [
+    `Resumen de reservas del ${dateLabel}`,
+    '',
+    `Total: ${count}`,
+    '',
+    ...lines
+  ].join('\n');
+
+  const rowsHtml = sorted.map((row) => {
+    const advisor = String(row.createdByName || row.createdByEmail || '-').trim();
+    return `<tr>
+      <td style="border:1px solid #ddd;padding:6px 8px;">${escapeHtml(row.hour || '-')}</td>
+      <td style="border:1px solid #ddd;padding:6px 8px;">${escapeHtml(reservationRoomLabel(row.room))}</td>
+      <td style="border:1px solid #ddd;padding:6px 8px;">${escapeHtml(row.broker || '-')}</td>
+      <td style="border:1px solid #ddd;padding:6px 8px;">${escapeHtml(row.client || '-')}</td>
+      <td style="border:1px solid #ddd;padding:6px 8px;">${escapeHtml(row.pax || '-')}</td>
+      <td style="border:1px solid #ddd;padding:6px 8px;">${escapeHtml(advisor || '-')}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<div style="font-family:Arial,sans-serif;color:#1f1f1f;">
+    <p><strong>Resumen de reservas del ${escapeHtml(dateLabel)}</strong></p>
+    <p>Total de reservas: <strong>${count}</strong></p>
+    <table style="border-collapse:collapse;width:100%;max-width:960px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #ddd;padding:6px 8px;text-align:left;background:#f7f3e7;">Hora</th>
+          <th style="border:1px solid #ddd;padding:6px 8px;text-align:left;background:#f7f3e7;">Sala</th>
+          <th style="border:1px solid #ddd;padding:6px 8px;text-align:left;background:#f7f3e7;">Broker</th>
+          <th style="border:1px solid #ddd;padding:6px 8px;text-align:left;background:#f7f3e7;">Cliente</th>
+          <th style="border:1px solid #ddd;padding:6px 8px;text-align:left;background:#f7f3e7;">Pax</th>
+          <th style="border:1px solid #ddd;padding:6px 8px;text-align:left;background:#f7f3e7;">Asesor</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>`;
+
+  return { subject, text, html };
+}
+
+async function sendViceroyDailyReservationsReport(todayKey) {
+  const transport = getViceroyDailyMailerTransport();
+  if (!transport) {
+    log('Reporte diario reservas Viceroy omitido: SMTP o destinatarios no configurados.');
+    return false;
+  }
+  const data = readViceroyRoomReservations();
+  const rows = data.rows.filter((row) => String(row && row.date || '') === todayKey);
+  const email = buildViceroyDailyReservationsEmail(todayKey, rows);
+  const message = {
+    from: SMTP_FROM,
+    to: VICEROY_RESERVAS_DAILY_EMAIL_TO,
+    subject: email.subject,
+    text: email.text,
+    html: email.html
+  };
+  if (VICEROY_RESERVAS_DAILY_EMAIL_CC) {
+    message.cc = VICEROY_RESERVAS_DAILY_EMAIL_CC;
+  }
+  await transport.sendMail(message);
+  log(`Reporte diario reservas Viceroy enviado (${todayKey}) a ${VICEROY_RESERVAS_DAILY_EMAIL_TO}`);
+  return true;
+}
+
+async function processViceroyDailyReservationsReport(now = new Date()) {
+  if (!VICEROY_RESERVAS_DAILY_EMAIL_ENABLED) return;
+  const parts = getTimePartsInTimeZone(now, APP_TIMEZONE);
+  if (!parts || parts.hour < 21) return;
+  const todayKey = parts.dateKey;
+  const state = readViceroyDailyReportState();
+  if (state.lastSentDate === todayKey) return;
+  try {
+    const sent = await sendViceroyDailyReservationsReport(todayKey);
+    if (!sent) return;
+    saveViceroyDailyReportState({
+      lastSentDate: todayKey,
+      lastSentAt: new Date().toISOString()
+    });
+  } catch (err) {
+    log(`Error enviando reporte diario reservas Viceroy: ${err && err.stack ? err.stack : err}`);
+  }
+}
+
+function startViceroyDailyReservationsScheduler() {
+  if (!VICEROY_RESERVAS_DAILY_EMAIL_ENABLED) {
+    log('Scheduler reporte diario reservas Viceroy desactivado por configuración.');
+    return;
+  }
+  processViceroyDailyReservationsReport().catch((err) => {
+    log(`Error inicial scheduler reservas Viceroy: ${err && err.stack ? err.stack : err}`);
+  });
+  if (viceroyDailyReportTimer) clearInterval(viceroyDailyReportTimer);
+  viceroyDailyReportTimer = setInterval(() => {
+    processViceroyDailyReservationsReport().catch((err) => {
+      log(`Error scheduler reservas Viceroy: ${err && err.stack ? err.stack : err}`);
+    });
+  }, 60 * 1000);
 }
 
 async function isAllowedLoginEmail(email) {
@@ -8509,6 +8723,7 @@ async function startServer() {
     });
   const server = app.listen(PORT, HOST, () => {
     log(`Servidor listo en http://${HOST}:${PORT}`);
+    startViceroyDailyReservationsScheduler();
   });
   // Helps prevent intermittent gateway resets on long-running PDF generation requests.
   server.keepAliveTimeout = 120000;

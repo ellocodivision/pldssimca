@@ -22,7 +22,7 @@
     --rot-morning:#efc13a;
     --rot-afternoon:#f09c4e;
     --free:#f1ece2;
-    --row-height:88px;
+    --row-height:108px;
   }
 
   *{box-sizing:border-box}
@@ -206,7 +206,7 @@
   .shift-cell{
     padding:10px;
     background:#fff;
-    overflow:hidden;
+    overflow:visible;
   }
 
   .shift-cell.editable{ cursor:pointer; }
@@ -214,31 +214,31 @@
 
   .shift-card{
     height:100%;
-    min-height:64px;
+    min-height:84px;
     border-radius:18px;
-    padding:12px 12px 10px;
+    padding:12px 11px 10px;
     display:flex;
     flex-direction:column;
     justify-content:space-between;
-    gap:10px;
+    gap:8px;
     font-weight:800;
-    overflow:hidden;
+    overflow:visible;
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);
   }
 
   .shift-card .title{
-    font-size:13px;
-    line-height:1.12;
+    font-size:12px;
+    line-height:1.16;
     letter-spacing:.03em;
     text-transform:uppercase;
     display:-webkit-box;
-    -webkit-line-clamp:2;
+    -webkit-line-clamp:3;
     -webkit-box-orient:vertical;
     overflow:hidden;
   }
 
   .shift-card .meta{
-    font-size:12px;
+    font-size:11px;
     font-weight:700;
     opacity:.9;
   }
@@ -402,7 +402,11 @@
   }
 
   @media (max-width: 800px){
+    :root{ --row-height:100px; }
     .summary-strip{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .shift-card{ min-height:78px; padding:10px 10px 8px; }
+    .shift-card .title{ font-size:11px; line-height:1.12; }
+    .shift-card .meta{ font-size:10px; }
   }
 
   @media (max-width: 720px){
