@@ -109,6 +109,7 @@ const TABLA_PAGOS_LAYOUT_PATH = path.join(DATA_DIR, 'tabla-pagos-layout.json');
 const FINANCIAMIENTO_SIMCA_LAYOUT_PATH = path.join(DATA_DIR, 'financiamiento-simca-layout.json');
 const HOJA_RESERVA_SIMCA_LAYOUT_PATH = path.join(DATA_DIR, 'hoja-reserva-simca-layout.json');
 const HORARIOS_SIMCA_OVERRIDES_PATH = path.join(DATA_DIR, 'horarios-simca-overrides.json');
+const HORARIOS_VICEROY_OVERRIDES_PATH = path.join(DATA_DIR, 'horarios-viceroy-overrides.json');
 const VICEROY_PAYMENT_PLAN_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-payment-plan-layout.json');
 const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
 const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
@@ -1941,6 +1942,14 @@ const HORARIOS_SIMCA_SHIFT_TYPES = new Set([
   'free'
 ]);
 
+const HORARIOS_VICEROY_SHIFT_TYPES = new Set([
+  'fixed1018',
+  'fixed1220',
+  'rot1015',
+  'rot1520',
+  'free'
+]);
+
 function normalizeHorariosSimcaOverrideRow(row) {
   const weekStart = normalizeReservationDate(row && row.weekStart);
   const date = normalizeReservationDate(row && row.date);
@@ -1969,6 +1978,40 @@ function saveHorariosSimcaOverrides(rows) {
     ? rows.map(normalizeHorariosSimcaOverrideRow).filter(Boolean)
     : [];
   writeJson(HORARIOS_SIMCA_OVERRIDES_PATH, {
+    rows: normalizedRows,
+    updatedAt: new Date().toISOString()
+  });
+  return normalizedRows;
+}
+
+function normalizeHorariosViceroyOverrideRow(row) {
+  const weekStart = normalizeReservationDate(row && row.weekStart);
+  const date = normalizeReservationDate(row && row.date);
+  const advisorId = String(row && row.advisorId || '').trim().toLowerCase();
+  const typeRaw = String(row && row.type || '').trim();
+  const type = HORARIOS_VICEROY_SHIFT_TYPES.has(typeRaw) ? typeRaw : '';
+  const updatedBy = String(row && row.updatedBy || '').trim().toLowerCase();
+  const updatedAt = String(row && row.updatedAt || '').trim() || new Date().toISOString();
+  if (!weekStart || !date || !advisorId || !type) return null;
+  return { weekStart, date, advisorId, type, updatedBy, updatedAt };
+}
+
+function readHorariosViceroyOverrides() {
+  const raw = readJson(HORARIOS_VICEROY_OVERRIDES_PATH, { rows: [], updatedAt: null });
+  const rows = Array.isArray(raw && raw.rows)
+    ? raw.rows.map(normalizeHorariosViceroyOverrideRow).filter(Boolean)
+    : [];
+  return {
+    rows,
+    updatedAt: raw && raw.updatedAt ? String(raw.updatedAt) : null
+  };
+}
+
+function saveHorariosViceroyOverrides(rows) {
+  const normalizedRows = Array.isArray(rows)
+    ? rows.map(normalizeHorariosViceroyOverrideRow).filter(Boolean)
+    : [];
+  writeJson(HORARIOS_VICEROY_OVERRIDES_PATH, {
     rows: normalizedRows,
     updatedAt: new Date().toISOString()
   });
@@ -4267,6 +4310,8 @@ app.use('/generador-roi', requireInternalUser);
 app.use('/financiamiento-simca', requireInternalUser);
 app.use('/horarios-simca', requireInternalUser);
 app.use('/api/horarios-simca', requireInternalUser);
+app.use('/horarios-viceroy', requireAuth);
+app.use('/api/horarios-viceroy', requireAuth);
 app.use('/tabla-pagos', requireInternalUser);
 app.use('/hoja-reserva-simca', requireInternalUser);
 app.use('/form', requireInternalUser);
@@ -4381,10 +4426,29 @@ app.get('/horarios-simca', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'horarios-simca.html'));
 });
 
+app.get('/horarios-viceroy', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'horarios-viceroy.html'));
+});
+
 app.get('/api/horarios-simca/overrides', (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
   const weekStart = normalizeReservationDate(req.query && req.query.weekStart);
   const data = readHorariosSimcaOverrides();
+  const rows = weekStart
+    ? data.rows.filter((row) => row.weekStart === weekStart)
+    : data.rows;
+  return res.json({
+    ok: true,
+    isGerente: currentEmail === GERENTE_EMAIL,
+    rows,
+    updatedAt: data.updatedAt
+  });
+});
+
+app.get('/api/horarios-viceroy/overrides', (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const weekStart = normalizeReservationDate(req.query && req.query.weekStart);
+  const data = readHorariosViceroyOverrides();
   const rows = weekStart
     ? data.rows.filter((row) => row.weekStart === weekStart)
     : data.rows;
@@ -4420,6 +4484,30 @@ app.post('/api/horarios-simca/overrides', requireGerente, (req, res) => {
   return res.json({ ok: true, row: incoming, rows: saved.filter((row) => row.weekStart === incoming.weekStart) });
 });
 
+app.post('/api/horarios-viceroy/overrides', requireGerente, (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const incoming = normalizeHorariosViceroyOverrideRow({
+    weekStart: req.body && req.body.weekStart,
+    date: req.body && req.body.date,
+    advisorId: req.body && req.body.advisorId,
+    type: req.body && req.body.type,
+    updatedBy: currentEmail,
+    updatedAt: new Date().toISOString()
+  });
+  if (!incoming) {
+    return res.status(400).json({ error: 'Ajuste inválido.' });
+  }
+  const data = readHorariosViceroyOverrides();
+  const rows = data.rows.filter((row) => !(
+    row.weekStart === incoming.weekStart &&
+    row.date === incoming.date &&
+    row.advisorId === incoming.advisorId
+  ));
+  rows.push(incoming);
+  const saved = saveHorariosViceroyOverrides(rows);
+  return res.json({ ok: true, row: incoming, rows: saved.filter((row) => row.weekStart === incoming.weekStart) });
+});
+
 app.delete('/api/horarios-simca/overrides', requireGerente, (req, res) => {
   const weekStart = normalizeReservationDate(req.body && req.body.weekStart);
   const date = normalizeReservationDate(req.body && req.body.date);
@@ -4434,6 +4522,23 @@ app.delete('/api/horarios-simca/overrides', requireGerente, (req, res) => {
     row.advisorId === advisorId
   ));
   saveHorariosSimcaOverrides(nextRows);
+  return res.json({ ok: true, rows: nextRows.filter((row) => row.weekStart === weekStart) });
+});
+
+app.delete('/api/horarios-viceroy/overrides', requireGerente, (req, res) => {
+  const weekStart = normalizeReservationDate(req.body && req.body.weekStart);
+  const date = normalizeReservationDate(req.body && req.body.date);
+  const advisorId = String(req.body && req.body.advisorId || '').trim().toLowerCase();
+  if (!weekStart || !date || !advisorId) {
+    return res.status(400).json({ error: 'Faltan datos del ajuste.' });
+  }
+  const data = readHorariosViceroyOverrides();
+  const nextRows = data.rows.filter((row) => !(
+    row.weekStart === weekStart &&
+    row.date === date &&
+    row.advisorId === advisorId
+  ));
+  saveHorariosViceroyOverrides(nextRows);
   return res.json({ ok: true, rows: nextRows.filter((row) => row.weekStart === weekStart) });
 });
 

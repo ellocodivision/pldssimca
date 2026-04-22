@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horarios Viceroy</title>
+<style>
+  :root{
+    --bg:#f6f1e7;
+    --card:#fffdfa;
+    --card-soft:#faf4e8;
+    --ink:#1f1b16;
+    --muted:#72685c;
+    --line:#ddd2c0;
+    --accent:#dcb64f;
+    --accent-ink:#2f250f;
+    --shadow:0 24px 60px rgba(64, 46, 18, .08);
+    --fixed-early:#a57c1a;
+    --fixed-late:#6fae48;
+    --rot-morning:#efc13a;
+    --rot-afternoon:#f09c4e;
+    --free:#f1ece2;
+    --row-height:88px;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(220,182,79,.16), transparent 26%),
+      linear-gradient(180deg, #faf7ef 0%, var(--bg) 100%);
+  }
+
+  .page{
+    max-width:1500px;
+    margin:0 auto;
+    padding:22px 18px 36px;
+  }
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+
+  .topbar-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .topbar-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .back-btn,
+  .nav-btn,
+  .today-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:42px;
+    padding:0 16px;
+    border-radius:999px;
+    border:1px solid #c7bca6;
+    background:rgba(255,255,255,.92);
+    color:#241d14;
+    font:inherit;
+    font-size:13px;
+    font-weight:800;
+    text-decoration:none;
+    cursor:pointer;
+  }
+
+  .today-btn{
+    background:var(--accent);
+    border-color:#c6a441;
+    color:var(--accent-ink);
+  }
+
+  .week-pill{
+    display:inline-flex;
+    align-items:center;
+    min-height:42px;
+    padding:0 16px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#f4efe3;
+    color:#4a3d2d;
+    font-weight:800;
+    font-size:13px;
+    white-space:nowrap;
+  }
+
+  .editor-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    margin:2px 0 14px;
+  }
+
+  .editor-note{
+    color:var(--muted);
+    font-size:13px;
+    font-weight:700;
+  }
+
+  .editor-status{
+    min-height:20px;
+    color:#6f634f;
+    font-size:13px;
+    font-weight:700;
+  }
+
+  .editor-status.error{ color:#b42318; }
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+  }
+
+  .board-wrap{
+    overflow:auto;
+    padding:14px;
+  }
+
+  .board{
+    min-width:1240px;
+    display:grid;
+    grid-template-columns:260px repeat(7, minmax(138px, 1fr));
+    grid-auto-rows:var(--row-height);
+    border:1px solid var(--line);
+    border-radius:24px;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .head-cell,
+  .person-cell,
+  .shift-cell,
+  .count-cell{
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+
+  .head-cell{
+    padding:12px;
+    background:#f8f3e7;
+  }
+
+  .head-cell.blank{ background:#f4eee1; }
+
+  .day-name{
+    font-size:15px;
+    font-weight:900;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  .day-date{
+    margin-top:8px;
+    color:#74695d;
+    font-size:13px;
+    font-weight:700;
+  }
+
+  .person-cell{
+    padding:14px 16px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:6px;
+    background:#fff;
+  }
+
+  .person-name{
+    font-size:18px;
+    font-weight:900;
+    line-height:1.05;
+    letter-spacing:.01em;
+  }
+
+  .person-theory{
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:#7d7165;
+  }
+
+  .shift-cell{
+    padding:10px;
+    background:#fff;
+    overflow:hidden;
+  }
+
+  .shift-cell.editable{ cursor:pointer; }
+  .shift-cell.editable:hover{ background:#fbf6eb; }
+
+  .shift-card{
+    height:100%;
+    min-height:64px;
+    border-radius:18px;
+    padding:12px 12px 10px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:10px;
+    font-weight:800;
+    overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);
+  }
+
+  .shift-card .title{
+    font-size:13px;
+    line-height:1.12;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+
+  .shift-card .meta{
+    font-size:12px;
+    font-weight:700;
+    opacity:.9;
+  }
+
+  .shift-card.fixed1018{ background:var(--fixed-early); color:#fff6dc; }
+  .shift-card.fixed1220{ background:var(--fixed-late); color:#15210f; }
+  .shift-card.rot1015{ background:var(--rot-morning); color:#2b2108; }
+  .shift-card.rot1520{ background:var(--rot-afternoon); color:#28170a; }
+  .shift-card.free{ background:var(--free); color:#75695e; box-shadow:inset 0 0 0 1px rgba(0,0,0,.04); }
+
+  .manual-badge{
+    align-self:flex-start;
+    padding:3px 8px;
+    border-radius:999px;
+    background:rgba(255,255,255,.26);
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+
+  .count-cell{
+    background:#faf7f0;
+    padding:12px 14px;
+    min-height:var(--row-height);
+    height:var(--row-height);
+    overflow:hidden;
+  }
+
+  .count-label{
+    font-size:16px;
+    font-weight:900;
+    display:flex;
+    align-items:center;
+  }
+
+  .count-stack{
+    display:grid;
+    gap:6px;
+  }
+
+  .count-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-size:12px;
+    color:#5d5245;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .count-line strong{
+    font-size:15px;
+    color:#1f1b16;
+    font-weight:900;
+    text-transform:none;
+  }
+
+  .summary-strip{
+    margin-top:14px;
+    display:grid;
+    grid-template-columns:repeat(5, minmax(0, 1fr));
+    gap:10px;
+  }
+
+  .mini-stat{
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:var(--card-soft);
+    padding:14px 14px 12px;
+  }
+
+  .mini-stat .k{
+    font-size:11px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:#7d7264;
+  }
+
+  .mini-stat .v{
+    margin-top:8px;
+    font-size:18px;
+    font-weight:900;
+    line-height:1.15;
+  }
+
+  .mini-stat .s{
+    margin-top:6px;
+    color:#75695d;
+    font-size:12px;
+    line-height:1.25;
+  }
+
+  .cell-editor{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    width:min(340px, calc(100vw - 24px));
+    padding:16px;
+    border-radius:24px;
+    border:1px solid var(--line);
+    background:rgba(255,253,248,.98);
+    box-shadow:var(--shadow);
+    z-index:30;
+  }
+
+  .cell-editor[hidden]{ display:none; }
+
+  .cell-editor-title{
+    font-size:15px;
+    font-weight:900;
+  }
+
+  .cell-editor-meta{
+    margin-top:6px;
+    font-size:13px;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .cell-editor-select{
+    width:100%;
+    margin-top:12px;
+    min-height:44px;
+    border-radius:14px;
+    border:1px solid #ccbfa9;
+    background:#fff;
+    padding:0 12px;
+    font:inherit;
+  }
+
+  .cell-editor-actions{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .cell-editor-btn{
+    flex:1;
+    min-height:42px;
+    border-radius:999px;
+    border:1px solid #c8bda9;
+    background:#fff;
+    color:#241d14;
+    font:inherit;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .cell-editor-btn.primary{
+    background:var(--accent);
+    border-color:#c6a441;
+  }
+
+  .mobile-only-note{
+    display:none;
+  }
+
+  @media (max-width: 800px){
+    .summary-strip{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+
+  @media (max-width: 720px){
+    .page{ padding:18px 12px 28px; }
+    .board{ min-width:1160px; }
+    .mobile-only-note{ display:block; }
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <div class="topbar-left">
+        <a class="back-btn" href="/viceroy/inicio">Regresar a Viceroy</a>
+        <button class="nav-btn" id="prevWeekBtn" type="button">Semana anterior</button>
+        <div class="week-pill" id="weekRangePill">Semana</div>
+        <button class="today-btn" id="currentWeekBtn" type="button">Semana actual</button>
+        <button class="nav-btn" id="nextWeekBtn" type="button">Semana siguiente</button>
+      </div>
+      <div class="topbar-right">
+        <div class="week-pill" id="roleHintPill">Viceroy schedule</div>
+      </div>
+    </div>
+
+    <div class="editor-bar">
+      <div class="editor-note" id="editorNote">Horario semanal de Viceroy. Click en una celda para editar.</div>
+      <div class="editor-status" id="editorStatus"></div>
+    </div>
+
+    <section class="panel">
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+      </div>
+    </section>
+
+    <section class="summary-strip" id="summaryStrip"></section>
+  </main>
+
+  <div class="cell-editor" id="cellEditor" hidden>
+    <div class="cell-editor-title" id="cellEditorTitle">Editar horario</div>
+    <div class="cell-editor-meta" id="cellEditorMeta"></div>
+    <select class="cell-editor-select" id="cellEditorSelect"></select>
+    <div class="cell-editor-actions">
+      <button class="cell-editor-btn primary" id="cellEditorSaveBtn" type="button">Guardar</button>
+      <button class="cell-editor-btn" id="cellEditorDeleteBtn" type="button">Quitar ajuste</button>
+      <button class="cell-editor-btn" id="cellEditorCancelBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const WEEKDAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const MONTH_NAMES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const BASE_MONDAY = '2026-04-20';
+
+  const ADVISORS = [
+    { id: 'karenka', name: 'KARENKA', kind: 'fixed' },
+    { id: 'laura', name: 'LAURA', kind: 'fixed' },
+    { id: 'santiago', name: 'SANTIAGO', kind: 'fixed' },
+    { id: 'marion', name: 'MARION', kind: 'rotating', baseRole: 1 },
+    { id: 'michelle', name: 'MICHELLE', kind: 'rotating', baseRole: 2 },
+    { id: 'daniela', name: 'DANIELA', kind: 'rotating', baseRole: 3 },
+    { id: 'jasso', name: 'JASSO', kind: 'rotating', baseRole: 4 },
+    { id: 'karla', name: 'KARLA', kind: 'rotating', baseRole: 5 }
+  ];
+
+  const SHIFT_META = {
+    fixed1018: { title: '10:00 a 18:00', short: '10 a 18', tone: 'fixed1018' },
+    fixed1220: { title: '12:00 a 20:00', short: '12 a 20', tone: 'fixed1220' },
+    rot1015: { title: '10:00 a 15:00', short: '10 a 15', tone: 'rot1015' },
+    rot1520: { title: '15:00 a 20:00', short: '15 a 20', tone: 'rot1520' },
+    free: { title: '', short: 'Libre', tone: 'free' }
+  };
+
+  const MANUAL_SHIFT_OPTIONS = [
+    { value: 'fixed1018', label: '10:00 a 18:00' },
+    { value: 'fixed1220', label: '12:00 a 20:00' },
+    { value: 'rot1015', label: '10:00 a 15:00' },
+    { value: 'rot1520', label: '15:00 a 20:00' },
+    { value: 'free', label: 'Libre' }
+  ];
+
+  const ROTATING_PATTERNS = {
+    1: ['rot1015', 'free', 'rot1015', 'free', 'free', 'rot1015', 'free'],
+    2: ['free', 'rot1520', 'free', 'free', 'rot1520', 'rot1520', 'free'],
+    3: ['free', 'rot1015', 'free', 'rot1015', 'free', 'free', 'rot1015'],
+    4: ['rot1520', 'free', 'free', 'rot1520', 'free', 'free', 'rot1520'],
+    5: ['free', 'free', 'rot1520', 'free', 'rot1015', 'free', 'free']
+  };
+
+  const ROLE_SUMMARIES = {
+    1: 'Lun / Mié / Sáb · 10:00-15:00',
+    2: 'Mar / Vie / Sáb · 15:00-20:00',
+    3: 'Mar / Jue / Dom · 10:00-15:00',
+    4: 'Lun / Jue / Dom · 15:00-20:00',
+    5: 'Mié / Vie · 10:00-15:00'
+  };
+
+  const FIXED_WEEKDAY = {
+    karenka: 'fixed1018',
+    laura: 'fixed1220',
+    santiago: 'fixed1220'
+  };
+
+  const boardEl = document.getElementById('board');
+  const summaryStripEl = document.getElementById('summaryStrip');
+  const weekRangePillEl = document.getElementById('weekRangePill');
+  const roleHintPillEl = document.getElementById('roleHintPill');
+  const editorNoteEl = document.getElementById('editorNote');
+  const editorStatusEl = document.getElementById('editorStatus');
+  const prevWeekBtn = document.getElementById('prevWeekBtn');
+  const currentWeekBtn = document.getElementById('currentWeekBtn');
+  const nextWeekBtn = document.getElementById('nextWeekBtn');
+  const cellEditorEl = document.getElementById('cellEditor');
+  const cellEditorTitleEl = document.getElementById('cellEditorTitle');
+  const cellEditorMetaEl = document.getElementById('cellEditorMeta');
+  const cellEditorSelectEl = document.getElementById('cellEditorSelect');
+  const cellEditorSaveBtn = document.getElementById('cellEditorSaveBtn');
+  const cellEditorDeleteBtn = document.getElementById('cellEditorDeleteBtn');
+  const cellEditorCancelBtn = document.getElementById('cellEditorCancelBtn');
+
+  let selectedMonday = startOfWeek(new Date());
+  let currentSim = null;
+  let currentOverrides = [];
+  let isGerente = false;
+  let activeCellContext = null;
+  let loadToken = 0;
+  let autoTimer = null;
+
+  function parseIsoDate(value) {
+    const parts = String(value || '').split('-').map(Number);
+    if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return new Date();
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function startOfWeek(date) {
+    const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const day = copy.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    copy.setDate(copy.getDate() + diff);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    next.setDate(next.getDate() + days);
+    next.setHours(0, 0, 0, 0);
+    return next;
+  }
+
+  function dateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatShortDate(date) {
+    return `${date.getDate()} ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+  }
+
+  function formatCompactDate(date) {
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
+
+  function diffWeeks(base, target) {
+    return Math.round((startOfWeek(target).getTime() - startOfWeek(base).getTime()) / (7 * 24 * 60 * 60 * 1000));
+  }
+
+  function positiveMod(value, modulo) {
+    return ((value % modulo) + modulo) % modulo;
+  }
+
+  function getRoleForAdvisor(advisor, weekIndex) {
+    if (advisor.kind !== 'rotating') return null;
+    return positiveMod((advisor.baseRole || 1) - 1 + weekIndex, 5) + 1;
+  }
+
+  function getTheoryLabel(advisor, weekIndex) {
+    if (advisor.kind === 'fixed') {
+      if (advisor.id === 'karenka') return 'Teórico: 10 a 18';
+      if (advisor.id === 'laura') return 'Teórico: 12 a 20';
+      if (advisor.id === 'santiago') return 'Teórico: 12 a 20';
+      return 'Teórico: Fijo';
+    }
+    const role = getRoleForAdvisor(advisor, weekIndex);
+    return `Teórico: Rol ${role} · ${ROLE_SUMMARIES[role] || ''}`;
+  }
+
+  function buildCell(type, meta, manual) {
+    return {
+      type,
+      meta: meta || '',
+      manual: Boolean(manual),
+      title: SHIFT_META[type] ? SHIFT_META[type].title : '',
+      short: SHIFT_META[type] ? SHIFT_META[type].short : '',
+      tone: SHIFT_META[type] ? SHIFT_META[type].tone : 'free'
+    };
+  }
+
+  function cloneWeekSimulation(week) {
+    return {
+      weekIndex: week.weekIndex,
+      weekStart: new Date(week.weekStart.getTime()),
+      days: week.days.map((day) => ({
+        date: new Date(day.date.getTime()),
+        cells: Object.fromEntries(Object.entries(day.cells).map(([id, cell]) => [id, { ...cell }]))
+      }))
+    };
+  }
+
+  function buildBaseWeek(weekStart) {
+    const weekIndex = diffWeeks(parseIsoDate(BASE_MONDAY), weekStart);
+    const days = [];
+
+    for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+      const date = addDays(weekStart, dayIndex);
+      const cells = {};
+
+      ADVISORS.forEach((advisor) => {
+        cells[advisor.id] = buildCell('free', '', false);
+      });
+
+      ADVISORS.forEach((advisor) => {
+        if (advisor.kind === 'fixed') {
+          if (dayIndex <= 4 && FIXED_WEEKDAY[advisor.id]) {
+            const fixedMeta = advisor.id === 'santiago' ? 'Lun-Sáb' : 'Lun-Vie';
+            cells[advisor.id] = buildCell(FIXED_WEEKDAY[advisor.id], fixedMeta, false);
+          }
+          return;
+        }
+
+        const role = getRoleForAdvisor(advisor, weekIndex);
+        const pattern = ROTATING_PATTERNS[role] || ROTATING_PATTERNS[1];
+        const type = pattern[dayIndex] || 'free';
+        cells[advisor.id] = buildCell(type, role ? `Semana ${weekIndex + 1} · Rol ${role}` : '', false);
+      });
+
+      if (dayIndex === 5 || dayIndex === 6) {
+        const saturday = dayIndex === 5;
+        const sunday = dayIndex === 6;
+        if (weekIndex % 2 === 0) {
+          if (saturday) {
+            cells.karenka = buildCell('fixed1220', 'Sábado', false);
+          }
+          if (sunday) {
+            cells.laura = buildCell('fixed1220', 'Domingo', false);
+            cells.santiago = buildCell('free', '', false);
+          }
+        } else {
+          if (saturday) {
+            cells.laura = buildCell('fixed1220', 'Sábado', false);
+          }
+          if (sunday) {
+            cells.karenka = buildCell('fixed1220', 'Domingo', false);
+            cells.santiago = buildCell('free', '', false);
+          }
+        }
+        if (saturday) {
+          cells.santiago = buildCell('fixed1220', 'Sábado', false);
+        }
+        if (sunday) {
+          cells.santiago = buildCell('free', '', false);
+        }
+      }
+
+      days.push({ date, cells });
+    }
+
+    return { weekIndex, weekStart, days };
+  }
+
+  function applyOverridesToSimulation(sim, rows) {
+    if (!Array.isArray(rows) || !rows.length) return sim;
+    const lookup = new Map();
+    rows.forEach((row) => {
+      if (!row || !row.date || !row.advisorId || !row.type) return;
+      lookup.set(`${row.date}__${row.advisorId}`, row);
+    });
+    sim.days.forEach((day) => {
+      const dayKey = dateKey(day.date);
+      ADVISORS.forEach((advisor) => {
+        const override = lookup.get(`${dayKey}__${advisor.id}`);
+        if (override) {
+          day.cells[advisor.id] = buildCell(override.type, 'Ajuste manual', true);
+        }
+      });
+    });
+    return sim;
+  }
+
+  function summarizeDay(cells) {
+    const summary = {
+      fixed1018: 0,
+      fixed1220: 0,
+      rot1015: 0,
+      rot1520: 0,
+      free: 0
+    };
+    ADVISORS.forEach((advisor) => {
+      const cell = cells[advisor.id];
+      const key = cell && summary.hasOwnProperty(cell.type) ? cell.type : 'free';
+      summary[key] += 1;
+    });
+    return summary;
+  }
+
+  function summarizeWeek(sim) {
+    const summary = {
+      fixed1018: 0,
+      fixed1220: 0,
+      rot1015: 0,
+      rot1520: 0,
+      free: 0
+    };
+    sim.days.forEach((day) => {
+      const daySummary = summarizeDay(day.cells);
+      Object.keys(summary).forEach((key) => {
+        summary[key] += daySummary[key] || 0;
+      });
+    });
+    return summary;
+  }
+
+  function renderBoard(sim) {
+    const start = sim.weekStart;
+    weekRangePillEl.textContent = `${formatShortDate(start)} - ${formatShortDate(addDays(start, 6))}`;
+    roleHintPillEl.textContent = `Viceroy · Semana ${sim.weekIndex + 1}`;
+
+    const cells = [];
+    cells.push(`<div class="head-cell blank"></div>`);
+
+    sim.days.forEach((day) => {
+      cells.push(`
+        <div class="head-cell">
+          <div class="day-name">${WEEKDAY_NAMES[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}</div>
+          <div class="day-date">${formatCompactDate(day.date)}</div>
+        </div>
+      `);
+    });
+
+    ADVISORS.forEach((advisor) => {
+      cells.push(`
+        <div class="person-cell">
+          <div class="person-name">${advisor.name}</div>
+          <div class="person-theory">${getTheoryLabel(advisor, sim.weekIndex)}</div>
+        </div>
+      `);
+      sim.days.forEach((day) => {
+        const cell = day.cells[advisor.id] || buildCell('free', '', false);
+        const manualClass = cell.manual ? ' manual' : '';
+        const canEditClass = isGerente ? ' editable' : '';
+        cells.push(`
+          <div class="shift-cell${manualClass}${canEditClass}" data-advisor-id="${advisor.id}" data-date="${dateKey(day.date)}">
+            <div class="shift-card ${cell.tone}">
+              <div class="title">${cell.title || '&nbsp;'}</div>
+              <div class="meta">${cell.meta || '&nbsp;'}</div>
+              ${cell.manual ? '<div class="manual-badge">Manual</div>' : ''}
+            </div>
+          </div>
+        `);
+      });
+    });
+
+    cells.push(`
+      <div class="count-cell count-label">Conteo</div>
+    `);
+    sim.days.forEach((day) => {
+      const summary = summarizeDay(day.cells);
+      cells.push(`
+        <div class="count-cell">
+          <div class="count-stack">
+            <div class="count-line"><span>10 a 18</span><strong>${summary.fixed1018}</strong></div>
+            <div class="count-line"><span>12 a 20</span><strong>${summary.fixed1220}</strong></div>
+            <div class="count-line"><span>10 a 15</span><strong>${summary.rot1015}</strong></div>
+            <div class="count-line"><span>15 a 20</span><strong>${summary.rot1520}</strong></div>
+            <div class="count-line"><span>Libre</span><strong>${summary.free}</strong></div>
+          </div>
+        </div>
+      `);
+    });
+
+    boardEl.innerHTML = cells.join('');
+  }
+
+  function renderSummary(sim) {
+    const summary = summarizeWeek(sim);
+    summaryStripEl.innerHTML = [
+      {
+        key: 'fixed1018',
+        title: '10 a 18',
+        value: summary.fixed1018,
+        subtitle: 'Karenka y bloques fijos'
+      },
+      {
+        key: 'fixed1220',
+        title: '12 a 20',
+        value: summary.fixed1220,
+        subtitle: 'Laura y Santiago / guardias'
+      },
+      {
+        key: 'rot1015',
+        title: '10 a 15',
+        value: summary.rot1015,
+        subtitle: 'Rotación semanal'
+      },
+      {
+        key: 'rot1520',
+        title: '15 a 20',
+        value: summary.rot1520,
+        subtitle: 'Rotación semanal'
+      },
+      {
+        key: 'free',
+        title: 'Libre',
+        value: summary.free,
+        subtitle: 'Descansos / huecos'
+      }
+    ].map((item) => `
+      <div class="mini-stat">
+        <div class="k">${item.title}</div>
+        <div class="v">${item.value}</div>
+        <div class="s">${item.subtitle}</div>
+      </div>
+    `).join('');
+  }
+
+  function openEditor(advisorId, dateKeyValue) {
+    if (!isGerente) return;
+    const day = currentSim && currentSim.days.find((item) => dateKey(item.date) === dateKeyValue);
+    if (!day) return;
+    const cell = day.cells[advisorId];
+    const advisor = ADVISORS.find((item) => item.id === advisorId);
+    if (!advisor) return;
+    activeCellContext = {
+      advisorId,
+      date: dateKeyValue,
+      weekStart: dateKey(selectedMonday)
+    };
+
+    cellEditorTitleEl.textContent = advisor.name;
+    cellEditorMetaEl.textContent = `${WEEKDAY_NAMES[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]} · ${formatCompactDate(day.date)} · ${cell && cell.title ? cell.title : 'Libre'}`;
+    cellEditorSelectEl.innerHTML = MANUAL_SHIFT_OPTIONS.map((option) => (
+      `<option value="${option.value}">${option.label}</option>`
+    )).join('');
+    cellEditorSelectEl.value = cell ? cell.type : 'free';
+    cellEditorEl.hidden = false;
+    editorStatusEl.textContent = 'Editando ajuste manual.';
+  }
+
+  function closeEditor() {
+    activeCellContext = null;
+    cellEditorEl.hidden = true;
+  }
+
+  async function loadOverridesForWeek(weekStartKey) {
+    const response = await fetch(`/api/horarios-viceroy/overrides?weekStart=${encodeURIComponent(weekStartKey)}`, {
+      credentials: 'same-origin'
+    });
+    const payload = await response.json();
+    if (!payload || !payload.ok) {
+      throw new Error('No se pudieron cargar los ajustes.');
+    }
+    isGerente = Boolean(payload.isGerente);
+    currentOverrides = Array.isArray(payload.rows) ? payload.rows : [];
+  }
+
+  async function saveOverride() {
+    if (!activeCellContext) return;
+    const type = cellEditorSelectEl.value;
+    const payload = {
+      weekStart: activeCellContext.weekStart,
+      date: activeCellContext.date,
+      advisorId: activeCellContext.advisorId,
+      type
+    };
+    const response = await fetch('/api/horarios-viceroy/overrides', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok || !result || !result.ok) {
+      throw new Error(result && result.error ? result.error : 'No se pudo guardar.');
+    }
+    await loadWeek(selectedMonday, false);
+  }
+
+  async function deleteOverride() {
+    if (!activeCellContext) return;
+    const payload = {
+      weekStart: activeCellContext.weekStart,
+      date: activeCellContext.date,
+      advisorId: activeCellContext.advisorId
+    };
+    const response = await fetch('/api/horarios-viceroy/overrides', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok || !result || !result.ok) {
+      throw new Error(result && result.error ? result.error : 'No se pudo quitar el ajuste.');
+    }
+    await loadWeek(selectedMonday, false);
+  }
+
+  async function loadWeek(weekStart, showLoading = true) {
+    const token = ++loadToken;
+    const weekStartKey = dateKey(weekStart);
+    try {
+      if (showLoading) {
+        editorStatusEl.textContent = 'Cargando horario...';
+        editorStatusEl.classList.remove('error');
+      }
+      await loadOverridesForWeek(weekStartKey);
+      if (token !== loadToken) return;
+      const base = buildBaseWeek(weekStart);
+      const sim = applyOverridesToSimulation(cloneWeekSimulation(base), currentOverrides);
+      currentSim = sim;
+      selectedMonday = weekStart;
+      renderBoard(sim);
+      renderSummary(sim);
+      if (!cellEditorEl.hidden && activeCellContext) {
+        const day = sim.days.find((item) => dateKey(item.date) === activeCellContext.date);
+        const cell = day && day.cells[activeCellContext.advisorId];
+        if (day && cell) {
+          cellEditorMetaEl.textContent = `${WEEKDAY_NAMES[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]} · ${formatCompactDate(day.date)} · ${cell && cell.title ? cell.title : 'Libre'}`;
+          cellEditorSelectEl.value = cell.type;
+        }
+      }
+      editorStatusEl.textContent = isGerente ? 'Modo gerente activo.' : 'Vista de solo lectura.';
+      editorStatusEl.classList.remove('error');
+    } catch (err) {
+      editorStatusEl.textContent = err.message || 'No se pudo cargar el horario.';
+      editorStatusEl.classList.add('error');
+    }
+  }
+
+  function bindBoardClicks() {
+    boardEl.addEventListener('click', (event) => {
+      const cell = event.target.closest('.shift-cell');
+      if (!cell || !isGerente) return;
+      openEditor(cell.dataset.advisorId, cell.dataset.date);
+    });
+  }
+
+  function setSelectedWeek(offset) {
+    const next = addDays(selectedMonday, offset * 7);
+    loadWeek(next);
+  }
+
+  prevWeekBtn.addEventListener('click', () => setSelectedWeek(-1));
+  nextWeekBtn.addEventListener('click', () => setSelectedWeek(1));
+  currentWeekBtn.addEventListener('click', () => loadWeek(startOfWeek(new Date())));
+
+  cellEditorSaveBtn.addEventListener('click', async () => {
+    try {
+      await saveOverride();
+      closeEditor();
+    } catch (err) {
+      editorStatusEl.textContent = err.message || 'No se pudo guardar.';
+      editorStatusEl.classList.add('error');
+    }
+  });
+
+  cellEditorDeleteBtn.addEventListener('click', async () => {
+    try {
+      await deleteOverride();
+      closeEditor();
+    } catch (err) {
+      editorStatusEl.textContent = err.message || 'No se pudo quitar el ajuste.';
+      editorStatusEl.classList.add('error');
+    }
+  });
+
+  cellEditorCancelBtn.addEventListener('click', closeEditor);
+
+  cellEditorSelectEl.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeEditor();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeEditor();
+  });
+
+  bindBoardClicks();
+
+  loadWeek(selectedMonday);
+  autoTimer = setInterval(() => {
+    if (!cellEditorEl.hidden) return;
+    loadWeek(selectedMonday, false);
+  }, 60000);
+})();
+</script>
+</body>
+</html>
