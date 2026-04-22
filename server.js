@@ -368,6 +368,14 @@ function requireGerente(req, res, next) {
   </body></html>`);
 }
 
+function canManageViceroyReservations(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return Boolean(
+    normalized &&
+    (normalized === GERENTE_EMAIL || normalized === VICEROY_RECEPTION_EMAIL)
+  );
+}
+
 function requireViceroyPresentAccess(req, res, next) {
   if (LOCAL_NO_AUTH) return next();
   if (req.isAuthenticated && req.isAuthenticated()) return next();
@@ -6342,7 +6350,7 @@ app.get('/viceroy/reservas', (req, res) => {
 app.get('/api/viceroy/reservas', (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
   const currentName = String(req.user && req.user.name || '').trim();
-  const isGerente = currentEmail === GERENTE_EMAIL || currentEmail === VICEROY_RECEPTION_EMAIL;
+  const isGerente = canManageViceroyReservations(currentEmail);
   const from = normalizeReservationDate(req.query && req.query.from);
   const to = normalizeReservationDate(req.query && req.query.to);
   const data = readViceroyRoomReservations();
@@ -6406,12 +6414,68 @@ app.post('/api/viceroy/reservas', (req, res) => {
   return res.status(201).json({ ok: true, row: newRow });
 });
 
+async function runViceroyDailyReservationsManualTest(dateInput) {
+  const targetDate = normalizeReservationDate(dateInput) || getTimePartsInTimeZone(new Date(), APP_TIMEZONE).dateKey;
+  if (!isViceroyDailyEmailConfigured()) {
+    return {
+      ok: false,
+      sent: false,
+      date: targetDate,
+      error: 'SMTP no configurado. Revisa variables SMTP_* y destinatarios.'
+    };
+  }
+  await sendViceroyDailyReservationsReport(targetDate);
+  return {
+    ok: true,
+    sent: true,
+    date: targetDate
+  };
+}
+
+app.get('/api/viceroy/reservas/daily-report/test', async (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  if (!canManageViceroyReservations(currentEmail)) {
+    return res.status(403).json({ error: 'No autorizado para probar reporte diario de reservas.' });
+  }
+  try {
+    const result = await runViceroyDailyReservationsManualTest(req.query && req.query.date);
+    if (!result.ok) return res.status(400).json(result);
+    return res.json(result);
+  } catch (err) {
+    log(`Error en test manual reporte reservas Viceroy (GET): ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      sent: false,
+      error: err && err.message ? err.message : 'No se pudo enviar el correo de prueba.'
+    });
+  }
+});
+
+app.post('/api/viceroy/reservas/daily-report/test', async (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  if (!canManageViceroyReservations(currentEmail)) {
+    return res.status(403).json({ error: 'No autorizado para probar reporte diario de reservas.' });
+  }
+  try {
+    const result = await runViceroyDailyReservationsManualTest(req.body && req.body.date);
+    if (!result.ok) return res.status(400).json(result);
+    return res.json(result);
+  } catch (err) {
+    log(`Error en test manual reporte reservas Viceroy (POST): ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      sent: false,
+      error: err && err.message ? err.message : 'No se pudo enviar el correo de prueba.'
+    });
+  }
+});
+
 app.delete('/api/viceroy/reservas/:id', (req, res) => {
   const rowId = String(req.params.id || '').trim();
   if (!rowId) return res.status(400).json({ error: 'id inválido' });
 
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const isGerente = currentEmail === GERENTE_EMAIL || currentEmail === VICEROY_RECEPTION_EMAIL;
+  const isGerente = canManageViceroyReservations(currentEmail);
   const data = readViceroyRoomReservations();
   const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
   if (index < 0) return res.status(404).json({ error: 'Reserva no encontrada' });
