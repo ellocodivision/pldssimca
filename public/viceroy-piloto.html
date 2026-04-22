@@ -659,7 +659,7 @@
       function applyLayoutToPreview() {
         const p = ensureLayout();
         const scaled = scaledOverlayValues(p);
-        document.documentElement.style.setProperty('--overlay-gutter', String(Math.max(460, Number(scaled.w || 360) + 110)) + 'px');
+        document.documentElement.style.setProperty('--overlay-gutter', String(Math.max(360, Number(scaled.w || 360) + 48)) + 'px');
         els.overlayBox.style.left = String(Math.max(0, Number(scaled.x || 18))) + 'px';
         els.overlayBox.style.top = String(Math.max(0, Number(scaled.y || 18))) + 'px';
         els.overlayBox.style.width = String(Math.max(320, Number(scaled.w || 360))) + 'px';
