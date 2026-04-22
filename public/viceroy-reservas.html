@@ -88,6 +88,7 @@
       </div>
       <div class="actions">
         <a class="btn" href="/viceroy">Volver</a>
+        <button id="sendCorporateBtn" class="btn" type="button" style="display:none;">Enviar correo a corporativo</button>
         <button id="reloadBtn" class="btn" type="button">Recargar</button>
       </div>
     </div>
@@ -214,6 +215,7 @@
       const bookingPax = document.getElementById("bookingPax");
       const saveBtn = document.getElementById("saveBtn");
       const reloadBtn = document.getElementById("reloadBtn");
+      const sendCorporateBtn = document.getElementById("sendCorporateBtn");
       const prevWeekBtn = document.getElementById("prevWeekBtn");
       const nextWeekBtn = document.getElementById("nextWeekBtn");
       const todayBtn = document.getElementById("todayBtn");
@@ -460,6 +462,32 @@
         await loadRows();
       }
 
+      async function sendCorporateDailyReport() {
+        const targetDate = bookingDate.value || isoDate(new Date());
+        const ok = window.confirm(`¿Enviar correo corporativo con las reservas del ${targetDate}?`);
+        if (!ok) return;
+        sendCorporateBtn.disabled = true;
+        setStatus("Enviando correo a corporativo...", "");
+        try {
+          const res = await fetch("/api/viceroy/reservas/corporativo/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ date: targetDate })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) {
+            setStatus(data && data.error ? data.error : `No se pudo enviar (${res.status})`, "error");
+            return;
+          }
+          setStatus(`Correo enviado a corporativo (${data.to || "-"}) para ${data.date || targetDate}.`, "ok");
+        } catch (error) {
+          setStatus("No se pudo enviar el correo corporativo.", "error");
+        } finally {
+          sendCorporateBtn.disabled = false;
+        }
+      }
+
       function renderSchedule() {
         schedule.innerHTML = "";
         const weekStart = state.weekStart || getMonday(parseIsoDate(bookingDate.value) || new Date());
@@ -695,6 +723,7 @@
         state.currentEmail = data.currentEmail || "";
         state.currentName = data.currentName || "";
         state.isGerente = Boolean(data.isGerente);
+        sendCorporateBtn.style.display = state.isGerente ? "inline-block" : "none";
         updateMeta(data.updatedAt);
         renderSchedule();
         refreshHourOptions(bookingHour.value);
@@ -749,6 +778,7 @@
         }
       });
       reloadBtn.addEventListener("click", loadRows);
+      sendCorporateBtn.addEventListener("click", sendCorporateDailyReport);
       bookingDate.addEventListener("change", syncWeekFromDate);
       bookingRoom.addEventListener("change", () => refreshHourOptions(bookingHour.value));
       prevWeekBtn.addEventListener("click", () => {

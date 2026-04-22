@@ -44,6 +44,7 @@ const APP_TIMEZONE = String(process.env.APP_TIMEZONE || 'America/Cancun').trim()
 const VICEROY_RESERVAS_DAILY_EMAIL_ENABLED = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_ENABLED || '1') !== '0';
 const VICEROY_RESERVAS_DAILY_EMAIL_TO = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_TO || `${VICEROY_RECEPTION_EMAIL},${GERENTE_EMAIL}`).trim();
 const VICEROY_RESERVAS_DAILY_EMAIL_CC = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_CC || '').trim();
+const VICEROY_RESERVAS_CORPORATE_EMAIL = String(process.env.VICEROY_RESERVAS_CORPORATE_EMAIL || 'ernesto@relatedgroud.com').trim();
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true' || SMTP_PORT === 465;
@@ -2886,27 +2887,36 @@ function buildViceroyDailyReservationsEmail(todayKey, rows) {
   return { subject, text, html };
 }
 
-async function sendViceroyDailyReservationsReport(todayKey) {
+async function sendViceroyDailyReservationsReport(todayKey, options = {}) {
   const transport = getViceroyDailyMailerTransport();
   if (!transport) {
     log('Reporte diario reservas Viceroy omitido: SMTP o destinatarios no configurados.');
     return false;
   }
+  const to = String(options && options.to || VICEROY_RESERVAS_DAILY_EMAIL_TO).trim();
+  const cc = String(options && options.cc !== undefined ? options.cc : VICEROY_RESERVAS_DAILY_EMAIL_CC).trim();
+  if (!to) {
+    log('Reporte diario reservas Viceroy omitido: no hay destinatario configurado.');
+    return false;
+  }
   const data = readViceroyRoomReservations();
   const rows = data.rows.filter((row) => String(row && row.date || '') === todayKey);
   const email = buildViceroyDailyReservationsEmail(todayKey, rows);
+  if (options && options.subject) {
+    email.subject = String(options.subject);
+  }
   const message = {
     from: SMTP_FROM,
-    to: VICEROY_RESERVAS_DAILY_EMAIL_TO,
+    to,
     subject: email.subject,
     text: email.text,
     html: email.html
   };
-  if (VICEROY_RESERVAS_DAILY_EMAIL_CC) {
-    message.cc = VICEROY_RESERVAS_DAILY_EMAIL_CC;
+  if (cc) {
+    message.cc = cc;
   }
   await transport.sendMail(message);
-  log(`Reporte diario reservas Viceroy enviado (${todayKey}) a ${VICEROY_RESERVAS_DAILY_EMAIL_TO}`);
+  log(`Reporte diario reservas Viceroy enviado (${todayKey}) a ${to}`);
   return true;
 }
 
@@ -6412,6 +6422,43 @@ app.post('/api/viceroy/reservas', (req, res) => {
   data.rows.push(newRow);
   saveViceroyRoomReservations(data.rows);
   return res.status(201).json({ ok: true, row: newRow });
+});
+
+app.post('/api/viceroy/reservas/corporativo/send', async (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  if (!canManageViceroyReservations(currentEmail)) {
+    return res.status(403).json({ error: 'No autorizado para enviar reporte corporativo.' });
+  }
+  const targetDate = normalizeReservationDate(req.body && req.body.date) || getTimePartsInTimeZone(new Date(), APP_TIMEZONE).dateKey;
+  try {
+    const sent = await sendViceroyDailyReservationsReport(targetDate, {
+      to: VICEROY_RESERVAS_CORPORATE_EMAIL,
+      cc: '',
+      subject: `Viceroy · Registro corporativo reservas (${targetDate})`
+    });
+    if (!sent) {
+      return res.status(400).json({
+        ok: false,
+        sent: false,
+        date: targetDate,
+        error: 'No se pudo enviar. Revisa configuración SMTP o destinatarios.'
+      });
+    }
+    return res.json({
+      ok: true,
+      sent: true,
+      date: targetDate,
+      to: VICEROY_RESERVAS_CORPORATE_EMAIL
+    });
+  } catch (err) {
+    log(`Error enviando reporte corporativo reservas Viceroy: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      sent: false,
+      date: targetDate,
+      error: err && err.message ? err.message : 'No se pudo enviar el correo corporativo.'
+    });
+  }
 });
 
 async function runViceroyDailyReservationsManualTest(dateInput) {
