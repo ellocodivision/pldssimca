@@ -257,6 +257,17 @@
       gap: 6px;
     }
 
+    .field-client {
+      grid-column: 1 / -1;
+    }
+
+    .field-help {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
     label {
       font-family: Arial, sans-serif;
       font-size: 10px;
@@ -749,6 +760,13 @@
           <h2 class="section-title" id="sectionTitle">Formas de Pago:</h2>
 
           <div class="capture-grid" id="captureGrid">
+            <div class="field field-client">
+              <label for="whisperClient" id="labelWhisperClient">Cliente Whisperlist</label>
+              <select id="whisperClient">
+                <option value="">Cargando clientes...</option>
+              </select>
+              <p class="field-help" id="whisperClientHint">Al elegir un cliente, la unidad A se completa automáticamente.</p>
+            </div>
             <div class="field">
               <label for="unitName" id="labelUnit">Unidad</label>
               <input id="unitName" type="text" value="402">
@@ -940,6 +958,8 @@
           download: 'Descargar PDF exacto',
           headline: 'Tabla de pago Viceroy',
           section: 'Formas de Pago:',
+          whisperClient: 'Cliente Whisperlist',
+          whisperClientHint: 'Al elegir un cliente, la unidad A se completa automáticamente.',
           unit: 'Unidad',
           paymentPlan: 'Forma de pago',
           listPrice: 'Precio de lista',
@@ -970,6 +990,8 @@
           download: 'Download exact PDF',
           headline: 'Viceroy Payment Plan',
           section: 'Payment Structures:',
+          whisperClient: 'Whisperlist client',
+          whisperClientHint: 'Choosing a client auto-fills the A unit.',
           unit: 'Unit',
           paymentPlan: 'Payment plan',
           listPrice: 'List price',
@@ -1002,6 +1024,8 @@
         downloadPdfBtn: document.getElementById('downloadPdfBtn'),
         headline: document.getElementById('headline'),
         sectionTitle: document.getElementById('sectionTitle'),
+        labelWhisperClient: document.getElementById('labelWhisperClient'),
+        whisperClientHint: document.getElementById('whisperClientHint'),
         labelUnit: document.getElementById('labelUnit'),
         labelPlan: document.getElementById('labelPlan'),
         labelListPrice: document.getElementById('labelListPrice'),
@@ -1022,6 +1046,7 @@
         headAmount: document.getElementById('headAmount'),
         footerLabel: document.getElementById('footerLabel'),
         captureGrid: document.getElementById('captureGrid'),
+        whisperClient: document.getElementById('whisperClient'),
         unitName: document.getElementById('unitName'),
         paymentPlan: document.getElementById('paymentPlan'),
         listPrice: document.getElementById('listPrice'),
@@ -1046,6 +1071,11 @@
       let currentLang = initialLang;
       let currentLayout = normalizeLayout(defaultLayout);
       let paymentDates = [];
+      let whisperClients = [];
+      let selectedWhisperClientId = '';
+      try {
+        selectedWhisperClientId = String(localStorage.getItem('viceroyTablaPagosWhisperClientId') || '').trim();
+      } catch {}
 
       function sanitizeNumber(value) {
         const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
@@ -1224,6 +1254,95 @@
         return yyyy + '-' + mm + '-' + dd;
       }
 
+      function getWhisperClientUnitA(row) {
+        return String(row && row.kpi && row.kpi.opcionA || '').trim();
+      }
+
+      function getWhisperClientLabel(row) {
+        const name = String(row && row.nombreCliente || '').trim() || 'Sin nombre';
+        const unitA = getWhisperClientUnitA(row);
+        return unitA ? (name + ' — A ' + unitA) : name;
+      }
+
+      function persistWhisperClientSelection(id) {
+        selectedWhisperClientId = String(id || '').trim();
+        try {
+          if (selectedWhisperClientId) localStorage.setItem('viceroyTablaPagosWhisperClientId', selectedWhisperClientId);
+          else localStorage.removeItem('viceroyTablaPagosWhisperClientId');
+        } catch {}
+      }
+
+      function applyWhisperClientSelection(id) {
+        const row = whisperClients.find(function (item) {
+          return String(item.id || '') === String(id || '');
+        });
+        if (!row) {
+          persistWhisperClientSelection('');
+          els.whisperClient.value = '';
+          return;
+        }
+        persistWhisperClientSelection(row.id);
+        els.whisperClient.value = String(row.id || '');
+        const unitA = getWhisperClientUnitA(row);
+        if (unitA) {
+          els.unitName.value = unitA;
+        }
+        update();
+      }
+
+      function renderWhisperClientOptions() {
+        const currentValue = selectedWhisperClientId || '';
+        els.whisperClient.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = whisperClients.length ? (currentLang === 'en' ? 'Choose a client' : 'Elige un cliente') : (currentLang === 'en' ? 'No clients available' : 'Sin clientes disponibles');
+        els.whisperClient.appendChild(placeholder);
+
+        whisperClients.forEach(function (row) {
+          const option = document.createElement('option');
+          option.value = String(row.id || '');
+          option.textContent = getWhisperClientLabel(row);
+          els.whisperClient.appendChild(option);
+        });
+
+        if (currentValue && whisperClients.some(function (row) { return String(row.id || '') === currentValue; })) {
+          els.whisperClient.value = currentValue;
+        } else if (whisperClients.length) {
+          els.whisperClient.value = '';
+          persistWhisperClientSelection('');
+        } else {
+          els.whisperClient.value = '';
+        }
+      }
+
+      async function loadWhisperClients() {
+        try {
+          const res = await fetch('/api/whisperlist', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          const rows = Array.isArray(data.rows) ? data.rows : [];
+          whisperClients = rows.filter(function (row) {
+            return row && row.canViewClientData;
+          }).sort(function (a, b) {
+            const nameA = String(a && a.nombreCliente || '').trim();
+            const nameB = String(b && b.nombreCliente || '').trim();
+            const byName = nameA.localeCompare(nameB, 'es');
+            if (byName) return byName;
+            const idA = String(a && a.id || '');
+            const idB = String(b && b.id || '');
+            return idA.localeCompare(idB, 'es');
+          });
+        } catch {
+          whisperClients = [];
+        }
+        renderWhisperClientOptions();
+        if (selectedWhisperClientId && whisperClients.some(function (row) {
+          return String(row.id || '') === String(selectedWhisperClientId);
+        })) {
+          applyWhisperClientSelection(selectedWhisperClientId);
+        }
+      }
+
       function updateLanguage() {
         const t = translations[currentLang];
         els.backBtn.textContent = t.back;
@@ -1233,6 +1352,8 @@
         els.downloadPdfBtn.textContent = t.download;
         els.headline.textContent = t.headline;
         els.sectionTitle.textContent = t.section;
+        els.labelWhisperClient.textContent = t.whisperClient;
+        els.whisperClientHint.textContent = t.whisperClientHint;
         els.labelUnit.textContent = t.unit;
         els.labelPlan.textContent = t.paymentPlan;
         els.labelListPrice.textContent = t.listPrice;
@@ -1252,6 +1373,7 @@
         els.headPercent.textContent = t.percent;
         els.headAmount.textContent = t.amount;
         els.footerLabel.textContent = t.totals;
+        if (els.whisperClient) renderWhisperClientOptions();
       }
 
       function syncDiscountVisibility() {
@@ -1524,6 +1646,9 @@
       });
 
       els.paymentPlan.addEventListener('change', update);
+      els.whisperClient.addEventListener('change', function () {
+        applyWhisperClientSelection(els.whisperClient.value);
+      });
       els.unitName.addEventListener('input', update);
       els.listPrice.addEventListener('input', update);
       els.paymentRows.addEventListener('input', function (event) {
@@ -1564,6 +1689,7 @@
       updateLanguage();
       syncDiscountVisibility();
       update();
+      loadWhisperClients();
       loadLayout();
       syncAccessControls();
     })();
