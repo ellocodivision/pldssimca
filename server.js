@@ -4650,7 +4650,8 @@ app.post('/api/viceroy/tabla-pagos/render-pdf', async (req, res) => {
     try {
       const browser = await getSharedPdfBrowser();
       pdfBuffer = await buildPdfBufferWithBrowser(browser, html, {
-        format: 'Letter',
+        width: '1920px',
+        height: '1080px',
         margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' },
         printBackground: true
       });
@@ -4662,7 +4663,8 @@ app.post('/api/viceroy/tabla-pagos/render-pdf', async (req, res) => {
       sharedPdfBrowser = null;
       const retryBrowser = await getSharedPdfBrowser();
       pdfBuffer = await buildPdfBufferWithBrowser(retryBrowser, html, {
-        format: 'Letter',
+        width: '1920px',
+        height: '1080px',
         margin: { top: '0in', right: '0in', bottom: '0in', left: '0in' },
         printBackground: true
       });

@@ -1072,6 +1072,8 @@
       let currentLayout = normalizeLayout(defaultLayout);
       let paymentDates = [];
       let whisperClients = [];
+      let viceroyInventoryRows = [];
+      let viceroyInventoryByUnit = new Map();
       let selectedWhisperClientId = '';
       try {
         selectedWhisperClientId = String(localStorage.getItem('viceroyTablaPagosWhisperClientId') || '').trim();
@@ -1081,6 +1083,61 @@
         const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
         const parsed = Number(cleaned);
         return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function normalizeViceroyUnitCode(rawValue) {
+        const text = String(rawValue == null ? '' : rawValue).trim().toUpperCase();
+        if (!text) return '';
+        const firstToken = text.split(/[\s,;|/\\-]+/).find(Boolean) || '';
+        const raw = firstToken.replace(/[^A-Z0-9.]/g, '');
+        if (!raw) return '';
+        if (/^\d+$/.test(raw)) return String(Number(raw));
+        const match = raw.match(/^0*(\d+)([A-Z]+)?$/);
+        if (match) {
+          const num = String(Number(match[1]));
+          return (num === 'NaN' ? match[1] : num) + (match[2] || '');
+        }
+        return raw;
+      }
+
+      function syncListPriceFromInventory(options) {
+        const opts = options || {};
+        const unitKey = normalizeViceroyUnitCode(els.unitName.value);
+        if (!unitKey) {
+          if (opts.clearWhenEmpty) {
+            els.listPrice.value = '';
+          }
+          return null;
+        }
+        const row = viceroyInventoryByUnit.get(unitKey);
+        if (row && Number.isFinite(Number(row.price))) {
+          els.listPrice.value = formatCurrency(Number(row.price));
+          return row;
+        }
+        if (opts.clearOnMissing) {
+          els.listPrice.value = '';
+        }
+        return null;
+      }
+
+      async function loadViceroyInventory() {
+        try {
+          const res = await fetch('/api/viceroy-piloto/inventory', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          const rows = Array.isArray(data.rows) ? data.rows : [];
+          viceroyInventoryRows = rows;
+          viceroyInventoryByUnit = new Map();
+          rows.forEach(function (row) {
+            const unitKey = normalizeViceroyUnitCode(row && row.unidad);
+            if (!unitKey) return;
+            viceroyInventoryByUnit.set(unitKey, row);
+          });
+        } catch {
+          viceroyInventoryRows = [];
+          viceroyInventoryByUnit = new Map();
+        }
+        syncListPriceFromInventory({ clearOnMissing: true });
+        update();
       }
 
       function clamp(value, min, max) {
@@ -1287,6 +1344,7 @@
         if (unitA) {
           els.unitName.value = unitA;
         }
+        syncListPriceFromInventory({ clearOnMissing: true, clearWhenEmpty: true });
         update();
       }
 
@@ -1453,6 +1511,8 @@
         if (body) {
           body.classList.remove('preview-mode', 'print-preview-mode');
           body.classList.add('pdf-export');
+          body.style.setProperty('--print-scale', '1');
+          body.style.setProperty('--print-margin-mm', '0');
         }
 
         document.querySelectorAll('input, textarea, select').forEach(function (sourceElement) {
@@ -1487,23 +1547,23 @@
         if (head) {
           const style = clone.ownerDocument.createElement('style');
           style.textContent = `
-            @page { size: portrait; margin: 0; }
-            html, body { margin: 0; padding: 0; background: #fff; width: 816px; height: 1056px; }
+            @page { size: 1920px 1080px; margin: 0; }
+            html, body { margin: 0; padding: 0; background: #fff; width: 1920px; height: 1080px; }
             body.pdf-export {
               background: #fff !important;
               padding: 0 !important;
-              min-height: 1056px !important;
-              width: 816px;
-              height: 1056px;
+              min-height: 1080px !important;
+              width: 1920px;
+              height: 1080px;
               overflow: hidden;
               position: relative;
             }
             body.pdf-export .page {
               position: absolute;
               left: 50%;
-              top: calc(var(--print-margin-mm) * 1mm);
-              width: calc(816px - (var(--print-margin-mm) * 2mm));
-              height: calc(1056px - (var(--print-margin-mm) * 2mm));
+              top: 0;
+              width: 1920px;
+              height: 1080px;
               max-width: none;
               margin: 0;
               padding: 0;
@@ -1511,13 +1571,11 @@
               transform: translateX(-50%);
             }
             body.pdf-export .sheet {
-              width: calc((816px - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
-              height: calc((1056px - (var(--print-margin-mm) * 2mm)) / var(--print-scale));
+              width: 1920px;
+              height: 1080px;
               border: none;
               box-shadow: none;
               background: #fff;
-              transform: scale(var(--print-scale));
-              transform-origin: top left;
               overflow: hidden;
             }
             body.pdf-export .topbar,
@@ -1650,6 +1708,10 @@
         applyWhisperClientSelection(els.whisperClient.value);
       });
       els.unitName.addEventListener('input', update);
+      els.unitName.addEventListener('change', function () {
+        syncListPriceFromInventory({ clearOnMissing: true, clearWhenEmpty: true });
+        update();
+      });
       els.listPrice.addEventListener('input', update);
       els.paymentRows.addEventListener('input', function (event) {
         const target = event.target;
@@ -1689,6 +1751,7 @@
       updateLanguage();
       syncDiscountVisibility();
       update();
+      loadViceroyInventory();
       loadWhisperClients();
       loadLayout();
       syncAccessControls();
