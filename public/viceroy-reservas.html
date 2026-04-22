@@ -179,6 +179,7 @@
         "sala-chica": "Sala chica",
         "reserva-sin-oficina": "Reserva sin sala"
       };
+      const CORPORATE_EMAIL = "ernesto@relatedgroud.com";
       const ROOM_ORDER = ["sala-grande", "sala-chica", "reserva-sin-oficina"];
       const RECEPTION_EMAIL = "reception@viceroyplayadelcarmen.com";
       const HOURS = [
@@ -405,6 +406,42 @@
         return state.isGerente || String(row.createdByEmail || "").toLowerCase() === String(state.currentEmail || "").toLowerCase();
       }
 
+      function sortReservations(rows) {
+        return [...(Array.isArray(rows) ? rows : [])].sort((a, b) => {
+          const byHour = String(a.hour || "").localeCompare(String(b.hour || ""));
+          if (byHour !== 0) return byHour;
+          return String(a.room || "").localeCompare(String(b.room || ""));
+        });
+      }
+
+      function buildCorporateDailyText(dateStr, rows) {
+        const safeDate = String(dateStr || "").trim() || "-";
+        const ordered = sortReservations(rows);
+        if (!ordered.length) {
+          return [
+            `Registro de reservas Viceroy del ${safeDate}`,
+            "",
+            "No hubo reservas registradas este dia."
+          ].join("\n");
+        }
+        const lines = ordered.map((row, idx) => {
+          const hour = String(row.hour || "-");
+          const room = ROOM_LABELS[row.room] || row.room || "-";
+          const broker = String(row.broker || row.title || "-");
+          const client = String(row.client || "-");
+          const pax = String(row.pax || "-");
+          const advisor = String(row.createdByName || row.createdByEmail || "-");
+          return `${idx + 1}. ${hour} | ${room} | Broker: ${broker} | Cliente: ${client} | Pax: ${pax} | Asesor: ${advisor}`;
+        });
+        return [
+          `Registro de reservas Viceroy del ${safeDate}`,
+          "",
+          `Total: ${ordered.length}`,
+          "",
+          ...lines
+        ].join("\n");
+      }
+
       function makeInlineKey(dateStr, room, hour) {
         return `${dateStr}__${room}__${hour}`;
       }
@@ -464,25 +501,28 @@
 
       async function sendCorporateDailyReport() {
         const targetDate = bookingDate.value || isoDate(new Date());
-        const ok = window.confirm(`¿Enviar correo corporativo con las reservas del ${targetDate}?`);
+        const ok = window.confirm(`¿Abrir correo a corporativo con las reservas del ${targetDate}?`);
         if (!ok) return;
         sendCorporateBtn.disabled = true;
-        setStatus("Enviando correo a corporativo...", "");
+        setStatus("Preparando correo a corporativo...", "");
         try {
-          const res = await fetch("/api/viceroy/reservas/corporativo/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+          const res = await fetch(`/api/viceroy/reservas?from=${encodeURIComponent(targetDate)}&to=${encodeURIComponent(targetDate)}`, {
             credentials: "same-origin",
-            body: JSON.stringify({ date: targetDate })
+            cache: "no-store"
           });
           const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data.ok) {
-            setStatus(data && data.error ? data.error : `No se pudo enviar (${res.status})`, "error");
+          if (!res.ok) {
+            setStatus(data && data.error ? data.error : `No se pudo cargar reservas (${res.status})`, "error");
             return;
           }
-          setStatus(`Correo enviado a corporativo (${data.to || "-"}) para ${data.date || targetDate}.`, "ok");
+          const rows = Array.isArray(data.rows) ? data.rows : [];
+          const subject = `Viceroy · Registro corporativo reservas (${targetDate})`;
+          const body = buildCorporateDailyText(targetDate, rows);
+          const mailtoHref = `mailto:${encodeURIComponent(CORPORATE_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          window.location.href = mailtoHref;
+          setStatus(`Correo listo para enviar en tu app de correo (${CORPORATE_EMAIL}).`, "ok");
         } catch (error) {
-          setStatus("No se pudo enviar el correo corporativo.", "error");
+          setStatus("No se pudo preparar el correo corporativo.", "error");
         } finally {
           sendCorporateBtn.disabled = false;
         }
