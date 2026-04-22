@@ -38,6 +38,7 @@ const VICEROY_PRESENT_TOKEN = String(process.env.VICEROY_PRESENT_TOKEN || '').tr
 const LOCAL_NO_AUTH = String(process.env.LOCAL_NO_AUTH || '') === '1';
 const ALLOWED_DOMAIN = String(process.env.ALLOWED_DOMAIN || 'simca.mx').toLowerCase();
 const GERENTE_EMAIL = String(process.env.GERENTE_EMAIL || 'martin@simca.mx').toLowerCase();
+const VICEROY_RECEPTION_EMAIL = 'reception@viceroyplayadelcarmen.com';
 const EXTRA_ALLOWED_EMAILS = new Set(
   String(process.env.ALLOWED_EMAILS || '')
     .split(',')
@@ -45,7 +46,7 @@ const EXTRA_ALLOWED_EMAILS = new Set(
     .filter(Boolean)
 );
 EXTRA_ALLOWED_EMAILS.add('jmotta@relatedgroup.com');
-EXTRA_ALLOWED_EMAILS.add('reception@viceroyplayadelcarmen.com');
+EXTRA_ALLOWED_EMAILS.add(VICEROY_RECEPTION_EMAIL);
 const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
 const USE_WHISPERLIST_DB = Boolean(DATABASE_URL);
 const LOG_PATH = '/tmp/fr-ven-server.log';
@@ -6103,6 +6104,11 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Reserva de oficinas</h2>
           <p class="desc">Reserva sala grande o sala chica por horario.</p>
         </a>
+        <a class="card" href="/horarios-viceroy">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Horarios Viceroy</h2>
+          <p class="desc">Consulta la semana comercial del equipo Viceroy.</p>
+        </a>
         <a class="card" href="/viceroy/registros">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy Registros</h2>
@@ -6122,7 +6128,7 @@ app.get('/viceroy/reservas', (req, res) => {
 app.get('/api/viceroy/reservas', (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
   const currentName = String(req.user && req.user.name || '').trim();
-  const isGerente = currentEmail === GERENTE_EMAIL;
+  const isGerente = currentEmail === GERENTE_EMAIL || currentEmail === VICEROY_RECEPTION_EMAIL;
   const from = normalizeReservationDate(req.query && req.query.from);
   const to = normalizeReservationDate(req.query && req.query.to);
   const data = readViceroyRoomReservations();
@@ -6191,7 +6197,7 @@ app.delete('/api/viceroy/reservas/:id', (req, res) => {
   if (!rowId) return res.status(400).json({ error: 'id inválido' });
 
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const isGerente = currentEmail === GERENTE_EMAIL;
+  const isGerente = currentEmail === GERENTE_EMAIL || currentEmail === VICEROY_RECEPTION_EMAIL;
   const data = readViceroyRoomReservations();
   const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
   if (index < 0) return res.status(404).json({ error: 'Reserva no encontrada' });
