@@ -2444,6 +2444,27 @@
         const data = await res.json().catch(function () { return {}; });
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar presentacion');
         state.canUploadInventory = await permissionPromise;
+
+        const previousFloorId = String(state.activeFloorId || '').trim();
+        const floors = Array.isArray(data.floors) ? data.floors : [];
+        state.floors = floors.map(function (floor, idx) {
+          const f = floor && typeof floor === 'object' ? floor : {};
+          if (!f.id) f.id = 'floor-' + (idx + 1);
+          if (!f.name) f.name = 'FLOOR-' + (idx + 1);
+          f.floorDisplay = normalizeFloorName(f.name, idx);
+          return f;
+        });
+        state.activeFloorId = previousFloorId && state.floors.some(function (floor) { return floor.id === previousFloorId; })
+          ? previousFloorId
+          : (state.floors[0] ? state.floors[0].id : '');
+        state.config = normalizeConfig(data.config);
+        state.showUnitLabels = false;
+        state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
+        orderFloors();
+        buildUnitIndex();
+        applyPresentationLayout();
+        restoreCurrentView();
+
         try {
           const sellersRes = await fetch('/api/whisperlist/sellers', { cache: 'no-store', credentials: 'same-origin' });
           if (sellersRes.ok) {
@@ -2472,29 +2493,16 @@
           state.isGerente = false;
           state.whisperlistRows = [];
         }
-
-        const previousFloorId = String(state.activeFloorId || '').trim();
-        const floors = Array.isArray(data.floors) ? data.floors : [];
-        state.floors = floors.map(function (floor, idx) {
-          const f = floor && typeof floor === 'object' ? floor : {};
-          if (!f.id) f.id = 'floor-' + (idx + 1);
-          if (!f.name) f.name = 'FLOOR-' + (idx + 1);
-          f.floorDisplay = normalizeFloorName(f.name, idx);
-          return f;
-        });
-        state.activeFloorId = previousFloorId && state.floors.some(function (floor) { return floor.id === previousFloorId; })
-          ? previousFloorId
-          : (state.floors[0] ? state.floors[0].id : '');
-        state.config = normalizeConfig(data.config);
-        state.showUnitLabels = false;
-        state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
-        applyPresentationLayout();
-
-        orderFloors();
-        buildUnitIndex();
         renderWhisperFilters();
         renderZoneAttributeFilters();
-        restoreCurrentView();
+        if (state.view === 'home') {
+          renderHome();
+        } else if (state.view === 'tipologias') {
+          renderTipologias();
+        } else if (state.view === 'floors') {
+          renderFloorTabs();
+          drawFloor();
+        }
       }
 
       async function refreshCurrentView(options) {
