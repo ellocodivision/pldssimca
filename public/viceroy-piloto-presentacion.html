@@ -1079,11 +1079,13 @@
           return (Math.max(0, n * scale) + 'px');
         };
         const overlayWidthPx = Number(layout.overlayWidth);
-        const scaledOverlayWidth = Number.isFinite(overlayWidthPx) ? Math.max(220, overlayWidthPx * sx) : 360;
-        root.style.setProperty('--overlay-gutter', String(Math.max(380, scaledOverlayWidth + 90)) + 'px');
+        const scaledOverlayWidth = Number.isFinite(overlayWidthPx)
+          ? Math.max(320, overlayWidthPx * sx * 1.35)
+          : 500;
+        root.style.setProperty('--overlay-gutter', String(Math.max(460, scaledOverlayWidth + 110)) + 'px');
         root.style.setProperty('--overlay-left', scaledPx(layout.overlayX, '18px', sx));
         root.style.setProperty('--overlay-top', scaledPx(layout.overlayY, '18px', sy));
-        root.style.setProperty('--overlay-width', scaledPx(layout.overlayWidth, '360px', sx));
+        root.style.setProperty('--overlay-width', String(Math.round(scaledOverlayWidth)) + 'px');
         root.style.setProperty('--overlay-bg', String(layout.overlayBg || 'rgba(255,255,255,0.88)'));
         root.style.setProperty('--overlay-border', String(layout.overlayBorder || '#cdd2c6'));
         root.style.setProperty('--table-header-bg', String(layout.tableHeaderBg || '#ecece4'));
