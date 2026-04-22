@@ -1063,10 +1063,14 @@
           ? state.config.presentationLayout
           : {};
         const root = document.documentElement;
-        const imgW = Number(els.baseImage && els.baseImage.clientWidth || 0);
-        const imgH = Number(els.baseImage && els.baseImage.clientHeight || 0);
-        const fallbackW = Number(els.baseImage && els.baseImage.naturalWidth || 1500);
-        const fallbackH = Number(els.baseImage && els.baseImage.naturalHeight || 900);
+        const imgEl = els.baseImage;
+        if (!imgEl || !imgEl.complete || !imgEl.naturalWidth || !imgEl.naturalHeight) {
+          return;
+        }
+        const imgW = Number(imgEl.clientWidth || 0);
+        const imgH = Number(imgEl.clientHeight || 0);
+        const fallbackW = Number(imgEl.naturalWidth || 1500);
+        const fallbackH = Number(imgEl.naturalHeight || 900);
         const currentW = imgW > 0 ? imgW : fallbackW;
         const currentH = imgH > 0 ? imgH : fallbackH;
         const refW = Number(layout.overlayRefWidth || currentW || 1500);
@@ -2313,9 +2317,16 @@
         }
 
         els.baseImage.onload = function () {
-          applyPresentationLayout();
+          window.requestAnimationFrame(function () {
+            applyPresentationLayout();
+          });
         };
         els.baseImage.src = floor.imageDataUrl;
+        if (els.baseImage.complete && els.baseImage.naturalWidth) {
+          window.requestAnimationFrame(function () {
+            applyPresentationLayout();
+          });
+        }
         const w = Number(floor.imageWidth) || els.baseImage.naturalWidth || 1200;
         const h = Number(floor.imageHeight) || els.baseImage.naturalHeight || 800;
         els.overlay.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
@@ -2380,7 +2391,6 @@
         const tipTxt = (state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D');
         els.floorsTopLabel.textContent = floorName + ' · Tipologia: ' + tipTxt;
         els.showAllOnMapBtn.textContent = state.showAllUnits ? 'Ver solo mis unidades' : 'Ver todas las unidades';
-        applyPresentationLayout();
       }
 
       function getFloorUnitInfo(unidad) {
