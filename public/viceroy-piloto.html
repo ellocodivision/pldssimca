@@ -546,10 +546,12 @@
         const refH = Number(p.overlayRefHeight || size.height || 900);
         const sx = refW > 0 ? (size.width / refW) : 1;
         const sy = refH > 0 ? (size.height / refH) : 1;
+        const rawWidth = Number(p.overlayWidth || 360);
+        const previewWidth = Number.isFinite(rawWidth) ? Math.max(320, rawWidth * sx * 1.35) : 500;
         return {
           x: Math.round(Number(p.overlayX || 18) * sx),
           y: Math.round(Number(p.overlayY || 18) * sy),
-          w: Math.round(Number(p.overlayWidth || 360) * sx)
+          w: Math.round(previewWidth)
         };
       }
 
@@ -657,10 +659,10 @@
       function applyLayoutToPreview() {
         const p = ensureLayout();
         const scaled = scaledOverlayValues(p);
-        document.documentElement.style.setProperty('--overlay-gutter', String(Math.max(260, Number(scaled.w || 360) + 48)) + 'px');
+        document.documentElement.style.setProperty('--overlay-gutter', String(Math.max(460, Number(scaled.w || 360) + 110)) + 'px');
         els.overlayBox.style.left = String(Math.max(0, Number(scaled.x || 18))) + 'px';
         els.overlayBox.style.top = String(Math.max(0, Number(scaled.y || 18))) + 'px';
-        els.overlayBox.style.width = String(Math.max(220, Number(scaled.w || 360))) + 'px';
+        els.overlayBox.style.width = String(Math.max(320, Number(scaled.w || 360))) + 'px';
         els.overlayBox.style.background = String(p.overlayBg || 'rgba(255,255,255,0.88)');
         els.overlayBox.style.borderColor = String(p.overlayBorder || '#cdd2c6');
         els.brandBlock.classList.add('hidden');
