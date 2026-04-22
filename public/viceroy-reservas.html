@@ -424,20 +424,57 @@
             "No hubo reservas registradas este dia."
           ].join("\n");
         }
+        const toPaxNumber = (value) => {
+          const digits = String(value == null ? "" : value).replace(/[^\d]/g, "");
+          const num = Number(digits);
+          if (!Number.isFinite(num) || num <= 0) return 0;
+          return num;
+        };
+        const paxValues = ordered.map((row) => toPaxNumber(row.pax));
+        const totalPax = paxValues.reduce((acc, value) => acc + value, 0);
+        const reservasConPax = paxValues.filter((value) => value > 0).length;
+        const promedioPax = reservasConPax ? (totalPax / reservasConPax) : 0;
+
+        const byAdvisor = new Map();
+        ordered.forEach((row) => {
+          const advisor = String(row.createdByName || row.createdByEmail || "-").trim() || "-";
+          byAdvisor.set(advisor, (byAdvisor.get(advisor) || 0) + 1);
+        });
+        const topAdvisors = [...byAdvisor.entries()]
+          .sort((a, b) => {
+            if (b[1] !== a[1]) return b[1] - a[1];
+            return String(a[0]).localeCompare(String(b[0]), "es");
+          })
+          .slice(0, 3);
+
+        const advisorLines = topAdvisors.length
+          ? topAdvisors.map(([name, count], idx) => `${idx + 1}) ${name}: ${count}`).join("\n")
+          : "Sin datos";
+
         const lines = ordered.map((row, idx) => {
           const hour = String(row.hour || "-");
-          const room = ROOM_LABELS[row.room] || row.room || "-";
           const broker = String(row.broker || row.title || "-");
           const client = String(row.client || "-");
-          const pax = String(row.pax || "-");
+          const paxRaw = String(row.pax || "-");
           const advisor = String(row.createdByName || row.createdByEmail || "-");
-          return `${idx + 1}. ${hour} | ${room} | Broker: ${broker} | Cliente: ${client} | Pax: ${pax} | Asesor: ${advisor}`;
+          return `${idx + 1}. ${hour} | Broker: ${broker} | Cliente: ${client} | Pax: ${paxRaw} | Asesor: ${advisor}`;
         });
+
         return [
           `Registro de reservas Viceroy del ${safeDate}`,
           "",
-          `Total: ${ordered.length}`,
+          "RESUMEN DEL DIA",
+          "------------------------------",
+          `Reservas totales: ${ordered.length}`,
+          `Pax total: ${totalPax}`,
+          `Promedio pax por reserva con pax: ${promedioPax.toFixed(1)}`,
+          `Reservas sin pax capturado: ${ordered.length - reservasConPax}`,
           "",
+          "Top asesores por reservas:",
+          advisorLines,
+          "",
+          "DETALLE",
+          "------------------------------",
           ...lines
         ].join("\n");
       }
