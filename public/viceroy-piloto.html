@@ -619,10 +619,9 @@
 
       function fillControlsFromLayout() {
         const p = ensureLayout();
-        const scaled = scaledOverlayValues(p);
-        els.overlayX.value = Number(scaled.x || 18);
-        els.overlayY.value = Number(scaled.y || 18);
-        els.overlayWidth.value = Number(scaled.w || 360);
+        els.overlayX.value = Number.isFinite(Number(p.overlayX)) ? Number(p.overlayX) : 18;
+        els.overlayY.value = Number.isFinite(Number(p.overlayY)) ? Number(p.overlayY) : 18;
+        els.overlayWidth.value = Number.isFinite(Number(p.overlayWidth)) ? Number(p.overlayWidth) : 360;
         els.overlayBg.value = String(p.overlayBg || 'rgba(255,255,255,0.88)');
         els.overlayBorder.value = String(p.overlayBorder || '#cdd2c6');
         els.tableHeaderBg.value = String(p.tableHeaderBg || '#ecece4');
