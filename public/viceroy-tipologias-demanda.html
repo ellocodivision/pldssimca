@@ -150,6 +150,8 @@
       let editableSimulationRows = [];
       const editableBaseM2ByUnit = new Map();
       const overrideM2ByUnit = new Map();
+      const STORAGE_KEY_BASE_M2 = 'viceroy_tipologias_demanda_base_m2_v1';
+      const STORAGE_KEY_SIMULATION = 'viceroy_tipologias_demanda_simulation_v1';
 
       function setStatus(message, type) {
         statusEl.textContent = message || '';
@@ -352,6 +354,73 @@
         const out = { 0: safeBase };
         for (let i = 1; i <= 7; i += 1) out[i] = out[i - 1] * 1.05;
         return out;
+      }
+
+      function saveEditableBaseToStorage() {
+        try {
+          const payload = {};
+          editableBaseM2ByUnit.forEach(function (value, unit) {
+            const key = String(unit || '').trim();
+            if (!key) return;
+            payload[key] = Math.max(0, Number(value) || 0);
+          });
+          localStorage.setItem(STORAGE_KEY_BASE_M2, JSON.stringify(payload));
+        } catch (_) {}
+      }
+
+      function loadEditableBaseFromStorage() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_BASE_M2);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object') return;
+          Object.keys(parsed).forEach(function (unit) {
+            const key = String(unit || '').trim();
+            if (!key) return;
+            const value = Math.max(0, Number(parsed[unit]) || 0);
+            editableBaseM2ByUnit.set(key, value);
+          });
+        } catch (_) {}
+      }
+
+      function saveSimulationToStorage() {
+        try {
+          const payload = {};
+          (Array.isArray(editableSimulationRows) ? editableSimulationRows : []).forEach(function (row) {
+            const groupKey = String(row && row.grupo || '').trim();
+            if (!groupKey) return;
+            payload[groupKey] = {
+              listaInicial: Math.max(0, Number(row && row.listaInicial) || 0),
+              lista0: Math.max(0, Number(row && row.lista0) || 0),
+              lista1: Math.max(0, Number(row && row.lista1) || 0),
+              lista2: Math.max(0, Number(row && row.lista2) || 0),
+              lista3: Math.max(0, Number(row && row.lista3) || 0),
+              lista4: Math.max(0, Number(row && row.lista4) || 0),
+              lista5: Math.max(0, Number(row && row.lista5) || 0),
+              lista6: Math.max(0, Number(row && row.lista6) || 0),
+              lista7: Math.max(0, Number(row && row.lista7) || 0)
+            };
+          });
+          localStorage.setItem(STORAGE_KEY_SIMULATION, JSON.stringify(payload));
+        } catch (_) {}
+      }
+
+      function applySimulationFromStorage() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_SIMULATION);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object') return;
+          editableSimulationRows.forEach(function (row) {
+            const groupKey = String(row && row.grupo || '').trim();
+            const stored = parsed[groupKey];
+            if (!stored || typeof stored !== 'object') return;
+            for (let i = 0; i <= 7; i += 1) {
+              row['lista' + i] = Math.max(0, Number(stored['lista' + i]) || 0);
+            }
+            row.listaInicial = Math.max(0, Number(stored.listaInicial != null ? stored.listaInicial : row.listaInicial) || 0);
+          });
+        } catch (_) {}
       }
 
       function listPricesForRow(row) {
@@ -558,9 +627,38 @@
           }
         };
 
+        const unitLaunchRows = recomputedRows.map(function (row) {
+          const groupKey = String(row && row.tipologia || '').trim();
+          const simRow = simByGrupo.get(groupKey) || {};
+          const launchList = Math.max(0, Math.min(7, Number(simRow && simRow.listaInicial) || 0));
+          const lpm2 = row && row.listPriceM2 ? row.listPriceM2 : {};
+          const priceM2Lanzamiento = Number(lpm2[String(launchList)] != null ? lpm2[String(launchList)] : lpm2[launchList]) || 0;
+          const m2 = Number(row && row.m2) || 0;
+          return {
+            unidad: row && row.unidad || '',
+            tipologia: row && row.tipologia || '',
+            recamaras: row && row.recamaras || '-',
+            listaInicial: launchList,
+            m2: m2,
+            priceM2Lanzamiento: priceM2Lanzamiento,
+            precioLanzamiento: priceM2Lanzamiento * m2,
+            source: 'calculado'
+          };
+        }).sort(function (a, b) {
+          return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+        });
+        const unitLaunch = {
+          rows: unitLaunchRows,
+          totals: {
+            unidades: unitLaunchRows.length,
+            precioLanzamientoUsd: unitLaunchRows.reduce(function (acc, row) { return acc + (Number(row && row.precioLanzamiento) || 0); }, 0)
+          }
+        };
+
         renderPricingControl({ unitProforma: unitProforma });
         renderPricingControlSummary({ pricingControl: pricingControl });
         renderBookingSimulation({ bookingSimulation: bookingSimulation });
+        renderUnitLaunch({ unitLaunch: unitLaunch });
       }
 
       function formatCurrency(value) {
@@ -778,6 +876,8 @@
             if (!unit || !lists || typeof lists !== 'object') return;
             overrideM2ByUnit.set(unit, lists);
           });
+          loadEditableBaseFromStorage();
+          applySimulationFromStorage();
           renderSource(currentReport);
           renderSummary(currentReport);
           renderTable(currentReport);
@@ -785,7 +885,6 @@
           renderInconsistencies(currentReport);
           renderPricingSimulation(currentReport);
           recomputePricingFromSimulation();
-          renderUnitLaunch(currentReport);
           setStatus('Reporte generado correctamente.', 'ok');
         } catch (err) {
           setStatus(err && err.message ? err.message : 'No se pudo cargar el reporte.', 'error');
@@ -803,6 +902,7 @@
         const row = editableSimulationRows.find(function (item) { return String(item && item.grupo || '').trim() === group; });
         if (!row || !Number.isFinite(list) || list < 0 || list > 7) return;
         row['lista' + list] = value;
+        saveSimulationToStorage();
         recomputePricingFromSimulation();
       });
       pricingControlEl.addEventListener('change', function (event) {
@@ -813,6 +913,7 @@
         const value = Math.max(0, Number(target.value) || 0);
         target.value = String(value);
         editableBaseM2ByUnit.set(unit, value);
+        saveEditableBaseToStorage();
         recomputePricingFromSimulation();
       });
       loadReport();
