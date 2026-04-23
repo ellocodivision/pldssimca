@@ -905,6 +905,7 @@ async function buildViceroyTipologiaDemandReport() {
 
   const tipologiaSelectionTotals = new Map();
   const tipologiaSelectedUnits = new Map();
+  const selectedUnitCounts = new Map();
   const seenSelectionOutsideInventory = new Set();
   const optionKeys = ['opcionA'];
 
@@ -931,6 +932,7 @@ async function buildViceroyTipologiaDemandReport() {
         return;
       }
       const tipologia = unitToTipologia.get(unit);
+      selectedUnitCounts.set(unit, (selectedUnitCounts.get(unit) || 0) + 1);
       tipologiaSelectionTotals.set(tipologia, (tipologiaSelectionTotals.get(tipologia) || 0) + 1);
       if (!tipologiaSelectedUnits.has(tipologia)) tipologiaSelectedUnits.set(tipologia, new Set());
       tipologiaSelectedUnits.get(tipologia).add(unit);
@@ -999,6 +1001,14 @@ async function buildViceroyTipologiaDemandReport() {
       : 'Aún no hay señales de demanda suficientes para defender aumentos de precio por tipología.'
   };
 
+  const unidadesTotales = [...tipologiaUnits.values()].reduce((acc, set) => acc + set.size, 0);
+  const unidadesSeleccionadas = selectedUnitCounts.size;
+  const unidadesSeleccionadasDuplicadas = [...selectedUnitCounts.values()].filter((count) => count > 1).length;
+  const seleccionesDuplicadasRepeticion = [...selectedUnitCounts.values()].reduce((acc, count) => {
+    if (count > 1) return acc + (count - 1);
+    return acc;
+  }, 0);
+
   return {
     generatedAt: new Date().toISOString(),
     source: {
@@ -1015,9 +1025,12 @@ async function buildViceroyTipologiaDemandReport() {
     },
     totals: {
       tipologias: rows.length,
-      unidadesInventario: [...tipologiaUnits.values()].reduce((acc, set) => acc + set.size, 0),
+      unidadesInventario: unidadesTotales,
       seleccionesTotales: rows.reduce((acc, row) => acc + row.seleccionesTotales, 0),
-      unidadesDistintasSeleccionadas: rows.reduce((acc, row) => acc + row.unidadesDistintasSeleccionadas, 0)
+      unidadesDistintasSeleccionadas: rows.reduce((acc, row) => acc + row.unidadesDistintasSeleccionadas, 0),
+      unidadesSeleccionadas,
+      unidadesSeleccionadasDuplicadas,
+      seleccionesDuplicadasRepeticion
     }
   };
 }
@@ -3916,12 +3929,12 @@ const VICEROY_PILOTO_COLUMN_ALIASES = {
   development: ['development', 'desarrollo', 'proyecto'],
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
   planLink: ['link', 'plano', 'plan_link', 'planlink', 'url_plano', 'urlplano', 'plano_url', 'image_url', 'imageurl'],
-  recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'habitaciones'],
+  recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'bed', 'habitaciones'],
   building: ['edificio', 'building', 'torre', 'tower', 'fase', 'phase'],
   tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad', 'type'],
   view: ['vista', 'view', 'vistas'],
   assignment: ['asignacion', 'assignment', 'assigned_to', 'assignedto', 'asesor', 'advisor', 'broker'],
-  m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area'],
+  m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area', 'total'],
   sqft: ['sqft', 'ft2', 'pies2', 'pies_cuadrados', 'square_feet', 'area_sqft'],
   price: ['precio_final', 'precio final', 'precio', 'precio_venta', 'venta', 'sale_price', 'price'],
   status: ['estatus', 'estado', 'status', 'disponibilidad', 'availability', 'inventario']
@@ -4129,16 +4142,25 @@ function dedupeViceroyRows(rows) {
 
 function parseViceroyInventoryFile(filePath) {
   const ext = path.extname(String(filePath || '')).toLowerCase();
-  if (ext === '.csv') {
-    const rawText = fs.readFileSync(filePath, 'utf-8');
-    const workbook = XLSX.read(rawText, { type: 'string' });
-    const firstSheetName = workbook.SheetNames[0];
-    const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
-    if (!firstSheet) return [];
-    return dedupeViceroyRows(parseViceroyRowsByListaPreciosV0(firstSheet));
-  }
+  const workbook = ext === '.csv'
+    ? XLSX.read(fs.readFileSync(filePath, 'utf-8'), { type: 'string' })
+    : XLSX.readFile(filePath);
+  const firstSheetName = workbook.SheetNames[0];
+  const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
+  if (!firstSheet) return [];
 
-  const workbook = XLSX.readFile(filePath);
+  // 1) Preferred: header-driven parsing (supports Unit/Type style inventories).
+  try {
+    const headerRows = rowsFromSheetWithHeaderRow(firstSheet, 1);
+    const normalizedRows = dedupeViceroyRows(
+      headerRows
+        .map((rawRow) => normalizeViceroyInventoryRow(rawRow))
+        .filter(Boolean)
+    );
+    if (normalizedRows.length) return normalizedRows;
+  } catch {}
+
+  // 2) Fallback: legacy fixed-column parser (Lista de Precios V0).
   const targetSheetKey = normalizeHeaderKey('Lista de Precios V0');
   const preferredSheetName = workbook.SheetNames.find((sheetName) => {
     const key = normalizeHeaderKey(sheetName);

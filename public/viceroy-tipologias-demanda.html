@@ -43,7 +43,7 @@
     .pill.media{background:#fff3d7;color:#6a4a02}
     .pill.baja{background:#ffe8e1;color:#8b2f1f}
     .pill.sin{background:#ece7dc;color:#625849}
-    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .summary-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
     .metric{border:1px solid #e4ddcf;border-radius:12px;background:#fff;padding:10px}
     .metric .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
     .metric .v{margin-top:4px;font-size:22px;font-weight:800}
@@ -157,7 +157,10 @@
         summaryGridEl.innerHTML = [
           { k: 'Tipologías', v: formatNumber(totals.tipologias || 0) },
           { k: 'Unidades inventario', v: formatNumber(totals.unidadesInventario || 0) },
+          { k: 'Unidades seleccionadas', v: formatNumber(totals.unidadesSeleccionadas || totals.unidadesDistintasSeleccionadas || 0) },
           { k: 'Selecciones totales', v: formatNumber(totals.seleccionesTotales || 0) },
+          { k: 'Unidades seleccionadas duplicadas', v: formatNumber(totals.unidadesSeleccionadasDuplicadas || 0) },
+          { k: 'Selecciones repetidas (duplicadas)', v: formatNumber(totals.seleccionesDuplicadasRepeticion || 0) },
           { k: 'Absorción promedio', v: formatPct(avgAbs) }
         ].map(function (item) {
           return '<div class="metric"><div class="k">' + item.k + '</div><div class="v">' + item.v + '</div></div>';
