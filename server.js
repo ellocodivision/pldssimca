@@ -976,14 +976,20 @@ async function buildViceroyTipologiaDemandReport() {
       comentario: classifyTipologiaDemand(absorptionPct, seleccionesTotales)
     };
   }).sort((a, b) => {
+    if (b.unidadesTotales !== a.unidadesTotales) return b.unidadesTotales - a.unidadesTotales;
     if (b.seleccionesTotales !== a.seleccionesTotales) return b.seleccionesTotales - a.seleccionesTotales;
     if (b.absorptionPct !== a.absorptionPct) return b.absorptionPct - a.absorptionPct;
-    if (b.unidadesDistintasSeleccionadas !== a.unidadesDistintasSeleccionadas) return b.unidadesDistintasSeleccionadas - a.unidadesDistintasSeleccionadas;
     return String(a.tipologia).localeCompare(String(b.tipologia), 'es');
   });
 
-  const tipologiasMasDemandadas = rows
+  const tipologiasMasDemandadas = [...rows]
     .filter((row) => row.seleccionesTotales > 0)
+    .sort((a, b) => {
+      if (b.seleccionesTotales !== a.seleccionesTotales) return b.seleccionesTotales - a.seleccionesTotales;
+      if (b.absorptionPct !== a.absorptionPct) return b.absorptionPct - a.absorptionPct;
+      if (b.unidadesDistintasSeleccionadas !== a.unidadesDistintasSeleccionadas) return b.unidadesDistintasSeleccionadas - a.unidadesDistintasSeleccionadas;
+      return String(a.tipologia).localeCompare(String(b.tipologia), 'es');
+    })
     .slice(0, 5)
     .map((row) => ({
       tipologia: row.tipologia,
