@@ -1009,11 +1009,18 @@ async function buildViceroyTipologiaDemandReport() {
     if (!tipologiaUnits.has(tipologia)) tipologiaUnits.set(tipologia, new Set());
     tipologiaUnits.get(tipologia).add(unit);
     if (!tipologiaUnitDetails.has(tipologia)) tipologiaUnitDetails.set(tipologia, []);
+    const listPriceMapRaw = row && row.listPricePerM2 && typeof row.listPricePerM2 === 'object' ? row.listPricePerM2 : {};
+    const listPricePerM2 = {};
+    for (let i = 0; i <= 7; i += 1) {
+      const value = parseCurrencyLike(listPriceMapRaw[i]);
+      if (Number.isFinite(value)) listPricePerM2[i] = value;
+    }
     tipologiaUnitDetails.get(tipologia).push({
       unidad: unit,
       m2: parseCurrencyLike(row && row.m2),
       price: parseCurrencyLike(row && row.price),
-      status: String(row && row.status || '').trim()
+      status: String(row && row.status || '').trim(),
+      listPricePerM2
     });
   });
 
@@ -1253,6 +1260,52 @@ async function buildViceroyTipologiaDemandReport() {
     }
   };
 
+  const startListByTipologia = new Map();
+  pricingSimulationRows.forEach((row) => {
+    if (!row || !row.grupo) return;
+    startListByTipologia.set(String(row.grupo), Number.isFinite(row.listaInicial) ? row.listaInicial : 0);
+  });
+
+  const unitLaunchRows = [];
+  tipologiaUnitDetails.forEach((details, tipologia) => {
+    const startList = startListByTipologia.has(String(tipologia)) ? startListByTipologia.get(String(tipologia)) : 0;
+    const safeList = Math.max(0, Math.min(maxList, Number(startList) || 0));
+    details.forEach((item) => {
+      const m2Value = Number.isFinite(item && item.m2) ? item.m2 : NaN;
+      const basePriceValue = Number.isFinite(item && item.price) ? item.price : NaN;
+      const basePricePerM2 = (Number.isFinite(basePriceValue) && Number.isFinite(m2Value) && m2Value > 0)
+        ? (basePriceValue / m2Value)
+        : NaN;
+      const listedPricePerM2 = item && item.listPricePerM2 && Number.isFinite(item.listPricePerM2[safeList])
+        ? item.listPricePerM2[safeList]
+        : NaN;
+      const launchPricePerM2 = Number.isFinite(listedPricePerM2)
+        ? listedPricePerM2
+        : (Number.isFinite(basePricePerM2) ? (basePricePerM2 * Math.pow(listGrowth, safeList)) : NaN);
+      const launchPriceTotal = (Number.isFinite(launchPricePerM2) && Number.isFinite(m2Value) && m2Value > 0)
+        ? (launchPricePerM2 * m2Value)
+        : NaN;
+      unitLaunchRows.push({
+        unidad: String(item && item.unidad || ''),
+        tipologia: String(tipologia || ''),
+        listaInicial: safeList,
+        m2: Number.isFinite(m2Value) ? m2Value : null,
+        priceM2Lanzamiento: Number.isFinite(launchPricePerM2) ? launchPricePerM2 : null,
+        precioLanzamiento: Number.isFinite(launchPriceTotal) ? launchPriceTotal : null,
+        source: Number.isFinite(listedPricePerM2) ? 'listado' : 'calculado'
+      });
+    });
+  });
+  unitLaunchRows.sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
+
+  const unitLaunch = {
+    rows: unitLaunchRows,
+    totals: {
+      unidades: unitLaunchRows.length,
+      precioLanzamientoUsd: unitLaunchRows.reduce((acc, row) => acc + (Number(row && row.precioLanzamiento) || 0), 0)
+    }
+  };
+
   const executiveSummary = {
     tipologiasMasDemandadas,
     tipologiasMenosDemandadas,
@@ -1284,6 +1337,7 @@ async function buildViceroyTipologiaDemandReport() {
     rows,
     pricingSimulation,
     pricingControl,
+    unitLaunch,
     executiveSummary,
     inconsistencies: {
       inventoryDuplicateUnits: inconsistencies.inventoryDuplicateUnits,
@@ -4241,6 +4295,35 @@ function normalizeViceroyPlanLink(rawValue) {
   return '';
 }
 
+function extractViceroyListPricePerM2Map(normalizedRow) {
+  const source = normalizedRow && typeof normalizedRow === 'object' ? normalizedRow : {};
+  const out = {};
+  for (let i = 0; i <= 7; i += 1) {
+    const candidates = [
+      String(i),
+      `lista${i}`,
+      `lista_${i}`,
+      `lista${i}_m2`,
+      `lista_${i}_m2`,
+      `list${i}`,
+      `list_${i}`,
+      `m2_lista_${i}`,
+      `m2_lista${i}`
+    ];
+    let found = NaN;
+    for (const key of candidates) {
+      if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+      const value = parseCurrencyLike(source[key]);
+      if (Number.isFinite(value)) {
+        found = value;
+        break;
+      }
+    }
+    if (Number.isFinite(found)) out[i] = found;
+  }
+  return out;
+}
+
 function normalizeViceroyInventoryRow(rawRow) {
   const row = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
@@ -4268,6 +4351,7 @@ function normalizeViceroyInventoryRow(rawRow) {
   const sqftRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.sqft);
   const priceRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.price);
   const status = normalizeViceroyRowStatus(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.status));
+  const listPricePerM2 = extractViceroyListPricePerM2Map(row);
   return {
     development,
     unidad: unit,
@@ -4280,7 +4364,8 @@ function normalizeViceroyInventoryRow(rawRow) {
     m2: m2Raw === '' ? '' : m2Raw,
     sqft: sqftRaw === '' ? '' : sqftRaw,
     price: priceRaw === '' ? '' : priceRaw,
-    status
+    status,
+    listPricePerM2
   };
 }
 

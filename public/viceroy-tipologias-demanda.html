@@ -115,6 +115,11 @@
       <h3 style="margin:0 0 8px;">Control de precios simulado por tipología</h3>
       <div id="pricingControl"></div>
     </section>
+
+    <section class="card">
+      <h3 style="margin:0 0 8px;">Detalle unidad por unidad · Precio de lanzamiento</h3>
+      <div id="unitLaunch"></div>
+    </section>
   </main>
 
   <script>
@@ -127,6 +132,7 @@
       const inconsistenciesEl = document.getElementById('inconsistencies');
       const pricingSimulationEl = document.getElementById('pricingSimulation');
       const pricingControlEl = document.getElementById('pricingControl');
+      const unitLaunchEl = document.getElementById('unitLaunch');
       const reloadBtn = document.getElementById('reloadBtn');
 
       function setStatus(message, type) {
@@ -339,6 +345,40 @@
           '</tr></tfoot></table></div>';
       }
 
+      function renderUnitLaunch(report) {
+        const unitLaunch = report && report.unitLaunch ? report.unitLaunch : {};
+        const rows = Array.isArray(unitLaunch.rows) ? unitLaunch.rows : [];
+        const totals = unitLaunch.totals || {};
+        if (!rows.length) {
+          unitLaunchEl.innerHTML = '<p>No hay datos de unidades para calcular lanzamiento.</p>';
+          return;
+        }
+        const bodyHtml = rows.map(function (row) {
+          return '<tr>' +
+            '<td class="mono">' + escapeHtml(row.unidad || '-') + '</td>' +
+            '<td class="mono">' + escapeHtml(row.tipologia || '-') + '</td>' +
+            '<td class="num">Lista ' + formatNumber(row.listaInicial || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.m2 || 0) + '</td>' +
+            '<td class="num">' + formatCurrency(row.priceM2Lanzamiento || 0) + '</td>' +
+            '<td class="num"><strong>' + formatCurrency(row.precioLanzamiento || 0) + '</strong></td>' +
+            '<td class="num">' + escapeHtml(row.source || '-') + '</td>' +
+          '</tr>';
+        }).join('');
+        unitLaunchEl.innerHTML =
+          '<p style="margin:0 0 10px;color:#444;">Precio de lanzamiento por unidad según la lista inicial de su tipología. Fuente: <strong>listado</strong> cuando existe precio por lista en inventario; si no, <strong>calculado</strong>.</p>' +
+          '<div class="table-wrap"><table style="min-width:1100px;"><thead><tr>' +
+          '<th>Unidad</th><th>Tipología</th><th>Lista de arranque</th><th>M2</th><th>$ / m2 lanzamiento</th><th>Precio lanzamiento (USD)</th><th>Fuente</th>' +
+          '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
+          '<td><strong>Totales</strong></td>' +
+          '<td>-</td>' +
+          '<td>-</td>' +
+          '<td class="num">-</td>' +
+          '<td class="num">-</td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.precioLanzamientoUsd || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatNumber(totals.unidades || rows.length) + ' unidades</strong></td>' +
+          '</tr></tfoot></table></div>';
+      }
+
       function renderSource(report) {
         const source = report && report.source ? report.source : {};
         sourceMetaEl.textContent =
@@ -363,6 +403,7 @@
           renderInconsistencies(data.report);
           renderPricingSimulation(data.report);
           renderPricingControl(data.report);
+          renderUnitLaunch(data.report);
           setStatus('Reporte generado correctamente.', 'ok');
         } catch (err) {
           setStatus(err && err.message ? err.message : 'No se pudo cargar el reporte.', 'error');
