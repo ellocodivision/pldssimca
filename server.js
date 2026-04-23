@@ -935,14 +935,30 @@ async function buildViceroyTipologiaDemandReport() {
   let inventoryRows = [];
   let inventoryFileName = '';
   let inventorySourcePath = '';
+  let bestInventoryScore = -1;
+  const scoreInventoryRows = (rows) => {
+    if (!Array.isArray(rows) || !rows.length) return -1;
+    let withListCols = 0;
+    let withM2 = 0;
+    rows.forEach((row) => {
+      const listMap = row && row.listPricePerM2 && typeof row.listPricePerM2 === 'object' ? row.listPricePerM2 : {};
+      const listCount = Object.keys(listMap).filter((k) => Number.isFinite(parseCurrencyLike(listMap[k]))).length;
+      if (listCount >= 8) withListCols += 1;
+      const m2 = parseCurrencyLike(row && row.m2);
+      if (Number.isFinite(m2) && m2 > 0) withM2 += 1;
+    });
+    // Prioriza cobertura de listas 0..7 por unidad, luego tamaño de inventario y cobertura de m2.
+    return (withListCols * 10000) + (rows.length * 100) + withM2;
+  };
   for (const candidate of candidates) {
     try {
       const parsedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(candidate.fullPath));
-      if (parsedRows.length) {
+      const score = scoreInventoryRows(parsedRows);
+      if (score > bestInventoryScore) {
+        bestInventoryScore = score;
         inventoryRows = parsedRows;
         inventoryFileName = candidate.name;
         inventorySourcePath = candidate.fullPath;
-        break;
       }
     } catch {}
   }
