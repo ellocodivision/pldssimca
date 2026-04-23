@@ -105,6 +105,11 @@
       <h3 style="margin:0 0 8px;">Datos inconsistentes detectados</h3>
       <div id="inconsistencies"></div>
     </section>
+
+    <section class="card">
+      <h3 style="margin:0 0 8px;">Simulación dinámica de listas por grupo</h3>
+      <div id="pricingSimulation"></div>
+    </section>
   </main>
 
   <script>
@@ -115,6 +120,7 @@
       const tableBodyEl = document.getElementById('tableBody');
       const executiveEl = document.getElementById('executive');
       const inconsistenciesEl = document.getElementById('inconsistencies');
+      const pricingSimulationEl = document.getElementById('pricingSimulation');
       const reloadBtn = document.getElementById('reloadBtn');
 
       function setStatus(message, type) {
@@ -226,6 +232,54 @@
           }, null, 2)) + '</pre></details>';
       }
 
+      function renderPricingSimulation(report) {
+        const sim = report && report.pricingSimulation ? report.pricingSimulation : {};
+        const rows = Array.isArray(sim.rows) ? sim.rows : [];
+        const maxList = Number(sim.maxList || 7);
+        const increment = Number(sim.incrementPerListPct || 5);
+        if (!rows.length) {
+          pricingSimulationEl.innerHTML = '<p>No hay datos suficientes para simular listas.</p>';
+          return;
+        }
+        const headers = [];
+        for (let i = 0; i <= maxList; i += 1) headers.push('Lista ' + i);
+        const headHtml = headers.map(function (title) {
+          return '<th>' + escapeHtml(title) + '<br><span style="font-weight:400;">+' + (increment * Math.max(0, Number(title.replace('Lista ', '')))) + '%</span></th>';
+        }).join('');
+        const bodyHtml = rows.map(function (row) {
+          const listCells = headers.map(function (_, idx) {
+            const key = 'lista' + idx;
+            return '<td class="num">' + escapeHtml(String(row[key] == null ? '-' : row[key])) + '</td>';
+          }).join('');
+          return '<tr>' +
+            '<td class="mono">' + escapeHtml(row.grupo) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidadesTotales || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidadesDistintasSeleccionadas || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.seleccionesTotales || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.mismaUnidadSeleccionada || 0) + '</td>' +
+            '<td class="num">Lista ' + formatNumber(row.listaInicial || 0) + ' (+' + formatNumber(row.incrementoBasePct || 0) + '%)</td>' +
+            '<td class="num">' + formatNumber(row.incrementaCada || 1) + '</td>' +
+            listCells +
+            '<td class="num"><strong>' + formatNumber(row.unidadesTotales || 0) + '</strong></td>' +
+          '</tr>';
+        }).join('');
+        const totals = Array.isArray(sim.totalsByList) ? sim.totalsByList : [];
+        const totalsHtml = headers.map(function (_, idx) {
+          return '<td class="num"><strong>' + formatNumber(totals[idx] || 0) + '</strong></td>';
+        }).join('');
+        pricingSimulationEl.innerHTML =
+          '<p style="margin:0 0 10px;color:#444;">Modelo propuesto: grupos con mayor presión de demanda arrancan en listas más altas; grupos con baja presión y alto inventario arrancan en lista 0. Los incrementos por lista son de +' + formatNumber(increment) + '%.</p>' +
+          '<div class="table-wrap"><table style="min-width:1700px;"><thead><tr>' +
+          '<th>Grupo</th><th>Unidades</th><th>Distintas seleccionadas</th><th>Selecciones</th><th>Duplicadas</th><th>Lista inicial</th><th>Incrementa cada</th>' +
+          headHtml +
+          '<th>Total</th>' +
+          '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
+          '<td colspan="7" style="text-align:right;"><strong>Totales por lista</strong></td>' +
+          totalsHtml +
+          '<td class="num"><strong>' + formatNumber(sim.totalUnits || 0) + '</strong></td>' +
+          '</tr></tfoot></table></div>';
+      }
+
       function renderSource(report) {
         const source = report && report.source ? report.source : {};
         sourceMetaEl.textContent =
@@ -248,6 +302,7 @@
           renderTable(data.report);
           renderExecutive(data.report);
           renderInconsistencies(data.report);
+          renderPricingSimulation(data.report);
           setStatus('Reporte generado correctamente.', 'ok');
         } catch (err) {
           setStatus(err && err.message ? err.message : 'No se pudo cargar el reporte.', 'error');

@@ -803,6 +803,97 @@ function classifyTipologiaDemand(absorptionPct, totalSelections) {
   return 'Baja demanda';
 }
 
+function normalizeViceroyPricingGroup(rawRecamaras) {
+  const key = String(rawRecamaras || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!key) return '';
+  const denNormalized = key
+    .replace(/\+DEN/g, '+1')
+    .replace(/\+D/g, '+1');
+  let match = denNormalized.match(/^([1-5])B(?:\+1)?$/);
+  if (match) {
+    const base = `${match[1]}B`;
+    return denNormalized.includes('+1') ? `${match[1]}+1` : base;
+  }
+  match = denNormalized.match(/^PH([1-5])(?:\+1)?$/);
+  if (match) {
+    return denNormalized.includes('+1') ? `PH${match[1]}+1` : `PH${match[1]}`;
+  }
+  return denNormalized;
+}
+
+function computeDynamicStartList(row) {
+  const unidadesTotales = Math.max(0, Number(row && row.unidadesTotales) || 0);
+  const unidadesDistintasSeleccionadas = Math.max(0, Number(row && row.unidadesDistintasSeleccionadas) || 0);
+  const seleccionesTotales = Math.max(0, Number(row && row.seleccionesTotales) || 0);
+  const duplicadas = Math.max(0, Number(row && row.mismaUnidadSeleccionada) || 0);
+
+  if (unidadesTotales <= 1) return 3;
+  if (unidadesTotales === 2) {
+    if (seleccionesTotales >= 2 || duplicadas > 0) return 3;
+    return 2;
+  }
+
+  const absorption = unidadesTotales > 0 ? (unidadesDistintasSeleccionadas / unidadesTotales) : 0;
+  const selectionPressure = unidadesTotales > 0 ? (seleccionesTotales / unidadesTotales) : 0;
+  const conflictPressure = unidadesDistintasSeleccionadas > 0 ? (duplicadas / unidadesDistintasSeleccionadas) : 0;
+  const weightedPressure = (0.55 * absorption) + (0.35 * Math.min(1, selectionPressure)) + (0.10 * Math.min(1, conflictPressure));
+
+  let startList = 0;
+  if (weightedPressure >= 0.75) startList = 2;
+  else if (weightedPressure >= 0.5) startList = 1;
+
+  if (duplicadas >= Math.max(2, Math.ceil(unidadesTotales * 0.25))) {
+    startList = Math.max(startList, 2);
+  }
+
+  if (unidadesTotales <= 4 && seleccionesTotales > 0) {
+    startList = Math.max(startList, 2);
+  }
+
+  if (unidadesTotales >= 12 && absorption <= 0.25 && duplicadas === 0) {
+    startList = 0;
+  }
+
+  return Math.min(3, Math.max(0, startList));
+}
+
+function computeDynamicIncrementStep(row, startList) {
+  const unidadesTotales = Math.max(1, Number(row && row.unidadesTotales) || 1);
+  const unidadesDistintasSeleccionadas = Math.max(0, Number(row && row.unidadesDistintasSeleccionadas) || 0);
+  const seleccionesTotales = Math.max(0, Number(row && row.seleccionesTotales) || 0);
+  const absorption = unidadesTotales > 0 ? (unidadesDistintasSeleccionadas / unidadesTotales) : 0;
+  const selectionPressure = unidadesTotales > 0 ? (seleccionesTotales / unidadesTotales) : 0;
+  const pressure = (0.6 * absorption) + (0.4 * Math.min(1, selectionPressure));
+
+  if (unidadesTotales <= 3) return 1;
+  const divisor = startList >= 2 ? 8 : (startList === 1 ? 7 : 6);
+  let step = Math.round(unidadesTotales / divisor);
+  if (pressure >= 0.8) step -= 1;
+  if (pressure <= 0.25) step += 1;
+  return Math.max(1, Math.min(unidadesTotales, step));
+}
+
+function buildDynamicListDistribution(unidadesTotales, startList, incrementaCada, maxList) {
+  const out = {};
+  let remaining = Math.max(0, Number(unidadesTotales) || 0);
+  for (let list = 0; list <= maxList; list += 1) {
+    const key = `lista${list}`;
+    if (list < startList || remaining <= 0) {
+      out[key] = '-';
+      continue;
+    }
+    if (list === maxList) {
+      out[key] = remaining;
+      remaining = 0;
+      continue;
+    }
+    const chunk = Math.min(incrementaCada, remaining);
+    out[key] = chunk;
+    remaining -= chunk;
+  }
+  return out;
+}
+
 function csvEscape(value) {
   const text = String(value == null ? '' : value);
   if (/[",\n\r]/.test(text)) {
@@ -867,7 +958,9 @@ async function buildViceroyTipologiaDemandReport() {
   const whisperRows = Array.isArray(whisperData && whisperData.rows) ? whisperData.rows : [];
 
   const unitToTipologia = new Map();
+  const unitToPricingGroup = new Map();
   const tipologiaUnits = new Map();
+  const pricingGroupUnits = new Map();
   const inconsistencies = {
     inventoryDuplicateUnits: [],
     inventoryUnitsMissingTipologia: [],
@@ -883,7 +976,13 @@ async function buildViceroyTipologiaDemandReport() {
   inventoryRows.forEach((row) => {
     const unit = extractUnitCode(row && row.unidad);
     const tipologia = String(row && row.tipologia || '').trim().toUpperCase();
+    const pricingGroup = normalizeViceroyPricingGroup(row && row.recamaras);
     if (!unit) return;
+    if (pricingGroup) {
+      unitToPricingGroup.set(unit, pricingGroup);
+      if (!pricingGroupUnits.has(pricingGroup)) pricingGroupUnits.set(pricingGroup, new Set());
+      pricingGroupUnits.get(pricingGroup).add(unit);
+    }
     if (!tipologia) {
       if (!seenMissingTipUnit.has(unit)) {
         inconsistencies.inventoryUnitsMissingTipologia.push({ unidad: unit });
@@ -921,6 +1020,8 @@ async function buildViceroyTipologiaDemandReport() {
 
   const tipologiaSelectionTotals = new Map();
   const tipologiaSelectedUnits = new Map();
+  const pricingGroupSelectionTotals = new Map();
+  const pricingGroupSelectedUnits = new Map();
   const selectedUnitCounts = new Map();
   const seenSelectionOutsideInventory = new Set();
   const optionKeys = ['opcionA'];
@@ -948,10 +1049,16 @@ async function buildViceroyTipologiaDemandReport() {
         return;
       }
       const tipologia = unitToTipologia.get(unit);
+      const pricingGroup = unitToPricingGroup.get(unit);
       selectedUnitCounts.set(unit, (selectedUnitCounts.get(unit) || 0) + 1);
       tipologiaSelectionTotals.set(tipologia, (tipologiaSelectionTotals.get(tipologia) || 0) + 1);
       if (!tipologiaSelectedUnits.has(tipologia)) tipologiaSelectedUnits.set(tipologia, new Set());
       tipologiaSelectedUnits.get(tipologia).add(unit);
+      if (pricingGroup) {
+        pricingGroupSelectionTotals.set(pricingGroup, (pricingGroupSelectionTotals.get(pricingGroup) || 0) + 1);
+        if (!pricingGroupSelectedUnits.has(pricingGroup)) pricingGroupSelectedUnits.set(pricingGroup, new Set());
+        pricingGroupSelectedUnits.get(pricingGroup).add(unit);
+      }
     });
   });
 
@@ -1015,6 +1122,61 @@ async function buildViceroyTipologiaDemandReport() {
     .filter((row) => row.seleccionesTotales === 0)
     .map((row) => row.tipologia);
 
+  const pricingRows = [...pricingGroupUnits.entries()].map(([grupo, unitsSet]) => {
+    const unidadesTotales = unitsSet.size;
+    const selectedUnits = pricingGroupSelectedUnits.get(grupo) || new Set();
+    const unidadesDistintasSeleccionadas = selectedUnits.size;
+    const seleccionesTotales = pricingGroupSelectionTotals.get(grupo) || 0;
+    const mismaUnidadSeleccionada = Math.max(0, seleccionesTotales - unidadesDistintasSeleccionadas);
+    const unidadesNoSeleccionadas = Math.max(0, unidadesTotales - unidadesDistintasSeleccionadas);
+    const absorptionPct = unidadesTotales > 0
+      ? (unidadesDistintasSeleccionadas / unidadesTotales) * 100
+      : 0;
+    return {
+      grupo,
+      unidadesTotales,
+      unidadesDistintasSeleccionadas,
+      seleccionesTotales,
+      mismaUnidadSeleccionada,
+      unidadesNoSeleccionadas,
+      absorptionPct
+    };
+  }).sort((a, b) => {
+    if (b.unidadesTotales !== a.unidadesTotales) return b.unidadesTotales - a.unidadesTotales;
+    if (b.seleccionesTotales !== a.seleccionesTotales) return b.seleccionesTotales - a.seleccionesTotales;
+    return String(a.grupo).localeCompare(String(b.grupo), 'es');
+  });
+
+  const listIncrementPct = 5;
+  const maxList = 7;
+  const pricingSimulationRows = pricingRows.map((row) => {
+    const startList = computeDynamicStartList(row);
+    const incrementaCada = computeDynamicIncrementStep(row, startList);
+    const lists = buildDynamicListDistribution(row.unidadesTotales, startList, incrementaCada, maxList);
+    return {
+      ...row,
+      listaInicial: startList,
+      incrementoBasePct: startList * listIncrementPct,
+      incrementaCada,
+      ...lists
+    };
+  });
+
+  const pricingSimulation = {
+    incrementPerListPct: listIncrementPct,
+    maxList,
+    rows: pricingSimulationRows,
+    totalsByList: Array.from({ length: maxList + 1 }, (_, index) => {
+      const key = `lista${index}`;
+      return pricingSimulationRows.reduce((acc, row) => {
+        const value = Number(row[key]);
+        if (!Number.isFinite(value)) return acc;
+        return acc + value;
+      }, 0);
+    }),
+    totalUnits: pricingSimulationRows.reduce((acc, row) => acc + row.unidadesTotales, 0)
+  };
+
   const executiveSummary = {
     tipologiasMasDemandadas,
     tipologiasMenosDemandadas,
@@ -1044,6 +1206,7 @@ async function buildViceroyTipologiaDemandReport() {
       whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
     },
     rows,
+    pricingSimulation,
     executiveSummary,
     inconsistencies: {
       inventoryDuplicateUnits: inconsistencies.inventoryDuplicateUnits,
