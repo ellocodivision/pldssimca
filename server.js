@@ -1320,6 +1320,58 @@ async function buildViceroyTipologiaDemandReport() {
     }
   };
 
+  const unitProformaRows = [];
+  tipologiaUnitDetails.forEach((details, tipologia) => {
+    const simRow = pricingSimulationRows.find((item) => String(item && item.grupo || '') === String(tipologia || ''));
+    const listAssignments = [];
+    if (simRow) {
+      for (let list = 0; list <= maxList; list += 1) {
+        const count = Number(simRow[`lista${list}`]);
+        if (!Number.isFinite(count) || count <= 0) continue;
+        for (let i = 0; i < count; i += 1) listAssignments.push(list);
+      }
+    }
+    const ordered = [...details].sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
+    ordered.forEach((item, index) => {
+      const m2Value = Number.isFinite(item && item.m2) ? item.m2 : NaN;
+      const basePriceValue = Number.isFinite(item && item.price) ? item.price : NaN;
+      const basePricePerM2 = (Number.isFinite(basePriceValue) && Number.isFinite(m2Value) && m2Value > 0)
+        ? (basePriceValue / m2Value)
+        : NaN;
+      const listPriceM2 = {};
+      const listPriceTotal = {};
+      for (let i = 0; i <= maxList; i += 1) {
+        const listed = item && item.listPricePerM2 && Number.isFinite(item.listPricePerM2[i]) ? item.listPricePerM2[i] : NaN;
+        const computed = Number.isFinite(basePricePerM2) ? (basePricePerM2 * Math.pow(listGrowth, i)) : NaN;
+        const valueM2 = Number.isFinite(listed) ? listed : computed;
+        listPriceM2[i] = Number.isFinite(valueM2) ? valueM2 : null;
+        listPriceTotal[i] = (Number.isFinite(valueM2) && Number.isFinite(m2Value) && m2Value > 0) ? (valueM2 * m2Value) : null;
+      }
+      const assignedList = listAssignments[index] != null ? listAssignments[index] : (simRow && Number.isFinite(simRow.listaInicial) ? simRow.listaInicial : 0);
+      const priceLista = Number.isFinite(listPriceTotal[assignedList]) ? listPriceTotal[assignedList] : null;
+      const priceVenta = Number.isFinite(priceLista) ? (priceLista * (1 - stressDiscountPct)) : null;
+      unitProformaRows.push({
+        unidad: String(item && item.unidad || ''),
+        tipologia: String(tipologia || ''),
+        recamaras: formatRecamaras(item && item.recamaras),
+        m2: Number.isFinite(m2Value) ? m2Value : null,
+        listaAsignada: assignedList,
+        listPriceM2,
+        priceLista,
+        priceVenta
+      });
+    });
+  });
+  unitProformaRows.sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
+  const unitProforma = {
+    rows: unitProformaRows,
+    totals: {
+      unidades: unitProformaRows.length,
+      priceLista: unitProformaRows.reduce((acc, row) => acc + (Number(row && row.priceLista) || 0), 0),
+      priceVenta: unitProformaRows.reduce((acc, row) => acc + (Number(row && row.priceVenta) || 0), 0)
+    }
+  };
+
   const executiveSummary = {
     tipologiasMasDemandadas,
     tipologiasMenosDemandadas,
@@ -1352,6 +1404,7 @@ async function buildViceroyTipologiaDemandReport() {
     pricingSimulation,
     pricingControl,
     unitLaunch,
+    unitProforma,
     executiveSummary,
     inconsistencies: {
       inventoryDuplicateUnits: inconsistencies.inventoryDuplicateUnits,

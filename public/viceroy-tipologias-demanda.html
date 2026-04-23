@@ -112,7 +112,7 @@
     </section>
 
     <section class="card">
-      <h3 style="margin:0 0 8px;">Precios proforma por tipología</h3>
+      <h3 style="margin:0 0 8px;">Precios proforma por unidad</h3>
       <div id="pricingControl"></div>
     </section>
 
@@ -299,49 +299,52 @@
       }
 
       function renderPricingControl(report) {
-        const control = report && report.pricingControl ? report.pricingControl : {};
-        const rows = Array.isArray(control.rows) ? control.rows : [];
-        const assumptions = control.assumptions || {};
-        const totals = control.totals || {};
+        const proforma = report && report.unitProforma ? report.unitProforma : {};
+        const rows = Array.isArray(proforma.rows) ? proforma.rows : [];
+        const totals = proforma.totals || {};
         if (!rows.length) {
-          pricingControlEl.innerHTML = '<p>No hay datos suficientes para simular el control de precios.</p>';
+          pricingControlEl.innerHTML = '<p>No hay datos suficientes para simular la proforma por unidad.</p>';
           return;
         }
         const bodyHtml = rows.map(function (row) {
+          const l0 = row.listPriceM2 && row.listPriceM2['0'] != null ? row.listPriceM2['0'] : 0;
+          const l1 = row.listPriceM2 && row.listPriceM2['1'] != null ? row.listPriceM2['1'] : 0;
+          const l2 = row.listPriceM2 && row.listPriceM2['2'] != null ? row.listPriceM2['2'] : 0;
+          const l3 = row.listPriceM2 && row.listPriceM2['3'] != null ? row.listPriceM2['3'] : 0;
+          const l4 = row.listPriceM2 && row.listPriceM2['4'] != null ? row.listPriceM2['4'] : 0;
+          const l5 = row.listPriceM2 && row.listPriceM2['5'] != null ? row.listPriceM2['5'] : 0;
+          const l6 = row.listPriceM2 && row.listPriceM2['6'] != null ? row.listPriceM2['6'] : 0;
+          const l7 = row.listPriceM2 && row.listPriceM2['7'] != null ? row.listPriceM2['7'] : 0;
           return '<tr>' +
-            '<td class="mono">' + escapeHtml(row.grupo) + '</td>' +
-            '<td class="num">' + formatCurrency(row.m2Promedio || 0) + '</td>' +
-            '<td class="num">' + formatNumber(row.unidades || 0) + '</td>' +
-            '<td class="num">' + formatCurrency(row.ingresosUsd || 0) + '</td>' +
-            '<td class="num">' + formatCurrency(row.stressTestUsd || 0) + '</td>' +
-            '<td class="num">' + formatNumber(row.vendidos || 0) + '</td>' +
-            '<td class="num">' + escapeHtml(row.lista || '-') + '</td>' +
-            '<td class="num">' + formatPct(row.participacionPct || 0) + '</td>' +
+            '<td class="mono">' + escapeHtml(row.unidad || '-') + '</td>' +
+            '<td class="mono">' + escapeHtml(row.tipologia || '-') + '</td>' +
+            '<td class="num">' + escapeHtml(row.recamaras || '-') + '</td>' +
+            '<td class="num">' + formatNumber(row.m2 || 0) + '</td>' +
+            '<td class="num">' + formatCurrency(l0) + '</td>' +
+            '<td class="num">' + formatCurrency(l1) + '</td>' +
+            '<td class="num">' + formatCurrency(l2) + '</td>' +
+            '<td class="num">' + formatCurrency(l3) + '</td>' +
+            '<td class="num">' + formatCurrency(l4) + '</td>' +
+            '<td class="num">' + formatCurrency(l5) + '</td>' +
+            '<td class="num">' + formatCurrency(l6) + '</td>' +
+            '<td class="num">' + formatCurrency(l7) + '</td>' +
+            '<td class="num">Lista ' + formatNumber(row.listaAsignada || 0) + '</td>' +
+            '<td class="num"><strong>' + formatCurrency(row.priceLista || 0) + '</strong></td>' +
+            '<td class="num"><strong>' + formatCurrency(row.priceVenta || 0) + '</strong></td>' +
           '</tr>';
         }).join('');
         pricingControlEl.innerHTML =
-          '<p style="margin:0 0 10px;color:#444;">Supuestos: incremento por lista +' + formatNumber((assumptions.listIncrementPct || 0)) + '% · descuento stress test ' + formatPct((assumptions.stressDiscountPct || 0) * 100) + ' · T.C. $' + formatNumber(assumptions.tc || 0) + ' MXN/USD.</p>' +
-          '<div class="table-wrap"><table style="min-width:1200px;"><thead><tr>' +
-          '<th>Grupo</th><th>$M2 (promedio)</th><th>Unidades</th><th>Ingresos (USD)</th><th>Stress Test (USD)</th><th>Vendidos</th><th>Lista</th><th>Participación</th>' +
+          '<p style="margin:0 0 10px;color:#444;">Simulación celda por celda estilo proforma: columnas 0..7 como $/m2 por lista y cálculo final por unidad según su lista asignada por grupo.</p>' +
+          '<div class="table-wrap"><table style="min-width:2100px;"><thead><tr>' +
+          '<th>Unidad</th><th>Tipo</th><th>Recámaras</th><th>M2</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>Lista asignada</th><th>Precio Lista</th><th>Precio Venta</th>' +
           '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
           '<td><strong>Totales</strong></td>' +
+          '<td>-</td><td>-</td><td>-</td>' +
+          '<td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="num">-</td>' +
+          '<td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="num">-</td>' +
           '<td class="num">-</td>' +
-          '<td class="num"><strong>' + formatNumber(totals.unidades || 0) + '</strong></td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.ingresosUsd || 0) + '</strong></td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.stressTestUsd || 0) + '</strong></td>' +
-          '<td class="num">-</td>' +
-          '<td class="num">-</td>' +
-          '<td class="num">100.00%</td>' +
-          '</tr>' +
-          '<tr>' +
-          '<td><strong>Total en pesos</strong></td>' +
-          '<td class="num">-</td>' +
-          '<td class="num">-</td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.ingresosMxn || 0) + '</strong></td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.stressTestMxn || 0) + '</strong></td>' +
-          '<td class="num">-</td>' +
-          '<td class="num">-</td>' +
-          '<td class="num">-</td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.priceLista || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.priceVenta || 0) + '</strong></td>' +
           '</tr></tfoot></table></div>';
       }
 
