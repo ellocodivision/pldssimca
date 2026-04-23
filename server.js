@@ -839,39 +839,39 @@ function computeDynamicStartList(row) {
   return Math.min(3, Math.max(0, startList));
 }
 
-function computeDynamicIncrementStep(row, startList) {
-  const unidadesTotales = Math.max(1, Number(row && row.unidadesTotales) || 1);
-  const unidadesDistintasSeleccionadas = Math.max(0, Number(row && row.unidadesDistintasSeleccionadas) || 0);
-  const seleccionesTotales = Math.max(0, Number(row && row.seleccionesTotales) || 0);
-  const absorption = unidadesTotales > 0 ? (unidadesDistintasSeleccionadas / unidadesTotales) : 0;
-  const selectionPressure = unidadesTotales > 0 ? (seleccionesTotales / unidadesTotales) : 0;
-  const pressure = (0.6 * absorption) + (0.4 * Math.min(1, selectionPressure));
-
-  if (unidadesTotales <= 3) return 1;
-  const divisor = startList >= 2 ? 8 : (startList === 1 ? 7 : 6);
-  let step = Math.round(unidadesTotales / divisor);
-  if (pressure >= 0.8) step -= 1;
-  if (pressure <= 0.25) step += 1;
-  return Math.max(1, Math.min(unidadesTotales, step));
+function computeBaseUnitsPerList(unidadesTotales, maxList) {
+  const total = Math.max(0, Number(unidadesTotales) || 0);
+  const listCount = Math.max(1, (Number(maxList) || 0) + 1);
+  return Math.max(1, Math.floor(total / listCount));
 }
 
-function buildDynamicListDistribution(unidadesTotales, startList, incrementaCada, maxList) {
+function buildDynamicListDistribution(unidadesTotales, startList, maxList) {
   const out = {};
-  let remaining = Math.max(0, Number(unidadesTotales) || 0);
-  for (let list = 0; list <= maxList; list += 1) {
+  const total = Math.max(0, Number(unidadesTotales) || 0);
+  const safeMax = Math.max(0, Number(maxList) || 0);
+  const listCount = safeMax + 1;
+  if (!listCount) return out;
+
+  const base = Math.floor(total / listCount);
+  const remainder = total % listCount;
+  const planned = Array.from({ length: listCount }, (_, idx) => base + (idx < remainder ? 1 : 0));
+
+  const safeStart = Math.min(Math.max(0, Number(startList) || 0), safeMax);
+  let carry = 0;
+  for (let i = 0; i < safeStart; i += 1) carry += planned[i];
+
+  for (let list = 0; list <= safeMax; list += 1) {
     const key = `lista${list}`;
-    if (list < startList || remaining <= 0) {
+    if (list < safeStart) {
       out[key] = '-';
       continue;
     }
-    if (list === maxList) {
-      out[key] = remaining;
-      remaining = 0;
+    const own = planned[list] || 0;
+    if (list === safeStart) {
+      out[key] = own + carry;
       continue;
     }
-    const chunk = Math.min(incrementaCada, remaining);
-    out[key] = chunk;
-    remaining -= chunk;
+    out[key] = own;
   }
   return out;
 }
@@ -1102,8 +1102,8 @@ async function buildViceroyTipologiaDemandReport() {
   const maxList = 7;
   const pricingSimulationRows = pricingRows.map((row) => {
     const startList = computeDynamicStartList(row);
-    const incrementaCada = computeDynamicIncrementStep(row, startList);
-    const lists = buildDynamicListDistribution(row.unidadesTotales, startList, incrementaCada, maxList);
+    const incrementaCada = computeBaseUnitsPerList(row.unidadesTotales, maxList);
+    const lists = buildDynamicListDistribution(row.unidadesTotales, startList, maxList);
     return {
       ...row,
       listaInicial: startList,
