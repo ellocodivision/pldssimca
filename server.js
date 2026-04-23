@@ -1300,80 +1300,68 @@ async function buildViceroyTipologiaDemandReport() {
     return maxList;
   };
 
-  const flatUnits = [];
+  const detailByTipologia = new Map();
   tipologiaUnitDetails.forEach((details, tipologia) => {
-    details.forEach((item) => {
-      flatUnits.push({
-        tipologia: String(tipologia || '').trim(),
-        unidad: String(item && item.unidad || '').trim(),
+    const orderedDetails = [...details].sort((a, b) => {
+      const ai = Number.isFinite(Number(a && a.sourceRowIndex)) ? Number(a.sourceRowIndex) : Number.POSITIVE_INFINITY;
+      const bi = Number.isFinite(Number(b && b.sourceRowIndex)) ? Number(b.sourceRowIndex) : Number.POSITIVE_INFINITY;
+      if (ai !== bi) return ai - bi;
+      return unitSort(a && a.unidad, b && b.unidad);
+    });
+    detailByTipologia.set(String(tipologia || '').trim(), orderedDetails);
+  });
+
+  const unitProformaRows = [];
+  const processedTipologias = new Set();
+  const buildRowsForTipologia = (tipologiaKey, simRowOrNull) => {
+    const details = Array.isArray(detailByTipologia.get(tipologiaKey)) ? detailByTipologia.get(tipologiaKey) : [];
+    if (!details.length) return;
+    const formulaLimits = simRowOrNull ? buildFormulaLimits(simRowOrNull).cumulative : [0, 0, 0, 0, 0, 0, 0];
+    details.forEach((item, index) => {
+      const rankInGroup = index + 1;
+      const series = computeListPriceSeries(item);
+      const assignedList = resolveListByExcelLikeFormula(rankInGroup, formulaLimits);
+      const priceLista = Number.isFinite(series.listPriceTotal[assignedList]) ? series.listPriceTotal[assignedList] : null;
+      const priceVenta = Number.isFinite(priceLista) ? (priceLista * (1 - stressDiscountPct)) : null;
+      unitProformaRows.push({
+        unidad: String(item && item.unidad || ''),
+        tipologia: tipologiaKey,
         recamaras: formatRecamaras(item && item.recamaras),
         level: String(item && item.level || '').trim(),
         groupCode: String(item && item.groupCode || '').trim(),
-        sourceRowIndex: Number.isFinite(Number(item && item.sourceRowIndex)) ? Number(item.sourceRowIndex) : null,
-        listThresholds: Array.isArray(item && item.listThresholds) ? item.listThresholds.map((v) => Number(v) || 0).slice(0, 8) : [],
-        status: String(item && item.status || '').trim(),
-        ...computeListPriceSeries(item)
+        m2: series.m2,
+        rankInGroup,
+        formulaLimits,
+        listaAsignada: assignedList,
+        listPriceM2: series.listPriceM2,
+        priceLista,
+        priceVenta,
+        baseTotal: Number.isFinite(series.listPriceTotal[0]) ? series.listPriceTotal[0] : 0,
+        status: String(item && item.status || '').trim()
       });
     });
-  });
-  flatUnits.sort((a, b) => {
-    const ai = Number.isFinite(a && a.sourceRowIndex) ? a.sourceRowIndex : Number.POSITIVE_INFINITY;
-    const bi = Number.isFinite(b && b.sourceRowIndex) ? b.sourceRowIndex : Number.POSITIVE_INFINITY;
-    if (ai !== bi) return ai - bi;
-    return unitSort(a && a.unidad, b && b.unidad);
+  };
+
+  pricingSimulationRows.forEach((simRow) => {
+    const tipologiaKey = String(simRow && simRow.grupo || '').trim();
+    if (!tipologiaKey) return;
+    buildRowsForTipologia(tipologiaKey, simRow);
+    processedTipologias.add(tipologiaKey);
   });
 
-  const limitsByGroup = new Map();
-  flatUnits.forEach((row) => {
-    const groupKey = String(row && row.groupCode || row && row.tipologia || '').trim();
-    if (!groupKey) return;
-    if (!limitsByGroup.has(groupKey) && Array.isArray(row && row.listThresholds) && row.listThresholds.length >= 7) {
-      limitsByGroup.set(groupKey, row.listThresholds);
-    }
-  });
-  if (!limitsByGroup.size) {
-    pricingSimulationRows.forEach((simRow) => {
-      const groupKey = String(simRow && simRow.grupo || '').trim();
-      if (!groupKey) return;
-      limitsByGroup.set(groupKey, buildFormulaLimits(simRow).cumulative);
-    });
-  }
-
-  const groupCounters = new Map();
-  const unitProformaRows = flatUnits.map((row) => {
-    const groupKey = String(row && row.groupCode || row && row.tipologia || '').trim();
-    const rankInGroup = (groupCounters.get(groupKey) || 0) + 1;
-    groupCounters.set(groupKey, rankInGroup);
-    const formulaLimits = limitsByGroup.get(groupKey) || [];
-    const assignedList = resolveListByExcelLikeFormula(rankInGroup, formulaLimits);
-    const priceLista = Number.isFinite(row && row.listPriceTotal && row.listPriceTotal[assignedList]) ? row.listPriceTotal[assignedList] : null;
-    const priceVenta = Number.isFinite(priceLista) ? (priceLista * (1 - stressDiscountPct)) : null;
-    return {
-      unidad: row.unidad,
-      tipologia: row.tipologia,
-      recamaras: row.recamaras,
-      level: row.level,
-      groupCode: row.groupCode,
-      m2: row.m2,
-      rankInGroup,
-      formulaLimits,
-      listaAsignada: assignedList,
-      listPriceM2: row.listPriceM2,
-      priceLista,
-      priceVenta,
-      baseTotal: Number.isFinite(row && row.listPriceTotal && row.listPriceTotal[0]) ? row.listPriceTotal[0] : 0,
-      status: row.status
-    };
+  detailByTipologia.forEach((_, tipologiaKey) => {
+    if (processedTipologias.has(tipologiaKey)) return;
+    buildRowsForTipologia(tipologiaKey, null);
   });
 
   const rowsByGroupForKesimo = new Map();
   unitProformaRows.forEach((row) => {
-    const groupKey = String(row && row.groupCode || row && row.tipologia || '').trim();
+    const groupKey = String(row && row.tipologia || '').trim();
     if (!rowsByGroupForKesimo.has(groupKey)) rowsByGroupForKesimo.set(groupKey, []);
     rowsByGroupForKesimo.get(groupKey).push(row);
   });
-  rowsByGroupForKesimo.forEach((rowsInGroup, groupKey) => {
-    const formulaLimits = limitsByGroup.get(groupKey) || [];
+  rowsByGroupForKesimo.forEach((rowsInGroup) => {
+    const formulaLimits = Array.isArray(rowsInGroup[0] && rowsInGroup[0].formulaLimits) ? rowsInGroup[0].formulaLimits : [];
     const ranked = [...rowsInGroup].sort((a, b) => {
       const byTotal = (Number(b && b.baseTotal) || 0) - (Number(a && a.baseTotal) || 0);
       if (byTotal !== 0) return byTotal;
