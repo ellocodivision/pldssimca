@@ -837,31 +837,46 @@
           };
         });
 
+        const simByTipologia = new Map();
+        simRows.forEach(function (row) {
+          const key = String(row && row.grupo || '').trim();
+          if (!key) return;
+          simByTipologia.set(key, row);
+        });
+
         const unitSimulationRows = proformaRows.map(function (row) {
           const listPrice = row && row.listPriceM2 && typeof row.listPriceM2 === 'object' ? row.listPriceM2 : {};
-          const baseM2 = Number(row && row.m2) || 0;
-          const unitLabel = String(row && row.unidad || '');
+          const tipologia = String(row && row.tipologia || '').trim();
+          const simRow = simByTipologia.get(tipologia) || {};
           return {
-            unidad: unitLabel,
-            tipologia: String(row && row.tipologia || ''),
-            recamaras: String(row && row.recamaras || ''),
-            lista_inicial_grupo: Number(row && row.listaAsignada) || 0,
-            rank_in_group: Number(row && row.rankInGroup) || 0,
-            m2: baseM2,
-            incremento_lista_pct: Number(sim.incrementPerListPct || 5),
-            lista_0: Number(listPrice['0'] != null ? listPrice['0'] : listPrice[0]) || 0,
-            lista_1: Number(listPrice['1'] != null ? listPrice['1'] : listPrice[1]) || 0,
-            lista_2: Number(listPrice['2'] != null ? listPrice['2'] : listPrice[2]) || 0,
-            lista_3: Number(listPrice['3'] != null ? listPrice['3'] : listPrice[3]) || 0,
-            lista_4: Number(listPrice['4'] != null ? listPrice['4'] : listPrice[4]) || 0,
-            lista_5: Number(listPrice['5'] != null ? listPrice['5'] : listPrice[5]) || 0,
-            lista_6: Number(listPrice['6'] != null ? listPrice['6'] : listPrice[6]) || 0,
-            lista_7: Number(listPrice['7'] != null ? listPrice['7'] : listPrice[7]) || 0,
-            precio_lista_asignada_usd: Number(row && row.priceLista) || 0,
-            precio_venta_usd: Number(row && row.priceVenta) || 0
+            Unidad: String(row && row.unidad || ''),
+            Tipologia: tipologia,
+            Recamaras: String(row && row.recamaras || ''),
+            'Lista inicial grupo': Number(simRow && simRow.listaInicial) || 0,
+            'Rango en grupo': Number(row && row.rankInGroup) || 0,
+            'M2': Number(row && row.m2) || 0,
+            'Incremento lista %': Number(sim.incrementPerListPct || 5),
+            'Lista 0 unidades grupo': Number(simRow && simRow.lista0) || 0,
+            'Lista 1 unidades grupo': Number(simRow && simRow.lista1) || 0,
+            'Lista 2 unidades grupo': Number(simRow && simRow.lista2) || 0,
+            'Lista 3 unidades grupo': Number(simRow && simRow.lista3) || 0,
+            'Lista 4 unidades grupo': Number(simRow && simRow.lista4) || 0,
+            'Lista 5 unidades grupo': Number(simRow && simRow.lista5) || 0,
+            'Lista 6 unidades grupo': Number(simRow && simRow.lista6) || 0,
+            'Lista 7 unidades grupo': Number(simRow && simRow.lista7) || 0,
+            'Lista 0 $/m2': Number(listPrice['0'] != null ? listPrice['0'] : listPrice[0]) || 0,
+            'Lista 1 $/m2': Number(listPrice['1'] != null ? listPrice['1'] : listPrice[1]) || 0,
+            'Lista 2 $/m2': Number(listPrice['2'] != null ? listPrice['2'] : listPrice[2]) || 0,
+            'Lista 3 $/m2': Number(listPrice['3'] != null ? listPrice['3'] : listPrice[3]) || 0,
+            'Lista 4 $/m2': Number(listPrice['4'] != null ? listPrice['4'] : listPrice[4]) || 0,
+            'Lista 5 $/m2': Number(listPrice['5'] != null ? listPrice['5'] : listPrice[5]) || 0,
+            'Lista 6 $/m2': Number(listPrice['6'] != null ? listPrice['6'] : listPrice[6]) || 0,
+            'Lista 7 $/m2': Number(listPrice['7'] != null ? listPrice['7'] : listPrice[7]) || 0,
+            'Precio lista asignada USD': Number(row && row.priceLista) || 0,
+            'Precio venta USD': Number(row && row.priceVenta) || 0
           };
         }).sort(function (a, b) {
-          return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+          return String(a && a.Unidad || '').localeCompare(String(b && b.Unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
         });
 
         const workbook = XLSX.utils.book_new();
