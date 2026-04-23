@@ -1590,6 +1590,11 @@ async function buildViceroyTipologiaDemandReport() {
     if (count > 1) return acc + (count - 1);
     return acc;
   }, 0);
+  const unitSelectionCounts = {};
+  selectedUnitCounts.forEach((count, unit) => {
+    if (!unit) return;
+    unitSelectionCounts[unit] = Number(count) || 0;
+  });
 
   return {
     generatedAt: new Date().toISOString(),
@@ -1611,6 +1616,7 @@ async function buildViceroyTipologiaDemandReport() {
       whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
     },
     rows,
+    unitSelectionCounts,
     pricingSimulation,
     pricingControl,
     unitLaunch,

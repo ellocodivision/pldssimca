@@ -66,6 +66,7 @@
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
         <button id="reloadBtn" class="btn" type="button">Recargar</button>
         <button id="exportFloorsBtn" class="btn" type="button">Exportar 7 niveles</button>
+        <button id="exportDuplicateFloorsBtn" class="btn" type="button">Exportar unidades duplicadas</button>
         <button id="exportExcelBtn" class="btn" type="button">Exportar Excel</button>
         <a class="btn primary" href="/api/viceroy/tipologias-demanda.csv">Exportar CSV</a>
       </div>
@@ -162,6 +163,7 @@
       const unitLaunchEl = document.getElementById('unitLaunch');
       const reloadBtn = document.getElementById('reloadBtn');
       const exportFloorsBtn = document.getElementById('exportFloorsBtn');
+      const exportDuplicateFloorsBtn = document.getElementById('exportDuplicateFloorsBtn');
       const exportExcelBtn = document.getElementById('exportExcelBtn');
       const m2UploadFileEl = document.getElementById('m2UploadFile');
       const m2UploadSheetEl = document.getElementById('m2UploadSheet');
@@ -308,6 +310,35 @@
         return map;
       }
 
+      function buildDemandUnitMetadataMap(report) {
+        const rows = Array.isArray(report && report.unitProforma && report.unitProforma.rows)
+          ? report.unitProforma.rows
+          : [];
+        const map = new Map();
+        rows.forEach(function (row) {
+          const unit = normalizeDemandUnitKey(row && row.unidad);
+          if (!unit) return;
+          map.set(unit, {
+            tipologia: String(row && row.tipologia || '').trim(),
+            recamaras: String(row && row.recamaras || '').trim()
+          });
+        });
+        return map;
+      }
+
+      function buildDemandUnitSelectionCountMap(report) {
+        const source = report && report.unitSelectionCounts && typeof report.unitSelectionCounts === 'object'
+          ? report.unitSelectionCounts
+          : {};
+        const map = new Map();
+        Object.entries(source).forEach(function (entry) {
+          const unit = normalizeDemandUnitKey(entry[0]);
+          if (!unit) return;
+          map.set(unit, Math.max(0, Number(entry[1]) || 0));
+        });
+        return map;
+      }
+
       function resolveDemandZoneInfo(zone, report, unitCommentMap) {
         const zoneLabel = String(zone && zone.label || '').trim();
         const unitKey = normalizeDemandUnitKey(zoneLabel);
@@ -316,6 +347,31 @@
           unidad: zoneLabel || unitKey,
           comentario: comment,
           color: getDemandCommentColor(comment)
+        };
+      }
+
+      function resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap) {
+        const zoneLabel = String(zone && zone.label || '').trim();
+        const unitKey = normalizeDemandUnitKey(zoneLabel);
+        const count = Number(unitSelectionCountMap.get(unitKey) || 0);
+        if (count === 1) {
+          return null;
+        }
+        const meta = unitMetadataMap.get(unitKey) || {};
+        const status = count > 1 ? 'duplicada' : 'disponible';
+        const color = count > 1 ? '#b71c1c' : '#6b6b6b';
+        const recamaras = String(meta.recamaras || '').trim();
+        const tipologia = String(meta.tipologia || '').trim();
+        const detail = [
+          recamaras ? `Recámaras: ${recamaras}` : '',
+          tipologia ? `Tipología: ${tipologia}` : '',
+          count > 1 ? `Veces elegida: ${count}` : 'Sin selección'
+        ].filter(Boolean).join(' · ');
+        return {
+          unidad: zoneLabel || unitKey,
+          estado: status,
+          detalle: detail,
+          color: color
         };
       }
 
@@ -368,6 +424,81 @@
           ctx.fillStyle = 'rgba(255,255,255,0.92)';
           ctx.strokeStyle = 'rgba(54,54,63,0.55)';
           ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8);
+          } else {
+            ctx.rect(boxX, boxY, boxWidth, boxHeight);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#2e3138';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.font = '700 13px Arial, sans-serif';
+          ctx.fillText(line1, boxX + paddingX, boxY + paddingY);
+          ctx.font = '500 11px Arial, sans-serif';
+          ctx.fillStyle = '#5f6573';
+          ctx.fillText(line2, boxX + paddingX, boxY + paddingY + 16);
+          ctx.restore();
+        });
+
+        return {
+          dataUrl: canvas.toDataURL('image/png'),
+          width: canvas.width,
+          height: canvas.height
+        };
+      }
+
+      async function renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap) {
+        const img = await loadImageElement(floor.imageDataUrl);
+        const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
+        const width = Number(floor.imageWidth) || img.naturalWidth || img.width || 1200;
+        const height = Number(floor.imageHeight) || img.naturalHeight || img.height || 800;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        zones.forEach(function (zone) {
+          const info = resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap);
+          if (!info) return;
+          const points = Array.isArray(zone && zone.points) ? zone.points : [];
+          if (!points.length) return;
+          ctx.beginPath();
+          points.forEach(function (point, index) {
+            const px = Number(point[0] || 0);
+            const py = Number(point[1] || 0);
+            if (index === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.closePath();
+          ctx.fillStyle = info.color + '55';
+          ctx.strokeStyle = info.color;
+          ctx.lineWidth = 2.5;
+          ctx.fill();
+          ctx.stroke();
+
+          const cx = points.reduce(function (acc, point) { return acc + Number(point[0] || 0); }, 0) / points.length;
+          const cy = points.reduce(function (acc, point) { return acc + Number(point[1] || 0); }, 0) / points.length;
+          const text1 = info.unidad || '';
+          const text2 = info.detalle || '';
+          ctx.save();
+          ctx.font = '600 13px Arial, sans-serif';
+          const maxWidth = Math.max(140, width * 0.24);
+          const line1 = truncateCanvasText(ctx, text1, maxWidth);
+          const line2 = truncateCanvasText(ctx, text2, maxWidth);
+          const paddingX = 8;
+          const paddingY = 6;
+          const textWidth = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
+          const boxWidth = Math.min(width * 0.5, textWidth + (paddingX * 2));
+          const boxHeight = 34 + (paddingY * 2);
+          const boxX = Math.max(6, Math.min(width - boxWidth - 6, cx - (boxWidth / 2)));
+          const boxY = Math.max(6, Math.min(height - boxHeight - 6, cy - boxHeight - 10));
+          ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          ctx.strokeStyle = info.color;
+          ctx.lineWidth = 1.8;
           ctx.beginPath();
           if (typeof ctx.roundRect === 'function') {
             ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8);
@@ -453,6 +584,70 @@
           if (exportFloorsBtn) {
             exportFloorsBtn.disabled = false;
             exportFloorsBtn.textContent = 'Exportar 7 niveles';
+          }
+        }
+      }
+
+      async function exportDuplicateDemandFloors() {
+        if (!currentReport) {
+          setStatus('Carga el reporte primero para exportar las unidades duplicadas.', 'error');
+          return;
+        }
+        if (exportDuplicateFloorsBtn) {
+          exportDuplicateFloorsBtn.disabled = true;
+          exportDuplicateFloorsBtn.textContent = 'Exportando duplicadas...';
+        }
+        try {
+          const floorsRes = await fetch('/api/viceroy/tipologias-demanda/floors', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          const floorsData = await floorsRes.json().catch(function () { return {}; });
+          if (!floorsRes.ok || !floorsData.ok || !Array.isArray(floorsData.floors) || !floorsData.floors.length) {
+            throw new Error(floorsData.error || ('No se pudieron cargar los niveles (' + floorsRes.status + ')'));
+          }
+
+          const unitSelectionCountMap = buildDemandUnitSelectionCountMap(currentReport);
+          const unitMetadataMap = buildDemandUnitMetadataMap(currentReport);
+          const pages = [];
+          for (const floor of floorsData.floors) {
+            const rendered = await renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap);
+            pages.push({
+              title: String(floor && (floor.floorDisplay || floor.name || floor.id || '') || ''),
+              dataUrl: rendered.dataUrl,
+              width: rendered.width,
+              height: rendered.height
+            });
+          }
+
+          const response = await fetch('/api/viceroy/tipologias-demanda/export-floors-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ pages: pages })
+          });
+          if (!response.ok) {
+            const bodyText = await response.text().catch(function () { return ''; });
+            throw new Error(bodyText || 'No se pudo exportar el PDF');
+          }
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'viceroy-tipologias-demanda-unidades-duplicadas.pdf';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 1000);
+          setStatus('PDF de unidades duplicadas exportado correctamente.', 'ok');
+        } catch (err) {
+          setStatus(err && err.message ? err.message : 'No se pudo exportar el PDF de duplicadas.', 'error');
+        } finally {
+          if (exportDuplicateFloorsBtn) {
+            exportDuplicateFloorsBtn.disabled = false;
+            exportDuplicateFloorsBtn.textContent = 'Exportar unidades duplicadas';
           }
         }
       }
@@ -1386,6 +1581,9 @@
       reloadBtn.addEventListener('click', loadReport);
       if (exportFloorsBtn) {
         exportFloorsBtn.addEventListener('click', exportDemandFloors);
+      }
+      if (exportDuplicateFloorsBtn) {
+        exportDuplicateFloorsBtn.addEventListener('click', exportDuplicateDemandFloors);
       }
       if (exportExcelBtn) {
         exportExcelBtn.addEventListener('click', exportDemandWorkbook);
