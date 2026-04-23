@@ -146,6 +146,8 @@
       const pricingControlEl = document.getElementById('pricingControl');
       const unitLaunchEl = document.getElementById('unitLaunch');
       const reloadBtn = document.getElementById('reloadBtn');
+      let currentReport = null;
+      let editableSimulationRows = [];
 
       function setStatus(message, type) {
         statusEl.textContent = message || '';
@@ -256,9 +258,23 @@
           }, null, 2)) + '</pre></details>';
       }
 
-      function renderPricingSimulation(report) {
+      function normalizeEditableSimulationRows(report) {
         const sim = report && report.pricingSimulation ? report.pricingSimulation : {};
         const rows = Array.isArray(sim.rows) ? sim.rows : [];
+        return rows.map(function (row) {
+          const out = Object.assign({}, row);
+          for (let i = 0; i <= 7; i += 1) {
+            out['lista' + i] = Math.max(0, Number(row && row['lista' + i]) || 0);
+          }
+          return out;
+        });
+      }
+
+      function renderPricingSimulation(report) {
+        const sim = report && report.pricingSimulation ? report.pricingSimulation : {};
+        const rows = Array.isArray(editableSimulationRows) && editableSimulationRows.length
+          ? editableSimulationRows
+          : normalizeEditableSimulationRows(report);
         const maxList = Number(sim.maxList || 7);
         const increment = Number(sim.incrementPerListPct || 5);
         if (!rows.length) {
@@ -273,7 +289,8 @@
         const bodyHtml = rows.map(function (row) {
           const listCells = headers.map(function (_, idx) {
             const key = 'lista' + idx;
-            return '<td class="num">' + escapeHtml(String(row[key] == null ? '-' : row[key])) + '</td>';
+            const value = Math.max(0, Number(row[key]) || 0);
+            return '<td class="num"><input type="number" min="0" step="1" value="' + escapeHtml(String(value)) + '" data-list-edit="1" data-grupo="' + escapeHtml(String(row.grupo || '')) + '" data-list="' + idx + '" style="width:82px;text-align:right;"></td>';
           }).join('');
           return '<tr>' +
             '<td class="mono">' + escapeHtml(row.grupo) + '</td>' +
@@ -283,26 +300,239 @@
             '<td class="num">' + formatNumber(row.mismaUnidadSeleccionada || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.unidadesAncla || 0) + '</td>' +
             '<td class="num">Lista ' + formatNumber(row.listaInicial || 0) + ' (+' + formatNumber(row.incrementoBasePct || 0) + '%)</td>' +
-            '<td class="num">' + formatNumber(row.incrementaCada || 1) + '</td>' +
             listCells +
             '<td class="num"><strong>' + formatNumber(row.unidadesTotales || 0) + '</strong></td>' +
           '</tr>';
         }).join('');
-        const totals = Array.isArray(sim.totalsByList) ? sim.totalsByList : [];
+        const totals = Array.from({ length: maxList + 1 }, function (_, idx) {
+          const key = 'lista' + idx;
+          return rows.reduce(function (acc, row) {
+            return acc + (Math.max(0, Number(row && row[key]) || 0));
+          }, 0);
+        });
         const totalsHtml = headers.map(function (_, idx) {
           return '<td class="num"><strong>' + formatNumber(totals[idx] || 0) + '</strong></td>';
         }).join('');
         pricingSimulationEl.innerHTML =
-          '<p style="margin:0 0 10px;color:#444;">Modelo propuesto: las unidades seleccionadas se concentran en la lista inicial del grupo (mismo precio ancla). El resto se distribuye en listas siguientes. Los incrementos por lista son de +' + formatNumber(increment) + '%.</p>' +
+          '<p style="margin:0 0 10px;color:#444;">Puedes editar manualmente cuántas unidades van en cada lista por grupo. Al cambiar cualquier valor, se recalculan automáticamente los demás reportes. Incremento por lista: +' + formatNumber(increment) + '%.</p>' +
           '<div class="table-wrap"><table style="min-width:1700px;"><thead><tr>' +
-          '<th>Grupo</th><th>Unidades</th><th>Distintas seleccionadas</th><th>Selecciones</th><th>Duplicadas</th><th>Unidades ancla</th><th>Lista inicial</th><th>Incrementa cada</th>' +
+          '<th>Grupo</th><th>Unidades</th><th>Distintas seleccionadas</th><th>Selecciones</th><th>Duplicadas</th><th>Unidades ancla</th><th>Lista inicial</th>' +
           headHtml +
           '<th>Total</th>' +
           '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
-          '<td colspan="8" style="text-align:right;"><strong>Totales por lista</strong></td>' +
+          '<td colspan="7" style="text-align:right;"><strong>Totales por lista</strong></td>' +
           totalsHtml +
-          '<td class="num"><strong>' + formatNumber(sim.totalUnits || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatNumber(rows.reduce(function (acc, row) { return acc + (Number(row.unidadesTotales) || 0); }, 0)) + '</strong></td>' +
           '</tr></tfoot></table></div>';
+      }
+
+      function buildLimitsFromEditableRow(row) {
+        let running = 0;
+        const limits = [];
+        for (let i = 0; i <= 6; i += 1) {
+          running += Math.max(0, Number(row && row['lista' + i]) || 0);
+          limits.push(running);
+        }
+        return limits;
+      }
+
+      function resolveListByLimits(rankInGroup, limits) {
+        const rank = Number(rankInGroup) || 0;
+        if (rank <= 0) return 0;
+        for (let list = 0; list <= 6; list += 1) {
+          if (rank <= Number(limits[list] || 0)) return list;
+        }
+        return 7;
+      }
+
+      function recomputePricingFromSimulation() {
+        if (!currentReport || !Array.isArray(editableSimulationRows) || !editableSimulationRows.length) return;
+        const baseRows = currentReport && currentReport.unitProforma && Array.isArray(currentReport.unitProforma.rows)
+          ? currentReport.unitProforma.rows
+          : [];
+        const byTipologia = new Map();
+        baseRows.forEach(function (row) {
+          const key = String(row && row.tipologia || '').trim();
+          if (!key) return;
+          if (!byTipologia.has(key)) byTipologia.set(key, []);
+          byTipologia.get(key).push(Object.assign({}, row));
+        });
+        byTipologia.forEach(function (rows) {
+          rows.sort(function (a, b) {
+            const ra = Number(a && a.rankInGroup) || 0;
+            const rb = Number(b && b.rankInGroup) || 0;
+            if (ra !== rb) return ra - rb;
+            return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+          });
+        });
+
+        const simByGrupo = new Map();
+        editableSimulationRows.forEach(function (row) {
+          simByGrupo.set(String(row && row.grupo || '').trim(), row);
+        });
+
+        const recomputedRows = [];
+        editableSimulationRows.forEach(function (simRow) {
+          const groupKey = String(simRow && simRow.grupo || '').trim();
+          const limits = buildLimitsFromEditableRow(simRow);
+          const details = byTipologia.get(groupKey) || [];
+          details.forEach(function (row, index) {
+            const rank = index + 1;
+            const assignedList = resolveListByLimits(rank, limits);
+            const m2 = Number(row && row.m2) || 0;
+            const lpm2 = row && row.listPriceM2 ? row.listPriceM2 : {};
+            const unitM2Price = Number(lpm2[String(assignedList)] != null ? lpm2[String(assignedList)] : lpm2[assignedList]) || 0;
+            const priceLista = unitM2Price * m2;
+            const priceVenta = priceLista * 0.95;
+            const list0Price = Number(lpm2['0'] != null ? lpm2['0'] : lpm2[0]) || 0;
+            recomputedRows.push(Object.assign({}, row, {
+              rankInGroup: rank,
+              formulaLimits: limits,
+              listaAsignada: assignedList,
+              priceLista: priceLista,
+              priceVenta: priceVenta,
+              baseTotal: list0Price * m2
+            }));
+          });
+        });
+
+        const extraGroups = [];
+        byTipologia.forEach(function (_, key) {
+          if (!simByGrupo.has(key)) extraGroups.push(key);
+        });
+        extraGroups.forEach(function (groupKey) {
+          const details = byTipologia.get(groupKey) || [];
+          const limits = [0, 0, 0, 0, 0, 0, 0];
+          details.forEach(function (row, index) {
+            const rank = index + 1;
+            const assignedList = resolveListByLimits(rank, limits);
+            const m2 = Number(row && row.m2) || 0;
+            const lpm2 = row && row.listPriceM2 ? row.listPriceM2 : {};
+            const unitM2Price = Number(lpm2[String(assignedList)] != null ? lpm2[String(assignedList)] : lpm2[assignedList]) || 0;
+            const priceLista = unitM2Price * m2;
+            const priceVenta = priceLista * 0.95;
+            const list0Price = Number(lpm2['0'] != null ? lpm2['0'] : lpm2[0]) || 0;
+            recomputedRows.push(Object.assign({}, row, {
+              rankInGroup: rank,
+              formulaLimits: limits,
+              listaAsignada: assignedList,
+              priceLista: priceLista,
+              priceVenta: priceVenta,
+              baseTotal: list0Price * m2
+            }));
+          });
+        });
+
+        const rowsByTipologia = new Map();
+        recomputedRows.forEach(function (row) {
+          const key = String(row && row.tipologia || '').trim();
+          if (!rowsByTipologia.has(key)) rowsByTipologia.set(key, []);
+          rowsByTipologia.get(key).push(row);
+        });
+        rowsByTipologia.forEach(function (rows, key) {
+          const simRow = simByGrupo.get(key) || {};
+          const limits = buildLimitsFromEditableRow(simRow);
+          const ranked = rows.slice().sort(function (a, b) {
+            const at = Number(a && a.baseTotal) || 0;
+            const bt = Number(b && b.baseTotal) || 0;
+            if (bt !== at) return bt - at;
+            return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+          });
+          ranked.forEach(function (row, idx) {
+            row.kEsimo = idx + 1;
+            row.listaAsignadaKesimo = resolveListByLimits(row.kEsimo, limits);
+            const lpm2 = row && row.listPriceM2 ? row.listPriceM2 : {};
+            const listVal = Number(lpm2[String(row.listaAsignadaKesimo)] != null ? lpm2[String(row.listaAsignadaKesimo)] : lpm2[row.listaAsignadaKesimo]) || 0;
+            row.priceListaKesimo = listVal * (Number(row && row.m2) || 0);
+            row.priceVentaKesimo = row.priceListaKesimo * 0.95;
+          });
+        });
+        recomputedRows.sort(function (a, b) {
+          return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+        });
+
+        const pricingControlRows = editableSimulationRows.map(function (simRow) {
+          const key = String(simRow && simRow.grupo || '').trim();
+          const rows = rowsByTipologia.get(key) || [];
+          const totalM2 = rows.reduce(function (acc, row) { return acc + (Number(row && row.m2) || 0); }, 0);
+          const totalBase = rows.reduce(function (acc, row) {
+            const lpm2 = row && row.listPriceM2 ? row.listPriceM2 : {};
+            const list0 = Number(lpm2['0'] != null ? lpm2['0'] : lpm2[0]) || 0;
+            return acc + list0;
+          }, 0);
+          return {
+            grupo: key,
+            m2Promedio: rows.length ? (totalBase / rows.length) : 0,
+            unidades: rows.length,
+            ingresosUsd: rows.reduce(function (acc, row) { return acc + (Number(row && row.priceVenta) || 0); }, 0),
+            stressTestUsd: rows.reduce(function (acc, row) { return acc + (Number(row && row.priceVentaKesimo) || 0); }, 0),
+            ingresosKesimoUsd: rows.reduce(function (acc, row) { return acc + (Number(row && row.priceListaKesimo) || 0); }, 0),
+            stressKesimoUsd: rows.reduce(function (acc, row) { return acc + (Number(row && row.priceVentaKesimo) || 0); }, 0),
+            vendidos: rows.reduce(function (acc, row) {
+              const status = String(row && row.status || '').toLowerCase();
+              return acc + (status.includes('vendid') || status.includes('sold') ? 1 : 0);
+            }, 0),
+            lista: 'Lista ' + formatNumber(simRow && simRow.listaInicial || 0)
+          };
+        });
+        const pricingControl = {
+          rows: pricingControlRows,
+          totals: {
+            unidades: pricingControlRows.reduce(function (acc, row) { return acc + (Number(row && row.unidades) || 0); }, 0),
+            ingresosUsd: pricingControlRows.reduce(function (acc, row) { return acc + (Number(row && row.ingresosUsd) || 0); }, 0),
+            stressTestUsd: pricingControlRows.reduce(function (acc, row) { return acc + (Number(row && row.stressTestUsd) || 0); }, 0),
+            ingresosKesimoUsd: pricingControlRows.reduce(function (acc, row) { return acc + (Number(row && row.ingresosKesimoUsd) || 0); }, 0),
+            stressKesimoUsd: pricingControlRows.reduce(function (acc, row) { return acc + (Number(row && row.stressKesimoUsd) || 0); }, 0)
+          }
+        };
+
+        const unitProforma = {
+          rows: recomputedRows,
+          totals: {
+            unidades: recomputedRows.length,
+            priceLista: recomputedRows.reduce(function (acc, row) { return acc + (Number(row && row.priceLista) || 0); }, 0),
+            priceVenta: recomputedRows.reduce(function (acc, row) { return acc + (Number(row && row.priceVenta) || 0); }, 0),
+            priceListaKesimo: recomputedRows.reduce(function (acc, row) { return acc + (Number(row && row.priceListaKesimo) || 0); }, 0),
+            priceVentaKesimo: recomputedRows.reduce(function (acc, row) { return acc + (Number(row && row.priceVentaKesimo) || 0); }, 0)
+          }
+        };
+
+        const bookingRows = recomputedRows.slice().sort(function (a, b) {
+          const pa = Number(a && a.priceLista) || Number.POSITIVE_INFINITY;
+          const pb = Number(b && b.priceLista) || Number.POSITIVE_INFINITY;
+          if (pa !== pb) return pa - pb;
+          return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+        }).map(function (row, index) {
+          return {
+            orden: index + 1,
+            unidad: row.unidad,
+            tipologia: row.tipologia,
+            listaAsignada: row.listaAsignada,
+            priceLista: row.priceLista,
+            priceVenta: row.priceVenta
+          };
+        });
+        const bookingSimulation = {
+          rows: bookingRows,
+          byList: Array.from({ length: 8 }, function (_, list) {
+            const units = bookingRows.filter(function (row) { return Number(row && row.listaAsignada) === list; });
+            return {
+              lista: list,
+              unidades: units.length,
+              totalPriceLista: units.reduce(function (acc, row) { return acc + (Number(row && row.priceLista) || 0); }, 0),
+              totalPriceVenta: units.reduce(function (acc, row) { return acc + (Number(row && row.priceVenta) || 0); }, 0)
+            };
+          }),
+          totals: {
+            unidades: bookingRows.length,
+            totalPriceLista: bookingRows.reduce(function (acc, row) { return acc + (Number(row && row.priceLista) || 0); }, 0),
+            totalPriceVenta: bookingRows.reduce(function (acc, row) { return acc + (Number(row && row.priceVenta) || 0); }, 0)
+          }
+        };
+
+        renderPricingControl({ unitProforma: unitProforma });
+        renderPricingControlSummary({ pricingControl: pricingControl });
+        renderBookingSimulation({ bookingSimulation: bookingSimulation });
       }
 
       function formatCurrency(value) {
@@ -502,16 +732,16 @@
           if (!res.ok || !data.ok || !data.report) {
             throw new Error(data.error || ('No se pudo cargar (' + res.status + ')'));
           }
-          renderSource(data.report);
-          renderSummary(data.report);
-          renderTable(data.report);
-          renderExecutive(data.report);
-          renderInconsistencies(data.report);
-          renderPricingSimulation(data.report);
-          renderPricingControlSummary(data.report);
-          renderBookingSimulation(data.report);
-          renderPricingControl(data.report);
-          renderUnitLaunch(data.report);
+          currentReport = data.report;
+          editableSimulationRows = normalizeEditableSimulationRows(currentReport);
+          renderSource(currentReport);
+          renderSummary(currentReport);
+          renderTable(currentReport);
+          renderExecutive(currentReport);
+          renderInconsistencies(currentReport);
+          renderPricingSimulation(currentReport);
+          recomputePricingFromSimulation();
+          renderUnitLaunch(currentReport);
           setStatus('Reporte generado correctamente.', 'ok');
         } catch (err) {
           setStatus(err && err.message ? err.message : 'No se pudo cargar el reporte.', 'error');
@@ -519,6 +749,18 @@
       }
 
       reloadBtn.addEventListener('click', loadReport);
+      pricingSimulationEl.addEventListener('input', function (event) {
+        const target = event && event.target;
+        if (!target || !target.matches('input[data-list-edit=\"1\"]')) return;
+        const group = String(target.getAttribute('data-grupo') || '').trim();
+        const list = Number(target.getAttribute('data-list'));
+        const value = Math.max(0, Math.floor(Number(target.value) || 0));
+        target.value = String(value);
+        const row = editableSimulationRows.find(function (item) { return String(item && item.grupo || '').trim() === group; });
+        if (!row || !Number.isFinite(list) || list < 0 || list > 7) return;
+        row['lista' + list] = value;
+        recomputePricingFromSimulation();
+      });
       loadReport();
     })();
   </script>
