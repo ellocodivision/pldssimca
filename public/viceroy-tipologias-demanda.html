@@ -39,9 +39,9 @@
     th{background:#f8f4ea;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
     td.num{text-align:right;font-variant-numeric:tabular-nums}
     .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}
-    .pill.alta{background:#def3e4;color:#165f2d}
-    .pill.media{background:#fff3d7;color:#6a4a02}
-    .pill.baja{background:#ffe8e1;color:#8b2f1f}
+    .pill.alta{background:#ffe1e1;color:#a22020}
+    .pill.media{background:#fff3b8;color:#7a5c00}
+    .pill.baja{background:#dbf2dd;color:#17612b}
     .pill.sin{background:#ece7dc;color:#625849}
     .summary-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
     .metric{border:1px solid #e4ddcf;border-radius:12px;background:#fff;padding:10px}
@@ -252,10 +252,20 @@
 
       function getDemandCommentColor(comment) {
         const txt = String(comment || '').toLowerCase();
-        if (txt.includes('alta')) return '#1f8d3c';
-        if (txt.includes('media')) return '#c47a00';
-        if (txt.includes('baja')) return '#b0372a';
+        if (txt.includes('alta')) return '#c62828';
+        if (txt.includes('media')) return '#d6a400';
+        if (txt.includes('baja')) return '#1f8d3c';
         return '#6b6b6b';
+      }
+
+      function normalizeDemandUnitKey(rawValue) {
+        const text = String(rawValue == null ? '' : rawValue).trim().toUpperCase();
+        if (!text) return '';
+        const compact = text.replace(/[\s,;|/\\-]+/g, '');
+        const match = compact.match(/^(\d+)([A-Z]*)$/);
+        if (!match) return compact;
+        const numeric = String(Math.max(0, parseInt(match[1], 10) || 0)).padStart(3, '0');
+        return numeric + (match[2] || '');
       }
 
       function buildDemandTipologiaCommentMap(report) {
@@ -275,7 +285,7 @@
           : [];
         const map = new Map();
         rows.forEach(function (row) {
-          const unit = String(row && row.unidad || '').trim();
+          const unit = normalizeDemandUnitKey(row && row.unidad);
           const tipologia = String(row && row.tipologia || '').trim();
           if (!unit || !tipologia) return;
           map.set(unit, tipologia);
@@ -295,7 +305,7 @@
 
       function resolveDemandZoneInfo(zone, report, unitCommentMap) {
         const zoneLabel = String(zone && zone.label || '').trim();
-        const unitKey = zoneLabel.replace(/\s+/g, '');
+        const unitKey = normalizeDemandUnitKey(zoneLabel);
         const comment = unitCommentMap.get(unitKey) || 'Sin demanda detectada';
         return {
           unidad: zoneLabel || unitKey,

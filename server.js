@@ -1006,7 +1006,7 @@ async function buildViceroyTipologiaDemandReport() {
   const isValidTipologiaValue = (value) => /^[A-Z][A-Z0-9.+-]*$/.test(String(value || '').trim().toUpperCase());
 
   inventoryRows.forEach((row) => {
-    const unit = extractUnitCode(row && row.unidad);
+    const unit = normalizeViceroyDemandUnitKey(row && row.unidad);
     const tipologia = String(row && row.tipologia || '').trim().toUpperCase();
     if (!unit) return;
     if (!tipologia) {
@@ -1079,7 +1079,7 @@ async function buildViceroyTipologiaDemandReport() {
     optionKeys.forEach((optionKey) => {
       const rawUnit = String(kpi && kpi[optionKey] || '').trim();
       if (!rawUnit) return;
-      const unit = extractUnitCode(rawUnit);
+      const unit = normalizeViceroyDemandUnitKey(rawUnit);
       if (!unit) return;
       if (!unitToTipologia.has(unit)) {
         const key = `${unit}__${optionKey}__${asesor}__${cliente}`;
@@ -4675,6 +4675,15 @@ function extractUnitCode(rawValue) {
     return (num === 'NaN' ? match[1] : num) + (match[2] || '');
   }
   return normalizedChars;
+}
+
+function normalizeViceroyDemandUnitKey(rawValue) {
+  const extracted = extractUnitCode(rawValue);
+  if (!extracted) return '';
+  const match = String(extracted).trim().match(/^(\d+)([A-Z]*)$/);
+  if (!match) return extracted;
+  const numeric = String(Math.max(0, parseInt(match[1], 10) || 0)).padStart(3, '0');
+  return numeric + (match[2] || '');
 }
 
 function parseViceroyRowsByListaPreciosV0(sheet) {
