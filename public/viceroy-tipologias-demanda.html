@@ -837,8 +837,36 @@
           };
         });
 
+        const unitSimulationRows = proformaRows.map(function (row) {
+          const listPrice = row && row.listPriceM2 && typeof row.listPriceM2 === 'object' ? row.listPriceM2 : {};
+          const baseM2 = Number(row && row.m2) || 0;
+          const unitLabel = String(row && row.unidad || '');
+          return {
+            unidad: unitLabel,
+            tipologia: String(row && row.tipologia || ''),
+            recamaras: String(row && row.recamaras || ''),
+            lista_inicial_grupo: Number(row && row.listaAsignada) || 0,
+            rank_in_group: Number(row && row.rankInGroup) || 0,
+            m2: baseM2,
+            incremento_lista_pct: Number(sim.incrementPerListPct || 5),
+            lista_0: Number(listPrice['0'] != null ? listPrice['0'] : listPrice[0]) || 0,
+            lista_1: Number(listPrice['1'] != null ? listPrice['1'] : listPrice[1]) || 0,
+            lista_2: Number(listPrice['2'] != null ? listPrice['2'] : listPrice[2]) || 0,
+            lista_3: Number(listPrice['3'] != null ? listPrice['3'] : listPrice[3]) || 0,
+            lista_4: Number(listPrice['4'] != null ? listPrice['4'] : listPrice[4]) || 0,
+            lista_5: Number(listPrice['5'] != null ? listPrice['5'] : listPrice[5]) || 0,
+            lista_6: Number(listPrice['6'] != null ? listPrice['6'] : listPrice[6]) || 0,
+            lista_7: Number(listPrice['7'] != null ? listPrice['7'] : listPrice[7]) || 0,
+            precio_lista_asignada_usd: Number(row && row.priceLista) || 0,
+            precio_venta_usd: Number(row && row.priceVenta) || 0
+          };
+        }).sort(function (a, b) {
+          return String(a && a.unidad || '').localeCompare(String(b && b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+        });
+
         const workbook = XLSX.utils.book_new();
         addSheetToWorkbook(workbook, 'Simulacion_Listas', simulationSheetRows);
+        addSheetToWorkbook(workbook, 'Simulacion_Unidad', unitSimulationRows);
         addSheetToWorkbook(workbook, 'Control_Tipologia', controlSheetRows);
         addSheetToWorkbook(workbook, 'Reserva_Secuencial', bookingSheetRows);
         addSheetToWorkbook(workbook, 'Proforma_Unidad', proformaSheetRows);
