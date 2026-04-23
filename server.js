@@ -1398,8 +1398,9 @@ async function buildViceroyTipologiaDemandReport() {
     const target = pricingControlAccumulator.get(key);
     target.unidades += 1;
     if (isSoldStatus(row && row.status)) target.vendidos += 1;
-    target.ingresosUsd += Number(row && row.priceLista) || 0;
-    target.stressTestUsd += Number(row && row.priceVenta) || 0;
+    // Control Excel: Ingresos usa columna Y (precio venta) y Stress usa columna AE (k-esimo con descuento).
+    target.ingresosUsd += Number(row && row.priceVenta) || 0;
+    target.stressTestUsd += Number(row && row.priceVentaKesimo) || 0;
     target.ingresosKesimoUsd += Number(row && row.priceListaKesimo) || 0;
     target.stressKesimoUsd += Number(row && row.priceVentaKesimo) || 0;
     target.totalM2 += Number(row && row.m2) || 0;
@@ -1468,6 +1469,42 @@ async function buildViceroyTipologiaDemandReport() {
     }
   };
 
+  const bookingSequenceRows = [...unitProformaRows]
+    .sort((a, b) => {
+      const pa = Number(a && a.priceLista);
+      const pb = Number(b && b.priceLista);
+      const aVal = Number.isFinite(pa) ? pa : Number.POSITIVE_INFINITY;
+      const bVal = Number.isFinite(pb) ? pb : Number.POSITIVE_INFINITY;
+      if (aVal !== bVal) return aVal - bVal;
+      return unitSort(a && a.unidad, b && b.unidad);
+    })
+    .map((row, index) => ({
+      orden: index + 1,
+      unidad: String(row && row.unidad || ''),
+      tipologia: String(row && row.tipologia || ''),
+      listaAsignada: Number.isFinite(Number(row && row.listaAsignada)) ? Number(row.listaAsignada) : 0,
+      priceLista: Number(row && row.priceLista) || 0,
+      priceVenta: Number(row && row.priceVenta) || 0
+    }));
+  const bookingByList = Array.from({ length: maxList + 1 }, (_, list) => {
+    const units = bookingSequenceRows.filter((row) => Number(row && row.listaAsignada) === list);
+    return {
+      lista: list,
+      unidades: units.length,
+      totalPriceLista: units.reduce((acc, row) => acc + (Number(row && row.priceLista) || 0), 0),
+      totalPriceVenta: units.reduce((acc, row) => acc + (Number(row && row.priceVenta) || 0), 0)
+    };
+  });
+  const bookingSimulation = {
+    rows: bookingSequenceRows,
+    byList: bookingByList,
+    totals: {
+      unidades: bookingSequenceRows.length,
+      totalPriceLista: bookingSequenceRows.reduce((acc, row) => acc + (Number(row && row.priceLista) || 0), 0),
+      totalPriceVenta: bookingSequenceRows.reduce((acc, row) => acc + (Number(row && row.priceVenta) || 0), 0)
+    }
+  };
+
   const executiveSummary = {
     tipologiasMasDemandadas,
     tipologiasMenosDemandadas,
@@ -1501,6 +1538,7 @@ async function buildViceroyTipologiaDemandReport() {
     pricingControl,
     unitLaunch,
     unitProforma,
+    bookingSimulation,
     executiveSummary,
     inconsistencies: {
       inventoryDuplicateUnits: inconsistencies.inventoryDuplicateUnits,

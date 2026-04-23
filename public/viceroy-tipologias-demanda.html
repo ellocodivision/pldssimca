@@ -117,6 +117,11 @@
     </section>
 
     <section class="card">
+      <h3 style="margin:0 0 8px;">Control final · Reserva secuencial (barato a caro)</h3>
+      <div id="bookingSimulation"></div>
+    </section>
+
+    <section class="card">
       <h3 style="margin:0 0 8px;">Proforma de precios por unidad (fórmula Excel)</h3>
       <div id="pricingControl"></div>
     </section>
@@ -137,6 +142,7 @@
       const inconsistenciesEl = document.getElementById('inconsistencies');
       const pricingSimulationEl = document.getElementById('pricingSimulation');
       const pricingControlSummaryEl = document.getElementById('pricingControlSummary');
+      const bookingSimulationEl = document.getElementById('bookingSimulation');
       const pricingControlEl = document.getElementById('pricingControl');
       const unitLaunchEl = document.getElementById('unitLaunch');
       const reloadBtn = document.getElementById('reloadBtn');
@@ -389,7 +395,7 @@
         pricingControlSummaryEl.innerHTML =
           '<p style="margin:0 0 10px;color:#444;">Simulación de la pestaña <strong>Control</strong> por tipología con totales en USD y escenario con descuento.</p>' +
           '<div class="table-wrap"><table style="min-width:1300px;"><thead><tr>' +
-          '<th>Tipología</th><th>Unidades</th><th>$M2 promedio (Lista 0)</th><th>Ingresos (USD)</th><th>Stress Test (USD)</th><th>Ingresos k-ésimo (USD)</th><th>Stress k-ésimo (USD)</th><th>Vendidos</th><th>Lista inicial</th>' +
+          '<th>Tipología</th><th>Unidades</th><th>$M2 promedio (Lista 0)</th><th>Ingresos (USD · Y)</th><th>Stress Test (USD · AE)</th><th>Ingresos k-ésimo (USD)</th><th>Stress k-ésimo (USD)</th><th>Vendidos</th><th>Lista inicial</th>' +
           '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
           '<td><strong>Totales</strong></td><td class="num"><strong>' + formatNumber(totals.unidades || 0) + '</strong></td><td class="num">-</td>' +
           '<td class="num"><strong>' + formatCurrency(totals.ingresosUsd || 0) + '</strong></td>' +
@@ -398,6 +404,49 @@
           '<td class="num"><strong>' + formatCurrency(totals.stressKesimoUsd || 0) + '</strong></td>' +
           '<td class="num">-</td><td class="num">-</td>' +
           '</tr></tfoot></table></div>';
+      }
+
+      function renderBookingSimulation(report) {
+        const booking = report && report.bookingSimulation ? report.bookingSimulation : {};
+        const byList = Array.isArray(booking.byList) ? booking.byList : [];
+        const totals = booking.totals || {};
+        const rows = Array.isArray(booking.rows) ? booking.rows : [];
+        if (!byList.length) {
+          bookingSimulationEl.innerHTML = '<p>No hay datos para simular reserva secuencial.</p>';
+          return;
+        }
+        const byListHtml = byList.map(function (row) {
+          return '<tr>' +
+            '<td class="num">Lista ' + formatNumber(row.lista || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidades || 0) + '</td>' +
+            '<td class="num"><strong>' + formatCurrency(row.totalPriceLista || 0) + '</strong></td>' +
+            '<td class="num"><strong>' + formatCurrency(row.totalPriceVenta || 0) + '</strong></td>' +
+          '</tr>';
+        }).join('');
+        const preview = rows.slice(0, 12).map(function (row) {
+          return '<tr>' +
+            '<td class="num">' + formatNumber(row.orden || 0) + '</td>' +
+            '<td class="mono">' + escapeHtml(row.unidad || '-') + '</td>' +
+            '<td class="mono">' + escapeHtml(row.tipologia || '-') + '</td>' +
+            '<td class="num">Lista ' + formatNumber(row.listaAsignada || 0) + '</td>' +
+            '<td class="num">' + formatCurrency(row.priceLista || 0) + '</td>' +
+            '<td class="num">' + formatCurrency(row.priceVenta || 0) + '</td>' +
+          '</tr>';
+        }).join('');
+        bookingSimulationEl.innerHTML =
+          '<p style="margin:0 0 10px;color:#444;">Simulación de venta unidad por unidad ordenando de <strong>menor a mayor precio lista</strong>. El total usa el precio de lista asignado por la simulación dinámica del grupo.</p>' +
+          '<div class="table-wrap"><table style="min-width:900px;"><thead><tr>' +
+          '<th>Lista</th><th>Unidades</th><th>Total Precio Lista</th><th>Total Precio Venta</th>' +
+          '</tr></thead><tbody>' + byListHtml + '</tbody><tfoot><tr>' +
+          '<td><strong>Totales</strong></td>' +
+          '<td class="num"><strong>' + formatNumber(totals.unidades || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.totalPriceLista || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.totalPriceVenta || 0) + '</strong></td>' +
+          '</tr></tfoot></table></div>' +
+          '<details style="margin-top:10px;"><summary>Ver primeras 12 reservas (de barato a caro)</summary>' +
+          '<div class="table-wrap" style="margin-top:8px;"><table style="min-width:900px;"><thead><tr>' +
+          '<th>Orden</th><th>Unidad</th><th>Tipología</th><th>Lista</th><th>Precio Lista</th><th>Precio Venta</th>' +
+          '</tr></thead><tbody>' + preview + '</tbody></table></div></details>';
       }
 
       function renderUnitLaunch(report) {
@@ -460,6 +509,7 @@
           renderInconsistencies(data.report);
           renderPricingSimulation(data.report);
           renderPricingControlSummary(data.report);
+          renderBookingSimulation(data.report);
           renderPricingControl(data.report);
           renderUnitLaunch(data.report);
           setStatus('Reporte generado correctamente.', 'ok');
