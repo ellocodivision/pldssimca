@@ -65,6 +65,7 @@
       <div class="actions">
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
         <button id="reloadBtn" class="btn" type="button">Recargar</button>
+        <button id="exportExcelBtn" class="btn" type="button">Exportar Excel</button>
         <a class="btn primary" href="/api/viceroy/tipologias-demanda.csv">Exportar CSV</a>
       </div>
     </div>
@@ -149,6 +150,7 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
     (function () {
       const statusEl = document.getElementById('status');
@@ -163,6 +165,7 @@
       const pricingControlEl = document.getElementById('pricingControl');
       const unitLaunchEl = document.getElementById('unitLaunch');
       const reloadBtn = document.getElementById('reloadBtn');
+      const exportExcelBtn = document.getElementById('exportExcelBtn');
       const m2UploadFileEl = document.getElementById('m2UploadFile');
       const m2UploadSheetEl = document.getElementById('m2UploadSheet');
       const m2UploadBtnEl = document.getElementById('m2UploadBtn');
@@ -171,6 +174,10 @@
       let editableSimulationRows = [];
       const editableBaseM2ByUnit = new Map();
       const overrideM2ByUnit = new Map();
+      let lastComputedPricingControl = null;
+      let lastComputedUnitProforma = null;
+      let lastComputedBookingSimulation = null;
+      let lastComputedUnitLaunch = null;
       const STORAGE_KEY_BASE_M2 = 'viceroy_tipologias_demanda_base_m2_v1';
       const STORAGE_KEY_SIMULATION = 'viceroy_tipologias_demanda_simulation_v1';
 
@@ -691,6 +698,10 @@
           }
         };
 
+        lastComputedPricingControl = pricingControl;
+        lastComputedUnitProforma = unitProforma;
+        lastComputedBookingSimulation = bookingSimulation;
+        lastComputedUnitLaunch = unitLaunch;
         renderPricingControl({ unitProforma: unitProforma });
         renderPricingControlSummary({ pricingControl: pricingControl });
         renderBookingSimulation({ bookingSimulation: bookingSimulation });
@@ -700,6 +711,141 @@
       function formatCurrency(value) {
         const n = Number(value || 0);
         return '$ ' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
+
+      function addSheetToWorkbook(workbook, sheetName, rows) {
+        const safeRows = Array.isArray(rows) && rows.length ? rows : [{ nota: 'Sin datos' }];
+        const worksheet = XLSX.utils.json_to_sheet(safeRows);
+        const keys = Object.keys(safeRows[0] || {});
+        if (keys.length) {
+          worksheet['!cols'] = keys.map(function (key) {
+            return { wch: Math.min(42, Math.max(10, String(key).length + 2)) };
+          });
+          worksheet['!autofilter'] = {
+            ref: XLSX.utils.encode_range({
+              s: { c: 0, r: 0 },
+              e: { c: Math.max(0, keys.length - 1), r: safeRows.length }
+            })
+          };
+        }
+        XLSX.utils.book_append_sheet(workbook, worksheet, String(sheetName || 'Hoja').slice(0, 31));
+      }
+
+      function exportDemandWorkbook() {
+        if (typeof XLSX === 'undefined') {
+          setStatus('No se pudo cargar la librería para exportar Excel. Recarga la página.', 'error');
+          return;
+        }
+        if (!currentReport) {
+          setStatus('Aún no hay datos para exportar. Carga el reporte primero.', 'error');
+          return;
+        }
+
+        const sim = currentReport && currentReport.pricingSimulation ? currentReport.pricingSimulation : {};
+        const simRows = Array.isArray(editableSimulationRows) ? editableSimulationRows : [];
+        const pricingControl = lastComputedPricingControl || (currentReport && currentReport.pricingControl) || {};
+        const bookingSimulation = lastComputedBookingSimulation || (currentReport && currentReport.bookingSimulation) || {};
+        const unitProforma = lastComputedUnitProforma || (currentReport && currentReport.unitProforma) || {};
+        const unitLaunch = lastComputedUnitLaunch || (currentReport && currentReport.unitLaunch) || {};
+        const maxList = Math.max(0, Number(sim.maxList || 7));
+
+        const simulationSheetRows = simRows.map(function (row) {
+          const out = {
+            grupo: String(row && row.grupo || ''),
+            unidades_totales: Number(row && row.unidadesTotales) || 0,
+            unidades_distintas_seleccionadas: Number(row && row.unidadesDistintasSeleccionadas) || 0,
+            selecciones_totales: Number(row && row.seleccionesTotales) || 0,
+            misma_unidad_duplicada: Number(row && row.mismaUnidadSeleccionada) || 0,
+            unidades_ancla: Number(row && row.unidadesAncla) || 0,
+            lista_inicial: Number(row && row.listaInicial) || 0,
+            incremento_base_pct: Number(row && row.incrementoBasePct) || 0
+          };
+          for (let i = 0; i <= maxList; i += 1) out['lista_' + i] = Math.max(0, Number(row && row['lista' + i]) || 0);
+          out.total = Number(row && row.unidadesTotales) || 0;
+          return out;
+        });
+
+        const controlRows = Array.isArray(pricingControl && pricingControl.rows) ? pricingControl.rows : [];
+        const controlSheetRows = controlRows.map(function (row) {
+          return {
+            tipologia: String(row && row.grupo || ''),
+            lista_inicial: String(row && row.lista || ''),
+            unidades: Number(row && row.unidades) || 0,
+            vendidos: Number(row && row.vendidos) || 0,
+            m2_promedio_lista0_usd: Number(row && row.m2Promedio) || 0,
+            ingresos_usd: Number(row && row.ingresosUsd) || 0,
+            stress_test_usd: Number(row && row.stressTestUsd) || 0,
+            ingresos_kesimo_usd: Number(row && row.ingresosKesimoUsd) || 0,
+            stress_kesimo_usd: Number(row && row.stressKesimoUsd) || 0
+          };
+        });
+
+        const bookingRows = Array.isArray(bookingSimulation && bookingSimulation.rows) ? bookingSimulation.rows : [];
+        const bookingSheetRows = bookingRows.map(function (row) {
+          return {
+            orden: Number(row && row.orden) || 0,
+            unidad: String(row && row.unidad || ''),
+            tipologia: String(row && row.tipologia || ''),
+            lista_asignada: Number(row && row.listaAsignada) || 0,
+            precio_lista_usd: Number(row && row.priceLista) || 0,
+            precio_venta_usd: Number(row && row.priceVenta) || 0
+          };
+        });
+
+        const proformaRows = Array.isArray(unitProforma && unitProforma.rows) ? unitProforma.rows : [];
+        const proformaSheetRows = proformaRows.map(function (row) {
+          const listPrice = row && row.listPriceM2 && typeof row.listPriceM2 === 'object' ? row.listPriceM2 : {};
+          return {
+            unidad: String(row && row.unidad || ''),
+            tipologia: String(row && row.tipologia || ''),
+            recamaras: String(row && row.recamaras || ''),
+            nivel: String(row && row.level || ''),
+            grupo_codigo: String(row && row.groupCode || ''),
+            m2: Number(row && row.m2) || 0,
+            n_grupo: Number(row && row.rankInGroup) || 0,
+            lista_asignada: Number(row && row.listaAsignada) || 0,
+            precio_lista_usd: Number(row && row.priceLista) || 0,
+            precio_venta_usd: Number(row && row.priceVenta) || 0,
+            kesimo: Number(row && row.kEsimo) || 0,
+            lista_kesimo: Number(row && row.listaAsignadaKesimo) || 0,
+            precio_lista_kesimo_usd: Number(row && row.priceListaKesimo) || 0,
+            precio_venta_kesimo_usd: Number(row && row.priceVentaKesimo) || 0,
+            lista0_m2: Number(listPrice['0'] != null ? listPrice['0'] : listPrice[0]) || 0,
+            lista1_m2: Number(listPrice['1'] != null ? listPrice['1'] : listPrice[1]) || 0,
+            lista2_m2: Number(listPrice['2'] != null ? listPrice['2'] : listPrice[2]) || 0,
+            lista3_m2: Number(listPrice['3'] != null ? listPrice['3'] : listPrice[3]) || 0,
+            lista4_m2: Number(listPrice['4'] != null ? listPrice['4'] : listPrice[4]) || 0,
+            lista5_m2: Number(listPrice['5'] != null ? listPrice['5'] : listPrice[5]) || 0,
+            lista6_m2: Number(listPrice['6'] != null ? listPrice['6'] : listPrice[6]) || 0,
+            lista7_m2: Number(listPrice['7'] != null ? listPrice['7'] : listPrice[7]) || 0,
+            limites_h_n: Array.isArray(row && row.formulaLimits) ? row.formulaLimits.join(' | ') : '',
+            status: String(row && row.status || '')
+          };
+        });
+
+        const launchRows = Array.isArray(unitLaunch && unitLaunch.rows) ? unitLaunch.rows : [];
+        const launchSheetRows = launchRows.map(function (row) {
+          return {
+            unidad: String(row && row.unidad || ''),
+            tipologia: String(row && row.tipologia || ''),
+            recamaras: String(row && row.recamaras || ''),
+            lista_inicial: Number(row && row.listaInicial) || 0,
+            m2: Number(row && row.m2) || 0,
+            precio_m2_lanzamiento_usd: Number(row && row.priceM2Lanzamiento) || 0,
+            precio_lanzamiento_usd: Number(row && row.precioLanzamiento) || 0,
+            fuente: String(row && row.source || '')
+          };
+        });
+
+        const workbook = XLSX.utils.book_new();
+        addSheetToWorkbook(workbook, 'Simulacion_Listas', simulationSheetRows);
+        addSheetToWorkbook(workbook, 'Control_Tipologia', controlSheetRows);
+        addSheetToWorkbook(workbook, 'Reserva_Secuencial', bookingSheetRows);
+        addSheetToWorkbook(workbook, 'Proforma_Unidad', proformaSheetRows);
+        addSheetToWorkbook(workbook, 'Detalle_Unidad', launchSheetRows);
+        const dateTag = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, 'viceroy-tipologias-demanda-' + dateTag + '.xlsx');
+        setStatus('Excel exportado correctamente.', 'ok');
       }
 
       function renderPricingControl(report) {
@@ -966,6 +1112,9 @@
       }
 
       reloadBtn.addEventListener('click', loadReport);
+      if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', exportDemandWorkbook);
+      }
       if (m2UploadBtnEl) {
         m2UploadBtnEl.addEventListener('click', uploadM2Workbook);
       }
