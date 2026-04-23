@@ -149,6 +149,7 @@
       let currentReport = null;
       let editableSimulationRows = [];
       const editableBaseM2ByUnit = new Map();
+      const overrideM2ByUnit = new Map();
 
       function setStatus(message, type) {
         statusEl.textContent = message || '';
@@ -355,6 +356,14 @@
 
       function listPricesForRow(row) {
         const unitKey = String(row && row.unidad || '').trim();
+        const overrideLists = overrideM2ByUnit.get(unitKey);
+        if (overrideLists && typeof overrideLists === 'object') {
+          const base0 = Number(overrideLists['0'] != null ? overrideLists['0'] : overrideLists[0]) || 0;
+          if (editableBaseM2ByUnit.has(unitKey)) {
+            return buildListPricesFromBase0(editableBaseM2ByUnit.get(unitKey));
+          }
+          return buildListPricesFromBase0(base0);
+        }
         const original = row && row.listPriceM2 && (row.listPriceM2['0'] != null ? row.listPriceM2['0'] : row.listPriceM2[0]);
         const base0 = editableBaseM2ByUnit.has(unitKey)
           ? editableBaseM2ByUnit.get(unitKey)
@@ -758,6 +767,17 @@
           currentReport = data.report;
           editableSimulationRows = normalizeEditableSimulationRows(currentReport);
           editableBaseM2ByUnit.clear();
+          overrideM2ByUnit.clear();
+          const source = currentReport && currentReport.source ? currentReport.source : {};
+          const overrideObj = source && source.m2OverridePricesByUnit && typeof source.m2OverridePricesByUnit === 'object'
+            ? source.m2OverridePricesByUnit
+            : {};
+          Object.entries(overrideObj).forEach(function (entry) {
+            const unit = String(entry[0] || '').trim();
+            const lists = entry[1];
+            if (!unit || !lists || typeof lists !== 'object') return;
+            overrideM2ByUnit.set(unit, lists);
+          });
           renderSource(currentReport);
           renderSummary(currentReport);
           renderTable(currentReport);
@@ -785,7 +805,7 @@
         row['lista' + list] = value;
         recomputePricingFromSimulation();
       });
-      pricingControlEl.addEventListener('input', function (event) {
+      pricingControlEl.addEventListener('change', function (event) {
         const target = event && event.target;
         if (!target || !target.matches('input[data-m2-base-edit=\"1\"]')) return;
         const unit = String(target.getAttribute('data-unit') || '').trim();

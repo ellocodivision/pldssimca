@@ -957,12 +957,17 @@ async function buildViceroyTipologiaDemandReport() {
   let m2OverrideByUnit = new Map();
   let m2OverrideSourcePath = '';
   let m2OverrideFileName = '';
+  let m2OverridePricesByUnit = {};
   const m2OverrideCandidates = resolveViceroyM2OverrideCandidates(devSlug);
   for (const candidatePath of m2OverrideCandidates) {
     try {
       const parsed = parseViceroyM2OverrideFile(candidatePath);
       if (parsed && parsed.size) {
         m2OverrideByUnit = parsed;
+        m2OverridePricesByUnit = {};
+        parsed.forEach((lists, unit) => {
+          m2OverridePricesByUnit[unit] = lists;
+        });
         m2OverrideSourcePath = candidatePath;
         m2OverrideFileName = path.basename(candidatePath);
         break;
@@ -1552,6 +1557,7 @@ async function buildViceroyTipologiaDemandReport() {
       m2OverrideFileName: m2OverrideFileName || '',
       m2OverrideSourcePath: m2OverrideSourcePath || '',
       m2OverrideRows: m2OverrideByUnit.size || 0,
+      m2OverridePricesByUnit,
       whisperlistSourceFile: String(whisperData && whisperData.sourceFile || ''),
       whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
     },
@@ -4938,11 +4944,6 @@ function resolveInventoryCandidatesByDevSlug(devSlug) {
   const latest = files
     .filter((f) => !canonicalNames.has(String(f.name || '').toLowerCase()))
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
-  // VICEROY PILOTO: seguir el flujo operativo de Presentación Piloto (último archivo cargado),
-  // no forzar INVENTARIOMAESTROWIX primero.
-  if (String(devSlug || '').trim() === 'viceroy-piloto') {
-    return [...latest, ...canonical];
-  }
   return [...canonical, ...latest];
 }
 
