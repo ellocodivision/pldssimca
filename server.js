@@ -1019,6 +1019,9 @@ async function buildViceroyTipologiaDemandReport() {
       unidad: unit,
       level: String(row && row.level || '').trim(),
       groupCode: String(row && row.groupCode || '').trim(),
+      sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null,
+      listThresholds: Array.isArray(row && row.listThresholds) ? row.listThresholds.map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0)).slice(0, 8) : [],
+      contador: Number.isFinite(parseCurrencyLike(row && row.contador)) ? parseCurrencyLike(row && row.contador) : null,
       m2: parseCurrencyLike(row && row.m2),
       price: parseCurrencyLike(row && row.price),
       status: String(row && row.status || '').trim(),
@@ -1297,69 +1300,93 @@ async function buildViceroyTipologiaDemandReport() {
     return maxList;
   };
 
-  const unitProformaRows = [];
+  const flatUnits = [];
   tipologiaUnitDetails.forEach((details, tipologia) => {
-    const simRow = pricingSimulationRows.find((item) => String(item && item.grupo || '') === String(tipologia || ''));
-    const formulaLimits = buildFormulaLimits(simRow);
-    const ordered = [...details].sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
-    const decorated = ordered.map((item, index) => {
-      const series = computeListPriceSeries(item);
-      const rankInGroup = index + 1;
-      const assignedList = resolveListByExcelLikeFormula(rankInGroup, formulaLimits.cumulative);
-      const priceLista = Number.isFinite(series.listPriceTotal[assignedList]) ? series.listPriceTotal[assignedList] : null;
-      const priceVenta = Number.isFinite(priceLista) ? (priceLista * (1 - stressDiscountPct)) : null;
-      const baseTotal = Number.isFinite(series.listPriceTotal[0]) ? series.listPriceTotal[0] : 0;
-      return {
-        unidad: String(item && item.unidad || ''),
-        tipologia: String(tipologia || ''),
+    details.forEach((item) => {
+      flatUnits.push({
+        tipologia: String(tipologia || '').trim(),
+        unidad: String(item && item.unidad || '').trim(),
         recamaras: formatRecamaras(item && item.recamaras),
         level: String(item && item.level || '').trim(),
         groupCode: String(item && item.groupCode || '').trim(),
+        sourceRowIndex: Number.isFinite(Number(item && item.sourceRowIndex)) ? Number(item.sourceRowIndex) : null,
+        listThresholds: Array.isArray(item && item.listThresholds) ? item.listThresholds.map((v) => Number(v) || 0).slice(0, 8) : [],
         status: String(item && item.status || '').trim(),
-        m2: series.m2,
-        listPriceM2: series.listPriceM2,
-        rankInGroup,
-        formulaLimits: formulaLimits.cumulative,
-        listaAsignada: assignedList,
-        priceLista,
-        priceVenta,
-        baseTotal
-      };
+        ...computeListPriceSeries(item)
+      });
     });
-    const ranked = [...decorated].sort((a, b) => {
+  });
+  flatUnits.sort((a, b) => {
+    const ai = Number.isFinite(a && a.sourceRowIndex) ? a.sourceRowIndex : Number.POSITIVE_INFINITY;
+    const bi = Number.isFinite(b && b.sourceRowIndex) ? b.sourceRowIndex : Number.POSITIVE_INFINITY;
+    if (ai !== bi) return ai - bi;
+    return unitSort(a && a.unidad, b && b.unidad);
+  });
+
+  const limitsByGroup = new Map();
+  flatUnits.forEach((row) => {
+    const groupKey = String(row && row.groupCode || row && row.tipologia || '').trim();
+    if (!groupKey) return;
+    if (!limitsByGroup.has(groupKey) && Array.isArray(row && row.listThresholds) && row.listThresholds.length >= 7) {
+      limitsByGroup.set(groupKey, row.listThresholds);
+    }
+  });
+  if (!limitsByGroup.size) {
+    pricingSimulationRows.forEach((simRow) => {
+      const groupKey = String(simRow && simRow.grupo || '').trim();
+      if (!groupKey) return;
+      limitsByGroup.set(groupKey, buildFormulaLimits(simRow).cumulative);
+    });
+  }
+
+  const groupCounters = new Map();
+  const unitProformaRows = flatUnits.map((row) => {
+    const groupKey = String(row && row.groupCode || row && row.tipologia || '').trim();
+    const rankInGroup = (groupCounters.get(groupKey) || 0) + 1;
+    groupCounters.set(groupKey, rankInGroup);
+    const formulaLimits = limitsByGroup.get(groupKey) || [];
+    const assignedList = resolveListByExcelLikeFormula(rankInGroup, formulaLimits);
+    const priceLista = Number.isFinite(row && row.listPriceTotal && row.listPriceTotal[assignedList]) ? row.listPriceTotal[assignedList] : null;
+    const priceVenta = Number.isFinite(priceLista) ? (priceLista * (1 - stressDiscountPct)) : null;
+    return {
+      unidad: row.unidad,
+      tipologia: row.tipologia,
+      recamaras: row.recamaras,
+      level: row.level,
+      groupCode: row.groupCode,
+      m2: row.m2,
+      rankInGroup,
+      formulaLimits,
+      listaAsignada: assignedList,
+      listPriceM2: row.listPriceM2,
+      priceLista,
+      priceVenta,
+      baseTotal: Number.isFinite(row && row.listPriceTotal && row.listPriceTotal[0]) ? row.listPriceTotal[0] : 0,
+      status: row.status
+    };
+  });
+
+  const rowsByGroupForKesimo = new Map();
+  unitProformaRows.forEach((row) => {
+    const groupKey = String(row && row.groupCode || row && row.tipologia || '').trim();
+    if (!rowsByGroupForKesimo.has(groupKey)) rowsByGroupForKesimo.set(groupKey, []);
+    rowsByGroupForKesimo.get(groupKey).push(row);
+  });
+  rowsByGroupForKesimo.forEach((rowsInGroup, groupKey) => {
+    const formulaLimits = limitsByGroup.get(groupKey) || [];
+    const ranked = [...rowsInGroup].sort((a, b) => {
       const byTotal = (Number(b && b.baseTotal) || 0) - (Number(a && a.baseTotal) || 0);
       if (byTotal !== 0) return byTotal;
       return unitSort(a && a.unidad, b && b.unidad);
     });
-    ranked.forEach((item, idx) => {
-      item.kEsimo = idx + 1;
-      item.listaAsignadaKesimo = resolveListByExcelLikeFormula(item.kEsimo, formulaLimits.cumulative);
-      const priceListaKesimo = Number.isFinite(item.listPriceM2[item.listaAsignadaKesimo]) && Number.isFinite(item.m2) && item.m2 > 0
-        ? (item.listPriceM2[item.listaAsignadaKesimo] * item.m2)
+    ranked.forEach((row, idx) => {
+      row.kEsimo = idx + 1;
+      row.listaAsignadaKesimo = resolveListByExcelLikeFormula(row.kEsimo, formulaLimits);
+      const priceListaKesimo = Number.isFinite(row.listPriceM2[row.listaAsignadaKesimo]) && Number.isFinite(row.m2) && row.m2 > 0
+        ? (row.listPriceM2[row.listaAsignadaKesimo] * row.m2)
         : null;
-      item.priceListaKesimo = priceListaKesimo;
-      item.priceVentaKesimo = Number.isFinite(priceListaKesimo) ? (priceListaKesimo * (1 - stressDiscountPct)) : null;
-    });
-    decorated.forEach((row) => {
-      unitProformaRows.push({
-        unidad: row.unidad,
-        tipologia: row.tipologia,
-        recamaras: row.recamaras,
-        level: row.level,
-        groupCode: row.groupCode,
-        m2: row.m2,
-        rankInGroup: row.rankInGroup,
-        formulaLimits: row.formulaLimits,
-        listaAsignada: row.listaAsignada,
-        listPriceM2: row.listPriceM2,
-        priceLista: row.priceLista,
-        priceVenta: row.priceVenta,
-        kEsimo: row.kEsimo,
-        listaAsignadaKesimo: row.listaAsignadaKesimo,
-        priceListaKesimo: row.priceListaKesimo,
-        priceVentaKesimo: row.priceVentaKesimo,
-        status: row.status
-      });
+      row.priceListaKesimo = priceListaKesimo;
+      row.priceVentaKesimo = Number.isFinite(priceListaKesimo) ? (priceListaKesimo * (1 - stressDiscountPct)) : null;
     });
   });
   unitProformaRows.sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
@@ -4632,6 +4659,69 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
   return out;
 }
 
+function normalizeViceroyGroupToRecamaras(groupCode) {
+  const group = String(groupCode || '').trim().toUpperCase();
+  if (!group) return '';
+  const plusDen = group.includes('+D') || group.includes('+1');
+  const ph = group.startsWith('PH');
+  const numberMatch = group.match(/(\d+)/);
+  const number = numberMatch ? numberMatch[1] : '';
+  if (!number) return group;
+  if (ph) return plusDen ? `PH${number}+DEN` : `PH${number}`;
+  return plusDen ? `${number}B+DEN` : `${number}B`;
+}
+
+function parseViceroyRowsByPreciosProforma(sheet) {
+  const out = [];
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+  if (!Array.isArray(matrix) || matrix.length < 3) return out;
+  for (let r = 2; r < matrix.length; r += 1) {
+    const row = matrix[r];
+    const unidad = extractUnitCode(rowDataByIndex(row, 0)); // A
+    if (!unidad) continue;
+    const level = String(rowDataByIndex(row, 1) || '').trim(); // B
+    const phase = String(rowDataByIndex(row, 2) || '').trim(); // C
+    const tipologia = String(rowDataByIndex(row, 3) || '').trim(); // D
+    const groupCode = String(rowDataByIndex(row, 4) || '').trim(); // E
+    const m2Raw = rowDataByIndex(row, 5); // F
+    const m2 = parseCurrencyLike(m2Raw);
+    const listThresholds = [];
+    for (let i = 0; i <= 7; i += 1) {
+      const threshold = parseCurrencyLike(rowDataByIndex(row, 7 + i)); // H..O
+      listThresholds.push(Number.isFinite(threshold) ? Math.floor(threshold) : 0);
+    }
+    const contador = parseCurrencyLike(rowDataByIndex(row, 6)); // G
+    const listPricePerM2 = {};
+    for (let i = 0; i <= 7; i += 1) {
+      const value = parseCurrencyLike(rowDataByIndex(row, 15 + i)); // P..W
+      if (Number.isFinite(value)) listPricePerM2[i] = value;
+    }
+    const priceLista = parseCurrencyLike(rowDataByIndex(row, 23)); // X
+    const recamaras = normalizeViceroyGroupToRecamaras(groupCode);
+    out.push({
+      development: 'VICEROY',
+      unidad,
+      level,
+      groupCode,
+      planLink: '',
+      recamaras,
+      edificio: phase,
+      tipologia: tipologia || groupCode,
+      vista: '',
+      asignacion: '',
+      m2: Number.isFinite(m2) ? m2 : m2Raw,
+      sqft: Number.isFinite(m2) ? String(Math.round(m2 * 10.7639)) : '',
+      price: Number.isFinite(priceLista) ? priceLista : '',
+      status: 'disponible',
+      listPricePerM2,
+      listThresholds,
+      contador,
+      sourceRowIndex: r + 1
+    });
+  }
+  return out;
+}
+
 function pickRicherViceroyRow(current, next) {
   if (!current) return next;
   if (!next) return current;
@@ -4662,6 +4752,16 @@ function parseViceroyInventoryFile(filePath) {
   const firstSheetName = workbook.SheetNames[0];
   const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
   if (!firstSheet) return [];
+
+  // 0) Preferred for proforma simulation: explicit Precios Proforma sheet.
+  const preciosProformaSheetName = workbook.SheetNames.find((sheetName) => {
+    const key = normalizeHeaderKey(sheetName);
+    return key === normalizeHeaderKey('Precios Proforma') || key.includes(normalizeHeaderKey('Precios Proforma'));
+  });
+  if (preciosProformaSheetName && workbook.Sheets[preciosProformaSheetName]) {
+    const parsed = dedupeViceroyRows(parseViceroyRowsByPreciosProforma(workbook.Sheets[preciosProformaSheetName]));
+    if (parsed.length) return parsed;
+  }
 
   // 1) Preferred: header-driven parsing (supports Unit/Type style inventories).
   try {
@@ -4707,7 +4807,7 @@ function resolveInventoryCandidatesByDevSlug(devSlug) {
   devDirs.forEach((devDir) => {
     try {
       fs.readdirSync(devDir).forEach((name) => {
-        if (!/\.(xls|xlsx|csv)$/i.test(name)) return;
+        if (!/\.(xls|xlsx|xlsm|csv)$/i.test(name)) return;
         const fullPath = path.join(devDir, name);
         let mtimeMs = 0;
         try { mtimeMs = fs.statSync(fullPath).mtimeMs || 0; } catch {}
