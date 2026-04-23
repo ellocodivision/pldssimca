@@ -213,11 +213,13 @@
         inconsistenciesEl.innerHTML =
           '<p><strong>Unidades duplicadas con tipología diferente en inventario:</strong> ' + formatNumber(dup.length) + '</p>' +
           '<p><strong>Unidades de inventario sin tipología:</strong> ' + formatNumber(missing.length) + '</p>' +
+          '<p><strong>Tipologías inválidas filtradas (ej. numéricas):</strong> ' + formatNumber((Array.isArray(data.inventoryTipologiasInvalidas) ? data.inventoryTipologiasInvalidas : []).length) + '</p>' +
           '<p><strong>Selecciones de unidades no encontradas en inventario:</strong> ' + formatNumber(outside.length) + '</p>' +
           '<details><summary>Ver muestra de inconsistencias</summary>' +
           '<pre style="white-space:pre-wrap;margin-top:8px;">' + escapeHtml(JSON.stringify({
             inventoryDuplicateUnits: dup.slice(0, 10),
             inventoryUnitsMissingTipologia: missing.slice(0, 10),
+            inventoryTipologiasInvalidas: (Array.isArray(data.inventoryTipologiasInvalidas) ? data.inventoryTipologiasInvalidas : []).slice(0, 10),
             selectionsUnitNotInInventory: outside.slice(0, 20)
           }, null, 2)) + '</pre></details>';
       }
@@ -226,6 +228,7 @@
         const source = report && report.source ? report.source : {};
         sourceMetaEl.textContent =
           'Base inventario: ' + (source.inventoryFileName || 'no identificado') +
+          ' | Ruta fuente inventario: ' + (source.inventorySourcePath || '-') +
           ' | Base selecciones Whisperlist: ' + (source.whisperlistSourceFile || 'no identificado') +
           ' | Actualizado Whisperlist: ' + (source.whisperlistUpdatedAt ? new Date(source.whisperlistUpdatedAt).toLocaleString('es-MX') : '-');
       }

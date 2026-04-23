@@ -842,12 +842,14 @@ async function buildViceroyTipologiaDemandReport() {
   const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
   let inventoryRows = [];
   let inventoryFileName = '';
+  let inventorySourcePath = '';
   for (const candidate of candidates) {
     try {
       const parsedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(candidate.fullPath));
       if (parsedRows.length) {
         inventoryRows = parsedRows;
         inventoryFileName = candidate.name;
+        inventorySourcePath = candidate.fullPath;
         break;
       }
     } catch {}
@@ -856,6 +858,7 @@ async function buildViceroyTipologiaDemandReport() {
     const cached = readViceroyInventoryCache();
     inventoryRows = cached.rows;
     inventoryFileName = cached.fileName || inventoryFileName;
+    inventorySourcePath = 'cache:' + getViceroyInventoryCachePath();
   }
 
   const whisperData = await readWhisperlistData();
@@ -866,11 +869,14 @@ async function buildViceroyTipologiaDemandReport() {
   const inconsistencies = {
     inventoryDuplicateUnits: [],
     inventoryUnitsMissingTipologia: [],
+    inventoryTipologiasInvalidas: [],
     selectionsUnitNotInInventory: []
   };
 
   const seenDuplicateUnit = new Set();
   const seenMissingTipUnit = new Set();
+  const seenInvalidTip = new Set();
+  const isValidTipologiaValue = (value) => /^[A-Z][A-Z0-9.+-]*$/.test(String(value || '').trim().toUpperCase());
 
   inventoryRows.forEach((row) => {
     const unit = extractUnitCode(row && row.unidad);
@@ -880,6 +886,14 @@ async function buildViceroyTipologiaDemandReport() {
       if (!seenMissingTipUnit.has(unit)) {
         inconsistencies.inventoryUnitsMissingTipologia.push({ unidad: unit });
         seenMissingTipUnit.add(unit);
+      }
+      return;
+    }
+    if (!isValidTipologiaValue(tipologia)) {
+      const badKey = `${unit}__${tipologia}`;
+      if (!seenInvalidTip.has(badKey)) {
+        inconsistencies.inventoryTipologiasInvalidas.push({ unidad: unit, tipologia });
+        seenInvalidTip.add(badKey);
       }
       return;
     }
@@ -1013,6 +1027,7 @@ async function buildViceroyTipologiaDemandReport() {
     generatedAt: new Date().toISOString(),
     source: {
       inventoryFileName: inventoryFileName || '',
+      inventorySourcePath: inventorySourcePath || '',
       whisperlistSourceFile: String(whisperData && whisperData.sourceFile || ''),
       whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
     },
@@ -1021,6 +1036,7 @@ async function buildViceroyTipologiaDemandReport() {
     inconsistencies: {
       inventoryDuplicateUnits: inconsistencies.inventoryDuplicateUnits,
       inventoryUnitsMissingTipologia: inconsistencies.inventoryUnitsMissingTipologia,
+      inventoryTipologiasInvalidas: inconsistencies.inventoryTipologiasInvalidas,
       selectionsUnitNotInInventory: inconsistencies.selectionsUnitNotInInventory
     },
     totals: {
