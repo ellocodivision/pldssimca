@@ -383,6 +383,7 @@
         }
         const status = isDuplicated ? 'duplicada' : 'similar';
         const color = isDuplicated ? '#b71c1c' : '#1f8d3c';
+        const fillColor = isDuplicated ? '#b71c1c' : '#dff4e1';
         const tipologia = String(meta.tipologia || '').trim();
         const precioLista = Number(meta.precioLista || 0);
         const precioVenta = Number(meta.precioVenta || 0);
@@ -397,7 +398,8 @@
           unidad: zoneLabel || unitKey,
           estado: status,
           detalle: detail,
-          color: color
+          color: color,
+          fillColor: fillColor
         };
       }
 
@@ -538,8 +540,9 @@
           return box.x >= 6 && box.y >= 6 && (box.x + box.w) <= (width - 6) && (box.y + box.h) <= (height - 6);
         };
         const candidateOffsets = [
-          [0, 0], [0, 20], [0, -20], [18, 0], [-18, 0], [18, 20], [-18, 20], [18, -20], [-18, -20],
-          [0, 40], [0, -40], [36, 0], [-36, 0], [36, 20], [-36, 20], [36, -20], [-36, -20]
+          [0, 0], [0, 22], [0, -22], [24, 0], [-24, 0], [24, 22], [-24, 22], [24, -22], [-24, -22],
+          [0, 44], [0, -44], [48, 0], [-48, 0], [48, 22], [-48, 22], [48, -22], [-48, -22],
+          [72, 0], [-72, 0], [72, 22], [-72, 22], [72, -22], [-72, -22], [96, 0], [-96, 0]
         ];
 
         renderables.forEach(function (entry) {
@@ -551,7 +554,7 @@
             else ctx.lineTo(px, py);
           });
           ctx.closePath();
-          ctx.fillStyle = entry.info.color + '55';
+          ctx.fillStyle = entry.info.fillColor || (entry.info.color + '55');
           ctx.strokeStyle = entry.info.color;
           ctx.lineWidth = 2.5;
           ctx.fill();
@@ -568,7 +571,7 @@
           const paddingY = 6;
           const textWidth = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
           const boxWidth = Math.min(width * 0.56, textWidth + (paddingX * 2));
-          const boxHeight = 56 + (paddingY * 2);
+          const boxHeight = 64 + (paddingY * 2);
           let boxX = Math.max(6, Math.min(width - boxWidth - 6, entry.centroidX - (boxWidth / 2)));
           let boxY = Math.max(6, Math.min(height - boxHeight - 6, entry.centroidY - boxHeight - 10));
           let box = { x: boxX, y: boxY, w: boxWidth, h: boxHeight };
@@ -601,7 +604,7 @@
             };
           }
           placedBoxes.push(box);
-          ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          ctx.fillStyle = entry.info.estado === 'duplicada' ? 'rgba(255,255,255,0.96)' : 'rgba(245,255,245,0.98)';
           ctx.strokeStyle = entry.info.color;
           ctx.lineWidth = 1.8;
           ctx.beginPath();
@@ -620,7 +623,8 @@
           ctx.font = '500 10px Arial, sans-serif';
           ctx.fillStyle = '#5f6573';
           ctx.fillText(line2, box.x + paddingX, box.y + paddingY + 16);
-          ctx.fillText(entry.info.estado === 'duplicada' ? 'Duplicada' : 'Disponible similar', box.x + paddingX, box.y + paddingY + 30);
+          ctx.fillText(entry.info.estado === 'duplicada' ? 'Duplicada' : 'Disponible en este piso', box.x + paddingX, box.y + paddingY + 30);
+          ctx.fillText(entry.info.detalle ? String(entry.info.detalle).split(' · ').slice(0, 2).join(' · ') : '', box.x + paddingX, box.y + paddingY + 44);
           ctx.restore();
         });
 
