@@ -45,6 +45,7 @@ const VICEROY_RESERVAS_DAILY_EMAIL_ENABLED = String(process.env.VICEROY_RESERVAS
 const VICEROY_RESERVAS_DAILY_EMAIL_TO = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_TO || `${VICEROY_RECEPTION_EMAIL},${GERENTE_EMAIL}`).trim();
 const VICEROY_RESERVAS_DAILY_EMAIL_CC = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_CC || '').trim();
 const VICEROY_RESERVAS_CORPORATE_EMAIL = String(process.env.VICEROY_RESERVAS_CORPORATE_EMAIL || 'ernesto@relatedgroud.com').trim();
+const VICEROY_PILOTO_MIN_PRICE_PER_M2 = Number(process.env.VICEROY_PILOTO_MIN_PRICE_PER_M2 || 7100);
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true' || SMTP_PORT === 465;
@@ -4677,8 +4678,10 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const pricePerM2Raw = rowDataByIndex(row, 15); // P
     const m2Value = parseCurrencyLike(m2Raw);
     const pricePerM2 = parseCurrencyLike(pricePerM2Raw);
-    // Usar exactamente el $/m2 del Excel (sin piso mínimo forzado).
-    const effectivePricePerM2 = Number.isFinite(pricePerM2) ? pricePerM2 : NaN;
+    // Política comercial de Viceroy Piloto Presentación: piso mínimo de $/m2.
+    const effectivePricePerM2 = Number.isFinite(pricePerM2)
+      ? Math.max(pricePerM2, Number.isFinite(VICEROY_PILOTO_MIN_PRICE_PER_M2) ? VICEROY_PILOTO_MIN_PRICE_PER_M2 : 7100)
+      : NaN;
     const price = (Number.isFinite(m2Value) && Number.isFinite(effectivePricePerM2))
       ? (m2Value * effectivePricePerM2)
       : '';
