@@ -112,7 +112,7 @@
     </section>
 
     <section class="card">
-      <h3 style="margin:0 0 8px;">Control de precios simulado por tipología</h3>
+      <h3 style="margin:0 0 8px;">Precios proforma por tipología</h3>
       <div id="pricingControl"></div>
     </section>
 
@@ -357,6 +357,7 @@
           return '<tr>' +
             '<td class="mono">' + escapeHtml(row.unidad || '-') + '</td>' +
             '<td class="mono">' + escapeHtml(row.tipologia || '-') + '</td>' +
+            '<td class="num">' + escapeHtml(row.recamaras || '-') + '</td>' +
             '<td class="num">Lista ' + formatNumber(row.listaInicial || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.m2 || 0) + '</td>' +
             '<td class="num">' + formatCurrency(row.priceM2Lanzamiento || 0) + '</td>' +
@@ -367,7 +368,7 @@
         unitLaunchEl.innerHTML =
           '<p style="margin:0 0 10px;color:#444;">Precio de lanzamiento por unidad según la lista inicial de su tipología. Fuente: <strong>listado</strong> cuando existe precio por lista en inventario; si no, <strong>calculado</strong>.</p>' +
           '<div class="table-wrap"><table style="min-width:1100px;"><thead><tr>' +
-          '<th>Unidad</th><th>Tipología</th><th>Lista de arranque</th><th>M2</th><th>$ / m2 lanzamiento</th><th>Precio lanzamiento (USD)</th><th>Fuente</th>' +
+          '<th>Unidad</th><th>Tipología</th><th>Recámaras</th><th>Lista de arranque</th><th>M2</th><th>$ / m2 lanzamiento</th><th>Precio lanzamiento (USD)</th><th>Fuente</th>' +
           '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
           '<td><strong>Totales</strong></td>' +
           '<td>-</td>' +
@@ -376,6 +377,7 @@
           '<td class="num">-</td>' +
           '<td class="num"><strong>' + formatCurrency(totals.precioLanzamientoUsd || 0) + '</strong></td>' +
           '<td class="num"><strong>' + formatNumber(totals.unidades || rows.length) + ' unidades</strong></td>' +
+          '<td class="num">-</td>' +
           '</tr></tfoot></table></div>';
       }
 

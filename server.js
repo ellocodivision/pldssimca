@@ -1020,6 +1020,7 @@ async function buildViceroyTipologiaDemandReport() {
       m2: parseCurrencyLike(row && row.m2),
       price: parseCurrencyLike(row && row.price),
       status: String(row && row.status || '').trim(),
+      recamaras: String(row && row.recamaras || '').trim(),
       listPricePerM2
     });
   });
@@ -1168,6 +1169,18 @@ async function buildViceroyTipologiaDemandReport() {
   const listGrowth = 1 + (listIncrementPct / 100);
   const stressDiscountPct = 0.05;
   const tc = 18.5;
+  const formatRecamaras = (rawValue) => {
+    const key = String(rawValue || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!key) return '';
+    const normalized = key.replace(/\+DEN$/g, '+1').replace(/\+D$/g, '+1');
+    let match = normalized.match(/^([1-5])B(?:\+1)?$/);
+    if (match) return normalized.includes('+1') ? `${match[1]}+1` : `${match[1]}`;
+    match = normalized.match(/^([1-5])(?:\+1)?$/);
+    if (match) return normalized.includes('+1') ? `${match[1]}+1` : `${match[1]}`;
+    match = normalized.match(/^PH([1-5])(?:\+1)?$/);
+    if (match) return normalized.includes('+1') ? `PH${match[1]}+1` : `PH${match[1]}`;
+    return normalized;
+  };
   const isSoldStatus = (raw) => {
     const key = normalizeHeaderKey(raw);
     return key.includes('vendid') || key.includes('sold');
@@ -1288,6 +1301,7 @@ async function buildViceroyTipologiaDemandReport() {
       unitLaunchRows.push({
         unidad: String(item && item.unidad || ''),
         tipologia: String(tipologia || ''),
+        recamaras: formatRecamaras(item && item.recamaras),
         listaInicial: safeList,
         m2: Number.isFinite(m2Value) ? m2Value : null,
         priceM2Lanzamiento: Number.isFinite(launchPricePerM2) ? launchPricePerM2 : null,
@@ -4252,6 +4266,7 @@ const VICEROY_PILOTO_COLUMN_ALIASES = {
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
   planLink: ['link', 'plano', 'plan_link', 'planlink', 'url_plano', 'urlplano', 'plano_url', 'image_url', 'imageurl'],
   recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'bed', 'habitaciones'],
+  den: ['den', 'estudio', 'studio_plus', 'plus_den'],
   building: ['edificio', 'building', 'torre', 'tower', 'fase', 'phase'],
   tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad', 'type'],
   view: ['vista', 'view', 'vistas'],
@@ -4336,6 +4351,8 @@ function normalizeViceroyInventoryRow(rawRow) {
   const building = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.building) || '').trim();
   const rawType = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
   let recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
+  const denRaw = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.den) || '').trim();
+  const hasDen = hasViceroyDen(denRaw);
   if (!recamaras && rawType) {
     const typeKey = normalizeHeaderKey(rawType);
     if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('3')) recamaras = '3PH';
@@ -4344,6 +4361,7 @@ function normalizeViceroyInventoryRow(rawRow) {
     else if (typeKey.includes('2')) recamaras = '2B';
     else if (typeKey.includes('1')) recamaras = '1B';
   }
+  if (hasDen && recamaras && !/\+/.test(recamaras)) recamaras = `${recamaras}+DEN`;
   const tipologia = rawType;
   const view = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.view) || '').trim();
   const assignment = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.assignment) || '').trim();
