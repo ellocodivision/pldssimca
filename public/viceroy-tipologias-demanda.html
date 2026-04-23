@@ -257,6 +257,7 @@
             '<td class="num">' + formatNumber(row.unidadesDistintasSeleccionadas || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.seleccionesTotales || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.mismaUnidadSeleccionada || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidadesAncla || 0) + '</td>' +
             '<td class="num">Lista ' + formatNumber(row.listaInicial || 0) + ' (+' + formatNumber(row.incrementoBasePct || 0) + '%)</td>' +
             '<td class="num">' + formatNumber(row.incrementaCada || 1) + '</td>' +
             listCells +
@@ -268,13 +269,13 @@
           return '<td class="num"><strong>' + formatNumber(totals[idx] || 0) + '</strong></td>';
         }).join('');
         pricingSimulationEl.innerHTML =
-          '<p style="margin:0 0 10px;color:#444;">Modelo propuesto: grupos con mayor presión de demanda arrancan en listas más altas; grupos con baja presión y alto inventario arrancan en lista 0. Los incrementos por lista son de +' + formatNumber(increment) + '%.</p>' +
+          '<p style="margin:0 0 10px;color:#444;">Modelo propuesto: las unidades seleccionadas se concentran en la lista inicial del grupo (mismo precio ancla). El resto se distribuye en listas siguientes. Los incrementos por lista son de +' + formatNumber(increment) + '%.</p>' +
           '<div class="table-wrap"><table style="min-width:1700px;"><thead><tr>' +
-          '<th>Grupo</th><th>Unidades</th><th>Distintas seleccionadas</th><th>Selecciones</th><th>Duplicadas</th><th>Lista inicial</th><th>Incrementa cada</th>' +
+          '<th>Grupo</th><th>Unidades</th><th>Distintas seleccionadas</th><th>Selecciones</th><th>Duplicadas</th><th>Unidades ancla</th><th>Lista inicial</th><th>Incrementa cada</th>' +
           headHtml +
           '<th>Total</th>' +
           '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
-          '<td colspan="7" style="text-align:right;"><strong>Totales por lista</strong></td>' +
+          '<td colspan="8" style="text-align:right;"><strong>Totales por lista</strong></td>' +
           totalsHtml +
           '<td class="num"><strong>' + formatNumber(sim.totalUnits || 0) + '</strong></td>' +
           '</tr></tfoot></table></div>';

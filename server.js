@@ -845,33 +845,43 @@ function computeBaseUnitsPerList(unidadesTotales, maxList) {
   return Math.max(1, Math.floor(total / listCount));
 }
 
-function buildDynamicListDistribution(unidadesTotales, startList, maxList) {
+function computeAnchoredIncrementStep(unidadesTotales, startList, unidadesAncla, maxList) {
+  const total = Math.max(0, Number(unidadesTotales) || 0);
+  const start = Math.max(0, Number(startList) || 0);
+  const anchor = Math.max(0, Number(unidadesAncla) || 0);
+  if (start > 0 && anchor > 0) {
+    return Math.max(1, Math.ceil(anchor / (start + 1)));
+  }
+  return computeBaseUnitsPerList(total, maxList);
+}
+
+function buildDynamicListDistribution(unidadesTotales, startList, unidadesAncla, incrementaCada, maxList) {
   const out = {};
   const total = Math.max(0, Number(unidadesTotales) || 0);
   const safeMax = Math.max(0, Number(maxList) || 0);
-  const listCount = safeMax + 1;
-  if (!listCount) return out;
-
-  const base = Math.floor(total / listCount);
-  const remainder = total % listCount;
-  const planned = Array.from({ length: listCount }, (_, idx) => base + (idx < remainder ? 1 : 0));
-
   const safeStart = Math.min(Math.max(0, Number(startList) || 0), safeMax);
-  let carry = 0;
-  for (let i = 0; i < safeStart; i += 1) carry += planned[i];
+  const safeStep = Math.max(1, Number(incrementaCada) || 1);
+  const safeAnchor = Math.min(total, Math.max(0, Number(unidadesAncla) || 0));
+  let remaining = total;
 
-  for (let list = 0; list <= safeMax; list += 1) {
+  for (let list = 0; list < safeStart; list += 1) {
+    out[`lista${list}`] = '-';
+  }
+
+  const defaultStartUnits = safeStart > 0 ? (safeStep * (safeStart + 1)) : safeStep;
+  const startUnitsRaw = safeAnchor > 0 ? safeAnchor : defaultStartUnits;
+  const startUnits = Math.min(remaining, Math.max(0, startUnitsRaw));
+  out[`lista${safeStart}`] = startUnits;
+  remaining -= startUnits;
+
+  for (let list = safeStart + 1; list <= safeMax; list += 1) {
     const key = `lista${list}`;
-    if (list < safeStart) {
-      out[key] = '-';
-      continue;
+    if (remaining <= 0) out[key] = '-';
+    else {
+      const chunk = Math.min(safeStep, remaining);
+      out[key] = chunk;
+      remaining -= chunk;
     }
-    const own = planned[list] || 0;
-    if (list === safeStart) {
-      out[key] = own + carry;
-      continue;
-    }
-    out[key] = own;
   }
   return out;
 }
@@ -1102,10 +1112,15 @@ async function buildViceroyTipologiaDemandReport() {
   const maxList = 7;
   const pricingSimulationRows = pricingRows.map((row) => {
     const startList = computeDynamicStartList(row);
-    const incrementaCada = computeBaseUnitsPerList(row.unidadesTotales, maxList);
-    const lists = buildDynamicListDistribution(row.unidadesTotales, startList, maxList);
+    const unidadesAncla = Math.min(
+      Math.max(0, Number(row.unidadesTotales) || 0),
+      Math.max(0, Number(row.seleccionesTotales) || 0)
+    );
+    const incrementaCada = computeAnchoredIncrementStep(row.unidadesTotales, startList, unidadesAncla, maxList);
+    const lists = buildDynamicListDistribution(row.unidadesTotales, startList, unidadesAncla, incrementaCada, maxList);
     return {
       ...row,
+      unidadesAncla,
       listaInicial: startList,
       incrementoBasePct: startList * listIncrementPct,
       incrementaCada,
