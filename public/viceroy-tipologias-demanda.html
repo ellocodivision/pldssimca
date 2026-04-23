@@ -85,6 +85,7 @@
               <th>Unidades totales existentes</th>
               <th>Unidades distintas seleccionadas</th>
               <th>Selecciones totales</th>
+              <th>Misma unidad seleccionada (duplicadas)</th>
               <th>Unidades no seleccionadas</th>
               <th>Porcentaje de absorción</th>
               <th>Comentario</th>
@@ -170,7 +171,7 @@
       function renderTable(report) {
         const rows = Array.isArray(report && report.rows) ? report.rows : [];
         if (!rows.length) {
-          tableBodyEl.innerHTML = '<tr><td colspan="7">No hay datos para mostrar.</td></tr>';
+          tableBodyEl.innerHTML = '<tr><td colspan="8">No hay datos para mostrar.</td></tr>';
           return;
         }
         tableBodyEl.innerHTML = rows.map(function (row) {
@@ -179,6 +180,7 @@
             '<td class="num">' + formatNumber(row.unidadesTotales) + '</td>' +
             '<td class="num">' + formatNumber(row.unidadesDistintasSeleccionadas) + '</td>' +
             '<td class="num">' + formatNumber(row.seleccionesTotales) + '</td>' +
+            '<td class="num">' + formatNumber(row.mismaUnidadSeleccionada || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.unidadesNoSeleccionadas) + '</td>' +
             '<td class="num">' + formatPct(row.absorptionPct) + '</td>' +
             '<td>' + badgeForComment(row.comentario) + '</td>' +
@@ -191,7 +193,7 @@
         if (!safe.length) return '<em>Sin datos</em>';
         return '<ul class="exec-list">' + safe.map(function (item) {
           if (typeof item === 'string') return '<li class="mono">' + escapeHtml(item) + '</li>';
-          return '<li><span class="mono">' + escapeHtml(item.tipologia || '') + '</span> · selecciones ' + formatNumber(item.seleccionesTotales || 0) + ' · absorción ' + formatPct(item.absorptionPct || 0) + '</li>';
+          return '<li><span class="mono">' + escapeHtml(item.tipologia || '') + '</span> · selecciones ' + formatNumber(item.seleccionesTotales || 0) + ' · duplicadas ' + formatNumber(item.mismaUnidadSeleccionada || 0) + ' · absorción ' + formatPct(item.absorptionPct || 0) + '</li>';
         }).join('') + '</ul>';
       }
 

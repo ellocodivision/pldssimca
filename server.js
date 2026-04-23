@@ -818,6 +818,7 @@ function buildViceroyTipologiaDemandCsv(report) {
     'Unidades totales existentes',
     'Unidades distintas seleccionadas',
     'Selecciones totales',
+    'Misma unidad seleccionada (duplicadas)',
     'Unidades no seleccionadas',
     'Porcentaje de absorcion',
     'Comentario'
@@ -829,6 +830,7 @@ function buildViceroyTipologiaDemandCsv(report) {
       csvEscape(row.unidadesTotales),
       csvEscape(row.unidadesDistintasSeleccionadas),
       csvEscape(row.seleccionesTotales),
+      csvEscape(row.mismaUnidadSeleccionada),
       csvEscape(row.unidadesNoSeleccionadas),
       csvEscape(`${Number(row.absorptionPct || 0).toFixed(2)}%`),
       csvEscape(row.comentario)
@@ -958,6 +960,7 @@ async function buildViceroyTipologiaDemandReport() {
     const selectedUnits = tipologiaSelectedUnits.get(tipologia) || new Set();
     const unidadesDistintasSeleccionadas = selectedUnits.size;
     const seleccionesTotales = tipologiaSelectionTotals.get(tipologia) || 0;
+    const mismaUnidadSeleccionada = Math.max(0, seleccionesTotales - unidadesDistintasSeleccionadas);
     const unidadesNoSeleccionadas = Math.max(0, unidadesTotales - unidadesDistintasSeleccionadas);
     const absorptionPct = unidadesTotales > 0
       ? (unidadesDistintasSeleccionadas / unidadesTotales) * 100
@@ -967,6 +970,7 @@ async function buildViceroyTipologiaDemandReport() {
       unidadesTotales,
       unidadesDistintasSeleccionadas,
       seleccionesTotales,
+      mismaUnidadSeleccionada,
       unidadesNoSeleccionadas,
       absorptionPct,
       comentario: classifyTipologiaDemand(absorptionPct, seleccionesTotales)
@@ -984,6 +988,7 @@ async function buildViceroyTipologiaDemandReport() {
     .map((row) => ({
       tipologia: row.tipologia,
       seleccionesTotales: row.seleccionesTotales,
+      mismaUnidadSeleccionada: row.mismaUnidadSeleccionada,
       absorptionPct: row.absorptionPct
     }));
   const tipologiasMenosDemandadas = [...rows]
@@ -997,6 +1002,7 @@ async function buildViceroyTipologiaDemandReport() {
     .map((row) => ({
       tipologia: row.tipologia,
       seleccionesTotales: row.seleccionesTotales,
+      mismaUnidadSeleccionada: row.mismaUnidadSeleccionada,
       absorptionPct: row.absorptionPct
     }));
   const tipologiasSinDemanda = rows
