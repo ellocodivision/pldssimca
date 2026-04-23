@@ -4812,6 +4812,7 @@ function resolveViceroyM2OverrideCandidates(devSlug) {
   const envPath = String(process.env.VICEROY_TIPOLOGIA_M2_OVERRIDE_PATH || '').trim();
   if (envPath) files.push(envPath);
   if (String(devSlug || '').trim() === 'viceroy-piloto') {
+    files.push(path.join(os.homedir(), 'Downloads', 'dsadsadsadsa.xlsx'));
     files.push(path.join(os.homedir(), 'Downloads', 'codex m2.xlsx'));
     files.push(path.join(os.homedir(), 'Downloads', 'codex-m2.xlsx'));
     const devDirs = [];
