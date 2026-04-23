@@ -845,14 +845,21 @@ function computeBaseUnitsPerList(unidadesTotales, maxList) {
   return Math.max(1, Math.floor(total / listCount));
 }
 
+function computePatternIncrementStep(unidadesTotales) {
+  const total = Math.max(0, Number(unidadesTotales) || 0);
+  // Patrón comercial tomado de la tabla de referencia:
+  // 2 -> 1, 7 -> 2, 23 -> 5, 44/45 -> 8, 73 -> 10.
+  if (total <= 2) return 1;
+  if (total <= 7) return 2;
+  if (total <= 23) return 5;
+  if (total <= 45) return 8;
+  return 10;
+}
+
 function computeAnchoredIncrementStep(unidadesTotales, startList, unidadesAncla, maxList) {
   const total = Math.max(0, Number(unidadesTotales) || 0);
-  const start = Math.max(0, Number(startList) || 0);
-  const anchor = Math.max(0, Number(unidadesAncla) || 0);
-  if (start > 0 && anchor > 0) {
-    return Math.max(1, Math.ceil(anchor / (start + 1)));
-  }
-  return computeBaseUnitsPerList(total, maxList);
+  if (!total) return 1;
+  return computePatternIncrementStep(total);
 }
 
 function buildDynamicListDistribution(unidadesTotales, startList, unidadesAncla, incrementaCada, maxList) {
