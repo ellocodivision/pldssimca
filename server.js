@@ -1017,6 +1017,8 @@ async function buildViceroyTipologiaDemandReport() {
     }
     tipologiaUnitDetails.get(tipologia).push({
       unidad: unit,
+      level: String(row && row.level || '').trim(),
+      groupCode: String(row && row.groupCode || '').trim(),
       m2: parseCurrencyLike(row && row.m2),
       price: parseCurrencyLike(row && row.price),
       status: String(row && row.status || '').trim(),
@@ -1169,6 +1171,43 @@ async function buildViceroyTipologiaDemandReport() {
   const listGrowth = 1 + (listIncrementPct / 100);
   const stressDiscountPct = 0.05;
   const tc = 18.5;
+  const roundUpToTen = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return NaN;
+    return Math.ceil(n / 10) * 10;
+  };
+  const computeListPriceSeries = (item) => {
+    const m2Value = Number.isFinite(item && item.m2) && item.m2 > 0 ? item.m2 : NaN;
+    const listPriceM2 = {};
+    const listPriceTotal = {};
+    const listedMap = item && item.listPricePerM2 && typeof item.listPricePerM2 === 'object' ? item.listPricePerM2 : {};
+    const baseFromPrice = Number.isFinite(item && item.price) && Number.isFinite(m2Value) && m2Value > 0
+      ? (item.price / m2Value)
+      : NaN;
+    const listedZero = Number.isFinite(parseCurrencyLike(listedMap[0])) ? parseCurrencyLike(listedMap[0]) : NaN;
+    let running = Number.isFinite(listedZero)
+      ? listedZero
+      : (Number.isFinite(baseFromPrice) ? roundUpToTen(baseFromPrice) : NaN);
+    for (let i = 0; i <= maxList; i += 1) {
+      const listed = Number.isFinite(parseCurrencyLike(listedMap[i])) ? parseCurrencyLike(listedMap[i]) : NaN;
+      if (i === 0) {
+        running = Number.isFinite(listed) ? listed : running;
+      } else if (!Number.isFinite(listed)) {
+        running = Number.isFinite(running) ? roundUpToTen(running * listGrowth) : NaN;
+      } else {
+        running = listed;
+      }
+      listPriceM2[i] = Number.isFinite(running) ? running : null;
+      listPriceTotal[i] = (Number.isFinite(running) && Number.isFinite(m2Value) && m2Value > 0)
+        ? (running * m2Value)
+        : null;
+    }
+    return {
+      m2: Number.isFinite(m2Value) ? m2Value : null,
+      listPriceM2,
+      listPriceTotal
+    };
+  };
   const formatRecamaras = (rawValue) => {
     const key = String(rawValue || '').trim().toUpperCase().replace(/\s+/g, '');
     if (!key) return '';
@@ -1186,92 +1225,6 @@ async function buildViceroyTipologiaDemandReport() {
     return key.includes('vendid') || key.includes('sold');
   };
   const unitSort = (a, b) => String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' });
-  const globalPriceM2Samples = [];
-  tipologiaUnitDetails.forEach((details) => {
-    details.forEach((item) => {
-      if (Number.isFinite(item && item.price) && item.price > 0 && Number.isFinite(item && item.m2) && item.m2 > 0) {
-        globalPriceM2Samples.push(item.price / item.m2);
-      }
-    });
-  });
-  const globalAvgPriceM2 = globalPriceM2Samples.length
-    ? (globalPriceM2Samples.reduce((acc, value) => acc + value, 0) / globalPriceM2Samples.length)
-    : 0;
-
-  const pricingControlRows = pricingSimulationRows.map((row) => {
-    const groupDetailsRaw = Array.isArray(tipologiaUnitDetails.get(row.grupo)) ? tipologiaUnitDetails.get(row.grupo) : [];
-    const groupDetails = [...groupDetailsRaw].sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
-    const listAssignments = [];
-    for (let list = 0; list <= maxList; list += 1) {
-      const count = Number(row[`lista${list}`]);
-      if (!Number.isFinite(count) || count <= 0) continue;
-      for (let i = 0; i < count; i += 1) listAssignments.push(list);
-    }
-    const groupM2Samples = groupDetails
-      .filter((item) => Number.isFinite(item && item.price) && item.price > 0 && Number.isFinite(item && item.m2) && item.m2 > 0)
-      .map((item) => item.price / item.m2);
-    const groupAvgPriceM2 = groupM2Samples.length
-      ? (groupM2Samples.reduce((acc, value) => acc + value, 0) / groupM2Samples.length)
-      : globalAvgPriceM2;
-
-    let ingresosUsd = 0;
-    let stressTestUsd = 0;
-    let totalM2 = 0;
-    let totalBasePriceUsd = 0;
-    let vendidos = 0;
-
-    groupDetails.forEach((item, idx) => {
-      const m2Value = Number.isFinite(item && item.m2) && item.m2 > 0 ? item.m2 : 0;
-      let basePriceUsd = Number.isFinite(item && item.price) && item.price > 0 ? item.price : 0;
-      if (!basePriceUsd && m2Value > 0 && groupAvgPriceM2 > 0) {
-        basePriceUsd = m2Value * groupAvgPriceM2;
-      }
-      const assignedList = listAssignments[idx] != null
-        ? listAssignments[idx]
-        : (Number.isFinite(row.listaInicial) ? row.listaInicial : 0);
-      const listPriceUsd = basePriceUsd * Math.pow(listGrowth, assignedList);
-      const stressPriceUsd = listPriceUsd * (1 - stressDiscountPct);
-      ingresosUsd += listPriceUsd;
-      stressTestUsd += stressPriceUsd;
-      totalM2 += m2Value;
-      totalBasePriceUsd += basePriceUsd;
-      if (isSoldStatus(item && item.status)) vendidos += 1;
-    });
-
-    const m2Promedio = totalM2 > 0 ? (totalBasePriceUsd / totalM2) : 0;
-    return {
-      grupo: row.grupo,
-      m2Promedio,
-      unidades: row.unidadesTotales,
-      ingresosUsd,
-      stressTestUsd,
-      vendidos,
-      lista: `Lista ${row.listaInicial}`
-    };
-  });
-
-  const totalIngresosUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row.ingresosUsd) || 0), 0);
-  const totalStressUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row.stressTestUsd) || 0), 0);
-  const totalUnidadesControl = pricingControlRows.reduce((acc, row) => acc + (Number(row.unidades) || 0), 0);
-  pricingControlRows.forEach((row) => {
-    row.participacionPct = totalIngresosUsd > 0 ? ((row.ingresosUsd / totalIngresosUsd) * 100) : 0;
-  });
-
-  const pricingControl = {
-    assumptions: {
-      listIncrementPct,
-      stressDiscountPct,
-      tc
-    },
-    rows: pricingControlRows,
-    totals: {
-      unidades: totalUnidadesControl,
-      ingresosUsd: totalIngresosUsd,
-      stressTestUsd: totalStressUsd,
-      ingresosMxn: totalIngresosUsd * tc,
-      stressTestMxn: totalStressUsd * tc
-    }
-  };
 
   const startListByTipologia = new Map();
   pricingSimulationRows.forEach((row) => {
@@ -1320,55 +1273,165 @@ async function buildViceroyTipologiaDemandReport() {
     }
   };
 
+  const buildListAssignments = (simRow) => {
+    const listAssignments = [];
+    for (let list = 0; list <= maxList; list += 1) {
+      const count = Number(simRow && simRow[`lista${list}`]);
+      if (!Number.isFinite(count) || count <= 0) continue;
+      for (let i = 0; i < count; i += 1) listAssignments.push(list);
+    }
+    return listAssignments;
+  };
+
   const unitProformaRows = [];
   tipologiaUnitDetails.forEach((details, tipologia) => {
     const simRow = pricingSimulationRows.find((item) => String(item && item.grupo || '') === String(tipologia || ''));
-    const listAssignments = [];
-    if (simRow) {
-      for (let list = 0; list <= maxList; list += 1) {
-        const count = Number(simRow[`lista${list}`]);
-        if (!Number.isFinite(count) || count <= 0) continue;
-        for (let i = 0; i < count; i += 1) listAssignments.push(list);
-      }
-    }
+    const fallbackList = simRow && Number.isFinite(simRow.listaInicial) ? simRow.listaInicial : 0;
+    const listAssignments = buildListAssignments(simRow);
     const ordered = [...details].sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
-    ordered.forEach((item, index) => {
-      const m2Value = Number.isFinite(item && item.m2) ? item.m2 : NaN;
-      const basePriceValue = Number.isFinite(item && item.price) ? item.price : NaN;
-      const basePricePerM2 = (Number.isFinite(basePriceValue) && Number.isFinite(m2Value) && m2Value > 0)
-        ? (basePriceValue / m2Value)
-        : NaN;
-      const listPriceM2 = {};
-      const listPriceTotal = {};
-      for (let i = 0; i <= maxList; i += 1) {
-        const listed = item && item.listPricePerM2 && Number.isFinite(item.listPricePerM2[i]) ? item.listPricePerM2[i] : NaN;
-        const computed = Number.isFinite(basePricePerM2) ? (basePricePerM2 * Math.pow(listGrowth, i)) : NaN;
-        const valueM2 = Number.isFinite(listed) ? listed : computed;
-        listPriceM2[i] = Number.isFinite(valueM2) ? valueM2 : null;
-        listPriceTotal[i] = (Number.isFinite(valueM2) && Number.isFinite(m2Value) && m2Value > 0) ? (valueM2 * m2Value) : null;
-      }
-      const assignedList = listAssignments[index] != null ? listAssignments[index] : (simRow && Number.isFinite(simRow.listaInicial) ? simRow.listaInicial : 0);
-      const priceLista = Number.isFinite(listPriceTotal[assignedList]) ? listPriceTotal[assignedList] : null;
+    const decorated = ordered.map((item, index) => {
+      const series = computeListPriceSeries(item);
+      const assignedList = listAssignments[index] != null ? listAssignments[index] : fallbackList;
+      const priceLista = Number.isFinite(series.listPriceTotal[assignedList]) ? series.listPriceTotal[assignedList] : null;
       const priceVenta = Number.isFinite(priceLista) ? (priceLista * (1 - stressDiscountPct)) : null;
-      unitProformaRows.push({
+      const baseTotal = Number.isFinite(series.listPriceTotal[0]) ? series.listPriceTotal[0] : 0;
+      return {
         unidad: String(item && item.unidad || ''),
         tipologia: String(tipologia || ''),
         recamaras: formatRecamaras(item && item.recamaras),
-        m2: Number.isFinite(m2Value) ? m2Value : null,
+        level: String(item && item.level || '').trim(),
+        groupCode: String(item && item.groupCode || '').trim(),
+        status: String(item && item.status || '').trim(),
+        m2: series.m2,
+        listPriceM2: series.listPriceM2,
         listaAsignada: assignedList,
-        listPriceM2,
         priceLista,
-        priceVenta
+        priceVenta,
+        baseTotal
+      };
+    });
+    const ranked = [...decorated].sort((a, b) => {
+      const byTotal = (Number(b && b.baseTotal) || 0) - (Number(a && a.baseTotal) || 0);
+      if (byTotal !== 0) return byTotal;
+      return unitSort(a && a.unidad, b && b.unidad);
+    });
+    ranked.forEach((item, idx) => {
+      item.kEsimo = idx + 1;
+      item.listaAsignadaKesimo = listAssignments[idx] != null ? listAssignments[idx] : fallbackList;
+      const priceListaKesimo = Number.isFinite(item.listPriceM2[item.listaAsignadaKesimo]) && Number.isFinite(item.m2) && item.m2 > 0
+        ? (item.listPriceM2[item.listaAsignadaKesimo] * item.m2)
+        : null;
+      item.priceListaKesimo = priceListaKesimo;
+      item.priceVentaKesimo = Number.isFinite(priceListaKesimo) ? (priceListaKesimo * (1 - stressDiscountPct)) : null;
+    });
+    decorated.forEach((row) => {
+      unitProformaRows.push({
+        unidad: row.unidad,
+        tipologia: row.tipologia,
+        recamaras: row.recamaras,
+        level: row.level,
+        groupCode: row.groupCode,
+        m2: row.m2,
+        listaAsignada: row.listaAsignada,
+        listPriceM2: row.listPriceM2,
+        priceLista: row.priceLista,
+        priceVenta: row.priceVenta,
+        kEsimo: row.kEsimo,
+        listaAsignadaKesimo: row.listaAsignadaKesimo,
+        priceListaKesimo: row.priceListaKesimo,
+        priceVentaKesimo: row.priceVentaKesimo,
+        status: row.status
       });
     });
   });
   unitProformaRows.sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
+  const pricingControlAccumulator = new Map();
+  unitProformaRows.forEach((row) => {
+    const key = String(row && row.tipologia || '').trim();
+    if (!key) return;
+    if (!pricingControlAccumulator.has(key)) {
+      pricingControlAccumulator.set(key, {
+        grupo: key,
+        unidades: 0,
+        vendidos: 0,
+        ingresosUsd: 0,
+        stressTestUsd: 0,
+        ingresosKesimoUsd: 0,
+        stressKesimoUsd: 0,
+        totalM2: 0,
+        totalBaseM2Usd: 0
+      });
+    }
+    const target = pricingControlAccumulator.get(key);
+    target.unidades += 1;
+    if (isSoldStatus(row && row.status)) target.vendidos += 1;
+    target.ingresosUsd += Number(row && row.priceLista) || 0;
+    target.stressTestUsd += Number(row && row.priceVenta) || 0;
+    target.ingresosKesimoUsd += Number(row && row.priceListaKesimo) || 0;
+    target.stressKesimoUsd += Number(row && row.priceVentaKesimo) || 0;
+    target.totalM2 += Number(row && row.m2) || 0;
+    target.totalBaseM2Usd += Number(row && row.listPriceM2 && row.listPriceM2[0]) || 0;
+  });
+  const pricingControlRows = pricingSimulationRows.map((simRow) => {
+    const acc = pricingControlAccumulator.get(String(simRow && simRow.grupo || '')) || {
+      grupo: String(simRow && simRow.grupo || ''),
+      unidades: 0,
+      vendidos: 0,
+      ingresosUsd: 0,
+      stressTestUsd: 0,
+      ingresosKesimoUsd: 0,
+      stressKesimoUsd: 0,
+      totalM2: 0,
+      totalBaseM2Usd: 0
+    };
+    const m2Promedio = acc.unidades > 0 ? (acc.totalBaseM2Usd / acc.unidades) : 0;
+    return {
+      grupo: acc.grupo,
+      m2Promedio,
+      unidades: acc.unidades,
+      ingresosUsd: acc.ingresosUsd,
+      stressTestUsd: acc.stressTestUsd,
+      ingresosKesimoUsd: acc.ingresosKesimoUsd,
+      stressKesimoUsd: acc.stressKesimoUsd,
+      vendidos: acc.vendidos,
+      lista: `Lista ${Number.isFinite(simRow && simRow.listaInicial) ? simRow.listaInicial : 0}`
+    };
+  });
+  const totalIngresosUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row && row.ingresosUsd) || 0), 0);
+  const totalStressUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row && row.stressTestUsd) || 0), 0);
+  const totalIngresosKesimoUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row && row.ingresosKesimoUsd) || 0), 0);
+  const totalStressKesimoUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row && row.stressKesimoUsd) || 0), 0);
+  const totalUnidadesControl = pricingControlRows.reduce((acc, row) => acc + (Number(row && row.unidades) || 0), 0);
+  pricingControlRows.forEach((row) => {
+    row.participacionPct = totalIngresosUsd > 0 ? ((row.ingresosUsd / totalIngresosUsd) * 100) : 0;
+  });
+  const pricingControl = {
+    assumptions: {
+      listIncrementPct,
+      stressDiscountPct,
+      tc
+    },
+    rows: pricingControlRows,
+    totals: {
+      unidades: totalUnidadesControl,
+      ingresosUsd: totalIngresosUsd,
+      stressTestUsd: totalStressUsd,
+      ingresosMxn: totalIngresosUsd * tc,
+      stressTestMxn: totalStressUsd * tc,
+      ingresosKesimoUsd: totalIngresosKesimoUsd,
+      stressKesimoUsd: totalStressKesimoUsd,
+      ingresosKesimoMxn: totalIngresosKesimoUsd * tc,
+      stressKesimoMxn: totalStressKesimoUsd * tc
+    }
+  };
   const unitProforma = {
     rows: unitProformaRows,
     totals: {
       unidades: unitProformaRows.length,
       priceLista: unitProformaRows.reduce((acc, row) => acc + (Number(row && row.priceLista) || 0), 0),
-      priceVenta: unitProformaRows.reduce((acc, row) => acc + (Number(row && row.priceVenta) || 0), 0)
+      priceVenta: unitProformaRows.reduce((acc, row) => acc + (Number(row && row.priceVenta) || 0), 0),
+      priceListaKesimo: unitProformaRows.reduce((acc, row) => acc + (Number(row && row.priceListaKesimo) || 0), 0),
+      priceVentaKesimo: unitProformaRows.reduce((acc, row) => acc + (Number(row && row.priceVentaKesimo) || 0), 0)
     }
   };
 
@@ -4317,9 +4380,11 @@ function rowsFromSheetWithHeaderRow(sheet, headerRowNumber) {
 const VICEROY_PILOTO_COLUMN_ALIASES = {
   development: ['development', 'desarrollo', 'proyecto'],
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
+  level: ['level', 'nivel', 'floor', 'piso'],
   planLink: ['link', 'plano', 'plan_link', 'planlink', 'url_plano', 'urlplano', 'plano_url', 'image_url', 'imageurl'],
   recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'bed', 'habitaciones'],
   den: ['den', 'estudio', 'studio_plus', 'plus_den'],
+  groupCode: ['group', 'grupo', 'group_code', 'groupcode'],
   building: ['edificio', 'building', 'torre', 'tower', 'fase', 'phase'],
   tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad', 'type'],
   view: ['vista', 'view', 'vistas'],
@@ -4401,6 +4466,8 @@ function normalizeViceroyInventoryRow(rawRow) {
   if (!unit) return null;
   const development = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.development) || '').trim();
   const planLink = normalizeViceroyPlanLink(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.planLink));
+  const level = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.level) || '').trim();
+  const groupCode = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.groupCode) || '').trim();
   const building = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.building) || '').trim();
   const rawType = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
   let recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
@@ -4426,6 +4493,8 @@ function normalizeViceroyInventoryRow(rawRow) {
   return {
     development,
     unidad: unit,
+    level,
+    groupCode,
     planLink,
     recamaras,
     edificio: building,
