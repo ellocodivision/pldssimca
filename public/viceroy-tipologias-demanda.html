@@ -148,6 +148,7 @@
       const reloadBtn = document.getElementById('reloadBtn');
       let currentReport = null;
       let editableSimulationRows = [];
+      const editableBaseM2ByUnit = new Map();
 
       function setStatus(message, type) {
         statusEl.textContent = message || '';
@@ -345,6 +346,22 @@
         return 7;
       }
 
+      function buildListPricesFromBase0(base0) {
+        const safeBase = Math.max(0, Number(base0) || 0);
+        const out = { 0: safeBase };
+        for (let i = 1; i <= 7; i += 1) out[i] = out[i - 1] * 1.05;
+        return out;
+      }
+
+      function listPricesForRow(row) {
+        const unitKey = String(row && row.unidad || '').trim();
+        const original = row && row.listPriceM2 && (row.listPriceM2['0'] != null ? row.listPriceM2['0'] : row.listPriceM2[0]);
+        const base0 = editableBaseM2ByUnit.has(unitKey)
+          ? editableBaseM2ByUnit.get(unitKey)
+          : Math.max(0, Number(original) || 0);
+        return buildListPricesFromBase0(base0);
+      }
+
       function recomputePricingFromSimulation() {
         if (!currentReport || !Array.isArray(editableSimulationRows) || !editableSimulationRows.length) return;
         const baseRows = currentReport && currentReport.unitProforma && Array.isArray(currentReport.unitProforma.rows)
@@ -380,7 +397,7 @@
             const rank = index + 1;
             const assignedList = resolveListByLimits(rank, limits);
             const m2 = Number(row && row.m2) || 0;
-            const lpm2 = row && row.listPriceM2 ? row.listPriceM2 : {};
+            const lpm2 = listPricesForRow(row);
             const unitM2Price = Number(lpm2[String(assignedList)] != null ? lpm2[String(assignedList)] : lpm2[assignedList]) || 0;
             const priceLista = unitM2Price * m2;
             const priceVenta = priceLista * 0.95;
@@ -389,6 +406,7 @@
               rankInGroup: rank,
               formulaLimits: limits,
               listaAsignada: assignedList,
+              listPriceM2: lpm2,
               priceLista: priceLista,
               priceVenta: priceVenta,
               baseTotal: list0Price * m2
@@ -407,7 +425,7 @@
             const rank = index + 1;
             const assignedList = resolveListByLimits(rank, limits);
             const m2 = Number(row && row.m2) || 0;
-            const lpm2 = row && row.listPriceM2 ? row.listPriceM2 : {};
+            const lpm2 = listPricesForRow(row);
             const unitM2Price = Number(lpm2[String(assignedList)] != null ? lpm2[String(assignedList)] : lpm2[assignedList]) || 0;
             const priceLista = unitM2Price * m2;
             const priceVenta = priceLista * 0.95;
@@ -416,6 +434,7 @@
               rankInGroup: rank,
               formulaLimits: limits,
               listaAsignada: assignedList,
+              listPriceM2: lpm2,
               priceLista: priceLista,
               priceVenta: priceVenta,
               baseTotal: list0Price * m2
@@ -549,21 +568,23 @@
           return;
         }
         const bodyHtml = rows.map(function (row) {
-          const l0 = row.listPriceM2 && row.listPriceM2['0'] != null ? row.listPriceM2['0'] : 0;
-          const l1 = row.listPriceM2 && row.listPriceM2['1'] != null ? row.listPriceM2['1'] : 0;
-          const l2 = row.listPriceM2 && row.listPriceM2['2'] != null ? row.listPriceM2['2'] : 0;
-          const l3 = row.listPriceM2 && row.listPriceM2['3'] != null ? row.listPriceM2['3'] : 0;
-          const l4 = row.listPriceM2 && row.listPriceM2['4'] != null ? row.listPriceM2['4'] : 0;
-          const l5 = row.listPriceM2 && row.listPriceM2['5'] != null ? row.listPriceM2['5'] : 0;
-          const l6 = row.listPriceM2 && row.listPriceM2['6'] != null ? row.listPriceM2['6'] : 0;
-          const l7 = row.listPriceM2 && row.listPriceM2['7'] != null ? row.listPriceM2['7'] : 0;
+          const lpm2 = listPricesForRow(row);
+          const l0 = lpm2['0'] != null ? lpm2['0'] : 0;
+          const l1 = lpm2['1'] != null ? lpm2['1'] : 0;
+          const l2 = lpm2['2'] != null ? lpm2['2'] : 0;
+          const l3 = lpm2['3'] != null ? lpm2['3'] : 0;
+          const l4 = lpm2['4'] != null ? lpm2['4'] : 0;
+          const l5 = lpm2['5'] != null ? lpm2['5'] : 0;
+          const l6 = lpm2['6'] != null ? lpm2['6'] : 0;
+          const l7 = lpm2['7'] != null ? lpm2['7'] : 0;
+          const unitKey = String(row && row.unidad || '').trim();
           return '<tr>' +
             '<td class="mono">' + escapeHtml(row.unidad || '-') + '</td>' +
             '<td class="mono">' + escapeHtml(row.tipologia || '-') + '</td>' +
             '<td class="num">' + formatNumber(row.rankInGroup || 0) + '</td>' +
             '<td class="num">' + escapeHtml(row.recamaras || '-') + '</td>' +
             '<td class="num">' + formatNumber(row.m2 || 0) + '</td>' +
-            '<td class="num">' + formatCurrency(l0) + '</td>' +
+            '<td class="num"><input type="number" min="0" step="0.01" value="' + escapeHtml(String(Number(l0.toFixed(2)))) + '" data-m2-base-edit="1" data-unit="' + escapeHtml(unitKey) + '" style="width:94px;text-align:right;"></td>' +
             '<td class="num">' + formatCurrency(l1) + '</td>' +
             '<td class="num">' + formatCurrency(l2) + '</td>' +
             '<td class="num">' + formatCurrency(l3) + '</td>' +
@@ -736,6 +757,7 @@
           }
           currentReport = data.report;
           editableSimulationRows = normalizeEditableSimulationRows(currentReport);
+          editableBaseM2ByUnit.clear();
           renderSource(currentReport);
           renderSummary(currentReport);
           renderTable(currentReport);
@@ -761,6 +783,16 @@
         const row = editableSimulationRows.find(function (item) { return String(item && item.grupo || '').trim() === group; });
         if (!row || !Number.isFinite(list) || list < 0 || list > 7) return;
         row['lista' + list] = value;
+        recomputePricingFromSimulation();
+      });
+      pricingControlEl.addEventListener('input', function (event) {
+        const target = event && event.target;
+        if (!target || !target.matches('input[data-m2-base-edit=\"1\"]')) return;
+        const unit = String(target.getAttribute('data-unit') || '').trim();
+        if (!unit) return;
+        const value = Math.max(0, Number(target.value) || 0);
+        target.value = String(value);
+        editableBaseM2ByUnit.set(unit, value);
         recomputePricingFromSimulation();
       });
       loadReport();
