@@ -324,6 +324,7 @@
           return '<tr>' +
             '<td class="mono">' + escapeHtml(row.unidad || '-') + '</td>' +
             '<td class="mono">' + escapeHtml(row.tipologia || '-') + '</td>' +
+            '<td class="num">' + formatNumber(row.rankInGroup || 0) + '</td>' +
             '<td class="num">' + escapeHtml(row.recamaras || '-') + '</td>' +
             '<td class="num">' + formatNumber(row.m2 || 0) + '</td>' +
             '<td class="num">' + formatCurrency(l0) + '</td>' +
@@ -341,15 +342,16 @@
             '<td class="num">Lista ' + formatNumber(row.listaAsignadaKesimo || 0) + '</td>' +
             '<td class="num"><strong>' + formatCurrency(row.priceListaKesimo || 0) + '</strong></td>' +
             '<td class="num"><strong>' + formatCurrency(row.priceVentaKesimo || 0) + '</strong></td>' +
+            '<td class="mono">' + escapeHtml(Array.isArray(row.formulaLimits) ? row.formulaLimits.join(' | ') : '-') + '</td>' +
           '</tr>';
         }).join('');
         pricingControlEl.innerHTML =
           '<p style="margin:0 0 10px;color:#444;">Simulación celda por celda con fórmula tipo Excel para pestañas <strong>$M2</strong> y <strong>Precio Proforma</strong>. Incluye asignación normal y variante k-ésimo.</p>' +
-          '<div class="table-wrap"><table style="min-width:2600px;"><thead><tr>' +
-          '<th>Unidad</th><th>Tipo</th><th>Recámaras</th><th>M2</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>Lista asignada</th><th>Precio Lista</th><th>Precio Venta</th><th>k-ésimo</th><th>Lista k-ésimo</th><th>Precio Lista k-ésimo</th><th>Precio Venta k-ésimo</th>' +
+          '<div class="table-wrap"><table style="min-width:2800px;"><thead><tr>' +
+          '<th>Unidad</th><th>Tipo</th><th>N grupo (G)</th><th>Recámaras</th><th>M2 (F)</th><th>0 (P)</th><th>1 (Q)</th><th>2 (R)</th><th>3 (S)</th><th>4 (T)</th><th>5 (U)</th><th>6 (V)</th><th>7 (W)</th><th>Lista asignada (X)</th><th>Precio Lista (X)</th><th>Precio Venta (Y)</th><th>k-ésimo</th><th>Lista k-ésimo</th><th>Precio Lista k-ésimo</th><th>Precio Venta k-ésimo</th><th>Límites H:N</th>' +
           '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
           '<td><strong>Totales</strong></td>' +
-          '<td>-</td><td>-</td><td>-</td>' +
+          '<td>-</td><td>-</td><td>-</td><td>-</td>' +
           '<td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="num">-</td>' +
           '<td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="num">-</td>' +
           '<td class="num">-</td>' +
@@ -359,6 +361,7 @@
           '<td class="num">-</td>' +
           '<td class="num"><strong>' + formatCurrency(totals.priceListaKesimo || 0) + '</strong></td>' +
           '<td class="num"><strong>' + formatCurrency(totals.priceVentaKesimo || 0) + '</strong></td>' +
+          '<td class="num">-</td>' +
           '</tr></tfoot></table></div>';
       }
 

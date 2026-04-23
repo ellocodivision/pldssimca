@@ -1273,25 +1273,39 @@ async function buildViceroyTipologiaDemandReport() {
     }
   };
 
-  const buildListAssignments = (simRow) => {
-    const listAssignments = [];
+  const buildFormulaLimits = (simRow) => {
+    const listCounts = [];
     for (let list = 0; list <= maxList; list += 1) {
       const count = Number(simRow && simRow[`lista${list}`]);
-      if (!Number.isFinite(count) || count <= 0) continue;
-      for (let i = 0; i < count; i += 1) listAssignments.push(list);
+      listCounts.push(Number.isFinite(count) && count > 0 ? Math.floor(count) : 0);
     }
-    return listAssignments;
+    const cumulative = [];
+    let running = 0;
+    for (let i = 0; i < maxList; i += 1) {
+      running += listCounts[i] || 0;
+      cumulative.push(running);
+    }
+    return { listCounts, cumulative };
+  };
+
+  const resolveListByExcelLikeFormula = (rankInGroup, limits) => {
+    const rank = Number(rankInGroup);
+    if (!Number.isFinite(rank) || rank <= 0) return 0;
+    for (let list = 0; list < maxList; list += 1) {
+      if (rank <= Number(limits[list] || 0)) return list;
+    }
+    return maxList;
   };
 
   const unitProformaRows = [];
   tipologiaUnitDetails.forEach((details, tipologia) => {
     const simRow = pricingSimulationRows.find((item) => String(item && item.grupo || '') === String(tipologia || ''));
-    const fallbackList = simRow && Number.isFinite(simRow.listaInicial) ? simRow.listaInicial : 0;
-    const listAssignments = buildListAssignments(simRow);
+    const formulaLimits = buildFormulaLimits(simRow);
     const ordered = [...details].sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
     const decorated = ordered.map((item, index) => {
       const series = computeListPriceSeries(item);
-      const assignedList = listAssignments[index] != null ? listAssignments[index] : fallbackList;
+      const rankInGroup = index + 1;
+      const assignedList = resolveListByExcelLikeFormula(rankInGroup, formulaLimits.cumulative);
       const priceLista = Number.isFinite(series.listPriceTotal[assignedList]) ? series.listPriceTotal[assignedList] : null;
       const priceVenta = Number.isFinite(priceLista) ? (priceLista * (1 - stressDiscountPct)) : null;
       const baseTotal = Number.isFinite(series.listPriceTotal[0]) ? series.listPriceTotal[0] : 0;
@@ -1304,6 +1318,8 @@ async function buildViceroyTipologiaDemandReport() {
         status: String(item && item.status || '').trim(),
         m2: series.m2,
         listPriceM2: series.listPriceM2,
+        rankInGroup,
+        formulaLimits: formulaLimits.cumulative,
         listaAsignada: assignedList,
         priceLista,
         priceVenta,
@@ -1317,7 +1333,7 @@ async function buildViceroyTipologiaDemandReport() {
     });
     ranked.forEach((item, idx) => {
       item.kEsimo = idx + 1;
-      item.listaAsignadaKesimo = listAssignments[idx] != null ? listAssignments[idx] : fallbackList;
+      item.listaAsignadaKesimo = resolveListByExcelLikeFormula(item.kEsimo, formulaLimits.cumulative);
       const priceListaKesimo = Number.isFinite(item.listPriceM2[item.listaAsignadaKesimo]) && Number.isFinite(item.m2) && item.m2 > 0
         ? (item.listPriceM2[item.listaAsignadaKesimo] * item.m2)
         : null;
@@ -1332,6 +1348,8 @@ async function buildViceroyTipologiaDemandReport() {
         level: row.level,
         groupCode: row.groupCode,
         m2: row.m2,
+        rankInGroup: row.rankInGroup,
+        formulaLimits: row.formulaLimits,
         listaAsignada: row.listaAsignada,
         listPriceM2: row.listPriceM2,
         priceLista: row.priceLista,
