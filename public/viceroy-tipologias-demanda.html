@@ -73,6 +73,23 @@
     <p class="status" id="status"></p>
 
     <section class="card">
+      <h3 style="margin:0 0 8px;">Carga Excel M2 (solo este módulo)</h3>
+      <p style="margin:0 0 10px;color:#444;">
+        Sube un Excel/CSV para llenar <strong>Lista 0 (P)</strong> por unidad. No modifica Viceroy Piloto Presentación.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="m2UploadFile" type="file" accept=".xlsx,.xls,.csv" />
+        <input id="m2UploadSheet" type="text" placeholder="Hoja (opcional)" style="min-height:38px;padding:0 10px;border:1px solid #cfc8b8;border-radius:8px;min-width:180px;" />
+        <button id="m2UploadBtn" class="btn primary" type="button">Subir Excel M2</button>
+      </div>
+      <p style="margin:10px 0 0;color:#555;font-size:12px;">
+        Columnas esperadas: <strong>Unidad</strong> (aliases: Unidad, Depto, Unit, No) y <strong>0 (P)</strong>
+        (aliases: 0 (P), 0, Lista0, Lista_0, P, Precio_m2, M2_base, M2).
+      </p>
+      <p id="m2UploadStatus" class="status" style="margin-top:8px;"></p>
+    </section>
+
+    <section class="card">
       <div class="summary-grid" id="summaryGrid"></div>
     </section>
 
@@ -146,6 +163,10 @@
       const pricingControlEl = document.getElementById('pricingControl');
       const unitLaunchEl = document.getElementById('unitLaunch');
       const reloadBtn = document.getElementById('reloadBtn');
+      const m2UploadFileEl = document.getElementById('m2UploadFile');
+      const m2UploadSheetEl = document.getElementById('m2UploadSheet');
+      const m2UploadBtnEl = document.getElementById('m2UploadBtn');
+      const m2UploadStatusEl = document.getElementById('m2UploadStatus');
       let currentReport = null;
       let editableSimulationRows = [];
       const editableBaseM2ByUnit = new Map();
@@ -156,6 +177,21 @@
       function setStatus(message, type) {
         statusEl.textContent = message || '';
         statusEl.className = 'status' + (type ? (' ' + type) : '');
+      }
+
+      function setUploadStatus(message, type) {
+        if (!m2UploadStatusEl) return;
+        m2UploadStatusEl.textContent = message || '';
+        m2UploadStatusEl.className = 'status' + (type ? (' ' + type) : '');
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function () { resolve(String(reader.result || '')); };
+          reader.onerror = function () { reject(new Error('No se pudo leer el archivo.')); };
+          reader.readAsDataURL(file);
+        });
       }
 
       function formatPct(value) {
@@ -854,6 +890,44 @@
           ' | Actualizado Whisperlist: ' + (source.whisperlistUpdatedAt ? new Date(source.whisperlistUpdatedAt).toLocaleString('es-MX') : '-');
       }
 
+      async function uploadM2Workbook() {
+        const file = m2UploadFileEl && m2UploadFileEl.files && m2UploadFileEl.files[0];
+        if (!file) {
+          setUploadStatus('Selecciona un archivo Excel/CSV primero.', 'error');
+          return;
+        }
+        setUploadStatus('Subiendo y procesando archivo...', '');
+        if (m2UploadBtnEl) m2UploadBtnEl.disabled = true;
+        try {
+          const dataUrl = await readFileAsDataUrl(file);
+          const payload = {
+            fileName: file.name,
+            base64: dataUrl,
+            sheetName: String(m2UploadSheetEl && m2UploadSheetEl.value || '').trim()
+          };
+          const res = await fetch('/api/viceroy/tipologias-demanda/m2-upload', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok) {
+            throw new Error(data.error || ('No se pudo subir (' + res.status + ')'));
+          }
+          setUploadStatus(
+            'Archivo aplicado. Filas importadas: ' + formatNumber(data.imported || 0) +
+            ' · hoja: ' + String(data.sheetName || '-') + '.',
+            'ok'
+          );
+          await loadReport();
+        } catch (err) {
+          setUploadStatus(err && err.message ? err.message : 'No se pudo subir el archivo.', 'error');
+        } finally {
+          if (m2UploadBtnEl) m2UploadBtnEl.disabled = false;
+        }
+      }
+
       async function loadReport() {
         setStatus('Cargando reporte...', '');
         try {
@@ -892,6 +966,9 @@
       }
 
       reloadBtn.addEventListener('click', loadReport);
+      if (m2UploadBtnEl) {
+        m2UploadBtnEl.addEventListener('click', uploadM2Workbook);
+      }
       pricingSimulationEl.addEventListener('input', function (event) {
         const target = event && event.target;
         if (!target || !target.matches('input[data-list-edit=\"1\"]')) return;

@@ -140,6 +140,7 @@ const VICEROY_REGISTROS_JSON_PATH = path.join(DATA_DIR, 'viceroy-registros.json'
 const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx');
 const VICEROY_ROOM_RESERVATIONS_PATH = path.join(DATA_DIR, 'viceroy-room-reservations.json');
 const VICEROY_RESERVAS_DAILY_REPORT_STATE_PATH = path.join(DATA_DIR, 'viceroy-reservas-daily-report-state.json');
+const VICEROY_TIPOLOGIA_M2_OVERRIDE_JSON_PATH = path.join(DATA_DIR, 'viceroy-tipologias-demanda-m2-override.json');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
@@ -957,23 +958,34 @@ async function buildViceroyTipologiaDemandReport() {
   let m2OverrideByUnit = new Map();
   let m2OverrideSourcePath = '';
   let m2OverrideFileName = '';
+  let m2OverrideSheetName = '';
+  let m2OverrideUpdatedAt = null;
   let m2OverridePricesByUnit = {};
-  const m2OverrideCandidates = resolveViceroyM2OverrideCandidates(devSlug);
-  for (const candidatePath of m2OverrideCandidates) {
-    try {
-      const parsed = parseViceroyM2OverrideFile(candidatePath);
-      if (parsed && parsed.size) {
-        m2OverrideByUnit = parsed;
-        m2OverridePricesByUnit = {};
-        parsed.forEach((lists, unit) => {
-          m2OverridePricesByUnit[unit] = lists;
-        });
-        m2OverrideSourcePath = candidatePath;
-        m2OverrideFileName = path.basename(candidatePath);
-        break;
-      }
-    } catch {}
+  const manualOverride = readViceroyTipologiaM2ManualOverride();
+  if (manualOverride.byUnit && manualOverride.byUnit.size) {
+    m2OverrideByUnit = manualOverride.byUnit;
+    m2OverrideSourcePath = VICEROY_TIPOLOGIA_M2_OVERRIDE_JSON_PATH;
+    m2OverrideFileName = manualOverride.fileName || 'cargado-en-modulo-tipologias-demanda';
+    m2OverrideSheetName = manualOverride.sheetName || '';
+    m2OverrideUpdatedAt = manualOverride.updatedAt || null;
+  } else {
+    const m2OverrideCandidates = resolveViceroyM2OverrideCandidates(devSlug);
+    for (const candidatePath of m2OverrideCandidates) {
+      try {
+        const parsed = parseViceroyM2OverrideFile(candidatePath);
+        if (parsed && parsed.size) {
+          m2OverrideByUnit = parsed;
+          m2OverrideSourcePath = candidatePath;
+          m2OverrideFileName = path.basename(candidatePath);
+          break;
+        }
+      } catch {}
+    }
   }
+  m2OverridePricesByUnit = {};
+  m2OverrideByUnit.forEach((lists, unit) => {
+    m2OverridePricesByUnit[unit] = lists;
+  });
 
   const whisperData = await readWhisperlistData();
   const whisperRows = Array.isArray(whisperData && whisperData.rows) ? whisperData.rows : [];
@@ -1557,6 +1569,8 @@ async function buildViceroyTipologiaDemandReport() {
       m2OverrideFileName: m2OverrideFileName || '',
       m2OverrideSourcePath: m2OverrideSourcePath || '',
       m2OverrideRows: m2OverrideByUnit.size || 0,
+      m2OverrideSheetName: m2OverrideSheetName || '',
+      m2OverrideUpdatedAt: m2OverrideUpdatedAt || null,
       m2OverridePricesByUnit,
       whisperlistSourceFile: String(whisperData && whisperData.sourceFile || ''),
       whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
@@ -4807,6 +4821,104 @@ function parseViceroyM2OverrideFile(filePath) {
   return byUnit;
 }
 
+function parseViceroyTipologiaM2BaseWorkbook(workbook, requestedSheetName) {
+  const outByUnit = new Map();
+  const fallbackSheet = workbook.SheetNames[0] || '';
+  const targetSheetName = String(requestedSheetName || fallbackSheet || '').trim();
+  if (!targetSheetName) {
+    return { sheetName: '', byUnit: outByUnit, imported: 0, skipped: 0 };
+  }
+  const sheet = workbook.Sheets[targetSheetName];
+  if (!sheet) {
+    return { sheetName: '', byUnit: outByUnit, imported: 0, skipped: 0 };
+  }
+  const rows = rowsFromSheetWithHeaderRow(sheet, 1);
+  let imported = 0;
+  let skipped = 0;
+  rows.forEach((rawRow) => {
+    const row = {};
+    Object.entries(rawRow || {}).forEach(([key, value]) => {
+      row[normalizeHeaderKey(key)] = value;
+    });
+    const unitRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit)
+      || row.unidad
+      || row.unit
+      || row.no
+      || '';
+    const unit = extractUnitCode(unitRaw);
+    const baseRaw = (
+      row['0_p']
+      ?? row['0']
+      ?? row['lista0']
+      ?? row['lista_0']
+      ?? row.p
+      ?? row.precio_m2
+      ?? row.precio_por_m2
+      ?? row.m2_base
+      ?? row.m2
+      ?? ''
+    );
+    const base0 = parseCurrencyLike(baseRaw);
+    if (!unit || !Number.isFinite(base0) || base0 <= 0) {
+      skipped += 1;
+      return;
+    }
+    outByUnit.set(unit, { 0: base0 });
+    imported += 1;
+  });
+  return { sheetName: targetSheetName, byUnit: outByUnit, imported, skipped };
+}
+
+function readViceroyTipologiaM2ManualOverride() {
+  const raw = readJson(VICEROY_TIPOLOGIA_M2_OVERRIDE_JSON_PATH, null);
+  const byUnit = new Map();
+  if (!raw || typeof raw !== 'object') {
+    return {
+      byUnit,
+      fileName: '',
+      sheetName: '',
+      updatedAt: null,
+      imported: 0
+    };
+  }
+  const rows = Array.isArray(raw.rows) ? raw.rows : [];
+  rows.forEach((item) => {
+    const unit = extractUnitCode(item && item.unidad);
+    const base0 = parseCurrencyLike(item && item.base0);
+    if (!unit || !Number.isFinite(base0) || base0 <= 0) return;
+    byUnit.set(unit, { 0: base0 });
+  });
+  return {
+    byUnit,
+    fileName: String(raw.fileName || '').trim(),
+    sheetName: String(raw.sheetName || '').trim(),
+    updatedAt: raw.updatedAt || null,
+    imported: Number.isFinite(Number(raw.imported)) ? Number(raw.imported) : byUnit.size
+  };
+}
+
+function saveViceroyTipologiaM2ManualOverride(payload) {
+  const fileName = String(payload && payload.fileName || '').trim();
+  const sheetName = String(payload && payload.sheetName || '').trim();
+  const byUnit = payload && payload.byUnit instanceof Map ? payload.byUnit : new Map();
+  const rows = Array.from(byUnit.entries())
+    .map(([unidad, listMap]) => ({
+      unidad,
+      base0: Number(parseCurrencyLike(listMap && (listMap[0] != null ? listMap[0] : listMap['0'])) || 0)
+    }))
+    .filter((item) => item.unidad && Number.isFinite(item.base0) && item.base0 > 0)
+    .sort((a, b) => String(a.unidad).localeCompare(String(b.unidad), 'es', { numeric: true, sensitivity: 'base' }));
+  const data = {
+    fileName,
+    sheetName,
+    imported: rows.length,
+    updatedAt: new Date().toISOString(),
+    rows
+  };
+  writeJson(VICEROY_TIPOLOGIA_M2_OVERRIDE_JSON_PATH, data);
+  return data;
+}
+
 function resolveViceroyM2OverrideCandidates(devSlug) {
   const files = [];
   const envPath = String(process.env.VICEROY_TIPOLOGIA_M2_OVERRIDE_PATH || '').trim();
@@ -7361,6 +7473,71 @@ app.get('/api/viceroy/tipologias-demanda', async (req, res) => {
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
+});
+
+app.get('/api/viceroy/tipologias-demanda/m2-upload-status', (req, res) => {
+  try {
+    const saved = readViceroyTipologiaM2ManualOverride();
+    return res.json({
+      ok: true,
+      hasData: Boolean(saved.byUnit && saved.byUnit.size),
+      fileName: saved.fileName || '',
+      sheetName: saved.sheetName || '',
+      updatedAt: saved.updatedAt || null,
+      imported: Number(saved.imported || 0)
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo leer el estado de carga de M2.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.post('/api/viceroy/tipologias-demanda/m2-upload', async (req, res) => {
+  const { fileName, base64, sheetName } = req.body || {};
+  if (!base64) {
+    return res.status(400).json({ ok: false, error: 'Archivo inválido: falta contenido base64.' });
+  }
+
+  let workbook;
+  try {
+    const payload = String(base64).includes(',') ? String(base64).split(',').pop() : String(base64);
+    const buffer = Buffer.from(payload || '', 'base64');
+    workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  } catch (err) {
+    return res.status(400).json({ ok: false, error: 'No se pudo leer el archivo Excel/CSV.' });
+  }
+
+  const parsed = parseViceroyTipologiaM2BaseWorkbook(workbook, sheetName);
+  if (!parsed.sheetName) {
+    return res.status(400).json({
+      ok: false,
+      error: 'No se encontró una hoja válida en el archivo.'
+    });
+  }
+  if (!parsed.byUnit.size) {
+    return res.status(400).json({
+      ok: false,
+      error: 'No se encontraron filas válidas. Revisa columnas: Unidad y 0 (P).'
+    });
+  }
+
+  const safeName = sanitizeExcelFileName(fileName) || 'tipologias-demanda-m2.xlsx';
+  const saved = saveViceroyTipologiaM2ManualOverride({
+    fileName: safeName,
+    sheetName: parsed.sheetName,
+    byUnit: parsed.byUnit
+  });
+  return res.json({
+    ok: true,
+    fileName: saved.fileName,
+    sheetName: saved.sheetName,
+    imported: saved.imported,
+    skipped: parsed.skipped,
+    updatedAt: saved.updatedAt
+  });
 });
 
 app.get('/api/viceroy/tipologias-demanda.csv', async (req, res) => {
