@@ -7475,6 +7475,80 @@ app.get('/api/viceroy/tipologias-demanda', async (req, res) => {
   }
 });
 
+app.get('/api/viceroy/tipologias-demanda/floors', (req, res) => {
+  try {
+    const devSlug = 'viceroy-piloto';
+    const config = readViceroyPilotoConfig();
+    const requestedName = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+    const selectedName = requestedName || String(config.selectedFloorJsonName || '').trim();
+    let floorsData = selectedName
+      ? readNamedFloorsByDevelopment(devSlug, selectedName)
+      : readMergedFloorsByDevelopment(devSlug);
+    if ((!Array.isArray(floorsData.floors) || !floorsData.floors.length) && selectedName) {
+      floorsData = readMergedFloorsByDevelopment(devSlug);
+    }
+    return res.json({
+      ok: true,
+      dev: devSlug,
+      floors: floorsData.floors,
+      loadedFiles: floorsData.loadedFiles,
+      showUnitLabels: floorsData.showUnitLabels !== false
+    });
+  } catch (err) {
+    log(`Error en /api/viceroy/tipologias-demanda/floors: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudieron cargar los niveles del plano.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.post('/api/viceroy/tipologias-demanda/export-floors-pdf', async (req, res) => {
+  const pages = Array.isArray(req.body && req.body.pages) ? req.body.pages : [];
+  const validPages = pages.filter((page) => {
+    const dataUrl = String(page && page.dataUrl || '');
+    const width = Number(page && page.width);
+    const height = Number(page && page.height);
+    return dataUrl.startsWith('data:image/png;base64,') && Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0;
+  });
+  if (!validPages.length) {
+    return res.status(400).json({ error: 'No hay páginas válidas para exportar.' });
+  }
+
+  try {
+    const pdfDoc = await PDFDocument.create();
+    for (const pageInfo of validPages) {
+      const dataUrl = String(pageInfo.dataUrl || '');
+      const width = Math.max(1, Math.round(Number(pageInfo.width) || 0));
+      const height = Math.max(1, Math.round(Number(pageInfo.height) || 0));
+      const base64 = dataUrl.split(',')[1] || '';
+      const pngBytes = Buffer.from(base64, 'base64');
+      const embedded = await pdfDoc.embedPng(pngBytes);
+      const page = pdfDoc.addPage([width, height]);
+      page.drawImage(embedded, {
+        x: 0,
+        y: 0,
+        width,
+        height
+      });
+    }
+    const pdfBytes = await pdfDoc.save();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="viceroy-tipologias-demanda-7-niveles.pdf"'
+    );
+    return res.send(Buffer.from(pdfBytes));
+  } catch (err) {
+    log(`Error en /api/viceroy/tipologias-demanda/export-floors-pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF por páginas.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.get('/api/viceroy/tipologias-demanda/m2-upload-status', (req, res) => {
   try {
     const saved = readViceroyTipologiaM2ManualOverride();

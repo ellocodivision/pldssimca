@@ -65,6 +65,7 @@
       <div class="actions">
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
         <button id="reloadBtn" class="btn" type="button">Recargar</button>
+        <button id="exportFloorsBtn" class="btn" type="button">Exportar 7 niveles</button>
         <button id="exportExcelBtn" class="btn" type="button">Exportar Excel</button>
         <a class="btn primary" href="/api/viceroy/tipologias-demanda.csv">Exportar CSV</a>
       </div>
@@ -165,6 +166,7 @@
       const pricingControlEl = document.getElementById('pricingControl');
       const unitLaunchEl = document.getElementById('unitLaunch');
       const reloadBtn = document.getElementById('reloadBtn');
+      const exportFloorsBtn = document.getElementById('exportFloorsBtn');
       const exportExcelBtn = document.getElementById('exportExcelBtn');
       const m2UploadFileEl = document.getElementById('m2UploadFile');
       const m2UploadSheetEl = document.getElementById('m2UploadSheet');
@@ -201,6 +203,26 @@
         });
       }
 
+      function loadImageElement(src) {
+        return new Promise(function (resolve, reject) {
+          const img = new Image();
+          img.onload = function () { resolve(img); };
+          img.onerror = reject;
+          img.src = src;
+        });
+      }
+
+      function truncateCanvasText(ctx, text, maxWidth) {
+        const value = String(text || '');
+        if (!value) return '';
+        if (ctx.measureText(value).width <= maxWidth) return value;
+        let output = value;
+        while (output.length > 1 && ctx.measureText(output + '...').width > maxWidth) {
+          output = output.slice(0, -1);
+        }
+        return output + '...';
+      }
+
       function formatPct(value) {
         const n = Number(value);
         return Number.isFinite(n) ? (n.toFixed(2) + '%') : '0.00%';
@@ -226,6 +248,198 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function getDemandCommentColor(comment) {
+        const txt = String(comment || '').toLowerCase();
+        if (txt.includes('alta')) return '#1f8d3c';
+        if (txt.includes('media')) return '#c47a00';
+        if (txt.includes('baja')) return '#b0372a';
+        return '#6b6b6b';
+      }
+
+      function buildDemandTipologiaCommentMap(report) {
+        const rows = Array.isArray(report && report.rows) ? report.rows : [];
+        const map = new Map();
+        rows.forEach(function (row) {
+          const tipologia = String(row && row.tipologia || '').trim();
+          if (!tipologia) return;
+          map.set(tipologia, String(row && row.comentario || 'Sin demanda detectada').trim() || 'Sin demanda detectada');
+        });
+        return map;
+      }
+
+      function buildDemandUnitTipologiaMap(report) {
+        const rows = Array.isArray(report && report.unitProforma && report.unitProforma.rows)
+          ? report.unitProforma.rows
+          : [];
+        const map = new Map();
+        rows.forEach(function (row) {
+          const unit = String(row && row.unidad || '').trim();
+          const tipologia = String(row && row.tipologia || '').trim();
+          if (!unit || !tipologia) return;
+          map.set(unit, tipologia);
+        });
+        return map;
+      }
+
+      function buildDemandUnitCommentMap(report) {
+        const tipologiaCommentMap = buildDemandTipologiaCommentMap(report);
+        const unitTipologiaMap = buildDemandUnitTipologiaMap(report);
+        const map = new Map();
+        unitTipologiaMap.forEach(function (tipologia, unit) {
+          map.set(unit, tipologiaCommentMap.get(tipologia) || 'Sin demanda detectada');
+        });
+        return map;
+      }
+
+      function resolveDemandZoneInfo(zone, report, unitCommentMap) {
+        const zoneLabel = String(zone && zone.label || '').trim();
+        const unitKey = zoneLabel.replace(/\s+/g, '');
+        const comment = unitCommentMap.get(unitKey) || 'Sin demanda detectada';
+        return {
+          unidad: zoneLabel || unitKey,
+          comentario: comment,
+          color: getDemandCommentColor(comment)
+        };
+      }
+
+      async function renderDemandFloorExportCanvas(floor, report, unitCommentMap) {
+        const img = await loadImageElement(floor.imageDataUrl);
+        const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
+        const width = Number(floor.imageWidth) || img.naturalWidth || img.width || 1200;
+        const height = Number(floor.imageHeight) || img.naturalHeight || img.height || 800;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        zones.forEach(function (zone) {
+          const info = resolveDemandZoneInfo(zone, report, unitCommentMap);
+          const points = Array.isArray(zone && zone.points) ? zone.points : [];
+          if (!points.length) return;
+          ctx.beginPath();
+          points.forEach(function (point, index) {
+            const px = Number(point[0] || 0);
+            const py = Number(point[1] || 0);
+            if (index === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.closePath();
+          ctx.fillStyle = info.color + '66';
+          ctx.strokeStyle = info.color;
+          ctx.lineWidth = 2;
+          ctx.fill();
+          ctx.stroke();
+
+          const cx = points.reduce(function (acc, point) { return acc + Number(point[0] || 0); }, 0) / points.length;
+          const cy = points.reduce(function (acc, point) { return acc + Number(point[1] || 0); }, 0) / points.length;
+          const text1 = info.unidad || '';
+          const text2 = info.comentario || '';
+          if (!text1 && !text2) return;
+          ctx.save();
+          ctx.font = '600 13px Arial, sans-serif';
+          const maxWidth = Math.max(120, width * 0.22);
+          const line1 = truncateCanvasText(ctx, text1, maxWidth);
+          const line2 = truncateCanvasText(ctx, text2, maxWidth);
+          const paddingX = 8;
+          const paddingY = 6;
+          const textWidth = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
+          const boxWidth = Math.min(width * 0.42, textWidth + (paddingX * 2));
+          const boxHeight = 34 + (paddingY * 2);
+          const boxX = Math.max(6, Math.min(width - boxWidth - 6, cx - (boxWidth / 2)));
+          const boxY = Math.max(6, Math.min(height - boxHeight - 6, cy - boxHeight - 10));
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.strokeStyle = 'rgba(54,54,63,0.55)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8);
+          } else {
+            ctx.rect(boxX, boxY, boxWidth, boxHeight);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#2e3138';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.font = '700 13px Arial, sans-serif';
+          ctx.fillText(line1, boxX + paddingX, boxY + paddingY);
+          ctx.font = '500 11px Arial, sans-serif';
+          ctx.fillStyle = '#5f6573';
+          ctx.fillText(line2, boxX + paddingX, boxY + paddingY + 16);
+          ctx.restore();
+        });
+
+        return {
+          dataUrl: canvas.toDataURL('image/png'),
+          width: canvas.width,
+          height: canvas.height
+        };
+      }
+
+      async function exportDemandFloors() {
+        if (!currentReport) {
+          setStatus('Carga el reporte primero para exportar los niveles.', 'error');
+          return;
+        }
+        if (exportFloorsBtn) {
+          exportFloorsBtn.disabled = true;
+          exportFloorsBtn.textContent = 'Exportando PDF...';
+        }
+        try {
+          const floorsRes = await fetch('/api/viceroy/tipologias-demanda/floors', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          const floorsData = await floorsRes.json().catch(function () { return {}; });
+          if (!floorsRes.ok || !floorsData.ok || !Array.isArray(floorsData.floors) || !floorsData.floors.length) {
+            throw new Error(floorsData.error || ('No se pudieron cargar los niveles (' + floorsRes.status + ')'));
+          }
+
+          const unitCommentMap = buildDemandUnitCommentMap(currentReport);
+          const pages = [];
+          for (const floor of floorsData.floors) {
+            const rendered = await renderDemandFloorExportCanvas(floor, currentReport, unitCommentMap);
+            pages.push({
+              title: String(floor && (floor.floorDisplay || floor.name || floor.id || '') || ''),
+              dataUrl: rendered.dataUrl,
+              width: rendered.width,
+              height: rendered.height
+            });
+          }
+
+          const response = await fetch('/api/viceroy/tipologias-demanda/export-floors-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ pages: pages })
+          });
+          if (!response.ok) {
+            const bodyText = await response.text().catch(function () { return ''; });
+            throw new Error(bodyText || 'No se pudo exportar el PDF');
+          }
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'viceroy-tipologias-demanda-7-niveles.pdf';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 1000);
+          setStatus('PDF de 7 niveles exportado correctamente.', 'ok');
+        } catch (err) {
+          setStatus(err && err.message ? err.message : 'No se pudo exportar el PDF.', 'error');
+        } finally {
+          if (exportFloorsBtn) {
+            exportFloorsBtn.disabled = false;
+            exportFloorsBtn.textContent = 'Exportar 7 niveles';
+          }
+        }
       }
 
       function renderSummary(report) {
