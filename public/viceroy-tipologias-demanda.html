@@ -563,20 +563,8 @@
           if (!info) return null;
           return Object.assign({}, entry, { info: info });
         }).filter(Boolean);
-        const rows = buildDuplicateFloorRows(renderables);
-        const leftWidth = Math.max(560, Math.min(860, Math.round(width * 0.40)));
-        const gap = 24;
-        const topPad = 28;
-        const sidePad = 24;
-        const tableHeaderH = 48;
-        const rowH = 34;
-        const tableH = topPad + tableHeaderH + (rows.length * rowH) + 28;
-        const imageMaxWidth = Math.max(620, width - leftWidth - gap - (sidePad * 2));
-        const imageScale = Math.min(1, imageMaxWidth / width);
-        const imageDrawW = Math.round(width * imageScale);
-        const imageDrawH = Math.round(height * imageScale);
-        const canvasHeight = Math.max(tableH, imageDrawH + topPad + 32);
-        const canvasWidth = leftWidth + gap + imageDrawW + (sidePad * 2);
+        const canvasWidth = width;
+        const canvasHeight = height;
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
@@ -584,100 +572,11 @@
         ctx.fillStyle = '#fbfaf6';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        const leftX = sidePad;
-        const rightX = leftWidth + gap;
-        const rightY = topPad;
-        const imageX = rightX;
-        const imageY = topPad;
-
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#d8d1c1';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(leftX, topPad, leftWidth - sidePad, canvasHeight - topPad * 2, 16);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#d8d1c1';
-        ctx.beginPath();
-        ctx.roundRect(imageX, imageY, imageDrawW, imageDrawH, 14);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#1a1a1a';
-        ctx.font = '700 20px Arial, sans-serif';
-        ctx.fillText('Unidades duplicadas / similares', leftX + 18, topPad + 16);
-        ctx.font = '500 12px Arial, sans-serif';
-        ctx.fillStyle = '#666';
-        ctx.fillText('Solo se muestran las recámaras afectadas en este piso.', leftX + 18, topPad + 40);
-
-        const legendItems = Array.from(floorStyleMap.entries());
-        let legendX = leftX + 18;
-        const legendY = topPad + 58;
-        legendItems.forEach(function (entry) {
-          const style = entry[1] || {};
-          ctx.fillStyle = style.fill || '#f5f5f5';
-          ctx.strokeStyle = style.stroke || '#999';
-          ctx.lineWidth = 1.2;
-          ctx.beginPath();
-          ctx.roundRect(legendX, legendY, 150, 24, 10);
-          ctx.fill();
-          ctx.stroke();
-          ctx.fillStyle = '#2e3138';
-          ctx.font = '600 11px Arial, sans-serif';
-          ctx.fillText(formatBedroomLabel(entry[0]), legendX + 10, legendY + 6);
-          legendX += 160;
-        });
-
-        const headerY = topPad + 92;
-        const colX = [leftX + 18, leftX + 92, leftX + 176, leftX + 350, leftX + 460];
-        const colLabels = ['Unidad', 'Recámaras', 'Tipología', 'Estado', 'Precio'];
-        ctx.fillStyle = '#f3efe5';
-        ctx.strokeStyle = '#d8d1c1';
-        ctx.beginPath();
-        ctx.roundRect(leftX + 12, headerY, leftWidth - 24, tableHeaderH, 12);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#555';
-        ctx.font = '700 11px Arial, sans-serif';
-        colLabels.forEach(function (label, idx) {
-          ctx.fillText(label, colX[idx], headerY + 18);
-        });
-
-        rows.forEach(function (row, index) {
-          const y = headerY + tableHeaderH + (index * rowH);
-          ctx.fillStyle = index % 2 === 0 ? '#ffffff' : '#faf8f1';
-          ctx.strokeStyle = row.color || '#999';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.roundRect(leftX + 12, y, leftWidth - 24, rowH - 2, 10);
-          ctx.fill();
-          ctx.stroke();
-          ctx.fillStyle = row.fillColor || '#fff';
-          ctx.beginPath();
-          ctx.roundRect(leftX + 14, y + 5, 14, 14, 4);
-          ctx.fill();
-          ctx.strokeStyle = row.color || '#999';
-          ctx.stroke();
-          ctx.fillStyle = '#222';
-          ctx.font = '700 12px Arial, sans-serif';
-          ctx.fillText(String(row.unidad || '-'), colX[0], y + 10);
-          ctx.font = '500 12px Arial, sans-serif';
-          ctx.fillText(String(row.recamaras || '-'), colX[1], y + 10);
-          ctx.fillText(String(row.tipologia || '-'), colX[2], y + 10);
-          ctx.fillText(String(row.estado || '-'), colX[3], y + 10);
-          ctx.fillText(formatCurrency(row.precio || 0), colX[4], y + 10);
-        });
-
         const imageCtx = ctx;
-        const scaleX = imageDrawW / width;
-        const scaleY = imageDrawH / height;
+        const scaleX = canvasWidth / width;
+        const scaleY = canvasHeight / height;
         imageCtx.save();
-        imageCtx.beginPath();
-        imageCtx.rect(imageX, imageY, imageDrawW, imageDrawH);
-        imageCtx.clip();
-        imageCtx.drawImage(img, imageX, imageY, imageDrawW, imageDrawH);
+        imageCtx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
 
         renderables.forEach(function (entry) {
           const points = Array.isArray(entry && entry.points) ? entry.points : [];
@@ -685,8 +584,8 @@
           imageCtx.save();
           imageCtx.beginPath();
           points.forEach(function (point, index) {
-            const px = Number(point[0] || 0) * scaleX + imageX;
-            const py = Number(point[1] || 0) * scaleY + imageY;
+            const px = Number(point[0] || 0) * scaleX;
+            const py = Number(point[1] || 0) * scaleY;
             if (index === 0) imageCtx.moveTo(px, py);
             else imageCtx.lineTo(px, py);
           });
@@ -722,18 +621,18 @@
         }
 
         renderables.forEach(function (entry) {
-          const centroidX = entry.centroidX * scaleX + imageX;
-          const centroidY = entry.centroidY * scaleY + imageY;
+          const centroidX = entry.centroidX * scaleX;
+          const centroidY = entry.centroidY * scaleY;
           const unitText = String(entry.unitKey || '').replace(/^0+/, '') || String(entry.unitKey || '');
-          const unitW = Math.max(30, imageCtx.measureText(unitText).width + 12);
-          const unitH = 18;
+          const unitW = Math.max(24, imageCtx.measureText(unitText).width + 2);
+          const unitH = 14;
           let chosen = { x: centroidX, y: centroidY };
           let placed = false;
           for (let i = 0; i < placements.length; i += 1) {
             const offset = placements[i];
             const candidate = {
-              x: Math.max(imageX + 4, Math.min(imageX + imageDrawW - unitW - 4, centroidX + offset[0])),
-              y: Math.max(imageY + 4, Math.min(imageY + imageDrawH - unitH - 4, centroidY + offset[1])),
+              x: Math.max(4, Math.min(canvasWidth - unitW - 4, centroidX + offset[0])),
+              y: Math.max(4, Math.min(canvasHeight - unitH - 4, centroidY + offset[1])),
               w: unitW,
               h: unitH
             };
@@ -748,31 +647,18 @@
           }
           if (!placed) {
             chosen = {
-              x: Math.max(imageX + 4, Math.min(imageX + imageDrawW - unitW - 4, centroidX)),
-              y: Math.max(imageY + 4, Math.min(imageY + imageDrawH - unitH - 4, centroidY)),
+              x: Math.max(4, Math.min(canvasWidth - unitW - 4, centroidX)),
+              y: Math.max(4, Math.min(canvasHeight - unitH - 4, centroidY)),
               w: unitW,
               h: unitH
             };
           }
           placedLabels.push(chosen);
           imageCtx.save();
-          imageCtx.beginPath();
-          if (typeof imageCtx.roundRect === 'function') {
-            imageCtx.roundRect(chosen.x, chosen.y, chosen.w, chosen.h, 8);
-          } else {
-            imageCtx.rect(chosen.x, chosen.y, chosen.w, chosen.h);
-          }
-          imageCtx.globalAlpha = 0.96;
-          imageCtx.fillStyle = '#ffffff';
-          imageCtx.fill();
-          imageCtx.globalAlpha = 1;
-          imageCtx.lineWidth = 2;
-          imageCtx.strokeStyle = entry.info.color || '#222';
-          imageCtx.stroke();
-          imageCtx.font = '700 13px Arial, sans-serif';
+          imageCtx.font = '800 12px Arial, sans-serif';
           imageCtx.textAlign = 'center';
           imageCtx.textBaseline = 'middle';
-          imageCtx.lineWidth = 3.5;
+          imageCtx.lineWidth = 3;
           imageCtx.strokeStyle = '#ffffff';
           imageCtx.fillStyle = entry.info.color || '#222';
           imageCtx.strokeText(unitText, chosen.x + (chosen.w / 2), chosen.y + (chosen.h / 2));
