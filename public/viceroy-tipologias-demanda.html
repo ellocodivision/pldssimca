@@ -553,6 +553,15 @@
           : normalizeEditableSimulationRows(report);
         const maxList = Number(sim.maxList || 7);
         const increment = Number(sim.incrementPerListPct || 5);
+        const unitRows = report && report.unitProforma && Array.isArray(report.unitProforma.rows)
+          ? report.unitProforma.rows
+          : [];
+        const unitsByTipologia = new Map();
+        unitRows.forEach(function (row) {
+          const key = String(row && row.tipologia || '').trim();
+          if (!key) return;
+          unitsByTipologia.set(key, (unitsByTipologia.get(key) || 0) + 1);
+        });
         if (!rows.length) {
           pricingSimulationEl.innerHTML = '<p>No hay datos suficientes para simular listas.</p>';
           return;
@@ -563,6 +572,8 @@
           return '<th>' + escapeHtml(title) + '<br><span style="font-weight:400;">+' + (increment * Math.max(0, Number(title.replace('Lista ', '')))) + '%</span></th>';
         }).join('');
         const bodyHtml = rows.map(function (row) {
+          const groupKey = String(row && row.grupo || '').trim();
+          const unitsCount = Number(unitsByTipologia.get(groupKey) || row.unidadesTotales || 0);
           const listCells = headers.map(function (_, idx) {
             const key = 'lista' + idx;
             const value = Math.max(0, Number(row[key]) || 0);
@@ -570,14 +581,14 @@
           }).join('');
           return '<tr>' +
             '<td class="mono">' + escapeHtml(row.grupo) + '</td>' +
-            '<td class="num">' + formatNumber(row.unidadesTotales || 0) + '</td>' +
+            '<td class="num">' + formatNumber(unitsCount) + '</td>' +
             '<td class="num">' + formatNumber(row.unidadesDistintasSeleccionadas || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.seleccionesTotales || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.mismaUnidadSeleccionada || 0) + '</td>' +
             '<td class="num">' + formatNumber(row.unidadesAncla || 0) + '</td>' +
             '<td class="num">Lista ' + formatNumber(row.listaInicial || 0) + ' (+' + formatNumber(row.incrementoBasePct || 0) + '%)</td>' +
             listCells +
-            '<td class="num"><strong>' + formatNumber(row.unidadesTotales || 0) + '</strong></td>' +
+            '<td class="num"><strong>' + formatNumber(unitsCount) + '</strong></td>' +
           '</tr>';
         }).join('');
         const totals = Array.from({ length: maxList + 1 }, function (_, idx) {
@@ -598,7 +609,10 @@
           '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
           '<td colspan="7" style="text-align:right;"><strong>Totales por lista</strong></td>' +
           totalsHtml +
-          '<td class="num"><strong>' + formatNumber(rows.reduce(function (acc, row) { return acc + (Number(row.unidadesTotales) || 0); }, 0)) + '</strong></td>' +
+          '<td class="num"><strong>' + formatNumber(rows.reduce(function (acc, row) {
+            const key = String(row && row.grupo || '').trim();
+            return acc + (Number(unitsByTipologia.get(key) || row.unidadesTotales || 0));
+          }, 0)) + '</strong></td>' +
           '</tr></tfoot></table></div>';
       }
 
