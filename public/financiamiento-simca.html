@@ -934,6 +934,28 @@
                     <select id="downPaymentSelect"></select>
                   </div>
                   <div class="field">
+                    <label for="priceModeSelect" id="labelPriceMode">Precio</label>
+                    <select id="priceModeSelect">
+                      <option value="excel">Desde Excel</option>
+                      <option value="manual">Monto manual</option>
+                    </select>
+                  </div>
+                  <div class="field" id="customPriceField" style="display:none;">
+                    <label for="customPriceInput" id="labelCustomPrice">Precio manual</label>
+                    <input id="customPriceInput" type="text" inputmode="decimal" placeholder="Ej: 450000">
+                  </div>
+                  <div class="field">
+                    <label for="downPaymentModeSelect" id="labelDownPaymentMode">Tipo de enganche</label>
+                    <select id="downPaymentModeSelect">
+                      <option value="percent">Porcentaje</option>
+                      <option value="manual">Monto manual</option>
+                    </select>
+                  </div>
+                  <div class="field" id="customDownPaymentField" style="display:none;">
+                    <label for="customDownPaymentInput" id="labelCustomDownPayment">Enganche manual</label>
+                    <input id="customDownPaymentInput" type="text" inputmode="decimal" placeholder="Ej: 150000">
+                  </div>
+                  <div class="field">
                     <label for="termSelect" id="labelTerm">Plazo</label>
                     <select id="termSelect">
                       <option value="3">3 años</option>
@@ -1034,6 +1056,12 @@
   const developmentSelect = document.getElementById('developmentSelect');
   const unitSelect = document.getElementById('unitSelect');
   const downPaymentSelect = document.getElementById('downPaymentSelect');
+  const priceModeSelect = document.getElementById('priceModeSelect');
+  const customPriceField = document.getElementById('customPriceField');
+  const customPriceInput = document.getElementById('customPriceInput');
+  const downPaymentModeSelect = document.getElementById('downPaymentModeSelect');
+  const customDownPaymentField = document.getElementById('customDownPaymentField');
+  const customDownPaymentInput = document.getElementById('customDownPaymentInput');
   const termSelect = document.getElementById('termSelect');
   const rateInput = document.getElementById('rateInput');
   const startDateInput = document.getElementById('startDateInput');
@@ -1053,6 +1081,10 @@
   const labelDevelopment = document.getElementById('labelDevelopment');
   const labelUnit = document.getElementById('labelUnit');
   const labelDownPayment = document.getElementById('labelDownPayment');
+  const labelPriceMode = document.getElementById('labelPriceMode');
+  const labelCustomPrice = document.getElementById('labelCustomPrice');
+  const labelDownPaymentMode = document.getElementById('labelDownPaymentMode');
+  const labelCustomDownPayment = document.getElementById('labelCustomDownPayment');
   const labelTerm = document.getElementById('labelTerm');
   const labelRate = document.getElementById('labelRate');
   const labelStartDate = document.getElementById('labelStartDate');
@@ -1147,7 +1179,15 @@
       print: 'Imprimir',
       development: 'Desarrollo',
       unit: 'Unidad',
+      priceMode: 'Precio',
+      priceFromExcel: 'Desde Excel',
+      priceManualMode: 'Monto manual',
+      customPrice: 'Precio manual',
       downPayment: 'Enganche',
+      downPaymentType: 'Tipo de enganche',
+      downPaymentByPercent: 'Porcentaje',
+      downPaymentByAmount: 'Monto manual',
+      customDownPayment: 'Enganche manual',
       term: 'Plazo',
       annualRate: 'Tasa anual',
       startDate: 'Fecha inicio',
@@ -1188,7 +1228,15 @@
       print: 'Print',
       development: 'Development',
       unit: 'Unit',
+      priceMode: 'Price',
+      priceFromExcel: 'From Excel',
+      priceManualMode: 'Manual amount',
+      customPrice: 'Manual price',
       downPayment: 'Down payment',
+      downPaymentType: 'Down payment type',
+      downPaymentByPercent: 'Percentage',
+      downPaymentByAmount: 'Manual amount',
+      customDownPayment: 'Manual down payment',
       term: 'Term',
       annualRate: 'Annual rate',
       startDate: 'Start date',
@@ -1570,6 +1618,53 @@
     updateRateInput();
   }
 
+  function parsePositiveMoneyInput(value) {
+    const amount = toNumber(value);
+    return amount > 0 ? amount : 0;
+  }
+
+  function updatePriceModeUI() {
+    if (!customPriceField || !priceModeSelect) return;
+    customPriceField.style.display = priceModeSelect.value === 'manual' ? '' : 'none';
+  }
+
+  function updateDownPaymentModeUI() {
+    if (!customDownPaymentField || !downPaymentModeSelect) return;
+    const isManual = downPaymentModeSelect.value === 'manual';
+    customDownPaymentField.style.display = isManual ? '' : 'none';
+    downPaymentSelect.disabled = isManual;
+  }
+
+  function getSelectedPrice(basePrice) {
+    const priceFromExcel = Number(basePrice) || 0;
+    if (!priceModeSelect || priceModeSelect.value !== 'manual') return priceFromExcel;
+    const manualPrice = parsePositiveMoneyInput(customPriceInput ? customPriceInput.value : '');
+    return manualPrice > 0 ? manualPrice : priceFromExcel;
+  }
+
+  function getSelectedDownPayment(price) {
+    const minPct = getMinimumDownPaymentPercent(developmentSelect.value);
+    const minAmount = price * (minPct / 100);
+    if (!downPaymentModeSelect || downPaymentModeSelect.value !== 'manual') {
+      const pct = Number(downPaymentSelect.value) || minPct;
+      const safePct = Math.max(minPct, pct);
+      const amount = price * (safePct / 100);
+      return {
+        amount,
+        percent: safePct,
+        label: `${safePct.toFixed(0)}% · ${formatMoney(amount)}`
+      };
+    }
+    const manualRaw = parsePositiveMoneyInput(customDownPaymentInput ? customDownPaymentInput.value : '');
+    const safeManual = Math.min(price, Math.max(minAmount, manualRaw || minAmount));
+    const percent = price > 0 ? (safeManual / price) * 100 : 0;
+    return {
+      amount: safeManual,
+      percent,
+      label: `${formatMoney(safeManual)} · ${percent.toFixed(2)}%`
+    };
+  }
+
   function addMonths(date, months) {
     const next = new Date(date.getTime());
     next.setMonth(next.getMonth() + months);
@@ -1593,10 +1688,27 @@
     if (labelDevelopment) labelDevelopment.textContent = t.development;
     if (labelUnit) labelUnit.textContent = t.unit;
     if (labelDownPayment) labelDownPayment.textContent = t.downPayment;
+    if (labelPriceMode) labelPriceMode.textContent = t.priceMode;
+    if (labelCustomPrice) labelCustomPrice.textContent = t.customPrice;
+    if (labelDownPaymentMode) labelDownPaymentMode.textContent = t.downPaymentType;
+    if (labelCustomDownPayment) labelCustomDownPayment.textContent = t.customDownPayment;
     if (labelTerm) labelTerm.textContent = t.term;
     if (labelRate) labelRate.textContent = t.annualRate;
     if (labelStartDate) labelStartDate.textContent = t.startDate;
     updateDownPaymentOptions();
+    updatePriceModeUI();
+    updateDownPaymentModeUI();
+
+    if (priceModeSelect) {
+      const priceModeOptions = priceModeSelect.querySelectorAll('option');
+      if (priceModeOptions[0]) priceModeOptions[0].textContent = t.priceFromExcel;
+      if (priceModeOptions[1]) priceModeOptions[1].textContent = t.priceManualMode;
+    }
+    if (downPaymentModeSelect) {
+      const downModeOptions = downPaymentModeSelect.querySelectorAll('option');
+      if (downModeOptions[0]) downModeOptions[0].textContent = t.downPaymentByPercent;
+      if (downModeOptions[1]) downModeOptions[1].textContent = t.downPaymentByAmount;
+    }
 
     if (!developmentSelect.value) {
       developmentSelect.innerHTML = `<option value="">${t.selectDevelopment}</option>`;
@@ -1675,8 +1787,8 @@
     return principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
   }
 
-  function buildSchedule(price, downPct, years) {
-    const downPayment = price * downPct;
+  function buildSchedule(price, downPaymentAmount, years) {
+    const downPayment = Math.max(0, Math.min(Number(price) || 0, Number(downPaymentAmount) || 0));
     const financed = Math.max(0, price - downPayment);
     const months = years * 12;
     const annualRate = getAnnualRateForTerm(years);
@@ -1739,13 +1851,13 @@
     };
   }
 
-  function renderSummary(data, development, unit) {
+  function renderSummary(data, development, unit, downPaymentLabel) {
     const t = translations[currentLang];
     summaryGrid.innerHTML = [
       [t.project, development],
       [t.unit, unit],
       [t.saleValue, formatMoney(data.price)],
-      [t.downPayment, `${Number(downPaymentSelect.value).toFixed(0)}% · ${formatMoney(data.downPayment)}`],
+      [t.downPayment, downPaymentLabel || formatMoney(data.downPayment)],
       [t.amountToFinance, formatMoney(data.financed)],
       [t.monthlyBasePayment, formatMoney(data.basePayment)]
     ].map(([key, value]) => `<div class="metric"><div class="k">${key}</div><div class="v">${value}</div></div>`).join('');
@@ -1830,12 +1942,13 @@
 
     const development = clean(get(currentRow, COL.DEVELOPMENT));
     const unit = clean(get(currentRow, COL.UNIT));
-    const price = toNumber(get(currentRow, COL.FINAL_PRICE));
-    const downPct = Number(downPaymentSelect.value) / 100;
+    const excelPrice = toNumber(get(currentRow, COL.FINAL_PRICE));
+    const price = getSelectedPrice(excelPrice);
+    const downPaymentInfo = getSelectedDownPayment(price);
     const years = Number(termSelect.value);
-    const data = buildSchedule(price, downPct, years);
+    const data = buildSchedule(price, downPaymentInfo.amount, years);
 
-    renderSummary(data, development, unit);
+    renderSummary(data, development, unit, downPaymentInfo.label);
     renderTable(data);
   }
 
@@ -1884,6 +1997,24 @@
   });
 
   downPaymentSelect.addEventListener('change', rerender);
+  if (priceModeSelect) {
+    priceModeSelect.addEventListener('change', () => {
+      updatePriceModeUI();
+      rerender();
+    });
+  }
+  if (customPriceInput) {
+    customPriceInput.addEventListener('input', rerender);
+  }
+  if (downPaymentModeSelect) {
+    downPaymentModeSelect.addEventListener('change', () => {
+      updateDownPaymentModeUI();
+      rerender();
+    });
+  }
+  if (customDownPaymentInput) {
+    customDownPaymentInput.addEventListener('input', rerender);
+  }
   termSelect.addEventListener('change', () => {
     updateRateInput();
     rerender();
@@ -1984,10 +2115,11 @@
     const t = translations[currentLang];
     const development = clean(get(currentRow, COL.DEVELOPMENT));
     const unit = clean(get(currentRow, COL.UNIT));
-    const price = toNumber(get(currentRow, COL.FINAL_PRICE));
-    const downPctValue = Number(downPaymentSelect.value);
+    const excelPrice = toNumber(get(currentRow, COL.FINAL_PRICE));
+    const price = getSelectedPrice(excelPrice);
+    const downPaymentInfo = getSelectedDownPayment(price);
     const years = Number(termSelect.value);
-    const data = buildSchedule(price, downPctValue / 100, years);
+    const data = buildSchedule(price, downPaymentInfo.amount, years);
     const overlaySvg = renderExportOverlayLines(exportLayout.lines || []);
     const rowTargets = computePdfRowTargets(exportLayout);
     const firstPageRows = rowTargets.firstPageRows;
@@ -1999,7 +2131,7 @@
       [t.project, development, 'detail'],
       [t.unit, unit, 'detail'],
       [t.saleValue, formatMoney(data.price), 'summary'],
-      [t.downPayment, `${downPctValue.toFixed(0)}% · ${formatMoney(data.downPayment)}`, 'summary'],
+      [t.downPayment, downPaymentInfo.label, 'summary'],
       [t.amountToFinance, formatMoney(data.financed), 'summary'],
       [t.monthlyBasePayment, formatMoney(data.basePayment), 'summary'],
       [t.termMonths, String(data.months), 'detail'],
