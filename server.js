@@ -935,30 +935,14 @@ async function buildViceroyTipologiaDemandReport() {
   let inventoryRows = [];
   let inventoryFileName = '';
   let inventorySourcePath = '';
-  let bestInventoryScore = -1;
-  const scoreInventoryRows = (rows) => {
-    if (!Array.isArray(rows) || !rows.length) return -1;
-    let withListCols = 0;
-    let withM2 = 0;
-    rows.forEach((row) => {
-      const listMap = row && row.listPricePerM2 && typeof row.listPricePerM2 === 'object' ? row.listPricePerM2 : {};
-      const listCount = Object.keys(listMap).filter((k) => Number.isFinite(parseCurrencyLike(listMap[k]))).length;
-      if (listCount >= 8) withListCols += 1;
-      const m2 = parseCurrencyLike(row && row.m2);
-      if (Number.isFinite(m2) && m2 > 0) withM2 += 1;
-    });
-    // Prioriza cobertura de listas 0..7 por unidad, luego tamaño de inventario y cobertura de m2.
-    return (withListCols * 10000) + (rows.length * 100) + withM2;
-  };
   for (const candidate of candidates) {
     try {
       const parsedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(candidate.fullPath));
-      const score = scoreInventoryRows(parsedRows);
-      if (score > bestInventoryScore) {
-        bestInventoryScore = score;
+      if (parsedRows.length) {
         inventoryRows = parsedRows;
         inventoryFileName = candidate.name;
         inventorySourcePath = candidate.fullPath;
+        break;
       }
     } catch {}
   }
@@ -4868,6 +4852,11 @@ function resolveInventoryCandidatesByDevSlug(devSlug) {
   const latest = files
     .filter((f) => !canonicalNames.has(String(f.name || '').toLowerCase()))
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  // VICEROY PILOTO: seguir el flujo operativo de Presentación Piloto (último archivo cargado),
+  // no forzar INVENTARIOMAESTROWIX primero.
+  if (String(devSlug || '').trim() === 'viceroy-piloto') {
+    return [...latest, ...canonical];
+  }
   return [...canonical, ...latest];
 }
 
@@ -8491,21 +8480,30 @@ app.post('/api/viceroy-piloto/inventory', (req, res) => {
   const canonicalName = `INVENTARIOMAESTROWIX.${ext}`;
   const canonicalPath = path.join(devDir, canonicalName);
   fs.writeFileSync(canonicalPath, buffer);
+  const uploadedName = rawFileName;
+  const uploadedPath = path.join(devDir, uploadedName);
+  if (String(uploadedName).toLowerCase() !== String(canonicalName).toLowerCase()) {
+    try { fs.writeFileSync(uploadedPath, buffer); } catch {}
+  }
   // Mirror write to repo data path when runtime storage points elsewhere.
   const repoDevDir = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto');
   if (repoDevDir !== devDir) {
     try {
       if (!fs.existsSync(repoDevDir)) fs.mkdirSync(repoDevDir, { recursive: true });
       fs.writeFileSync(path.join(repoDevDir, canonicalName), buffer);
+      if (String(uploadedName).toLowerCase() !== String(canonicalName).toLowerCase()) {
+        try { fs.writeFileSync(path.join(repoDevDir, uploadedName), buffer); } catch {}
+      }
     } catch {}
   }
   // Verify file is readable right away so frontend does not show false-positive success.
   try {
-    const persistedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(canonicalPath));
+    const preferredPath = fs.existsSync(uploadedPath) ? uploadedPath : canonicalPath;
+    const persistedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(preferredPath));
     if (!persistedRows.length) {
       return res.status(500).json({ error: 'Se guardó archivo pero no se pudo leer inventario persistido' });
     }
-    writeViceroyInventoryCache(persistedRows, canonicalName);
+    writeViceroyInventoryCache(persistedRows, path.basename(preferredPath));
   } catch (err) {
     return res.status(500).json({
       error: 'Archivo guardado pero lectura de verificación falló',
@@ -8514,7 +8512,7 @@ app.post('/api/viceroy-piloto/inventory', (req, res) => {
   }
   return res.json({
     ok: true,
-    fileName: canonicalName
+    fileName: uploadedName || canonicalName
   });
 });
 
