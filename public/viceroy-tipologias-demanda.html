@@ -132,11 +132,6 @@
     </section>
 
     <section class="card">
-      <h3 style="margin:0 0 8px;">Control simulado por tipología</h3>
-      <div id="pricingControlSummary"></div>
-    </section>
-
-    <section class="card">
       <h3 style="margin:0 0 8px;">Control final · Reserva secuencial (barato a caro)</h3>
       <div id="bookingSimulation"></div>
     </section>
@@ -162,7 +157,6 @@
       const executiveEl = document.getElementById('executive');
       const inconsistenciesEl = document.getElementById('inconsistencies');
       const pricingSimulationEl = document.getElementById('pricingSimulation');
-      const pricingControlSummaryEl = document.getElementById('pricingControlSummary');
       const bookingSimulationEl = document.getElementById('bookingSimulation');
       const pricingControlEl = document.getElementById('pricingControl');
       const unitLaunchEl = document.getElementById('unitLaunch');
@@ -183,6 +177,16 @@
       let lastComputedUnitLaunch = null;
       const STORAGE_KEY_BASE_M2 = 'viceroy_tipologias_demanda_base_m2_v1';
       const STORAGE_KEY_SIMULATION = 'viceroy_tipologias_demanda_simulation_v1';
+
+      function normalizeDisplayUnitKey(rawValue) {
+        const text = String(rawValue == null ? '' : rawValue).trim().toUpperCase();
+        if (!text) return '';
+        const compact = text.replace(/[\s,;|/\\-]+/g, '');
+        const match = compact.match(/^(\d+)([A-Z]*)$/);
+        if (!match) return compact;
+        const numeric = String(Math.max(0, parseInt(match[1], 10) || 0)).padStart(3, '0');
+        return numeric + (match[2] || '');
+      }
 
       function setStatus(message, type) {
         statusEl.textContent = message || '';
@@ -628,7 +632,7 @@
         try {
           const payload = {};
           editableBaseM2ByUnit.forEach(function (value, unit) {
-            const key = String(unit || '').trim();
+            const key = normalizeDisplayUnitKey(unit);
             if (!key) return;
             payload[key] = Math.max(0, Number(value) || 0);
           });
@@ -643,7 +647,7 @@
           const parsed = JSON.parse(raw);
           if (!parsed || typeof parsed !== 'object') return;
           Object.keys(parsed).forEach(function (unit) {
-            const key = String(unit || '').trim();
+            const key = normalizeDisplayUnitKey(unit);
             if (!key) return;
             const value = Math.max(0, Number(parsed[unit]) || 0);
             editableBaseM2ByUnit.set(key, value);
@@ -692,7 +696,7 @@
       }
 
       function listPricesForRow(row) {
-        const unitKey = String(row && row.unidad || '').trim();
+        const unitKey = normalizeDisplayUnitKey(row && row.unidad);
         const overrideLists = overrideM2ByUnit.get(unitKey);
         if (overrideLists && typeof overrideLists === 'object') {
           const base0 = Number(overrideLists['0'] != null ? overrideLists['0'] : overrideLists[0]) || 0;
@@ -928,7 +932,6 @@
         lastComputedBookingSimulation = bookingSimulation;
         lastComputedUnitLaunch = unitLaunch;
         renderPricingControl({ unitProforma: unitProforma });
-        renderPricingControlSummary({ pricingControl: pricingControl });
         renderBookingSimulation({ bookingSimulation: bookingSimulation });
         renderUnitLaunch({ unitLaunch: unitLaunch });
       }
@@ -1194,41 +1197,6 @@
           '</tr></tfoot></table></div>';
       }
 
-      function renderPricingControlSummary(report) {
-        const control = report && report.pricingControl ? report.pricingControl : {};
-        const rows = Array.isArray(control.rows) ? control.rows : [];
-        const totals = control.totals || {};
-        if (!rows.length) {
-          pricingControlSummaryEl.innerHTML = '<p>No hay datos suficientes para simular Control.</p>';
-          return;
-        }
-        const bodyHtml = rows.map(function (row) {
-          return '<tr>' +
-            '<td class="mono">' + escapeHtml(row.grupo || '-') + '</td>' +
-            '<td class="num">' + formatNumber(row.unidades || 0) + '</td>' +
-            '<td class="num">' + formatCurrency(row.m2Promedio || 0) + '</td>' +
-            '<td class="num"><strong>' + formatCurrency(row.ingresosUsd || 0) + '</strong></td>' +
-            '<td class="num"><strong>' + formatCurrency(row.stressTestUsd || 0) + '</strong></td>' +
-            '<td class="num"><strong>' + formatCurrency(row.ingresosKesimoUsd || 0) + '</strong></td>' +
-            '<td class="num"><strong>' + formatCurrency(row.stressKesimoUsd || 0) + '</strong></td>' +
-            '<td class="num">' + formatNumber(row.vendidos || 0) + '</td>' +
-            '<td class="num">' + escapeHtml(row.lista || '-') + '</td>' +
-          '</tr>';
-        }).join('');
-        pricingControlSummaryEl.innerHTML =
-          '<p style="margin:0 0 10px;color:#444;">Simulación de la pestaña <strong>Control</strong> por tipología con totales en USD y escenario con descuento.</p>' +
-          '<div class="table-wrap"><table style="min-width:1300px;"><thead><tr>' +
-          '<th>Tipología</th><th>Unidades</th><th>$M2 promedio (Lista 0)</th><th>Ingresos (USD · Y)</th><th>Stress Test (USD · AE)</th><th>Ingresos k-ésimo (USD)</th><th>Stress k-ésimo (USD)</th><th>Vendidos</th><th>Lista inicial</th>' +
-          '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
-          '<td><strong>Totales</strong></td><td class="num"><strong>' + formatNumber(totals.unidades || 0) + '</strong></td><td class="num">-</td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.ingresosUsd || 0) + '</strong></td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.stressTestUsd || 0) + '</strong></td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.ingresosKesimoUsd || 0) + '</strong></td>' +
-          '<td class="num"><strong>' + formatCurrency(totals.stressKesimoUsd || 0) + '</strong></td>' +
-          '<td class="num">-</td><td class="num">-</td>' +
-          '</tr></tfoot></table></div>';
-      }
-
       function renderBookingSimulation(report) {
         const booking = report && report.bookingSimulation ? report.bookingSimulation : {};
         const byList = Array.isArray(booking.byList) ? booking.byList : [];
@@ -1381,7 +1349,7 @@
             ? source.m2OverridePricesByUnit
             : {};
           Object.entries(overrideObj).forEach(function (entry) {
-            const unit = String(entry[0] || '').trim();
+            const unit = normalizeDisplayUnitKey(entry[0]);
             const lists = entry[1];
             if (!unit || !lists || typeof lists !== 'object') return;
             overrideM2ByUnit.set(unit, lists);

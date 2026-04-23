@@ -4888,7 +4888,7 @@ function parseViceroyTipologiaM2BaseWorkbook(workbook, requestedSheetName) {
         || row.unit
         || row.no
         || '';
-      const unit = extractUnitCode(unitRaw);
+      const unit = normalizeViceroyDemandUnitKey(unitRaw);
       const baseRaw = (
         row['0_p']
         ?? row['0']
@@ -4928,7 +4928,7 @@ function readViceroyTipologiaM2ManualOverride() {
   }
   const rows = Array.isArray(raw.rows) ? raw.rows : [];
   rows.forEach((item) => {
-    const unit = extractUnitCode(item && item.unidad);
+    const unit = normalizeViceroyDemandUnitKey(item && item.unidad);
     const base0 = parseCurrencyLike(item && item.base0);
     if (!unit || !Number.isFinite(base0) || base0 <= 0) return;
     byUnit.set(unit, { 0: base0 });
@@ -4948,7 +4948,7 @@ function saveViceroyTipologiaM2ManualOverride(payload) {
   const byUnit = payload && payload.byUnit instanceof Map ? payload.byUnit : new Map();
   const rows = Array.from(byUnit.entries())
     .map(([unidad, listMap]) => ({
-      unidad,
+      unidad: normalizeViceroyDemandUnitKey(unidad),
       base0: Number(parseCurrencyLike(listMap && (listMap[0] != null ? listMap[0] : listMap['0'])) || 0)
     }))
     .filter((item) => item.unidad && Number.isFinite(item.base0) && item.base0 > 0)
