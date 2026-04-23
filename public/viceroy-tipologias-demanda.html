@@ -720,6 +720,8 @@
         sourceMetaEl.textContent =
           'Base inventario: ' + (source.inventoryFileName || 'no identificado') +
           ' | Ruta fuente inventario: ' + (source.inventorySourcePath || '-') +
+          ' | Base $/m2 listas: ' + (source.m2OverrideFileName || source.inventoryFileName || 'no identificado') +
+          ' | Ruta $/m2 listas: ' + (source.m2OverrideSourcePath || source.inventorySourcePath || '-') +
           ' | Base selecciones Whisperlist: ' + (source.whisperlistSourceFile || 'no identificado') +
           ' | Actualizado Whisperlist: ' + (source.whisperlistUpdatedAt ? new Date(source.whisperlistUpdatedAt).toLocaleString('es-MX') : '-');
       }

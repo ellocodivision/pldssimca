@@ -953,6 +953,22 @@ async function buildViceroyTipologiaDemandReport() {
     inventorySourcePath = 'cache:' + getViceroyInventoryCachePath();
   }
 
+  let m2OverrideByUnit = new Map();
+  let m2OverrideSourcePath = '';
+  let m2OverrideFileName = '';
+  const m2OverrideCandidates = resolveViceroyM2OverrideCandidates(devSlug);
+  for (const candidatePath of m2OverrideCandidates) {
+    try {
+      const parsed = parseViceroyM2OverrideFile(candidatePath);
+      if (parsed && parsed.size) {
+        m2OverrideByUnit = parsed;
+        m2OverrideSourcePath = candidatePath;
+        m2OverrideFileName = path.basename(candidatePath);
+        break;
+      }
+    } catch {}
+  }
+
   const whisperData = await readWhisperlistData();
   const whisperRows = Array.isArray(whisperData && whisperData.rows) ? whisperData.rows : [];
 
@@ -1009,7 +1025,9 @@ async function buildViceroyTipologiaDemandReport() {
     if (!tipologiaUnits.has(tipologia)) tipologiaUnits.set(tipologia, new Set());
     tipologiaUnits.get(tipologia).add(unit);
     if (!tipologiaUnitDetails.has(tipologia)) tipologiaUnitDetails.set(tipologia, []);
-    const listPriceMapRaw = row && row.listPricePerM2 && typeof row.listPricePerM2 === 'object' ? row.listPricePerM2 : {};
+    const rowListMapRaw = row && row.listPricePerM2 && typeof row.listPricePerM2 === 'object' ? row.listPricePerM2 : {};
+    const overrideListMapRaw = m2OverrideByUnit.get(unit);
+    const listPriceMapRaw = overrideListMapRaw && typeof overrideListMapRaw === 'object' ? overrideListMapRaw : rowListMapRaw;
     const listPricePerM2 = {};
     for (let i = 0; i <= 7; i += 1) {
       const value = parseCurrencyLike(listPriceMapRaw[i]);
@@ -1530,6 +1548,9 @@ async function buildViceroyTipologiaDemandReport() {
     source: {
       inventoryFileName: inventoryFileName || '',
       inventorySourcePath: inventorySourcePath || '',
+      m2OverrideFileName: m2OverrideFileName || '',
+      m2OverrideSourcePath: m2OverrideSourcePath || '',
+      m2OverrideRows: m2OverrideByUnit.size || 0,
       whisperlistSourceFile: String(whisperData && whisperData.sourceFile || ''),
       whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
     },
@@ -4746,6 +4767,68 @@ function parseViceroyRowsByPreciosProforma(sheet) {
     });
   }
   return out;
+}
+
+function parseViceroyM2OverrideFile(filePath) {
+  const ext = path.extname(String(filePath || '')).toLowerCase();
+  const workbook = ext === '.csv'
+    ? XLSX.read(fs.readFileSync(filePath, 'utf-8'), { type: 'string' })
+    : XLSX.readFile(filePath);
+  const firstSheetName = workbook.SheetNames[0];
+  const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
+  if (!firstSheet) return new Map();
+  const headerRows = rowsFromSheetWithHeaderRow(firstSheet, 1);
+  const byUnit = new Map();
+  headerRows.forEach((rawRow) => {
+    const row = {};
+    Object.entries(rawRow || {}).forEach(([key, value]) => {
+      row[normalizeHeaderKey(key)] = value;
+    });
+    const unitRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit) || row.unidad || row.unit || '';
+    const unit = extractUnitCode(unitRaw);
+    if (!unit) return;
+    const listMap = extractViceroyListPricePerM2Map(row);
+    const cleanListMap = {};
+    for (let i = 0; i <= 7; i += 1) {
+      const value = parseCurrencyLike(listMap[i]);
+      if (Number.isFinite(value)) cleanListMap[i] = value;
+    }
+    if (Object.keys(cleanListMap).length) byUnit.set(unit, cleanListMap);
+  });
+  return byUnit;
+}
+
+function resolveViceroyM2OverrideCandidates(devSlug) {
+  const files = [];
+  const envPath = String(process.env.VICEROY_TIPOLOGIA_M2_OVERRIDE_PATH || '').trim();
+  if (envPath) files.push(envPath);
+  if (String(devSlug || '').trim() === 'viceroy-piloto') {
+    files.push(path.join(os.homedir(), 'Downloads', 'codex m2.xlsx'));
+    files.push(path.join(os.homedir(), 'Downloads', 'codex-m2.xlsx'));
+    const devDirs = [];
+    const primary = path.join(DEVELOPMENTS_DIR, devSlug);
+    devDirs.push(primary);
+    const repoDir = path.join(REPO_DATA_DIR, 'developments', devSlug);
+    if (repoDir !== primary) devDirs.push(repoDir);
+    devDirs.forEach((devDir) => {
+      try {
+        fs.readdirSync(devDir).forEach((name) => {
+          if (!/\.(xls|xlsx|xlsm|csv)$/i.test(name)) return;
+          if (!/codex.*m2|m2.*codex/i.test(String(name || ''))) return;
+          files.push(path.join(devDir, name));
+        });
+      } catch {}
+    });
+  }
+  const seen = new Set();
+  const existing = files
+    .map((f) => path.resolve(String(f || '').trim()))
+    .filter((f) => {
+      if (!f || seen.has(f)) return false;
+      seen.add(f);
+      return fs.existsSync(f);
+    });
+  return existing;
 }
 
 function pickRicherViceroyRow(current, next) {
