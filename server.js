@@ -958,6 +958,7 @@ async function buildViceroyTipologiaDemandReport() {
 
   const unitToTipologia = new Map();
   const tipologiaUnits = new Map();
+  const tipologiaUnitDetails = new Map();
   const inconsistencies = {
     inventoryDuplicateUnits: [],
     inventoryUnitsMissingTipologia: [],
@@ -1007,6 +1008,13 @@ async function buildViceroyTipologiaDemandReport() {
     unitToTipologia.set(unit, tipologia);
     if (!tipologiaUnits.has(tipologia)) tipologiaUnits.set(tipologia, new Set());
     tipologiaUnits.get(tipologia).add(unit);
+    if (!tipologiaUnitDetails.has(tipologia)) tipologiaUnitDetails.set(tipologia, []);
+    tipologiaUnitDetails.get(tipologia).push({
+      unidad: unit,
+      m2: parseCurrencyLike(row && row.m2),
+      price: parseCurrencyLike(row && row.price),
+      status: String(row && row.status || '').trim()
+    });
   });
 
   const tipologiaSelectionTotals = new Map();
@@ -1150,6 +1158,101 @@ async function buildViceroyTipologiaDemandReport() {
     totalUnits: pricingSimulationRows.reduce((acc, row) => acc + row.unidadesTotales, 0)
   };
 
+  const listGrowth = 1 + (listIncrementPct / 100);
+  const stressDiscountPct = 0.05;
+  const tc = 18.5;
+  const isSoldStatus = (raw) => {
+    const key = normalizeHeaderKey(raw);
+    return key.includes('vendid') || key.includes('sold');
+  };
+  const unitSort = (a, b) => String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' });
+  const globalPriceM2Samples = [];
+  tipologiaUnitDetails.forEach((details) => {
+    details.forEach((item) => {
+      if (Number.isFinite(item && item.price) && item.price > 0 && Number.isFinite(item && item.m2) && item.m2 > 0) {
+        globalPriceM2Samples.push(item.price / item.m2);
+      }
+    });
+  });
+  const globalAvgPriceM2 = globalPriceM2Samples.length
+    ? (globalPriceM2Samples.reduce((acc, value) => acc + value, 0) / globalPriceM2Samples.length)
+    : 0;
+
+  const pricingControlRows = pricingSimulationRows.map((row) => {
+    const groupDetailsRaw = Array.isArray(tipologiaUnitDetails.get(row.grupo)) ? tipologiaUnitDetails.get(row.grupo) : [];
+    const groupDetails = [...groupDetailsRaw].sort((a, b) => unitSort(a && a.unidad, b && b.unidad));
+    const listAssignments = [];
+    for (let list = 0; list <= maxList; list += 1) {
+      const count = Number(row[`lista${list}`]);
+      if (!Number.isFinite(count) || count <= 0) continue;
+      for (let i = 0; i < count; i += 1) listAssignments.push(list);
+    }
+    const groupM2Samples = groupDetails
+      .filter((item) => Number.isFinite(item && item.price) && item.price > 0 && Number.isFinite(item && item.m2) && item.m2 > 0)
+      .map((item) => item.price / item.m2);
+    const groupAvgPriceM2 = groupM2Samples.length
+      ? (groupM2Samples.reduce((acc, value) => acc + value, 0) / groupM2Samples.length)
+      : globalAvgPriceM2;
+
+    let ingresosUsd = 0;
+    let stressTestUsd = 0;
+    let totalM2 = 0;
+    let totalBasePriceUsd = 0;
+    let vendidos = 0;
+
+    groupDetails.forEach((item, idx) => {
+      const m2Value = Number.isFinite(item && item.m2) && item.m2 > 0 ? item.m2 : 0;
+      let basePriceUsd = Number.isFinite(item && item.price) && item.price > 0 ? item.price : 0;
+      if (!basePriceUsd && m2Value > 0 && groupAvgPriceM2 > 0) {
+        basePriceUsd = m2Value * groupAvgPriceM2;
+      }
+      const assignedList = listAssignments[idx] != null
+        ? listAssignments[idx]
+        : (Number.isFinite(row.listaInicial) ? row.listaInicial : 0);
+      const listPriceUsd = basePriceUsd * Math.pow(listGrowth, assignedList);
+      const stressPriceUsd = listPriceUsd * (1 - stressDiscountPct);
+      ingresosUsd += listPriceUsd;
+      stressTestUsd += stressPriceUsd;
+      totalM2 += m2Value;
+      totalBasePriceUsd += basePriceUsd;
+      if (isSoldStatus(item && item.status)) vendidos += 1;
+    });
+
+    const m2Promedio = totalM2 > 0 ? (totalBasePriceUsd / totalM2) : 0;
+    return {
+      grupo: row.grupo,
+      m2Promedio,
+      unidades: row.unidadesTotales,
+      ingresosUsd,
+      stressTestUsd,
+      vendidos,
+      lista: `Lista ${row.listaInicial}`
+    };
+  });
+
+  const totalIngresosUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row.ingresosUsd) || 0), 0);
+  const totalStressUsd = pricingControlRows.reduce((acc, row) => acc + (Number(row.stressTestUsd) || 0), 0);
+  const totalUnidadesControl = pricingControlRows.reduce((acc, row) => acc + (Number(row.unidades) || 0), 0);
+  pricingControlRows.forEach((row) => {
+    row.participacionPct = totalIngresosUsd > 0 ? ((row.ingresosUsd / totalIngresosUsd) * 100) : 0;
+  });
+
+  const pricingControl = {
+    assumptions: {
+      listIncrementPct,
+      stressDiscountPct,
+      tc
+    },
+    rows: pricingControlRows,
+    totals: {
+      unidades: totalUnidadesControl,
+      ingresosUsd: totalIngresosUsd,
+      stressTestUsd: totalStressUsd,
+      ingresosMxn: totalIngresosUsd * tc,
+      stressTestMxn: totalStressUsd * tc
+    }
+  };
+
   const executiveSummary = {
     tipologiasMasDemandadas,
     tipologiasMenosDemandadas,
@@ -1180,6 +1283,7 @@ async function buildViceroyTipologiaDemandReport() {
     },
     rows,
     pricingSimulation,
+    pricingControl,
     executiveSummary,
     inconsistencies: {
       inventoryDuplicateUnits: inconsistencies.inventoryDuplicateUnits,

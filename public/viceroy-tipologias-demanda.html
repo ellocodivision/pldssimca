@@ -110,6 +110,11 @@
       <h3 style="margin:0 0 8px;">Simulación dinámica de listas por grupo</h3>
       <div id="pricingSimulation"></div>
     </section>
+
+    <section class="card">
+      <h3 style="margin:0 0 8px;">Control de precios simulado por tipología</h3>
+      <div id="pricingControl"></div>
+    </section>
   </main>
 
   <script>
@@ -121,6 +126,7 @@
       const executiveEl = document.getElementById('executive');
       const inconsistenciesEl = document.getElementById('inconsistencies');
       const pricingSimulationEl = document.getElementById('pricingSimulation');
+      const pricingControlEl = document.getElementById('pricingControl');
       const reloadBtn = document.getElementById('reloadBtn');
 
       function setStatus(message, type) {
@@ -281,6 +287,58 @@
           '</tr></tfoot></table></div>';
       }
 
+      function formatCurrency(value) {
+        const n = Number(value || 0);
+        return '$ ' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
+
+      function renderPricingControl(report) {
+        const control = report && report.pricingControl ? report.pricingControl : {};
+        const rows = Array.isArray(control.rows) ? control.rows : [];
+        const assumptions = control.assumptions || {};
+        const totals = control.totals || {};
+        if (!rows.length) {
+          pricingControlEl.innerHTML = '<p>No hay datos suficientes para simular el control de precios.</p>';
+          return;
+        }
+        const bodyHtml = rows.map(function (row) {
+          return '<tr>' +
+            '<td class="mono">' + escapeHtml(row.grupo) + '</td>' +
+            '<td class="num">' + formatCurrency(row.m2Promedio || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidades || 0) + '</td>' +
+            '<td class="num">' + formatCurrency(row.ingresosUsd || 0) + '</td>' +
+            '<td class="num">' + formatCurrency(row.stressTestUsd || 0) + '</td>' +
+            '<td class="num">' + formatNumber(row.vendidos || 0) + '</td>' +
+            '<td class="num">' + escapeHtml(row.lista || '-') + '</td>' +
+            '<td class="num">' + formatPct(row.participacionPct || 0) + '</td>' +
+          '</tr>';
+        }).join('');
+        pricingControlEl.innerHTML =
+          '<p style="margin:0 0 10px;color:#444;">Supuestos: incremento por lista +' + formatNumber((assumptions.listIncrementPct || 0)) + '% · descuento stress test ' + formatPct((assumptions.stressDiscountPct || 0) * 100) + ' · T.C. $' + formatNumber(assumptions.tc || 0) + ' MXN/USD.</p>' +
+          '<div class="table-wrap"><table style="min-width:1200px;"><thead><tr>' +
+          '<th>Grupo</th><th>$M2 (promedio)</th><th>Unidades</th><th>Ingresos (USD)</th><th>Stress Test (USD)</th><th>Vendidos</th><th>Lista</th><th>Participación</th>' +
+          '</tr></thead><tbody>' + bodyHtml + '</tbody><tfoot><tr>' +
+          '<td><strong>Totales</strong></td>' +
+          '<td class="num">-</td>' +
+          '<td class="num"><strong>' + formatNumber(totals.unidades || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.ingresosUsd || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.stressTestUsd || 0) + '</strong></td>' +
+          '<td class="num">-</td>' +
+          '<td class="num">-</td>' +
+          '<td class="num">100.00%</td>' +
+          '</tr>' +
+          '<tr>' +
+          '<td><strong>Total en pesos</strong></td>' +
+          '<td class="num">-</td>' +
+          '<td class="num">-</td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.ingresosMxn || 0) + '</strong></td>' +
+          '<td class="num"><strong>' + formatCurrency(totals.stressTestMxn || 0) + '</strong></td>' +
+          '<td class="num">-</td>' +
+          '<td class="num">-</td>' +
+          '<td class="num">-</td>' +
+          '</tr></tfoot></table></div>';
+      }
+
       function renderSource(report) {
         const source = report && report.source ? report.source : {};
         sourceMetaEl.textContent =
@@ -304,6 +362,7 @@
           renderExecutive(data.report);
           renderInconsistencies(data.report);
           renderPricingSimulation(data.report);
+          renderPricingControl(data.report);
           setStatus('Reporte generado correctamente.', 'ok');
         } catch (err) {
           setStatus(err && err.message ? err.message : 'No se pudo cargar el reporte.', 'error');
