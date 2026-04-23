@@ -803,24 +803,6 @@ function classifyTipologiaDemand(absorptionPct, totalSelections) {
   return 'Baja demanda';
 }
 
-function normalizeViceroyPricingGroup(rawRecamaras) {
-  const key = String(rawRecamaras || '').trim().toUpperCase().replace(/\s+/g, '');
-  if (!key) return '';
-  const denNormalized = key
-    .replace(/\+DEN/g, '+1')
-    .replace(/\+D/g, '+1');
-  let match = denNormalized.match(/^([1-5])B(?:\+1)?$/);
-  if (match) {
-    const base = `${match[1]}B`;
-    return denNormalized.includes('+1') ? `${match[1]}+1` : base;
-  }
-  match = denNormalized.match(/^PH([1-5])(?:\+1)?$/);
-  if (match) {
-    return denNormalized.includes('+1') ? `PH${match[1]}+1` : `PH${match[1]}`;
-  }
-  return denNormalized;
-}
-
 function computeDynamicStartList(row) {
   const unidadesTotales = Math.max(0, Number(row && row.unidadesTotales) || 0);
   const unidadesDistintasSeleccionadas = Math.max(0, Number(row && row.unidadesDistintasSeleccionadas) || 0);
@@ -958,9 +940,7 @@ async function buildViceroyTipologiaDemandReport() {
   const whisperRows = Array.isArray(whisperData && whisperData.rows) ? whisperData.rows : [];
 
   const unitToTipologia = new Map();
-  const unitToPricingGroup = new Map();
   const tipologiaUnits = new Map();
-  const pricingGroupUnits = new Map();
   const inconsistencies = {
     inventoryDuplicateUnits: [],
     inventoryUnitsMissingTipologia: [],
@@ -976,13 +956,7 @@ async function buildViceroyTipologiaDemandReport() {
   inventoryRows.forEach((row) => {
     const unit = extractUnitCode(row && row.unidad);
     const tipologia = String(row && row.tipologia || '').trim().toUpperCase();
-    const pricingGroup = normalizeViceroyPricingGroup(row && row.recamaras);
     if (!unit) return;
-    if (pricingGroup) {
-      unitToPricingGroup.set(unit, pricingGroup);
-      if (!pricingGroupUnits.has(pricingGroup)) pricingGroupUnits.set(pricingGroup, new Set());
-      pricingGroupUnits.get(pricingGroup).add(unit);
-    }
     if (!tipologia) {
       if (!seenMissingTipUnit.has(unit)) {
         inconsistencies.inventoryUnitsMissingTipologia.push({ unidad: unit });
@@ -1020,8 +994,6 @@ async function buildViceroyTipologiaDemandReport() {
 
   const tipologiaSelectionTotals = new Map();
   const tipologiaSelectedUnits = new Map();
-  const pricingGroupSelectionTotals = new Map();
-  const pricingGroupSelectedUnits = new Map();
   const selectedUnitCounts = new Map();
   const seenSelectionOutsideInventory = new Set();
   const optionKeys = ['opcionA'];
@@ -1049,16 +1021,10 @@ async function buildViceroyTipologiaDemandReport() {
         return;
       }
       const tipologia = unitToTipologia.get(unit);
-      const pricingGroup = unitToPricingGroup.get(unit);
       selectedUnitCounts.set(unit, (selectedUnitCounts.get(unit) || 0) + 1);
       tipologiaSelectionTotals.set(tipologia, (tipologiaSelectionTotals.get(tipologia) || 0) + 1);
       if (!tipologiaSelectedUnits.has(tipologia)) tipologiaSelectedUnits.set(tipologia, new Set());
       tipologiaSelectedUnits.get(tipologia).add(unit);
-      if (pricingGroup) {
-        pricingGroupSelectionTotals.set(pricingGroup, (pricingGroupSelectionTotals.get(pricingGroup) || 0) + 1);
-        if (!pricingGroupSelectedUnits.has(pricingGroup)) pricingGroupSelectedUnits.set(pricingGroup, new Set());
-        pricingGroupSelectedUnits.get(pricingGroup).add(unit);
-      }
     });
   });
 
@@ -1122,30 +1088,15 @@ async function buildViceroyTipologiaDemandReport() {
     .filter((row) => row.seleccionesTotales === 0)
     .map((row) => row.tipologia);
 
-  const pricingRows = [...pricingGroupUnits.entries()].map(([grupo, unitsSet]) => {
-    const unidadesTotales = unitsSet.size;
-    const selectedUnits = pricingGroupSelectedUnits.get(grupo) || new Set();
-    const unidadesDistintasSeleccionadas = selectedUnits.size;
-    const seleccionesTotales = pricingGroupSelectionTotals.get(grupo) || 0;
-    const mismaUnidadSeleccionada = Math.max(0, seleccionesTotales - unidadesDistintasSeleccionadas);
-    const unidadesNoSeleccionadas = Math.max(0, unidadesTotales - unidadesDistintasSeleccionadas);
-    const absorptionPct = unidadesTotales > 0
-      ? (unidadesDistintasSeleccionadas / unidadesTotales) * 100
-      : 0;
-    return {
-      grupo,
-      unidadesTotales,
-      unidadesDistintasSeleccionadas,
-      seleccionesTotales,
-      mismaUnidadSeleccionada,
-      unidadesNoSeleccionadas,
-      absorptionPct
-    };
-  }).sort((a, b) => {
-    if (b.unidadesTotales !== a.unidadesTotales) return b.unidadesTotales - a.unidadesTotales;
-    if (b.seleccionesTotales !== a.seleccionesTotales) return b.seleccionesTotales - a.seleccionesTotales;
-    return String(a.grupo).localeCompare(String(b.grupo), 'es');
-  });
+  const pricingRows = rows.map((row) => ({
+    grupo: row.tipologia,
+    unidadesTotales: row.unidadesTotales,
+    unidadesDistintasSeleccionadas: row.unidadesDistintasSeleccionadas,
+    seleccionesTotales: row.seleccionesTotales,
+    mismaUnidadSeleccionada: row.mismaUnidadSeleccionada,
+    unidadesNoSeleccionadas: row.unidadesNoSeleccionadas,
+    absorptionPct: row.absorptionPct
+  }));
 
   const listIncrementPct = 5;
   const maxList = 7;
