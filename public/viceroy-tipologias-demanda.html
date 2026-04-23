@@ -320,7 +320,9 @@
           if (!unit) return;
           map.set(unit, {
             tipologia: String(row && row.tipologia || '').trim(),
-            recamaras: String(row && row.recamaras || '').trim()
+            recamaras: String(row && row.recamaras || '').trim(),
+            precioLista: Number(row && row.priceLista) || 0,
+            precioVenta: Number(row && row.priceVenta) || 0
           });
         });
         return map;
@@ -339,6 +341,18 @@
         return map;
       }
 
+      function buildDemandDuplicateRecamarasSet(report, unitSelectionCountMap, unitMetadataMap) {
+        const set = new Set();
+        unitSelectionCountMap.forEach(function (count, unit) {
+          if (Number(count) <= 1) return;
+          const meta = unitMetadataMap.get(unit);
+          const recamaras = String(meta && meta.recamaras || '').trim();
+          if (!recamaras) return;
+          set.add(recamaras.toUpperCase().replace(/\s+/g, ''));
+        });
+        return set;
+      }
+
       function resolveDemandZoneInfo(zone, report, unitCommentMap) {
         const zoneLabel = String(zone && zone.label || '').trim();
         const unitKey = normalizeDemandUnitKey(zoneLabel);
@@ -350,22 +364,30 @@
         };
       }
 
-      function resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap) {
+      function resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet) {
         const zoneLabel = String(zone && zone.label || '').trim();
         const unitKey = normalizeDemandUnitKey(zoneLabel);
+        const meta = unitMetadataMap.get(unitKey);
+        if (!meta) return null;
         const count = Number(unitSelectionCountMap.get(unitKey) || 0);
-        if (count === 1) {
+        const recamaras = String(meta.recamaras || '').trim();
+        const normalizedRecamaras = recamaras.toUpperCase().replace(/\s+/g, '');
+        const isDuplicated = count > 1;
+        const isSimilarFree = count === 0 && normalizedRecamaras && duplicateRecamarasSet.has(normalizedRecamaras);
+        if (!isDuplicated && !isSimilarFree) {
           return null;
         }
-        const meta = unitMetadataMap.get(unitKey) || {};
-        const status = count > 1 ? 'duplicada' : 'disponible';
-        const color = count > 1 ? '#b71c1c' : '#6b6b6b';
-        const recamaras = String(meta.recamaras || '').trim();
+        const status = isDuplicated ? 'duplicada' : 'similar';
+        const color = isDuplicated ? '#b71c1c' : '#1f8d3c';
         const tipologia = String(meta.tipologia || '').trim();
+        const precioLista = Number(meta.precioLista || 0);
+        const precioVenta = Number(meta.precioVenta || 0);
         const detail = [
           recamaras ? `Recámaras: ${recamaras}` : '',
           tipologia ? `Tipología: ${tipologia}` : '',
-          count > 1 ? `Veces elegida: ${count}` : 'Sin selección'
+          isDuplicated ? `Veces elegida: ${count}` : 'Disponible similar',
+          precioLista > 0 ? `Precio lista: ${formatCurrency(precioLista)}` : '',
+          precioVenta > 0 ? `Precio venta: ${formatCurrency(precioVenta)}` : ''
         ].filter(Boolean).join(' · ');
         return {
           unidad: zoneLabel || unitKey,
@@ -450,7 +472,7 @@
         };
       }
 
-      async function renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap) {
+      async function renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet) {
         const img = await loadImageElement(floor.imageDataUrl);
         const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
         const width = Number(floor.imageWidth) || img.naturalWidth || img.width || 1200;
@@ -462,7 +484,7 @@
         ctx.drawImage(img, 0, 0, width, height);
 
         zones.forEach(function (zone) {
-          const info = resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap);
+          const info = resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet);
           if (!info) return;
           const points = Array.isArray(zone && zone.points) ? zone.points : [];
           if (!points.length) return;
@@ -492,8 +514,8 @@
           const paddingX = 8;
           const paddingY = 6;
           const textWidth = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
-          const boxWidth = Math.min(width * 0.5, textWidth + (paddingX * 2));
-          const boxHeight = 34 + (paddingY * 2);
+          const boxWidth = Math.min(width * 0.56, textWidth + (paddingX * 2));
+          const boxHeight = 48 + (paddingY * 2);
           const boxX = Math.max(6, Math.min(width - boxWidth - 6, cx - (boxWidth / 2)));
           const boxY = Math.max(6, Math.min(height - boxHeight - 6, cy - boxHeight - 10));
           ctx.fillStyle = 'rgba(255,255,255,0.95)';
@@ -515,6 +537,7 @@
           ctx.font = '500 11px Arial, sans-serif';
           ctx.fillStyle = '#5f6573';
           ctx.fillText(line2, boxX + paddingX, boxY + paddingY + 16);
+          ctx.fillText(info.estado === 'duplicada' ? 'Duplicada' : 'Disponible similar', boxX + paddingX, boxY + paddingY + 30);
           ctx.restore();
         });
 
@@ -609,9 +632,10 @@
 
           const unitSelectionCountMap = buildDemandUnitSelectionCountMap(currentReport);
           const unitMetadataMap = buildDemandUnitMetadataMap(currentReport);
+          const duplicateRecamarasSet = buildDemandDuplicateRecamarasSet(currentReport, unitSelectionCountMap, unitMetadataMap);
           const pages = [];
           for (const floor of floorsData.floors) {
-            const rendered = await renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap);
+            const rendered = await renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet);
             pages.push({
               title: String(floor && (floor.floorDisplay || floor.name || floor.id || '') || ''),
               dataUrl: rendered.dataUrl,
