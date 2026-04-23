@@ -357,6 +357,23 @@
         return String(value == null ? '' : value).trim().toUpperCase().replace(/\s+/g, '');
       }
 
+      function buildDuplicateFloorStyleMap(floorDuplicateRecamarasSet) {
+        const palette = [
+          { stroke: '#d97706', fill: '#f9e1c8' },
+          { stroke: '#1d4ed8', fill: '#d9e6ff' },
+          { stroke: '#7c3aed', fill: '#eadcff' },
+          { stroke: '#0f766e', fill: '#d6f3ef' },
+          { stroke: '#b91c1c', fill: '#f8d7d7' },
+          { stroke: '#a16207', fill: '#fbe9c8' }
+        ];
+        const sortedKeys = Array.from(floorDuplicateRecamarasSet || []).sort();
+        const map = new Map();
+        sortedKeys.forEach(function (key, index) {
+          map.set(key, palette[index % palette.length]);
+        });
+        return map;
+      }
+
       function resolveDemandZoneInfo(zone, report, unitCommentMap) {
         const zoneLabel = String(zone && zone.label || '').trim();
         const unitKey = normalizeDemandUnitKey(zoneLabel);
@@ -368,7 +385,7 @@
         };
       }
 
-      function resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap, floorDuplicateRecamarasSet) {
+      function resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap, floorStyleMap) {
         const zoneLabel = String(zone && zone.label || '').trim();
         const unitKey = normalizeDemandUnitKey(zoneLabel);
         const meta = unitMetadataMap.get(unitKey);
@@ -376,14 +393,15 @@
         const count = Number(unitSelectionCountMap.get(unitKey) || 0);
         const recamaras = String(meta.recamaras || '').trim();
         const normalizedRecamaras = normalizeRecamarasSimilarityKey(recamaras);
+        const style = floorStyleMap.get(normalizedRecamaras) || { stroke: '#b71c1c', fill: '#f8d7d7' };
         const isDuplicated = count > 1;
-        const isSimilarFree = count === 0 && normalizedRecamaras && floorDuplicateRecamarasSet.has(normalizedRecamaras);
+        const isSimilarFree = count === 0 && normalizedRecamaras && floorStyleMap.has(normalizedRecamaras);
         if (!isDuplicated && !isSimilarFree) {
           return null;
         }
         const status = isDuplicated ? 'duplicada' : 'similar';
-        const color = isDuplicated ? '#b71c1c' : '#1f8d3c';
-        const fillColor = isDuplicated ? '#b71c1c' : '#dff4e1';
+        const color = style.stroke;
+        const fillColor = isDuplicated ? style.stroke : style.fill;
         const tipologia = String(meta.tipologia || '').trim();
         const precioLista = Number(meta.precioLista || 0);
         const precioVenta = Number(meta.precioVenta || 0);
@@ -514,14 +532,19 @@
             floorDuplicateRecamarasSet.add(entry.recamarasKey);
           }
         });
+        const floorStyleMap = buildDuplicateFloorStyleMap(floorDuplicateRecamarasSet);
 
         const renderables = zoneEntries.map(function (entry) {
-          const info = resolveDemandDuplicateZoneInfo(entry.zone, unitSelectionCountMap, unitMetadataMap, floorDuplicateRecamarasSet);
+          const info = resolveDemandDuplicateZoneInfo(entry.zone, unitSelectionCountMap, unitMetadataMap, floorStyleMap);
           if (!info) return null;
           return Object.assign({}, entry, { info: info });
         }).filter(Boolean);
 
         renderables.sort(function (a, b) {
+          const aDup = a.count > 1 ? 0 : 1;
+          const bDup = b.count > 1 ? 0 : 1;
+          if (aDup !== bDup) return aDup - bDup;
+          if (a.count !== b.count) return b.count - a.count;
           if (a.centroidY !== b.centroidY) return a.centroidY - b.centroidY;
           return a.centroidX - b.centroidX;
         });
@@ -539,11 +562,20 @@
         const fitsBox = function (box) {
           return box.x >= 6 && box.y >= 6 && (box.x + box.w) <= (width - 6) && (box.y + box.h) <= (height - 6);
         };
-        const candidateOffsets = [
-          [0, 0], [0, 22], [0, -22], [24, 0], [-24, 0], [24, 22], [-24, 22], [24, -22], [-24, -22],
-          [0, 44], [0, -44], [48, 0], [-48, 0], [48, 22], [-48, 22], [48, -22], [-48, -22],
-          [72, 0], [-72, 0], [72, 22], [-72, 22], [72, -22], [-72, -22], [96, 0], [-96, 0]
-        ];
+        const candidateOffsets = [];
+        for (let ring = 0; ring <= 8; ring += 1) {
+          const step = 24 * ring;
+          for (let dx = -step; dx <= step; dx += 24) {
+            for (let dy = -step; dy <= step; dy += 24) {
+              if (ring === 0 && dx === 0 && dy === 0) {
+                candidateOffsets.push([0, 0]);
+                continue;
+              }
+              if (ring > 0 && Math.abs(dx) !== step && Math.abs(dy) !== step) continue;
+              candidateOffsets.push([dx, dy]);
+            }
+          }
+        }
 
         renderables.forEach(function (entry) {
           ctx.beginPath();
@@ -570,8 +602,8 @@
           const paddingX = 8;
           const paddingY = 6;
           const textWidth = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
-          const boxWidth = Math.min(width * 0.56, textWidth + (paddingX * 2));
-          const boxHeight = 64 + (paddingY * 2);
+          const boxWidth = Math.min(width * 0.48, textWidth + (paddingX * 2));
+          const boxHeight = 70 + (paddingY * 2);
           let boxX = Math.max(6, Math.min(width - boxWidth - 6, entry.centroidX - (boxWidth / 2)));
           let boxY = Math.max(6, Math.min(height - boxHeight - 6, entry.centroidY - boxHeight - 10));
           let box = { x: boxX, y: boxY, w: boxWidth, h: boxHeight };
@@ -604,7 +636,7 @@
             };
           }
           placedBoxes.push(box);
-          ctx.fillStyle = entry.info.estado === 'duplicada' ? 'rgba(255,255,255,0.96)' : 'rgba(245,255,245,0.98)';
+          ctx.fillStyle = entry.info.estado === 'duplicada' ? 'rgba(255,255,255,0.96)' : 'rgba(247,251,255,0.98)';
           ctx.strokeStyle = entry.info.color;
           ctx.lineWidth = 1.8;
           ctx.beginPath();
@@ -625,6 +657,9 @@
           ctx.fillText(line2, box.x + paddingX, box.y + paddingY + 16);
           ctx.fillText(entry.info.estado === 'duplicada' ? 'Duplicada' : 'Disponible en este piso', box.x + paddingX, box.y + paddingY + 30);
           ctx.fillText(entry.info.detalle ? String(entry.info.detalle).split(' · ').slice(0, 2).join(' · ') : '', box.x + paddingX, box.y + paddingY + 44);
+          ctx.fillText('Precio: ' + (entry.info.estado === 'duplicada'
+            ? formatCurrency(entry.meta && entry.meta.precioVenta || 0)
+            : formatCurrency(entry.meta && entry.meta.precioLista || 0)), box.x + paddingX, box.y + paddingY + 58);
           ctx.restore();
         });
 
