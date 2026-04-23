@@ -77,16 +77,17 @@
     <section class="card">
       <h3 style="margin:0 0 8px;">Carga Excel M2 (solo este módulo)</h3>
       <p style="margin:0 0 10px;color:#444;">
-        Sube un Excel/CSV para llenar <strong>Lista 0 (P)</strong> por unidad. No modifica Viceroy Piloto Presentación.
+        Sube un Excel con una hoja para <strong>unidad + 0 (P)</strong> y otra para <strong>simulación por grupo</strong> para autocompletar todo el módulo. No modifica Viceroy Piloto Presentación.
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <input id="m2UploadFile" type="file" accept=".xlsx,.xls,.csv" />
         <input id="m2UploadSheet" type="text" placeholder="Hoja (opcional)" style="min-height:38px;padding:0 10px;border:1px solid #cfc8b8;border-radius:8px;min-width:180px;" />
-        <button id="m2UploadBtn" class="btn primary" type="button">Subir Excel M2</button>
+        <button id="m2UploadBtn" class="btn primary" type="button">Subir Excel M2 + Simulación</button>
       </div>
       <p style="margin:10px 0 0;color:#555;font-size:12px;">
         Columnas esperadas: <strong>Unidad</strong> (aliases: Unidad, Depto, Unit, No) y <strong>0 (P)</strong>
         (aliases: 0 (P), 0, Lista0, Lista_0, P, Precio_m2, M2_base, M2).
+        La hoja de simulación acepta <strong>grupo/tipología</strong>, <strong>lista_inicial</strong> y <strong>lista_0</strong> a <strong>lista_7</strong>.
       </p>
       <p id="m2UploadStatus" class="status" style="margin-top:8px;"></p>
     </section>
@@ -972,6 +973,7 @@
         const unitProforma = lastComputedUnitProforma || (currentReport && currentReport.unitProforma) || {};
         const unitLaunch = lastComputedUnitLaunch || (currentReport && currentReport.unitLaunch) || {};
         const maxList = Math.max(0, Number(sim.maxList || 7));
+        const m2Rows = Array.isArray(unitProforma && unitProforma.rows) ? unitProforma.rows : [];
 
         const simulationSheetRows = simRows.map(function (row) {
           const out = {
@@ -1103,7 +1105,21 @@
           return String(a && a.Unidad || '').localeCompare(String(b && b.Unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
         });
 
+        const m2SheetRows = m2Rows.map(function (row) {
+          const listPrice = row && row.listPriceM2 && typeof row.listPriceM2 === 'object' ? row.listPriceM2 : {};
+          const base0 = Number(listPrice['0'] != null ? listPrice['0'] : listPrice[0]) || 0;
+          return {
+            Unidad: String(row && row.unidad || ''),
+            Tipologia: String(row && row.tipologia || ''),
+            '0 (P)': base0,
+            precio_m2: base0
+          };
+        }).sort(function (a, b) {
+          return String(a && a.Unidad || '').localeCompare(String(b && b.Unidad || ''), 'es', { numeric: true, sensitivity: 'base' });
+        });
+
         const workbook = XLSX.utils.book_new();
+        addSheetToWorkbook(workbook, 'M2_Unidades', m2SheetRows);
         addSheetToWorkbook(workbook, 'Simulacion_Listas', simulationSheetRows);
         addSheetToWorkbook(workbook, 'Simulacion_Unidad', unitSimulationRows);
         addSheetToWorkbook(workbook, 'Control_Tipologia', controlSheetRows);
@@ -1299,6 +1315,8 @@
           ' | Ruta fuente inventario: ' + (source.inventorySourcePath || '-') +
           ' | Base $/m2 listas: ' + (source.m2OverrideFileName || source.inventoryFileName || 'no identificado') +
           ' | Ruta $/m2 listas: ' + (source.m2OverrideSourcePath || source.inventorySourcePath || '-') +
+          ' | Simulación listas: ' + (source.simulationOverrideFileName || 'no identificado') +
+          ' | Ruta simulación: ' + (source.simulationOverrideSourcePath || '-') +
           ' | Base selecciones Whisperlist: ' + (source.whisperlistSourceFile || 'no identificado') +
           ' | Actualizado Whisperlist: ' + (source.whisperlistUpdatedAt ? new Date(source.whisperlistUpdatedAt).toLocaleString('es-MX') : '-');
       }
@@ -1330,9 +1348,14 @@
           }
           setUploadStatus(
             'Archivo aplicado. Filas importadas: ' + formatNumber(data.imported || 0) +
+            ' · simulación: ' + formatNumber(data.simulationImported || 0) +
             ' · hoja: ' + String(data.sheetName || '-') + '.',
             'ok'
           );
+          try {
+            localStorage.removeItem(STORAGE_KEY_BASE_M2);
+            localStorage.removeItem(STORAGE_KEY_SIMULATION);
+          } catch (_) {}
           await loadReport();
         } catch (err) {
           setUploadStatus(err && err.message ? err.message : 'No se pudo subir el archivo.', 'error');

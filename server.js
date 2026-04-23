@@ -141,6 +141,7 @@ const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx
 const VICEROY_ROOM_RESERVATIONS_PATH = path.join(DATA_DIR, 'viceroy-room-reservations.json');
 const VICEROY_RESERVAS_DAILY_REPORT_STATE_PATH = path.join(DATA_DIR, 'viceroy-reservas-daily-report-state.json');
 const VICEROY_TIPOLOGIA_M2_OVERRIDE_JSON_PATH = path.join(DATA_DIR, 'viceroy-tipologias-demanda-m2-override.json');
+const VICEROY_TIPOLOGIA_SIMULATION_OVERRIDE_JSON_PATH = path.join(DATA_DIR, 'viceroy-tipologias-demanda-simulation-override.json');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
@@ -987,6 +988,20 @@ async function buildViceroyTipologiaDemandReport() {
     m2OverridePricesByUnit[unit] = lists;
   });
 
+  let simulationOverrideByGroup = new Map();
+  let simulationOverrideSourcePath = '';
+  let simulationOverrideFileName = '';
+  let simulationOverrideSheetName = '';
+  let simulationOverrideUpdatedAt = null;
+  const simulationManualOverride = readViceroyTipologiaSimulationManualOverride();
+  if (simulationManualOverride.byGroup && simulationManualOverride.byGroup.size) {
+    simulationOverrideByGroup = simulationManualOverride.byGroup;
+    simulationOverrideSourcePath = VICEROY_TIPOLOGIA_SIMULATION_OVERRIDE_JSON_PATH;
+    simulationOverrideFileName = simulationManualOverride.fileName || 'cargado-en-modulo-tipologias-demanda';
+    simulationOverrideSheetName = simulationManualOverride.sheetName || '';
+    simulationOverrideUpdatedAt = simulationManualOverride.updatedAt || null;
+  }
+
   const whisperData = await readWhisperlistData();
   const whisperRows = Array.isArray(whisperData && whisperData.rows) ? whisperData.rows : [];
 
@@ -1182,13 +1197,28 @@ async function buildViceroyTipologiaDemandReport() {
     );
     const incrementaCada = computeAnchoredIncrementStep(row.unidadesTotales, startList, unidadesAncla, maxList);
     const lists = buildDynamicListDistribution(row.unidadesTotales, startList, unidadesAncla, incrementaCada, maxList);
-    return {
+    const override = simulationOverrideByGroup.get(String(row && row.grupo || '').trim().toUpperCase());
+    const merged = {
       ...row,
       unidadesAncla,
       listaInicial: startList,
       incrementoBasePct: startList * listIncrementPct,
       incrementaCada,
       ...lists
+    };
+    if (override && typeof override === 'object') {
+      if (Number.isFinite(Number(override.listaInicial))) merged.listaInicial = Math.max(0, Math.floor(Number(override.listaInicial)));
+      if (Number.isFinite(Number(override.unidadesAncla))) merged.unidadesAncla = Math.max(0, Math.floor(Number(override.unidadesAncla)));
+      if (Number.isFinite(Number(override.incrementoBasePct))) merged.incrementoBasePct = Number(override.incrementoBasePct);
+      if (Number.isFinite(Number(override.unidadesTotales))) merged.unidadesTotales = Math.max(0, Math.floor(Number(override.unidadesTotales)));
+      if (Number.isFinite(Number(override.incrementaCada))) merged.incrementaCada = Math.max(0, Math.floor(Number(override.incrementaCada)));
+      for (let i = 0; i <= maxList; i += 1) {
+        const value = override[`lista${i}`];
+        if (Number.isFinite(Number(value))) merged[`lista${i}`] = Math.max(0, Math.floor(Number(value)));
+      }
+    }
+    return {
+      ...merged
     };
   });
 
@@ -1572,6 +1602,11 @@ async function buildViceroyTipologiaDemandReport() {
       m2OverrideSheetName: m2OverrideSheetName || '',
       m2OverrideUpdatedAt: m2OverrideUpdatedAt || null,
       m2OverridePricesByUnit,
+      simulationOverrideFileName: simulationOverrideFileName || '',
+      simulationOverrideSourcePath: simulationOverrideSourcePath || '',
+      simulationOverrideRows: simulationOverrideByGroup.size || 0,
+      simulationOverrideSheetName: simulationOverrideSheetName || '',
+      simulationOverrideUpdatedAt: simulationOverrideUpdatedAt || null,
       whisperlistSourceFile: String(whisperData && whisperData.sourceFile || ''),
       whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
     },
@@ -4832,50 +4867,51 @@ function parseViceroyM2OverrideFile(filePath) {
 
 function parseViceroyTipologiaM2BaseWorkbook(workbook, requestedSheetName) {
   const outByUnit = new Map();
-  const fallbackSheet = workbook.SheetNames[0] || '';
-  const targetSheetName = String(requestedSheetName || fallbackSheet || '').trim();
-  if (!targetSheetName) {
-    return { sheetName: '', byUnit: outByUnit, imported: 0, skipped: 0 };
-  }
-  const sheet = workbook.Sheets[targetSheetName];
-  if (!sheet) {
-    return { sheetName: '', byUnit: outByUnit, imported: 0, skipped: 0 };
-  }
-  const rows = rowsFromSheetWithHeaderRow(sheet, 1);
-  let imported = 0;
-  let skipped = 0;
-  rows.forEach((rawRow) => {
-    const row = {};
-    Object.entries(rawRow || {}).forEach(([key, value]) => {
-      row[normalizeHeaderKey(key)] = value;
+  const preferred = String(requestedSheetName || '').trim();
+  const sheetNames = Array.isArray(workbook && workbook.SheetNames) ? workbook.SheetNames : [];
+  const orderedSheetNames = preferred && workbook && workbook.Sheets && workbook.Sheets[preferred]
+    ? [preferred, ...sheetNames.filter((name) => name !== preferred)]
+    : sheetNames;
+  for (const sheetName of orderedSheetNames) {
+    const sheet = workbook && workbook.Sheets ? workbook.Sheets[sheetName] : null;
+    if (!sheet) continue;
+    const rows = rowsFromSheetWithHeaderRow(sheet, 1);
+    let imported = 0;
+    let skipped = 0;
+    rows.forEach((rawRow) => {
+      const row = {};
+      Object.entries(rawRow || {}).forEach(([key, value]) => {
+        row[normalizeHeaderKey(key)] = value;
+      });
+      const unitRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit)
+        || row.unidad
+        || row.unit
+        || row.no
+        || '';
+      const unit = extractUnitCode(unitRaw);
+      const baseRaw = (
+        row['0_p']
+        ?? row['0']
+        ?? row['lista0']
+        ?? row['lista_0']
+        ?? row.p
+        ?? row.precio_m2
+        ?? row.precio_por_m2
+        ?? row.m2_base
+        ?? row.m2
+        ?? ''
+      );
+      const base0 = parseCurrencyLike(baseRaw);
+      if (!unit || !Number.isFinite(base0) || base0 <= 0) {
+        skipped += 1;
+        return;
+      }
+      outByUnit.set(unit, { 0: base0 });
+      imported += 1;
     });
-    const unitRaw = pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.unit)
-      || row.unidad
-      || row.unit
-      || row.no
-      || '';
-    const unit = extractUnitCode(unitRaw);
-    const baseRaw = (
-      row['0_p']
-      ?? row['0']
-      ?? row['lista0']
-      ?? row['lista_0']
-      ?? row.p
-      ?? row.precio_m2
-      ?? row.precio_por_m2
-      ?? row.m2_base
-      ?? row.m2
-      ?? ''
-    );
-    const base0 = parseCurrencyLike(baseRaw);
-    if (!unit || !Number.isFinite(base0) || base0 <= 0) {
-      skipped += 1;
-      return;
-    }
-    outByUnit.set(unit, { 0: base0 });
-    imported += 1;
-  });
-  return { sheetName: targetSheetName, byUnit: outByUnit, imported, skipped };
+    if (imported) return { sheetName, byUnit: outByUnit, imported, skipped };
+  }
+  return { sheetName: '', byUnit: outByUnit, imported: 0, skipped: 0 };
 }
 
 function readViceroyTipologiaM2ManualOverride() {
@@ -4925,6 +4961,189 @@ function saveViceroyTipologiaM2ManualOverride(payload) {
     rows
   };
   writeJson(VICEROY_TIPOLOGIA_M2_OVERRIDE_JSON_PATH, data);
+  return data;
+}
+
+function parseViceroyTipologiaSimulationWorkbook(workbook, requestedSheetName) {
+  const outByGroup = new Map();
+  const sheetNames = Array.isArray(workbook && workbook.SheetNames) ? workbook.SheetNames : [];
+  const preferred = String(requestedSheetName || '').trim();
+  const orderedSheetNames = preferred && workbook && workbook.Sheets && workbook.Sheets[preferred]
+    ? [preferred, ...sheetNames.filter((name) => name !== preferred)]
+    : sheetNames;
+
+  for (const sheetName of orderedSheetNames) {
+    const sheet = workbook && workbook.Sheets ? workbook.Sheets[sheetName] : null;
+    if (!sheet) continue;
+    const rows = rowsFromSheetWithHeaderRow(sheet, 1);
+    let imported = 0;
+    rows.forEach((rawRow) => {
+      const row = {};
+      Object.entries(rawRow || {}).forEach(([key, value]) => {
+        row[normalizeHeaderKey(key)] = value;
+      });
+      const groupRaw = row.grupo
+        || row.tipologia
+        || row.group
+        || row.group_code
+        || row.tipologia_
+        || '';
+      const group = String(groupRaw || '').trim().toUpperCase();
+      if (!group) return;
+
+      const listInicialRaw = row.lista_inicial
+        ?? row.listainicial
+        ?? row.lista_inicial_grupo
+        ?? row.lista_inicial_0
+        ?? row.lista_inicio
+        ?? row.lista_arranque
+        ?? row.lista0_inicio
+        ?? row.lista_iniciales
+        ?? '';
+      const listInicial = parseCurrencyLike(listInicialRaw);
+
+      const unidadesAnclaRaw = row.unidades_ancla
+        ?? row.unidades_ancla_grupo
+        ?? row.ancla
+        ?? row.unidades_anchor
+        ?? '';
+      const unidadesAncla = parseCurrencyLike(unidadesAnclaRaw);
+
+      const incrementoBasePctRaw = row.incremento_base_pct
+        ?? row.incremento_lista_pct
+        ?? row.incremento_pct
+        ?? row.incremento
+        ?? '';
+      const incrementoBasePct = parseCurrencyLike(incrementoBasePctRaw);
+
+      const unidadesTotalesRaw = row.unidades_totales
+        ?? row.total_unidades
+        ?? row.unidades
+        ?? '';
+      const unidadesTotales = parseCurrencyLike(unidadesTotalesRaw);
+
+      const incrementaCadaRaw = row.incrementa_cada
+        ?? row.incremento_cada
+        ?? row.cada_cuantas
+        ?? '';
+      const incrementaCada = parseCurrencyLike(incrementaCadaRaw);
+
+      const listCounts = {};
+      let hasAnyValue = false;
+      for (let i = 0; i <= 7; i += 1) {
+        const raw = row[`lista_${i}`]
+          ?? row[`lista${i}`]
+          ?? row[`lista ${i}`]
+          ?? row[`lista-${i}`]
+          ?? row[`l${i}`]
+          ?? '';
+        const value = parseCurrencyLike(raw);
+        if (Number.isFinite(value)) {
+          listCounts[i] = Math.max(0, Math.floor(value));
+          hasAnyValue = true;
+        }
+      }
+
+      if (!hasAnyValue && !Number.isFinite(listInicial) && !Number.isFinite(unidadesAncla) &&
+        !Number.isFinite(incrementoBasePct) && !Number.isFinite(unidadesTotales) && !Number.isFinite(incrementaCada)) {
+        return;
+      }
+
+      outByGroup.set(group, {
+        grupo: group,
+        listaInicial: Number.isFinite(listInicial) ? Math.max(0, Math.floor(listInicial)) : null,
+        unidadesAncla: Number.isFinite(unidadesAncla) ? Math.max(0, Math.floor(unidadesAncla)) : null,
+        incrementoBasePct: Number.isFinite(incrementoBasePct) ? incrementoBasePct : null,
+        unidadesTotales: Number.isFinite(unidadesTotales) ? Math.max(0, Math.floor(unidadesTotales)) : null,
+        incrementaCada: Number.isFinite(incrementaCada) ? Math.max(0, Math.floor(incrementaCada)) : null,
+        lista0: Number.isFinite(listCounts[0]) ? listCounts[0] : null,
+        lista1: Number.isFinite(listCounts[1]) ? listCounts[1] : null,
+        lista2: Number.isFinite(listCounts[2]) ? listCounts[2] : null,
+        lista3: Number.isFinite(listCounts[3]) ? listCounts[3] : null,
+        lista4: Number.isFinite(listCounts[4]) ? listCounts[4] : null,
+        lista5: Number.isFinite(listCounts[5]) ? listCounts[5] : null,
+        lista6: Number.isFinite(listCounts[6]) ? listCounts[6] : null,
+        lista7: Number.isFinite(listCounts[7]) ? listCounts[7] : null
+      });
+      imported += 1;
+    });
+    if (imported) {
+      return { sheetName, byGroup: outByGroup, imported };
+    }
+  }
+
+  return { sheetName: '', byGroup: outByGroup, imported: 0 };
+}
+
+function readViceroyTipologiaSimulationManualOverride() {
+  const raw = readJson(VICEROY_TIPOLOGIA_SIMULATION_OVERRIDE_JSON_PATH, null);
+  const byGroup = new Map();
+  if (!raw || typeof raw !== 'object') {
+    return {
+      byGroup,
+      fileName: '',
+      sheetName: '',
+      updatedAt: null,
+      imported: 0
+    };
+  }
+  const rows = Array.isArray(raw.rows) ? raw.rows : [];
+  rows.forEach((item) => {
+    const group = String(item && item.grupo || '').trim().toUpperCase();
+    if (!group) return;
+    const row = {
+      grupo: group,
+      listaInicial: Number.isFinite(Number(item && item.listaInicial)) ? Math.max(0, Math.floor(Number(item.listaInicial))) : null,
+      unidadesAncla: Number.isFinite(Number(item && item.unidadesAncla)) ? Math.max(0, Math.floor(Number(item.unidadesAncla))) : null,
+      incrementoBasePct: Number.isFinite(Number(item && item.incrementoBasePct)) ? Number(item.incrementoBasePct) : null,
+      unidadesTotales: Number.isFinite(Number(item && item.unidadesTotales)) ? Math.max(0, Math.floor(Number(item.unidadesTotales))) : null,
+      incrementaCada: Number.isFinite(Number(item && item.incrementaCada)) ? Math.max(0, Math.floor(Number(item.incrementaCada))) : null
+    };
+    for (let i = 0; i <= 7; i += 1) {
+      const value = Number(item && item[`lista${i}`]);
+      row[`lista${i}`] = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+    }
+    byGroup.set(group, row);
+  });
+  return {
+    byGroup,
+    fileName: String(raw.fileName || '').trim(),
+    sheetName: String(raw.sheetName || '').trim(),
+    updatedAt: raw.updatedAt || null,
+    imported: Number.isFinite(Number(raw.imported)) ? Number(raw.imported) : byGroup.size
+  };
+}
+
+function saveViceroyTipologiaSimulationManualOverride(payload) {
+  const fileName = String(payload && payload.fileName || '').trim();
+  const sheetName = String(payload && payload.sheetName || '').trim();
+  const byGroup = payload && payload.byGroup instanceof Map ? payload.byGroup : new Map();
+  const rows = Array.from(byGroup.entries())
+    .map(([grupo, row]) => {
+      const item = {
+        grupo,
+        listaInicial: Number.isFinite(Number(row && row.listaInicial)) ? Math.max(0, Math.floor(Number(row.listaInicial))) : null,
+        unidadesAncla: Number.isFinite(Number(row && row.unidadesAncla)) ? Math.max(0, Math.floor(Number(row.unidadesAncla))) : null,
+        incrementoBasePct: Number.isFinite(Number(row && row.incrementoBasePct)) ? Number(row.incrementoBasePct) : null,
+        unidadesTotales: Number.isFinite(Number(row && row.unidadesTotales)) ? Math.max(0, Math.floor(Number(row.unidadesTotales))) : null,
+        incrementaCada: Number.isFinite(Number(row && row.incrementaCada)) ? Math.max(0, Math.floor(Number(row.incrementaCada))) : null
+      };
+      for (let i = 0; i <= 7; i += 1) {
+        const value = Number(row && row[`lista${i}`]);
+        item[`lista${i}`] = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+      }
+      return item;
+    })
+    .filter((item) => item.grupo)
+    .sort((a, b) => String(a.grupo).localeCompare(String(b.grupo), 'es', { numeric: true, sensitivity: 'base' }));
+  const data = {
+    fileName,
+    sheetName,
+    imported: rows.length,
+    updatedAt: new Date().toISOString(),
+    rows
+  };
+  writeJson(VICEROY_TIPOLOGIA_SIMULATION_OVERRIDE_JSON_PATH, data);
   return data;
 }
 
@@ -7561,13 +7780,19 @@ app.post('/api/viceroy/tipologias-demanda/export-floors-pdf', async (req, res) =
 app.get('/api/viceroy/tipologias-demanda/m2-upload-status', (req, res) => {
   try {
     const saved = readViceroyTipologiaM2ManualOverride();
+    const simulationSaved = readViceroyTipologiaSimulationManualOverride();
     return res.json({
       ok: true,
       hasData: Boolean(saved.byUnit && saved.byUnit.size),
       fileName: saved.fileName || '',
       sheetName: saved.sheetName || '',
       updatedAt: saved.updatedAt || null,
-      imported: Number(saved.imported || 0)
+      imported: Number(saved.imported || 0),
+      simulationHasData: Boolean(simulationSaved.byGroup && simulationSaved.byGroup.size),
+      simulationFileName: simulationSaved.fileName || '',
+      simulationSheetName: simulationSaved.sheetName || '',
+      simulationUpdatedAt: simulationSaved.updatedAt || null,
+      simulationImported: Number(simulationSaved.imported || 0)
     });
   } catch (err) {
     return res.status(500).json({
@@ -7593,33 +7818,41 @@ app.post('/api/viceroy/tipologias-demanda/m2-upload', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'No se pudo leer el archivo Excel/CSV.' });
   }
 
-  const parsed = parseViceroyTipologiaM2BaseWorkbook(workbook, sheetName);
-  if (!parsed.sheetName) {
+  const parsedBase = parseViceroyTipologiaM2BaseWorkbook(workbook, sheetName);
+  const parsedSimulation = parseViceroyTipologiaSimulationWorkbook(workbook, sheetName);
+  if (!parsedBase.byUnit.size && (!parsedSimulation.byGroup || !parsedSimulation.byGroup.size)) {
     return res.status(400).json({
       ok: false,
-      error: 'No se encontró una hoja válida en el archivo.'
-    });
-  }
-  if (!parsed.byUnit.size) {
-    return res.status(400).json({
-      ok: false,
-      error: 'No se encontraron filas válidas. Revisa columnas: Unidad y 0 (P).'
+      error: 'No se encontraron filas válidas. Revisa las hojas y columnas esperadas.'
     });
   }
 
   const safeName = sanitizeExcelFileName(fileName) || 'tipologias-demanda-m2.xlsx';
-  const saved = saveViceroyTipologiaM2ManualOverride({
-    fileName: safeName,
-    sheetName: parsed.sheetName,
-    byUnit: parsed.byUnit
-  });
+  const saved = parsedBase.byUnit.size
+    ? saveViceroyTipologiaM2ManualOverride({
+      fileName: safeName,
+      sheetName: parsedBase.sheetName,
+      byUnit: parsedBase.byUnit
+    })
+    : readViceroyTipologiaM2ManualOverride();
+  let simulationSaved = null;
+  if (parsedSimulation && parsedSimulation.byGroup && parsedSimulation.byGroup.size) {
+    simulationSaved = saveViceroyTipologiaSimulationManualOverride({
+      fileName: safeName,
+      sheetName: parsedSimulation.sheetName || sheetName || '',
+      byGroup: parsedSimulation.byGroup
+    });
+  }
   return res.json({
     ok: true,
-    fileName: saved.fileName,
-    sheetName: saved.sheetName,
-    imported: saved.imported,
-    skipped: parsed.skipped,
-    updatedAt: saved.updatedAt
+    fileName: saved.fileName || '',
+    sheetName: saved.sheetName || '',
+    imported: Number(saved.imported || 0),
+    skipped: Number(parsedBase.skipped || 0),
+    simulationFileName: simulationSaved ? simulationSaved.fileName : '',
+    simulationSheetName: simulationSaved ? simulationSaved.sheetName : '',
+    simulationImported: simulationSaved ? simulationSaved.imported : 0,
+    updatedAt: saved.updatedAt || null
   });
 });
 
