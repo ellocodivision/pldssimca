@@ -353,6 +353,10 @@
         return set;
       }
 
+      function normalizeRecamarasSimilarityKey(value) {
+        return String(value == null ? '' : value).trim().toUpperCase().replace(/\s+/g, '');
+      }
+
       function resolveDemandZoneInfo(zone, report, unitCommentMap) {
         const zoneLabel = String(zone && zone.label || '').trim();
         const unitKey = normalizeDemandUnitKey(zoneLabel);
@@ -364,16 +368,16 @@
         };
       }
 
-      function resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet) {
+      function resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap, floorDuplicateRecamarasSet) {
         const zoneLabel = String(zone && zone.label || '').trim();
         const unitKey = normalizeDemandUnitKey(zoneLabel);
         const meta = unitMetadataMap.get(unitKey);
         if (!meta) return null;
         const count = Number(unitSelectionCountMap.get(unitKey) || 0);
         const recamaras = String(meta.recamaras || '').trim();
-        const normalizedRecamaras = recamaras.toUpperCase().replace(/\s+/g, '');
+        const normalizedRecamaras = normalizeRecamarasSimilarityKey(recamaras);
         const isDuplicated = count > 1;
-        const isSimilarFree = count === 0 && normalizedRecamaras && duplicateRecamarasSet.has(normalizedRecamaras);
+        const isSimilarFree = count === 0 && normalizedRecamaras && floorDuplicateRecamarasSet.has(normalizedRecamaras);
         if (!isDuplicated && !isSimilarFree) {
           return null;
         }
@@ -472,7 +476,7 @@
         };
       }
 
-      async function renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet) {
+      async function renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap) {
         const img = await loadImageElement(floor.imageDataUrl);
         const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
         const width = Number(floor.imageWidth) || img.naturalWidth || img.width || 1200;
@@ -483,31 +487,80 @@
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        zones.forEach(function (zone) {
-          const info = resolveDemandDuplicateZoneInfo(zone, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet);
-          if (!info) return;
+        const zoneEntries = zones.map(function (zone) {
           const points = Array.isArray(zone && zone.points) ? zone.points : [];
-          if (!points.length) return;
+          const zoneLabel = String(zone && zone.label || '').trim();
+          const unitKey = normalizeDemandUnitKey(zoneLabel);
+          const meta = unitMetadataMap.get(unitKey);
+          if (!meta || !points.length) return null;
+          const count = Number(unitSelectionCountMap.get(unitKey) || 0);
+          return {
+            zone: zone,
+            points: points,
+            unitKey: unitKey,
+            meta: meta,
+            count: count,
+            recamarasKey: normalizeRecamarasSimilarityKey(meta && meta.recamaras || ''),
+            centroidX: points.reduce(function (acc, point) { return acc + Number(point[0] || 0); }, 0) / points.length,
+            centroidY: points.reduce(function (acc, point) { return acc + Number(point[1] || 0); }, 0) / points.length
+          };
+        }).filter(Boolean);
+
+        const floorDuplicateRecamarasSet = new Set();
+        zoneEntries.forEach(function (entry) {
+          if (entry.count > 1 && entry.recamarasKey) {
+            floorDuplicateRecamarasSet.add(entry.recamarasKey);
+          }
+        });
+
+        const renderables = zoneEntries.map(function (entry) {
+          const info = resolveDemandDuplicateZoneInfo(entry.zone, unitSelectionCountMap, unitMetadataMap, floorDuplicateRecamarasSet);
+          if (!info) return null;
+          return Object.assign({}, entry, { info: info });
+        }).filter(Boolean);
+
+        renderables.sort(function (a, b) {
+          if (a.centroidY !== b.centroidY) return a.centroidY - b.centroidY;
+          return a.centroidX - b.centroidX;
+        });
+
+        const placedBoxes = [];
+        const boxesOverlap = function (a, b, padding) {
+          const p = Number(padding) || 0;
+          return !(
+            (a.x + a.w + p) < b.x ||
+            (b.x + b.w + p) < a.x ||
+            (a.y + a.h + p) < b.y ||
+            (b.y + b.h + p) < a.y
+          );
+        };
+        const fitsBox = function (box) {
+          return box.x >= 6 && box.y >= 6 && (box.x + box.w) <= (width - 6) && (box.y + box.h) <= (height - 6);
+        };
+        const candidateOffsets = [
+          [0, 0], [0, 20], [0, -20], [18, 0], [-18, 0], [18, 20], [-18, 20], [18, -20], [-18, -20],
+          [0, 40], [0, -40], [36, 0], [-36, 0], [36, 20], [-36, 20], [36, -20], [-36, -20]
+        ];
+
+        renderables.forEach(function (entry) {
           ctx.beginPath();
-          points.forEach(function (point, index) {
+          entry.points.forEach(function (point, index) {
             const px = Number(point[0] || 0);
             const py = Number(point[1] || 0);
             if (index === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
           });
           ctx.closePath();
-          ctx.fillStyle = info.color + '55';
-          ctx.strokeStyle = info.color;
+          ctx.fillStyle = entry.info.color + '55';
+          ctx.strokeStyle = entry.info.color;
           ctx.lineWidth = 2.5;
           ctx.fill();
           ctx.stroke();
 
-          const cx = points.reduce(function (acc, point) { return acc + Number(point[0] || 0); }, 0) / points.length;
-          const cy = points.reduce(function (acc, point) { return acc + Number(point[1] || 0); }, 0) / points.length;
-          const text1 = info.unidad || '';
-          const text2 = info.detalle || '';
+          const text1 = entry.info.unidad || '';
+          const text2 = entry.info.detalle || '';
           ctx.save();
-          ctx.font = '600 13px Arial, sans-serif';
+          ctx.font = '600 12px Arial, sans-serif';
           const maxWidth = Math.max(140, width * 0.24);
           const line1 = truncateCanvasText(ctx, text1, maxWidth);
           const line2 = truncateCanvasText(ctx, text2, maxWidth);
@@ -515,29 +568,59 @@
           const paddingY = 6;
           const textWidth = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
           const boxWidth = Math.min(width * 0.56, textWidth + (paddingX * 2));
-          const boxHeight = 48 + (paddingY * 2);
-          const boxX = Math.max(6, Math.min(width - boxWidth - 6, cx - (boxWidth / 2)));
-          const boxY = Math.max(6, Math.min(height - boxHeight - 6, cy - boxHeight - 10));
+          const boxHeight = 56 + (paddingY * 2);
+          let boxX = Math.max(6, Math.min(width - boxWidth - 6, entry.centroidX - (boxWidth / 2)));
+          let boxY = Math.max(6, Math.min(height - boxHeight - 6, entry.centroidY - boxHeight - 10));
+          let box = { x: boxX, y: boxY, w: boxWidth, h: boxHeight };
+          const baseBox = { x: boxX, y: boxY, w: boxWidth, h: boxHeight };
+          let placed = false;
+          for (let i = 0; i < candidateOffsets.length; i += 1) {
+            const offset = candidateOffsets[i];
+            const candidate = {
+              x: Math.max(6, Math.min(width - boxWidth - 6, baseBox.x + offset[0])),
+              y: Math.max(6, Math.min(height - boxHeight - 6, baseBox.y + offset[1])),
+              w: boxWidth,
+              h: boxHeight
+            };
+            if (!fitsBox(candidate)) continue;
+            const overlaps = placedBoxes.some(function (other) {
+              return boxesOverlap(candidate, other, 6);
+            });
+            if (!overlaps) {
+              box = candidate;
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            box = {
+              x: boxX,
+              y: boxY,
+              w: boxWidth,
+              h: boxHeight
+            };
+          }
+          placedBoxes.push(box);
           ctx.fillStyle = 'rgba(255,255,255,0.95)';
-          ctx.strokeStyle = info.color;
+          ctx.strokeStyle = entry.info.color;
           ctx.lineWidth = 1.8;
           ctx.beginPath();
           if (typeof ctx.roundRect === 'function') {
-            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8);
+            ctx.roundRect(box.x, box.y, box.w, box.h, 8);
           } else {
-            ctx.rect(boxX, boxY, boxWidth, boxHeight);
+            ctx.rect(box.x, box.y, box.w, box.h);
           }
           ctx.fill();
           ctx.stroke();
           ctx.fillStyle = '#2e3138';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'top';
-          ctx.font = '700 13px Arial, sans-serif';
-          ctx.fillText(line1, boxX + paddingX, boxY + paddingY);
-          ctx.font = '500 11px Arial, sans-serif';
+          ctx.font = '700 12px Arial, sans-serif';
+          ctx.fillText(line1, box.x + paddingX, box.y + paddingY);
+          ctx.font = '500 10px Arial, sans-serif';
           ctx.fillStyle = '#5f6573';
-          ctx.fillText(line2, boxX + paddingX, boxY + paddingY + 16);
-          ctx.fillText(info.estado === 'duplicada' ? 'Duplicada' : 'Disponible similar', boxX + paddingX, boxY + paddingY + 30);
+          ctx.fillText(line2, box.x + paddingX, box.y + paddingY + 16);
+          ctx.fillText(entry.info.estado === 'duplicada' ? 'Duplicada' : 'Disponible similar', box.x + paddingX, box.y + paddingY + 30);
           ctx.restore();
         });
 
@@ -632,10 +715,9 @@
 
           const unitSelectionCountMap = buildDemandUnitSelectionCountMap(currentReport);
           const unitMetadataMap = buildDemandUnitMetadataMap(currentReport);
-          const duplicateRecamarasSet = buildDemandDuplicateRecamarasSet(currentReport, unitSelectionCountMap, unitMetadataMap);
           const pages = [];
           for (const floor of floorsData.floors) {
-            const rendered = await renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap, duplicateRecamarasSet);
+            const rendered = await renderDemandDuplicateFloorExportCanvas(floor, unitSelectionCountMap, unitMetadataMap);
             pages.push({
               title: String(floor && (floor.floorDisplay || floor.name || floor.id || '') || ''),
               dataUrl: rendered.dataUrl,
