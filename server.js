@@ -4360,8 +4360,11 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const pricePerM2Raw = rowDataByIndex(row, 15); // P
     const m2Value = parseCurrencyLike(m2Raw);
     const pricePerM2 = parseCurrencyLike(pricePerM2Raw);
-    const effectivePricePerM2 = Number.isFinite(pricePerM2) && pricePerM2 > 7100 ? pricePerM2 : 7100;
-    const price = Number.isFinite(m2Value) ? (m2Value * effectivePricePerM2) : '';
+    // Usar exactamente el $/m2 del Excel (sin piso mínimo forzado).
+    const effectivePricePerM2 = Number.isFinite(pricePerM2) ? pricePerM2 : NaN;
+    const price = (Number.isFinite(m2Value) && Number.isFinite(effectivePricePerM2))
+      ? (m2Value * effectivePricePerM2)
+      : '';
     const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
     const den = hasViceroyDen(denRaw) ? '1' : '';
     const recamaras = den && baseRecamaras ? `${baseRecamaras}+DEN` : baseRecamaras;
