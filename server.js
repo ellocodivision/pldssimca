@@ -796,6 +796,232 @@ function writeViceroyInventoryCache(rows, fileName) {
   fs.writeFileSync(cachePath, JSON.stringify(payload, null, 2), 'utf-8');
 }
 
+function classifyTipologiaDemand(absorptionPct, totalSelections) {
+  if (!Number.isFinite(totalSelections) || totalSelections <= 0) return 'Sin demanda detectada';
+  if (absorptionPct >= 70) return 'Alta demanda';
+  if (absorptionPct >= 35) return 'Demanda media';
+  return 'Baja demanda';
+}
+
+function csvEscape(value) {
+  const text = String(value == null ? '' : value);
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function buildViceroyTipologiaDemandCsv(report) {
+  const rows = Array.isArray(report && report.rows) ? report.rows : [];
+  const header = [
+    'Tipologia',
+    'Unidades totales existentes',
+    'Unidades distintas seleccionadas',
+    'Selecciones totales',
+    'Unidades no seleccionadas',
+    'Porcentaje de absorcion',
+    'Comentario'
+  ];
+  const lines = [header.join(',')];
+  rows.forEach((row) => {
+    lines.push([
+      csvEscape(row.tipologia),
+      csvEscape(row.unidadesTotales),
+      csvEscape(row.unidadesDistintasSeleccionadas),
+      csvEscape(row.seleccionesTotales),
+      csvEscape(row.unidadesNoSeleccionadas),
+      csvEscape(`${Number(row.absorptionPct || 0).toFixed(2)}%`),
+      csvEscape(row.comentario)
+    ].join(','));
+  });
+  return lines.join('\n');
+}
+
+async function buildViceroyTipologiaDemandReport() {
+  const devSlug = 'viceroy-piloto';
+  const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
+  let inventoryRows = [];
+  let inventoryFileName = '';
+  for (const candidate of candidates) {
+    try {
+      const parsedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(candidate.fullPath));
+      if (parsedRows.length) {
+        inventoryRows = parsedRows;
+        inventoryFileName = candidate.name;
+        break;
+      }
+    } catch {}
+  }
+  if (!inventoryRows.length) {
+    const cached = readViceroyInventoryCache();
+    inventoryRows = cached.rows;
+    inventoryFileName = cached.fileName || inventoryFileName;
+  }
+
+  const whisperData = await readWhisperlistData();
+  const whisperRows = Array.isArray(whisperData && whisperData.rows) ? whisperData.rows : [];
+
+  const unitToTipologia = new Map();
+  const tipologiaUnits = new Map();
+  const inconsistencies = {
+    inventoryDuplicateUnits: [],
+    inventoryUnitsMissingTipologia: [],
+    selectionsUnitNotInInventory: []
+  };
+
+  const seenDuplicateUnit = new Set();
+  const seenMissingTipUnit = new Set();
+
+  inventoryRows.forEach((row) => {
+    const unit = extractUnitCode(row && row.unidad);
+    const tipologia = String(row && row.tipologia || '').trim().toUpperCase();
+    if (!unit) return;
+    if (!tipologia) {
+      if (!seenMissingTipUnit.has(unit)) {
+        inconsistencies.inventoryUnitsMissingTipologia.push({ unidad: unit });
+        seenMissingTipUnit.add(unit);
+      }
+      return;
+    }
+    if (unitToTipologia.has(unit)) {
+      const existingTip = unitToTipologia.get(unit);
+      if (existingTip !== tipologia) {
+        const dupKey = `${unit}__${existingTip}__${tipologia}`;
+        if (!seenDuplicateUnit.has(dupKey)) {
+          inconsistencies.inventoryDuplicateUnits.push({
+            unidad: unit,
+            tipologiaPrimera: existingTip,
+            tipologiaDuplicada: tipologia
+          });
+          seenDuplicateUnit.add(dupKey);
+        }
+      }
+      return;
+    }
+    unitToTipologia.set(unit, tipologia);
+    if (!tipologiaUnits.has(tipologia)) tipologiaUnits.set(tipologia, new Set());
+    tipologiaUnits.get(tipologia).add(unit);
+  });
+
+  const tipologiaSelectionTotals = new Map();
+  const tipologiaSelectedUnits = new Map();
+  const seenSelectionOutsideInventory = new Set();
+  const optionKeys = ['opcionA'];
+
+  whisperRows.forEach((row) => {
+    const kpi = row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
+    const asesor = String(row && row.asesor || '').trim();
+    const cliente = String(row && row.nombreCliente || '').trim();
+    optionKeys.forEach((optionKey) => {
+      const rawUnit = String(kpi && kpi[optionKey] || '').trim();
+      if (!rawUnit) return;
+      const unit = extractUnitCode(rawUnit);
+      if (!unit) return;
+      if (!unitToTipologia.has(unit)) {
+        const key = `${unit}__${optionKey}__${asesor}__${cliente}`;
+        if (!seenSelectionOutsideInventory.has(key)) {
+          inconsistencies.selectionsUnitNotInInventory.push({
+            unidad: unit,
+            opcion: optionKey,
+            asesor,
+            cliente
+          });
+          seenSelectionOutsideInventory.add(key);
+        }
+        return;
+      }
+      const tipologia = unitToTipologia.get(unit);
+      tipologiaSelectionTotals.set(tipologia, (tipologiaSelectionTotals.get(tipologia) || 0) + 1);
+      if (!tipologiaSelectedUnits.has(tipologia)) tipologiaSelectedUnits.set(tipologia, new Set());
+      tipologiaSelectedUnits.get(tipologia).add(unit);
+    });
+  });
+
+  const rows = [...tipologiaUnits.entries()].map(([tipologia, unitsSet]) => {
+    const unidadesTotales = unitsSet.size;
+    const selectedUnits = tipologiaSelectedUnits.get(tipologia) || new Set();
+    const unidadesDistintasSeleccionadas = selectedUnits.size;
+    const seleccionesTotales = tipologiaSelectionTotals.get(tipologia) || 0;
+    const unidadesNoSeleccionadas = Math.max(0, unidadesTotales - unidadesDistintasSeleccionadas);
+    const absorptionPct = unidadesTotales > 0
+      ? (unidadesDistintasSeleccionadas / unidadesTotales) * 100
+      : 0;
+    return {
+      tipologia,
+      unidadesTotales,
+      unidadesDistintasSeleccionadas,
+      seleccionesTotales,
+      unidadesNoSeleccionadas,
+      absorptionPct,
+      comentario: classifyTipologiaDemand(absorptionPct, seleccionesTotales)
+    };
+  }).sort((a, b) => {
+    if (b.seleccionesTotales !== a.seleccionesTotales) return b.seleccionesTotales - a.seleccionesTotales;
+    if (b.absorptionPct !== a.absorptionPct) return b.absorptionPct - a.absorptionPct;
+    if (b.unidadesDistintasSeleccionadas !== a.unidadesDistintasSeleccionadas) return b.unidadesDistintasSeleccionadas - a.unidadesDistintasSeleccionadas;
+    return String(a.tipologia).localeCompare(String(b.tipologia), 'es');
+  });
+
+  const tipologiasMasDemandadas = rows
+    .filter((row) => row.seleccionesTotales > 0)
+    .slice(0, 5)
+    .map((row) => ({
+      tipologia: row.tipologia,
+      seleccionesTotales: row.seleccionesTotales,
+      absorptionPct: row.absorptionPct
+    }));
+  const tipologiasMenosDemandadas = [...rows]
+    .filter((row) => row.seleccionesTotales > 0)
+    .sort((a, b) => {
+      if (a.seleccionesTotales !== b.seleccionesTotales) return a.seleccionesTotales - b.seleccionesTotales;
+      if (a.absorptionPct !== b.absorptionPct) return a.absorptionPct - b.absorptionPct;
+      return String(a.tipologia).localeCompare(String(b.tipologia), 'es');
+    })
+    .slice(0, 5)
+    .map((row) => ({
+      tipologia: row.tipologia,
+      seleccionesTotales: row.seleccionesTotales,
+      absorptionPct: row.absorptionPct
+    }));
+  const tipologiasSinDemanda = rows
+    .filter((row) => row.seleccionesTotales === 0)
+    .map((row) => row.tipologia);
+
+  const executiveSummary = {
+    tipologiasMasDemandadas,
+    tipologiasMenosDemandadas,
+    tipologiasSinDemanda,
+    observacionDespresurizar: tipologiasMenosDemandadas.length
+      ? `Tipologías con menor tracción (${tipologiasMenosDemandadas.map((item) => item.tipologia).join(', ')}) pueden apoyarse con precio más competitivo y/o incentivos para despresurizar la demanda de las tipologías saturadas.`
+      : 'No hay suficiente contraste de demanda para recomendar ajustes agresivos de precio.',
+    observacionDefenderPrecio: tipologiasMasDemandadas.length
+      ? `Tipologías de mayor demanda (${tipologiasMasDemandadas.map((item) => item.tipologia).join(', ')}) muestran capacidad para defender mejor un precio más alto por su nivel de interés.`
+      : 'Aún no hay señales de demanda suficientes para defender aumentos de precio por tipología.'
+  };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    source: {
+      inventoryFileName: inventoryFileName || '',
+      whisperlistSourceFile: String(whisperData && whisperData.sourceFile || ''),
+      whisperlistUpdatedAt: String(whisperData && whisperData.updatedAt || '')
+    },
+    rows,
+    executiveSummary,
+    inconsistencies: {
+      inventoryDuplicateUnits: inconsistencies.inventoryDuplicateUnits,
+      inventoryUnitsMissingTipologia: inconsistencies.inventoryUnitsMissingTipologia,
+      selectionsUnitNotInInventory: inconsistencies.selectionsUnitNotInInventory
+    },
+    totals: {
+      tipologias: rows.length,
+      unidadesInventario: [...tipologiaUnits.values()].reduce((acc, set) => acc + set.size, 0),
+      seleccionesTotales: rows.reduce((acc, row) => acc + row.seleccionesTotales, 0),
+      unidadesDistintasSeleccionadas: rows.reduce((acc, row) => acc + row.unidadesDistintasSeleccionadas, 0)
+    }
+  };
+}
+
 function readViceroyPilotoConfig() {
   const filePath = getViceroyPilotoConfigPath();
   let seedConfig = null;
@@ -4567,6 +4793,8 @@ app.use('/api/presentaciones', requireInternalUser);
 app.use('/viceroy', requireAuth);
 app.use('/viceroy/reservas', requireAuth);
 app.use('/api/viceroy/reservas', requireAuth);
+app.use('/viceroy/tipologias-demanda', requireAuth);
+app.use('/api/viceroy/tipologias-demanda', requireAuth);
 app.use('/viceroy/inicio', requireAuth);
 app.use('/viceroy-piloto', requireGerente);
 app.use('/api/viceroy-piloto', (req, res, next) => {
@@ -6331,6 +6559,11 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Viceroy Whisperlist</h2>
           <p class="desc">Módulo original de Whisperlist.</p>
         </a>
+        <a class="card" href="/viceroy/tipologias-demanda">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Demanda por Tipología</h2>
+          <p class="desc">Reporte comercial de absorción e interés por tipología con base en selecciones reales.</p>
+        </a>
         <a class="card" href="/viceroy/reservas">
           <span class="tag">Módulo</span>
           <h2 class="name">Reserva de oficinas</h2>
@@ -6355,6 +6588,41 @@ app.get('/viceroy', (req, res) => {
 
 app.get('/viceroy/reservas', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-reservas.html'));
+});
+
+app.get('/viceroy/tipologias-demanda', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-tipologias-demanda.html'));
+});
+
+app.get('/api/viceroy/tipologias-demanda', async (req, res) => {
+  try {
+    const report = await buildViceroyTipologiaDemandReport();
+    return res.json({ ok: true, report });
+  } catch (err) {
+    log(`Error en /api/viceroy/tipologias-demanda: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo generar el reporte de demanda por tipología.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/viceroy/tipologias-demanda.csv', async (req, res) => {
+  try {
+    const report = await buildViceroyTipologiaDemandReport();
+    const csv = buildViceroyTipologiaDemandCsv(report);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="viceroy-tipologias-demanda.csv"');
+    return res.send(csv);
+  } catch (err) {
+    log(`Error en /api/viceroy/tipologias-demanda.csv: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo exportar CSV de demanda por tipología.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/api/viceroy/reservas', (req, res) => {

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viceroy · Demanda por Tipología</title>
+  <style>
+    :root{
+      --bg:#f4f1e8;
+      --card:#ffffff;
+      --ink:#1a1a1a;
+      --muted:#5f5f5f;
+      --line:#d8d1c1;
+      --accent:#ffe816;
+      --ok:#1f8d3c;
+      --warn:#b0372a;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1240px;margin:0 auto;padding:24px 16px 40px}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    h1{margin:0 0 6px;font-size:32px}
+    .sub{margin:0;color:var(--muted)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-height:40px;padding:0 14px;border-radius:10px;border:1px solid #bdb8a9;
+      background:#fff;color:#111;text-decoration:none;font-weight:700;cursor:pointer
+    }
+    .btn.primary{background:var(--accent);border-color:#111}
+    .meta{font-size:12px;color:var(--muted);margin-bottom:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+    .status{font-size:13px;color:var(--muted);min-height:18px}
+    .status.ok{color:var(--ok)}
+    .status.error{color:var(--warn)}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;background:#fff;min-width:1080px}
+    th,td{border:1px solid #e7e1d4;padding:8px 9px;text-align:left;vertical-align:top;font-size:13px}
+    th{background:#f8f4ea;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}
+    .pill.alta{background:#def3e4;color:#165f2d}
+    .pill.media{background:#fff3d7;color:#6a4a02}
+    .pill.baja{background:#ffe8e1;color:#8b2f1f}
+    .pill.sin{background:#ece7dc;color:#625849}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .metric{border:1px solid #e4ddcf;border-radius:12px;background:#fff;padding:10px}
+    .metric .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .metric .v{margin-top:4px;font-size:22px;font-weight:800}
+    .exec-list{margin:6px 0 0;padding-left:18px}
+    .exec-list li{margin:4px 0}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    @media (max-width:900px){
+      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1>Demanda por Tipología</h1>
+        <p class="sub">Absorción comercial por tipología basada en inventario Viceroy Piloto + selecciones Whisperlist (solo Opción A).</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy">Volver a Viceroy</a>
+        <button id="reloadBtn" class="btn" type="button">Recargar</button>
+        <a class="btn primary" href="/api/viceroy/tipologias-demanda.csv">Exportar CSV</a>
+      </div>
+    </div>
+
+    <div class="meta" id="sourceMeta">Cargando fuentes...</div>
+    <p class="status" id="status"></p>
+
+    <section class="card">
+      <div class="summary-grid" id="summaryGrid"></div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipología</th>
+              <th>Unidades totales existentes</th>
+              <th>Unidades distintas seleccionadas</th>
+              <th>Selecciones totales</th>
+              <th>Unidades no seleccionadas</th>
+              <th>Porcentaje de absorción</th>
+              <th>Comentario</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin:0 0 8px;">Resumen ejecutivo</h3>
+      <div id="executive"></div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin:0 0 8px;">Datos inconsistentes detectados</h3>
+      <div id="inconsistencies"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const statusEl = document.getElementById('status');
+      const sourceMetaEl = document.getElementById('sourceMeta');
+      const summaryGridEl = document.getElementById('summaryGrid');
+      const tableBodyEl = document.getElementById('tableBody');
+      const executiveEl = document.getElementById('executive');
+      const inconsistenciesEl = document.getElementById('inconsistencies');
+      const reloadBtn = document.getElementById('reloadBtn');
+
+      function setStatus(message, type) {
+        statusEl.textContent = message || '';
+        statusEl.className = 'status' + (type ? (' ' + type) : '');
+      }
+
+      function formatPct(value) {
+        const n = Number(value);
+        return Number.isFinite(n) ? (n.toFixed(2) + '%') : '0.00%';
+      }
+
+      function formatNumber(value) {
+        return Number(value || 0).toLocaleString('es-MX');
+      }
+
+      function badgeForComment(comment) {
+        const txt = String(comment || '').toLowerCase();
+        let cls = 'sin';
+        if (txt.includes('alta')) cls = 'alta';
+        else if (txt.includes('media')) cls = 'media';
+        else if (txt.includes('baja')) cls = 'baja';
+        return '<span class="pill ' + cls + '">' + escapeHtml(comment || 'Sin demanda detectada') + '</span>';
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderSummary(report) {
+        const totals = report && report.totals ? report.totals : {};
+        const rows = Array.isArray(report && report.rows) ? report.rows : [];
+        const avgAbs = rows.length
+          ? rows.reduce((acc, row) => acc + Number(row.absorptionPct || 0), 0) / rows.length
+          : 0;
+        summaryGridEl.innerHTML = [
+          { k: 'Tipologías', v: formatNumber(totals.tipologias || 0) },
+          { k: 'Unidades inventario', v: formatNumber(totals.unidadesInventario || 0) },
+          { k: 'Selecciones totales', v: formatNumber(totals.seleccionesTotales || 0) },
+          { k: 'Absorción promedio', v: formatPct(avgAbs) }
+        ].map(function (item) {
+          return '<div class="metric"><div class="k">' + item.k + '</div><div class="v">' + item.v + '</div></div>';
+        }).join('');
+      }
+
+      function renderTable(report) {
+        const rows = Array.isArray(report && report.rows) ? report.rows : [];
+        if (!rows.length) {
+          tableBodyEl.innerHTML = '<tr><td colspan="7">No hay datos para mostrar.</td></tr>';
+          return;
+        }
+        tableBodyEl.innerHTML = rows.map(function (row) {
+          return '<tr>' +
+            '<td class="mono">' + escapeHtml(row.tipologia) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidadesTotales) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidadesDistintasSeleccionadas) + '</td>' +
+            '<td class="num">' + formatNumber(row.seleccionesTotales) + '</td>' +
+            '<td class="num">' + formatNumber(row.unidadesNoSeleccionadas) + '</td>' +
+            '<td class="num">' + formatPct(row.absorptionPct) + '</td>' +
+            '<td>' + badgeForComment(row.comentario) + '</td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      function listTipologias(items) {
+        const safe = Array.isArray(items) ? items : [];
+        if (!safe.length) return '<em>Sin datos</em>';
+        return '<ul class="exec-list">' + safe.map(function (item) {
+          if (typeof item === 'string') return '<li class="mono">' + escapeHtml(item) + '</li>';
+          return '<li><span class="mono">' + escapeHtml(item.tipologia || '') + '</span> · selecciones ' + formatNumber(item.seleccionesTotales || 0) + ' · absorción ' + formatPct(item.absorptionPct || 0) + '</li>';
+        }).join('') + '</ul>';
+      }
+
+      function renderExecutive(report) {
+        const exec = report && report.executiveSummary ? report.executiveSummary : {};
+        executiveEl.innerHTML =
+          '<p><strong>1) Tipologías más demandadas</strong></p>' + listTipologias(exec.tipologiasMasDemandadas) +
+          '<p><strong>2) Tipologías menos demandadas</strong></p>' + listTipologias(exec.tipologiasMenosDemandadas) +
+          '<p><strong>3) Tipologías no elegidas por nadie</strong></p>' + listTipologias(exec.tipologiasSinDemanda) +
+          '<p><strong>4) Observación para despresurizar demanda</strong><br>' + escapeHtml(exec.observacionDespresurizar || '-') + '</p>' +
+          '<p><strong>5) Observación para defender precio</strong><br>' + escapeHtml(exec.observacionDefenderPrecio || '-') + '</p>';
+      }
+
+      function renderInconsistencies(report) {
+        const data = report && report.inconsistencies ? report.inconsistencies : {};
+        const dup = Array.isArray(data.inventoryDuplicateUnits) ? data.inventoryDuplicateUnits : [];
+        const missing = Array.isArray(data.inventoryUnitsMissingTipologia) ? data.inventoryUnitsMissingTipologia : [];
+        const outside = Array.isArray(data.selectionsUnitNotInInventory) ? data.selectionsUnitNotInInventory : [];
+        inconsistenciesEl.innerHTML =
+          '<p><strong>Unidades duplicadas con tipología diferente en inventario:</strong> ' + formatNumber(dup.length) + '</p>' +
+          '<p><strong>Unidades de inventario sin tipología:</strong> ' + formatNumber(missing.length) + '</p>' +
+          '<p><strong>Selecciones de unidades no encontradas en inventario:</strong> ' + formatNumber(outside.length) + '</p>' +
+          '<details><summary>Ver muestra de inconsistencias</summary>' +
+          '<pre style="white-space:pre-wrap;margin-top:8px;">' + escapeHtml(JSON.stringify({
+            inventoryDuplicateUnits: dup.slice(0, 10),
+            inventoryUnitsMissingTipologia: missing.slice(0, 10),
+            selectionsUnitNotInInventory: outside.slice(0, 20)
+          }, null, 2)) + '</pre></details>';
+      }
+
+      function renderSource(report) {
+        const source = report && report.source ? report.source : {};
+        sourceMetaEl.textContent =
+          'Base inventario: ' + (source.inventoryFileName || 'no identificado') +
+          ' | Base selecciones Whisperlist: ' + (source.whisperlistSourceFile || 'no identificado') +
+          ' | Actualizado Whisperlist: ' + (source.whisperlistUpdatedAt ? new Date(source.whisperlistUpdatedAt).toLocaleString('es-MX') : '-');
+      }
+
+      async function loadReport() {
+        setStatus('Cargando reporte...', '');
+        try {
+          const res = await fetch('/api/viceroy/tipologias-demanda', { credentials: 'same-origin', cache: 'no-store' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok || !data.report) {
+            throw new Error(data.error || ('No se pudo cargar (' + res.status + ')'));
+          }
+          renderSource(data.report);
+          renderSummary(data.report);
+          renderTable(data.report);
+          renderExecutive(data.report);
+          renderInconsistencies(data.report);
+          setStatus('Reporte generado correctamente.', 'ok');
+        } catch (err) {
+          setStatus(err && err.message ? err.message : 'No se pudo cargar el reporte.', 'error');
+        }
+      }
+
+      reloadBtn.addEventListener('click', loadReport);
+      loadReport();
+    })();
+  </script>
+</body>
+</html>
