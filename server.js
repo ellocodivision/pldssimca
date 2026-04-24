@@ -143,6 +143,7 @@ const VICEROY_RESERVAS_DAILY_REPORT_STATE_PATH = path.join(DATA_DIR, 'viceroy-re
 const VICEROY_TIPOLOGIA_M2_OVERRIDE_JSON_PATH = path.join(DATA_DIR, 'viceroy-tipologias-demanda-m2-override.json');
 const VICEROY_TIPOLOGIA_SIMULATION_OVERRIDE_JSON_PATH = path.join(DATA_DIR, 'viceroy-tipologias-demanda-simulation-override.json');
 const VICEROY_PILOTO_CONFIG_NAME = 'viceroy-tipologias.json';
+const USER_ACCESS_PATH = path.join(DATA_DIR, 'backend-user-access.json');
 const FLOOR_JSON_DIR = path.join(DATA_DIR, 'plano-ventas-floors');
 const DEVELOPMENTS_DIR = path.join(DATA_DIR, 'developments');
 const SEED_DEVELOPMENTS_DIR = path.join(__dirname, 'seed-data', 'developments');
@@ -173,6 +174,29 @@ const DEVELOPMENTS_BY_SLUG = DEVELOPMENTS.reduce((acc, item) => {
   acc[item.slug] = item;
   return acc;
 }, {});
+
+const BACKEND_MODULES = [
+  {
+    key: 'simca',
+    label: 'SIMCA',
+    description: 'FAES, ROI, Brokers, Presentaciones, Tabla de Pagos, Owner Services y herramientas comerciales.'
+  },
+  {
+    key: 'viceroy',
+    label: 'VICEROY',
+    description: 'Whisperlist, Registros, reservas, demanda por tipología y tabla de pago Viceroy.'
+  },
+  {
+    key: 'viceroyPilot',
+    label: 'Viceroy Piloto',
+    description: 'Inventario, presentación comercial, edición visual y exportaciones de piloto.'
+  },
+  {
+    key: 'usersAdmin',
+    label: 'Usuarios y permisos',
+    description: 'Panel para dar de alta correos y controlar acceso por módulo.'
+  }
+];
 
 const formats = {
   '35': { name: 'FR-VEN-35 Aviso de Privacidad', file: 'format-35.html' },
@@ -372,6 +396,32 @@ function requireGerente(req, res, next) {
   </body></html>`);
 }
 
+function requireBackendModule(moduleKey) {
+  return function (req, res, next) {
+    if (LOCAL_NO_AUTH) return next();
+    if (!(req.isAuthenticated && req.isAuthenticated())) {
+      if (String(req.path || '').startsWith('/api/')) {
+        return res.status(401).json({ error: 'No autenticado' });
+      }
+      return res.redirect('/login');
+    }
+    const email = String(req.user && req.user.email || '').trim().toLowerCase();
+    if (canAccessBackendModule(email, moduleKey)) return next();
+    if (String(req.path || '').startsWith('/api/')) {
+      return res.status(403).json({ error: 'No tienes permisos para este módulo' });
+    }
+    return res.redirect('/');
+  };
+}
+
+function requireBackendUsersAdmin(req, res, next) {
+  if (canManageBackendUsers(String(req && req.user && req.user.email || '').trim().toLowerCase())) return next();
+  if (String(req.path || '').startsWith('/api/')) {
+    return res.status(403).json({ error: 'No tienes permisos para administrar usuarios' });
+  }
+  return res.redirect('/');
+}
+
 function canManageViceroyReservations(email) {
   const normalized = String(email || '').trim().toLowerCase();
   return Boolean(
@@ -382,7 +432,10 @@ function canManageViceroyReservations(email) {
 
 function requireViceroyPresentAccess(req, res, next) {
   if (LOCAL_NO_AUTH) return next();
-  if (req.isAuthenticated && req.isAuthenticated()) return next();
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    const email = String(req.user && req.user.email || '').trim().toLowerCase();
+    if (canAccessBackendModule(email, 'viceroyPilot')) return next();
+  }
   if (!VICEROY_PRESENT_TOKEN) return next();
   const token = String(req.query && req.query.token || '').trim();
   if (token && token === VICEROY_PRESENT_TOKEN) return next();
@@ -510,6 +563,9 @@ function ensureDataFiles() {
   });
   if (!fs.existsSync(SUBMISSIONS_PATH)) fs.writeFileSync(SUBMISSIONS_PATH, '[]', 'utf-8');
   if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, '{}', 'utf-8');
+  if (!fs.existsSync(USER_ACCESS_PATH)) {
+    writeJson(USER_ACCESS_PATH, defaultBackendUserAccessData());
+  }
   if (!fs.existsSync(VICEROY_ROOM_RESERVATIONS_PATH)) {
     writeJson(VICEROY_ROOM_RESERVATIONS_PATH, { rows: [], updatedAt: null });
   }
@@ -2118,6 +2174,157 @@ function writeJson(filePath, data) {
   const tmpPath = `${filePath}.tmp`;
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
   fs.renameSync(tmpPath, filePath);
+}
+
+function defaultBackendUserAccessData() {
+  const now = new Date().toISOString();
+  return {
+    updatedAt: now,
+    users: [
+      {
+        email: GERENTE_EMAIL,
+        name: 'Martin Barroso',
+        role: 'admin',
+        modules: {
+          simca: true,
+          viceroy: true,
+          viceroyPilot: true,
+          usersAdmin: true
+        },
+        createdAt: now,
+        updatedAt: now
+      }
+    ]
+  };
+}
+
+function normalizeBackendUserModules(rawModules) {
+  const source = rawModules && typeof rawModules === 'object' ? rawModules : {};
+  return {
+    simca: Boolean(source.simca),
+    viceroy: Boolean(source.viceroy),
+    viceroyPilot: Boolean(source.viceroyPilot),
+    usersAdmin: Boolean(source.usersAdmin)
+  };
+}
+
+function normalizeBackendUserRecord(rawUser) {
+  const source = rawUser && typeof rawUser === 'object' ? rawUser : {};
+  const email = String(source.email || '').trim().toLowerCase();
+  if (!email) return null;
+  const now = new Date().toISOString();
+  const modules = normalizeBackendUserModules(source.modules);
+  const isGerente = email === GERENTE_EMAIL;
+  if (isGerente) {
+    modules.simca = true;
+    modules.viceroy = true;
+    modules.viceroyPilot = true;
+    modules.usersAdmin = true;
+  }
+  const roleRaw = String(source.role || '').trim().toLowerCase();
+  const role = isGerente
+    ? 'admin'
+    : (['admin', 'editor', 'viewer'].includes(roleRaw) ? roleRaw : (modules.usersAdmin ? 'admin' : 'viewer'));
+  return {
+    email,
+    name: String(source.name || '').trim() || email,
+    role,
+    modules,
+    createdAt: String(source.createdAt || now).trim(),
+    updatedAt: String(source.updatedAt || now).trim()
+  };
+}
+
+function readBackendUserAccessData() {
+  const raw = readJson(USER_ACCESS_PATH, defaultBackendUserAccessData());
+  const users = Array.isArray(raw && raw.users)
+    ? raw.users.map((item) => normalizeBackendUserRecord(item)).filter(Boolean)
+    : [];
+  const byEmail = new Map();
+  users.forEach((user) => {
+    byEmail.set(user.email, user);
+  });
+  const gerente = normalizeBackendUserRecord({
+    email: GERENTE_EMAIL,
+    name: 'Martin Barroso',
+    role: 'admin',
+    modules: {
+      simca: true,
+      viceroy: true,
+      viceroyPilot: true,
+      usersAdmin: true
+    }
+  });
+  byEmail.set(gerente.email, gerente);
+  return {
+    updatedAt: String(raw && raw.updatedAt || new Date().toISOString()),
+    users: Array.from(byEmail.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'es', { numeric: true, sensitivity: 'base' }))
+  };
+}
+
+function saveBackendUserAccessData(data) {
+  const source = data && typeof data === 'object' ? data : {};
+  const users = Array.isArray(source.users)
+    ? source.users.map((item) => normalizeBackendUserRecord(item)).filter(Boolean)
+    : [];
+  const byEmail = new Map(users.map((user) => [user.email, user]));
+  const gerente = normalizeBackendUserRecord({
+    email: GERENTE_EMAIL,
+    name: 'Martin Barroso',
+    role: 'admin',
+    modules: {
+      simca: true,
+      viceroy: true,
+      viceroyPilot: true,
+      usersAdmin: true
+    }
+  });
+  byEmail.set(gerente.email, gerente);
+  writeJson(USER_ACCESS_PATH, {
+    updatedAt: new Date().toISOString(),
+    users: Array.from(byEmail.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'es', { numeric: true, sensitivity: 'base' }))
+  });
+}
+
+function getBackendUserRecord(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return null;
+  const data = readBackendUserAccessData();
+  return data.users.find((user) => user.email === normalized) || null;
+}
+
+function legacyModuleAccessFallback(email, moduleKey) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === GERENTE_EMAIL) return true;
+  if (moduleKey === 'simca' || moduleKey === 'viceroy') return isInternalUserEmail(normalized);
+  if (moduleKey === 'viceroyPilot') return false;
+  if (moduleKey === 'usersAdmin') return false;
+  return false;
+}
+
+function canAccessBackendModule(email, moduleKey) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === GERENTE_EMAIL) return true;
+  const user = getBackendUserRecord(normalized);
+  if (user) {
+    if (user.role === 'admin') return true;
+    return Boolean(user.modules && user.modules[moduleKey]);
+  }
+  return legacyModuleAccessFallback(normalized, moduleKey);
+}
+
+function canManageBackendUsers(email) {
+  return canAccessBackendModule(email, 'usersAdmin');
+}
+
+function backendAllowedLoginEmails() {
+  const allowed = new Set();
+  readBackendUserAccessData().users.forEach((user) => {
+    if (user && user.email) allowed.add(user.email);
+  });
+  return allowed;
 }
 
 function sha256ForString(value) {
@@ -3806,6 +4013,7 @@ async function isAllowedLoginEmail(email) {
   if (normalized === GERENTE_EMAIL) return true;
   if (normalized.endsWith(`@${ALLOWED_DOMAIN}`)) return true;
   if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
+  if (backendAllowedLoginEmails().has(normalized)) return true;
   if ((await whisperlistAllowedEmails()).has(normalized)) return true;
   if ((await viceroyRegistrosAllowedEmails()).has(normalized)) return true;
   return false;
@@ -5578,8 +5786,6 @@ app.get('/logout', (req, res, next) => {
 
 function renderSimcaHome(req, res, options) {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
-  const isInternalUser = isInternalUserEmail(currentEmail);
-  if (!isInternalUser) return res.redirect('/viceroy');
   const isGerente = currentEmail === GERENTE_EMAIL;
   const titleText = options && options.titleText ? String(options.titleText) : 'SIMCA';
   const subtitleText = options && options.subtitleText ? String(options.subtitleText) : 'Módulos internos de SIMCA.';
@@ -5805,8 +6011,43 @@ function renderSimcaHome(req, res, options) {
 
 app.get('/', requireAuth, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
-  const isInternalUser = isInternalUserEmail(currentEmail);
-  if (!isInternalUser) return res.redirect('/viceroy');
+  const canSimca = canAccessBackendModule(currentEmail, 'simca');
+  const canViceroy = canAccessBackendModule(currentEmail, 'viceroy');
+  const canViceroyPilot = canAccessBackendModule(currentEmail, 'viceroyPilot');
+  const canUsersAdmin = canManageBackendUsers(currentEmail);
+  const cards = [];
+  if (canSimca) {
+    cards.push(`
+        <a class="card" href="/simca">
+          <span class="tag">Módulo</span>
+          <h2 class="name">SIMCA</h2>
+          <p class="desc">Acceso a FAES, ROI, Brokers, Presentaciones, Tabla de Pagos, Owner Services y herramientas comerciales.</p>
+        </a>`);
+  }
+  if (canViceroy) {
+    cards.push(`
+        <a class="card" href="/viceroy">
+          <span class="tag">Módulo</span>
+          <h2 class="name">VICEROY</h2>
+          <p class="desc">Acceso a Whisperlist, Registros, Tabla de Pago Viceroy, editor PDF y módulos internos de Viceroy.</p>
+        </a>`);
+  }
+  if (canViceroyPilot) {
+    cards.push(`
+        <a class="card" href="/viceroy-piloto">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Piloto</h2>
+          <p class="desc">Inventario, presentación comercial y exportaciones de planos del piloto.</p>
+        </a>`);
+  }
+  if (canUsersAdmin) {
+    cards.push(`
+        <a class="card admin" href="/usuarios">
+          <span class="tag">Admin</span>
+          <h2 class="name">Usuarios y permisos</h2>
+          <p class="desc">Agrega correos, define módulos permitidos y administra el acceso desde aquí.</p>
+        </a>`);
+  }
   return res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -5824,6 +6065,7 @@ app.get('/', requireAuth, (req, res) => {
     .grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:16px;}
     .card{display:block;background:var(--card);border:1px solid #dcd7cb;border-radius:18px;padding:22px;text-decoration:none;color:inherit;min-height:200px;}
     .card:hover{border-color:#b9b39f}
+    .card.admin{border-style:dashed;background:#fffdf4}
     .tag{display:inline-block;font-size:12px;font-weight:700;background:var(--accent);padding:4px 8px;border-radius:999px;margin-bottom:12px}
     .name{font-size:34px;margin:0 0 10px}
     .desc{margin:0;color:var(--muted);font-size:16px;line-height:1.45}
@@ -5841,82 +6083,78 @@ app.get('/', requireAuth, (req, res) => {
         </div>
       </div>
       <div class="grid">
-        <a class="card" href="/simca">
-          <span class="tag">Módulo</span>
-          <h2 class="name">SIMCA</h2>
-          <p class="desc">Acceso a FAES, ROI, Brokers, Presentaciones, Tabla de Pagos, Owner Services y herramientas comerciales.</p>
-        </a>
-        <a class="card" href="/viceroy">
-          <span class="tag">Módulo</span>
-          <h2 class="name">VICEROY</h2>
-          <p class="desc">Acceso a Whisperlist, Registros, Tabla de Pago Viceroy, editor PDF y módulos internos de Viceroy.</p>
-        </a>
+        ${cards.length ? cards.join('\n') : `
+        <div class="card">
+          <span class="tag">Sin módulos</span>
+          <h2 class="name">No tienes accesos asignados</h2>
+          <p class="desc">Pídele al administrador que te asigne permisos.</p>
+        </div>`}
       </div>
     </div>
   </body></html>`);
 });
 
-app.get('/simca', requireAuth, (req, res) => {
+app.get('/simca', requireBackendModule('simca'), (req, res) => {
   return renderSimcaHome(req, res, {
     titleText: 'SIMCA',
     subtitleText: 'Módulos internos de SIMCA.'
   });
 });
 
-app.use('/legacy', requireInternalUser);
-app.use('/generador-faes', requireInternalUser);
-app.use('/plds', requireInternalUser);
-app.use('/generador-roi', requireInternalUser);
-app.use('/financiamiento-simca', requireInternalUser);
-app.use('/horarios-simca', requireInternalUser);
-app.use('/api/horarios-simca', requireInternalUser);
-app.use('/horarios-viceroy', requireAuth);
-app.use('/api/horarios-viceroy', requireAuth);
-app.use('/tabla-pagos', requireInternalUser);
-app.use('/hoja-reserva-simca', requireInternalUser);
-app.use('/form', requireInternalUser);
-app.use('/form-nacional', requireInternalUser);
-app.use('/form-nacional-moral', requireInternalUser);
-app.use('/form-extranjera-moral', requireInternalUser);
-app.use('/format', requireInternalUser);
-app.use('/format-nacional', requireInternalUser);
-app.use('/format-nacional-moral', requireInternalUser);
-app.use('/format-extranjera-moral', requireInternalUser);
-app.use('/submissions', requireInternalUser);
-app.use('/api/plds', requireInternalUser);
-app.use('/api/roi', requireInternalUser);
-app.use('/api/tabla-pagos', requireInternalUser);
-app.use('/api/hoja-reserva-simca', requireInternalUser);
+app.use('/legacy', requireBackendModule('simca'));
+app.use('/generador-faes', requireBackendModule('simca'));
+app.use('/plds', requireBackendModule('simca'));
+app.use('/generador-roi', requireBackendModule('simca'));
+app.use('/financiamiento-simca', requireBackendModule('simca'));
+app.use('/horarios-simca', requireBackendModule('simca'));
+app.use('/api/horarios-simca', requireBackendModule('simca'));
+app.use('/horarios-viceroy', requireBackendModule('viceroy'));
+app.use('/api/horarios-viceroy', requireBackendModule('viceroy'));
+app.use('/tabla-pagos', requireBackendModule('simca'));
+app.use('/hoja-reserva-simca', requireBackendModule('simca'));
+app.use('/form', requireBackendModule('simca'));
+app.use('/form-nacional', requireBackendModule('simca'));
+app.use('/form-nacional-moral', requireBackendModule('simca'));
+app.use('/form-extranjera-moral', requireBackendModule('simca'));
+app.use('/format', requireBackendModule('simca'));
+app.use('/format-nacional', requireBackendModule('simca'));
+app.use('/format-nacional-moral', requireBackendModule('simca'));
+app.use('/format-extranjera-moral', requireBackendModule('simca'));
+app.use('/submissions', requireBackendModule('simca'));
+app.use('/api/plds', requireBackendModule('simca'));
+app.use('/api/roi', requireBackendModule('simca'));
+app.use('/api/tabla-pagos', requireBackendModule('simca'));
+app.use('/api/hoja-reserva-simca', requireBackendModule('simca'));
 app.use('/brokers.simca.mx', requireGerente);
 app.use('/api/brokers-simca-mx', requireGerente);
-app.use('/presentaciones', requireInternalUser);
-app.use('/api/presentaciones', requireInternalUser);
-app.use('/viceroy', requireAuth);
-app.use('/viceroy/reservas', requireAuth);
-app.use('/api/viceroy/reservas', requireAuth);
-app.use('/viceroy/tipologias-demanda', requireAuth);
-app.use('/api/viceroy/tipologias-demanda', requireAuth);
-app.use('/viceroy/inicio', requireAuth);
-app.use('/viceroy-piloto', requireGerente);
+app.use('/presentaciones', requireBackendModule('simca'));
+app.use('/api/presentaciones', requireBackendModule('simca'));
+app.use('/viceroy', requireBackendModule('viceroy'));
+app.use('/viceroy/reservas', requireBackendModule('viceroy'));
+app.use('/api/viceroy/reservas', requireBackendModule('viceroy'));
+app.use('/viceroy/tipologias-demanda', requireBackendModule('viceroy'));
+app.use('/api/viceroy/tipologias-demanda', requireBackendModule('viceroy'));
+app.use('/viceroy/inicio', requireBackendModule('viceroy'));
+app.use('/viceroy-piloto/', requireBackendModule('viceroyPilot'));
 app.use('/api/viceroy-piloto', (req, res, next) => {
   if (String(req.path || '').startsWith('/public-data')) {
     return requireViceroyPresentAccess(req, res, next);
   }
-  return requireGerente(req, res, next);
+  return requireBackendModule('viceroyPilot')(req, res, next);
 });
-app.use('/viceroy/registros', requireAuth);
-app.use('/api/viceroy/registros', requireAuth);
-app.use('/whisperlist/qr', requireGerente);
-app.use('/whisperlist', requireAuth);
-app.use('/api/whisperlist', requireAuth);
-app.use('/owner-services', requireGerente);
-app.use('/api/owner-services', requireGerente);
+app.use('/viceroy/registros', requireBackendModule('viceroy'));
+app.use('/api/viceroy/registros', requireBackendModule('viceroy'));
+app.use('/whisperlist/qr', requireBackendModule('viceroy'));
+app.use('/whisperlist', requireBackendModule('viceroy'));
+app.use('/api/whisperlist', requireBackendModule('viceroy'));
+app.use('/owner-services', requireBackendModule('simca'));
+app.use('/api/owner-services', requireBackendModule('simca'));
 
-app.use('/gerente-ventas', requireGerente);
-app.use('/plano-interactivo', requireGerente);
-app.use('/plano-ventas', requireGerente);
-app.use('/plano-descargar', requireGerente);
-app.use('/api/plano-ventas', requireGerente);
+app.use('/gerente-ventas', requireBackendModule('simca'));
+app.use('/plano-interactivo', requireBackendModule('simca'));
+app.use('/plano-ventas', requireBackendModule('simca'));
+app.use('/plano-descargar', requireBackendModule('simca'));
+app.use('/api/plano-ventas', requireBackendModule('simca'));
 
 app.get('/legacy/formatos', (req, res) => {
   const items = Object.entries(formats)
@@ -6206,8 +6444,366 @@ app.get('/api/session-info', requireAuth, (req, res) => {
     ok: true,
     email: currentEmail,
     isGerente: currentEmail === GERENTE_EMAIL,
-    isInternalUser: isInternalUserEmail(currentEmail)
+    isInternalUser: isInternalUserEmail(currentEmail),
+    canManageUsers: canManageBackendUsers(currentEmail),
+    permissions: {
+      simca: canAccessBackendModule(currentEmail, 'simca'),
+      viceroy: canAccessBackendModule(currentEmail, 'viceroy'),
+      viceroyPilot: canAccessBackendModule(currentEmail, 'viceroyPilot'),
+      usersAdmin: canAccessBackendModule(currentEmail, 'usersAdmin')
+    }
   });
+});
+
+app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const moduleRows = BACKEND_MODULES.map((mod) => `
+      <label class="module-chip">
+        <input type="checkbox" name="module_${escapeHtml(mod.key)}" value="1">
+        <span><strong>${escapeHtml(mod.label)}</strong><small>${escapeHtml(mod.description)}</small></span>
+      </label>
+  `).join('');
+  res.send(`<!doctype html>
+  <html lang="es"><head><meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Usuarios y permisos</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#fff;--ink:#1a1a1a;--muted:#666;--line:#d8d1c1;--accent:#ffe816;--ok:#0f7a3d;--bad:#b91c1c;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 50px;}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+    h1{margin:0 0 6px;font-size:30px}
+    .sub{margin:0;color:var(--muted);max-width:820px;line-height:1.45}
+    .back{display:inline-block;padding:8px 12px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:600;}
+    .grid{display:grid;grid-template-columns:1.1fr 1.4fr;gap:16px;align-items:start;margin-top:18px;}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;}
+    .card h2{margin:0 0 12px;font-size:20px}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+    .field label{font-size:13px;font-weight:700;color:#3a3a3a}
+    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid #cfc8b9;border-radius:12px;font:inherit;background:#fff;color:#111}
+    .field textarea{min-height:72px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .modules{display:grid;gap:10px;margin:8px 0 16px}
+    .module-chip{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #ddd6c4;border-radius:14px;background:#fffdf8}
+    .module-chip input{margin-top:3px}
+    .module-chip span{display:block}
+    .module-chip strong{display:block;font-size:14px}
+    .module-chip small{display:block;color:var(--muted);line-height:1.35;margin-top:2px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--accent)}
+    .btn.danger{background:#fff;border-color:#efc9c9;color:var(--bad)}
+    .note{font-size:13px;color:var(--muted);line-height:1.45;margin-top:10px}
+    .table{width:100%;border-collapse:separate;border-spacing:0}
+    .table th,.table td{padding:10px 10px;border-bottom:1px solid #eee6d5;text-align:left;vertical-align:top;font-size:13px}
+    .table th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#666;background:#faf8f0;position:sticky;top:0}
+    .table-wrap{max-height:640px;overflow:auto;border:1px solid #e1dacb;border-radius:14px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#f3efe5;font-size:12px;font-weight:700}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .status.ok{color:var(--ok);font-weight:700}
+    .status.error{color:var(--bad);font-weight:700}
+    .user-actions{display:flex;gap:8px;flex-wrap:wrap}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+  </style></head><body>
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <h1>Usuarios y permisos</h1>
+          <p class="sub">Da de alta correos, asigna permisos por módulo y controla quién puede entrar al backend. Los correos que agregues aquí también quedan autorizados para iniciar sesión.</p>
+        </div>
+        <div class="actions">
+          <a class="back" href="/">Volver al backend</a>
+          <a class="back" href="/logout">Cerrar sesión</a>
+        </div>
+      </div>
+      <div class="grid">
+        <section class="card">
+          <h2 id="formTitle">Agregar usuario</h2>
+          <div class="field">
+            <label for="emailInput">Correo</label>
+            <input id="emailInput" type="email" placeholder="usuario@dominio.com" autocomplete="off">
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="nameInput">Nombre</label>
+              <input id="nameInput" type="text" placeholder="Nombre visible">
+            </div>
+            <div class="field">
+              <label for="roleInput">Rol</label>
+              <select id="roleInput">
+                <option value="viewer">viewer</option>
+                <option value="editor">editor</option>
+                <option value="admin">admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="modules" id="modulesBox">
+            ${moduleRows}
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="saveBtn" type="button">Guardar usuario</button>
+            <button class="btn" id="resetBtn" type="button">Limpiar</button>
+          </div>
+          <div class="note">Si dejas un usuario sin permisos explícitos, seguirá usando el acceso heredado solo si todavía no existe en este panel. En cuanto lo agregas aquí, este registro manda.</div>
+          <div id="formStatus" class="status"></div>
+        </section>
+        <section class="card">
+          <h2>Usuarios registrados</h2>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Correo</th>
+                  <th>Nombre</th>
+                  <th>Rol</th>
+                  <th>Permisos</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTbody">
+                <tr><td colspan="5">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note">Los correos agregados aquí quedan autorizados para login aunque sean externos al dominio. El gerente siempre conserva acceso total.</p>
+          <div id="listStatus" class="status"></div>
+        </section>
+      </div>
+    </div>
+    <script>
+      const MODULES = ${JSON.stringify(BACKEND_MODULES)};
+      const CURRENT_EMAIL = ${JSON.stringify(currentEmail)};
+      const els = {
+        formTitle: document.getElementById('formTitle'),
+        emailInput: document.getElementById('emailInput'),
+        nameInput: document.getElementById('nameInput'),
+        roleInput: document.getElementById('roleInput'),
+        modulesBox: document.getElementById('modulesBox'),
+        saveBtn: document.getElementById('saveBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        formStatus: document.getElementById('formStatus'),
+        usersTbody: document.getElementById('usersTbody'),
+        listStatus: document.getElementById('listStatus')
+      };
+      let editingEmail = '';
+      let users = [];
+
+      function setStatus(el, message, kind) {
+        if (!el) return;
+        el.textContent = message || '';
+        el.className = 'status' + (kind ? ' ' + kind : '');
+      }
+
+      function currentModuleState() {
+        const modules = {};
+        MODULES.forEach((mod) => {
+          if (!mod || !mod.key) return;
+          const input = els.modulesBox.querySelector('input[name="module_' + mod.key + '"]');
+          modules[mod.key] = Boolean(input && input.checked);
+        });
+        return modules;
+      }
+
+      function applyModuleState(modules) {
+        MODULES.forEach((mod) => {
+          if (!mod || !mod.key) return;
+          const input = els.modulesBox.querySelector('input[name="module_' + mod.key + '"]');
+          if (input) input.checked = Boolean(modules && modules[mod.key]);
+        });
+      }
+
+      function resetForm() {
+        editingEmail = '';
+        els.formTitle.textContent = 'Agregar usuario';
+        els.emailInput.value = '';
+        els.nameInput.value = '';
+        els.roleInput.value = 'viewer';
+        applyModuleState({ simca: false, viceroy: false, viceroyPilot: false, usersAdmin: false });
+        setStatus(els.formStatus, '', '');
+      }
+
+      function esc(value) {
+        return String(value == null ? '' : value).replace(/[&<>\"']/g, function (m) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[m];
+        });
+      }
+
+      function renderUsers() {
+        if (!users.length) {
+          els.usersTbody.innerHTML = '<tr><td colspan="5">No hay usuarios registrados.</td></tr>';
+          return;
+        }
+        els.usersTbody.innerHTML = users.map((user) => {
+          const modules = [];
+          MODULES.forEach((mod) => {
+            if (user.modules && user.modules[mod.key]) modules.push(mod.label);
+          });
+          const moduleText = modules.length ? modules.join(', ') : 'Sin permisos';
+          const isSelf = String(user.email || '').toLowerCase() === CURRENT_EMAIL;
+          return '<tr>' +
+            '<td><strong>' + esc(user.email) + '</strong></td>' +
+            '<td>' + esc(user.name || '') + '</td>' +
+            '<td><span class="badge">' + esc(user.role || 'viewer') + '</span></td>' +
+            '<td>' + esc(moduleText) + '</td>' +
+            '<td><div class="user-actions">' +
+              '<button class="btn" type="button" data-edit="' + esc(user.email) + '">Editar</button>' +
+              (isSelf ? '' : '<button class="btn danger" type="button" data-delete="' + esc(user.email) + '">Eliminar</button>') +
+            '</div></td>' +
+          '</tr>';
+        }).join('');
+        els.usersTbody.querySelectorAll('[data-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const email = btn.getAttribute('data-edit');
+            const user = users.find((item) => String(item.email || '').toLowerCase() === String(email || '').toLowerCase());
+            if (!user) return;
+            editingEmail = String(user.email || '').toLowerCase();
+            els.formTitle.textContent = 'Editar usuario';
+            els.emailInput.value = user.email || '';
+            els.nameInput.value = user.name || '';
+            els.roleInput.value = user.role || 'viewer';
+            applyModuleState(user.modules || {});
+            setStatus(els.formStatus, 'Editando ' + user.email + '.', 'ok');
+          });
+        });
+        els.usersTbody.querySelectorAll('[data-delete]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const email = btn.getAttribute('data-delete');
+            if (!confirm('Eliminar acceso para ' + email + '?')) return;
+            try {
+              const res = await fetch('/api/admin/users/' + encodeURIComponent(email), { method: 'DELETE', credentials: 'same-origin' });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error || 'No se pudo eliminar');
+              await loadUsers();
+              setStatus(els.listStatus, 'Usuario eliminado: ' + email, 'ok');
+            } catch (err) {
+              setStatus(els.listStatus, err && err.message ? err.message : 'No se pudo eliminar el usuario.', 'error');
+            }
+          });
+        });
+      }
+
+      async function loadUsers() {
+        try {
+          const res = await fetch('/api/admin/users', { credentials: 'same-origin', cache: 'no-store' });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'No se pudieron cargar los usuarios');
+          users = Array.isArray(data.users) ? data.users : [];
+          renderUsers();
+        } catch (err) {
+          setStatus(els.listStatus, err && err.message ? err.message : 'Error cargando usuarios.', 'error');
+        }
+      }
+
+      async function saveUser() {
+        const email = String(els.emailInput.value || '').trim().toLowerCase();
+        const name = String(els.nameInput.value || '').trim();
+        const role = String(els.roleInput.value || 'viewer').trim();
+        if (!email) {
+          setStatus(els.formStatus, 'Pon un correo para guardar.', 'error');
+          return;
+        }
+        try {
+          els.saveBtn.disabled = true;
+          const res = await fetch('/api/admin/users', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              name,
+              role,
+              modules: currentModuleState(),
+              originalEmail: editingEmail || email
+            })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'No se pudo guardar');
+          await loadUsers();
+          resetForm();
+          setStatus(els.listStatus, 'Usuario guardado correctamente.', 'ok');
+        } catch (err) {
+          setStatus(els.formStatus, err && err.message ? err.message : 'No se pudo guardar el usuario.', 'error');
+        } finally {
+          els.saveBtn.disabled = false;
+        }
+      }
+
+      els.saveBtn.addEventListener('click', saveUser);
+      els.resetBtn.addEventListener('click', resetForm);
+      resetForm();
+      loadUsers();
+    </script>
+  </body></html>`);
+});
+
+app.get('/api/admin/users', requireBackendUsersAdmin, (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const data = readBackendUserAccessData();
+  return res.json({
+    ok: true,
+    currentUser: currentEmail,
+    users: data.users,
+    modules: BACKEND_MODULES,
+    updatedAt: data.updatedAt
+  });
+});
+
+app.post('/api/admin/users', requireBackendUsersAdmin, (req, res) => {
+  const originalEmail = String(req.body && req.body.originalEmail || req.body && req.body.email || '').trim().toLowerCase();
+  const email = String(req.body && req.body.email || '').trim().toLowerCase();
+  const name = String(req.body && req.body.name || '').trim();
+  const roleRaw = String(req.body && req.body.role || '').trim().toLowerCase();
+  const modulesRaw = req.body && req.body.modules && typeof req.body.modules === 'object' ? req.body.modules : {};
+  if (!email) {
+    return res.status(400).json({ error: 'El correo es obligatorio.' });
+  }
+  if (!['admin', 'editor', 'viewer'].includes(roleRaw)) {
+    return res.status(400).json({ error: 'Rol inválido.' });
+  }
+  const data = readBackendUserAccessData();
+  const users = Array.isArray(data.users) ? [...data.users] : [];
+  const normalizedModules = normalizeBackendUserModules(modulesRaw);
+  if (email === GERENTE_EMAIL) {
+    normalizedModules.simca = true;
+    normalizedModules.viceroy = true;
+    normalizedModules.viceroyPilot = true;
+    normalizedModules.usersAdmin = true;
+  }
+  let idx = users.findIndex((user) => user.email === originalEmail);
+  if (idx < 0) idx = users.findIndex((user) => user.email === email);
+  const nextUser = normalizeBackendUserRecord({
+    email,
+    name: name || email,
+    role: roleRaw,
+    modules: normalizedModules,
+    createdAt: idx >= 0 && users[idx] ? users[idx].createdAt : new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  if (!nextUser) {
+    return res.status(400).json({ error: 'No se pudo normalizar el usuario.' });
+  }
+  if (idx >= 0) {
+    users[idx] = nextUser;
+  } else {
+    users.push(nextUser);
+  }
+  saveBackendUserAccessData({ users });
+  return res.json({ ok: true, user: nextUser, users: readBackendUserAccessData().users });
+});
+
+app.delete('/api/admin/users/:email', requireBackendUsersAdmin, (req, res) => {
+  const email = String(req.params.email || '').trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ error: 'El correo es obligatorio.' });
+  }
+  if (email === GERENTE_EMAIL) {
+    return res.status(400).json({ error: 'El gerente no se puede eliminar.' });
+  }
+  const data = readBackendUserAccessData();
+  const users = Array.isArray(data.users) ? data.users.filter((user) => user.email !== email) : [];
+  saveBackendUserAccessData({ users });
+  return res.json({ ok: true, removed: email, users: readBackendUserAccessData().users });
 });
 
 app.get('/tabla-pagos', (req, res) => {
@@ -8927,7 +9523,7 @@ app.post('/api/viceroy-piloto/export-floors-pdf', requireViceroyPresentAccess, a
   }
 });
 
-app.get('/viceroy-piloto', (req, res) => {
+app.get('/viceroy-piloto', requireBackendModule('viceroyPilot'), (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-piloto.html'));
 });
 
