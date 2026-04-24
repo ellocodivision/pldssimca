@@ -2246,6 +2246,7 @@ function defaultBackendUserAccessData() {
   const now = new Date().toISOString();
   return {
     updatedAt: now,
+    deletedEmails: [],
     users: [
       {
         email: GERENTE_EMAIL,
@@ -2362,6 +2363,9 @@ function normalizeBackendUserRecord(rawUser) {
 
 function readBackendUserAccessData() {
   const raw = readJson(USER_ACCESS_PATH, defaultBackendUserAccessData());
+  const deletedEmails = Array.isArray(raw && raw.deletedEmails)
+    ? Array.from(new Set(raw.deletedEmails.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean)))
+    : [];
   const users = Array.isArray(raw && raw.users)
     ? raw.users.map((item) => normalizeBackendUserRecord(item)).filter(Boolean)
     : [];
@@ -2381,8 +2385,12 @@ function readBackendUserAccessData() {
     }
   });
   byEmail.set(gerente.email, gerente);
+  deletedEmails.forEach((email) => {
+    if (email !== GERENTE_EMAIL) byEmail.delete(email);
+  });
   return {
     updatedAt: String(raw && raw.updatedAt || new Date().toISOString()),
+    deletedEmails,
     users: Array.from(byEmail.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'es', { numeric: true, sensitivity: 'base' }))
   };
 }
@@ -2477,13 +2485,17 @@ async function buildBackendLegacyUserSeeds() {
 async function syncBackendUserAccessSeed() {
   const current = readBackendUserAccessData();
   const seeded = await buildBackendLegacyUserSeeds();
+  const deletedEmails = new Set((current.deletedEmails || []).map((email) => String(email || '').trim().toLowerCase()).filter(Boolean));
   const byEmail = new Map();
   seeded.forEach((user) => byEmail.set(user.email, user));
   current.users.forEach((user) => {
-    byEmail.set(user.email, user);
+    if (!deletedEmails.has(user.email)) {
+      byEmail.set(user.email, user);
+    }
   });
+  deletedEmails.forEach((email) => byEmail.delete(email));
   const merged = Array.from(byEmail.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'es', { numeric: true, sensitivity: 'base' }));
-  saveBackendUserAccessData({ users: merged });
+  saveBackendUserAccessData({ users: merged, deletedEmails: Array.from(deletedEmails) });
   return merged;
 }
 
@@ -2491,6 +2503,9 @@ function saveBackendUserAccessData(data) {
   const source = data && typeof data === 'object' ? data : {};
   const users = Array.isArray(source.users)
     ? source.users.map((item) => normalizeBackendUserRecord(item)).filter(Boolean)
+    : [];
+  const deletedEmails = Array.isArray(source.deletedEmails)
+    ? Array.from(new Set(source.deletedEmails.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean)))
     : [];
   const byEmail = new Map(users.map((user) => [user.email, user]));
   const gerente = normalizeBackendUserRecord({
@@ -2505,8 +2520,12 @@ function saveBackendUserAccessData(data) {
     }
   });
   byEmail.set(gerente.email, gerente);
+  deletedEmails.forEach((email) => {
+    if (email !== GERENTE_EMAIL) byEmail.delete(email);
+  });
   writeJson(USER_ACCESS_PATH, {
     updatedAt: new Date().toISOString(),
+    deletedEmails,
     users: Array.from(byEmail.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'es', { numeric: true, sensitivity: 'base' }))
   });
 }
@@ -7153,6 +7172,7 @@ app.post('/api/admin/users', requireBackendUsersAdmin, (req, res) => {
   }
   const data = readBackendUserAccessData();
   const users = Array.isArray(data.users) ? [...data.users] : [];
+  const deletedEmails = new Set(Array.isArray(data.deletedEmails) ? data.deletedEmails : []);
   const normalizedModules = normalizeBackendUserModules(modulesRaw, email);
   const normalizedSubmodules = normalizeBackendUserSubmodules(req.body && req.body.submodules && typeof req.body.submodules === 'object'
     ? req.body.submodules
@@ -7194,7 +7214,8 @@ app.post('/api/admin/users', requireBackendUsersAdmin, (req, res) => {
   } else {
     users.push(nextUser);
   }
-  saveBackendUserAccessData({ users });
+  deletedEmails.delete(email);
+  saveBackendUserAccessData({ users, deletedEmails: Array.from(deletedEmails) });
   return res.json({ ok: true, user: nextUser, users: readBackendUserAccessData().users });
 });
 
@@ -7208,7 +7229,9 @@ app.delete('/api/admin/users/:email', requireBackendUsersAdmin, (req, res) => {
   }
   const data = readBackendUserAccessData();
   const users = Array.isArray(data.users) ? data.users.filter((user) => user.email !== email) : [];
-  saveBackendUserAccessData({ users });
+  const deletedEmails = new Set(Array.isArray(data.deletedEmails) ? data.deletedEmails : []);
+  deletedEmails.add(email);
+  saveBackendUserAccessData({ users, deletedEmails: Array.from(deletedEmails) });
   return res.json({ ok: true, removed: email, users: readBackendUserAccessData().users });
 });
 
