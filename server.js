@@ -6711,6 +6711,10 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
     .field textarea{min-height:72px;resize:vertical}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .modules{display:grid;gap:10px;margin:8px 0 16px}
+    .selection{margin:0 0 14px;padding:12px 14px;border:1px dashed #cfc8b9;border-radius:14px;background:#fbfaf6;font-size:13px;line-height:1.45;color:#4b4b4b}
+    .selection strong{display:block;font-size:14px;color:#222;margin-bottom:4px}
+    .selection .mini{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .selection .mini span{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#fff;border:1px solid #ddd6c4;font-size:12px;font-weight:700}
     .module-chip{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #ddd6c4;border-radius:14px;background:#fffdf8}
     .module-chip input{margin-top:3px}
     .module-chip span{display:block}
@@ -6732,6 +6736,9 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
     .table th,.table td{padding:10px 10px;border-bottom:1px solid #eee6d5;text-align:left;vertical-align:top;font-size:13px}
     .table th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#666;background:#faf8f0;position:sticky;top:0}
     .table-wrap{max-height:640px;overflow:auto;border:1px solid #e1dacb;border-radius:14px}
+    .table tbody tr{cursor:pointer}
+    .table tbody tr:hover{background:#fff9d7}
+    .table tbody tr.active{background:#fff1a8}
     .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#f3efe5;font-size:12px;font-weight:700}
     .status{margin-top:10px;font-size:13px;color:var(--muted)}
     .status.ok{color:var(--ok);font-weight:700}
@@ -6770,6 +6777,11 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
                 <option value="admin">admin</option>
               </select>
             </div>
+          </div>
+          <div class="selection" id="selectionBox">
+            <strong>Selecciona un usuario para cargar sus permisos</strong>
+            <div>Al elegir una fila, la izquierda se marca con los módulos y submódulos que ya tiene ese correo.</div>
+            <div class="mini" id="selectionMini"></div>
           </div>
           <div class="modules" id="modulesBox">
             ${moduleRows}
@@ -6816,6 +6828,8 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
         emailInput: document.getElementById('emailInput'),
         nameInput: document.getElementById('nameInput'),
         roleInput: document.getElementById('roleInput'),
+        selectionBox: document.getElementById('selectionBox'),
+        selectionMini: document.getElementById('selectionMini'),
         modulesBox: document.getElementById('modulesBox'),
         submodulesBox: document.getElementById('submodulesBox'),
         saveBtn: document.getElementById('saveBtn'),
@@ -6826,6 +6840,7 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
       };
       let editingEmail = '';
       let users = [];
+      let selectedEmail = '';
 
       function setStatus(el, message, kind) {
         if (!el) return;
@@ -6841,6 +6856,34 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
           modules[mod.key] = Boolean(input && input.checked);
         });
         return modules;
+      }
+
+      function renderSelectionSummary(user) {
+        if (!els.selectionBox || !els.selectionMini) return;
+        const titleEl = els.selectionBox.querySelector('strong');
+        const bodyEl = els.selectionBox.querySelector('div');
+        if (!user) {
+          if (titleEl) titleEl.textContent = 'Selecciona un usuario para cargar sus permisos';
+          if (bodyEl) bodyEl.textContent = 'Al elegir una fila, la izquierda se marca con los módulos y submódulos que ya tiene ese correo.';
+          els.selectionMini.innerHTML = '';
+          return;
+        }
+        if (titleEl) titleEl.textContent = 'Permisos cargados de ' + (user.email || '');
+        if (bodyEl) bodyEl.textContent = 'Los módulos y submódulos de abajo ya vienen marcados. Quita o suma lo que necesites.';
+        const chips = [];
+        MODULES.forEach((mod) => {
+          if (user.modules && user.modules[mod.key]) {
+            chips.push('<span>' + esc(mod.label) + '</span>');
+          }
+        });
+        Object.keys(SUBMODULES).forEach((moduleKey) => {
+          (SUBMODULES[moduleKey] || []).forEach((item) => {
+            if (user.submodules && user.submodules[moduleKey] && user.submodules[moduleKey][item.key]) {
+              chips.push('<span>' + esc(item.label) + '</span>');
+            }
+          });
+        });
+        els.selectionMini.innerHTML = chips.length ? chips.join('') : '<span>Sin permisos marcados</span>';
       }
 
       function applyModuleState(modules) {
@@ -6876,12 +6919,14 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
 
       function resetForm() {
         editingEmail = '';
+        selectedEmail = '';
         els.formTitle.textContent = 'Agregar usuario';
         els.emailInput.value = '';
         els.nameInput.value = '';
         els.roleInput.value = 'viewer';
         applyModuleState({ simca: false, viceroy: false, usersAdmin: false });
         applySubmoduleState({});
+        renderSelectionSummary(null);
         setStatus(els.formStatus, '', '');
       }
 
@@ -6903,7 +6948,8 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
           });
           const moduleText = modules.length ? modules.join(', ') : 'Sin permisos';
           const isSelf = String(user.email || '').toLowerCase() === CURRENT_EMAIL;
-          return '<tr>' +
+          const isActive = String(user.email || '').toLowerCase() === selectedEmail;
+          return '<tr class="' + (isActive ? 'active' : '') + '" data-row="' + esc(user.email) + '">' +
             '<td><strong>' + esc(user.email) + '</strong></td>' +
             '<td>' + esc(user.name || '') + '</td>' +
             '<td><span class="badge">' + esc(user.role || 'viewer') + '</span></td>' +
@@ -6914,19 +6960,42 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
             '</div></td>' +
           '</tr>';
         }).join('');
-        els.usersTbody.querySelectorAll('[data-edit]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const email = btn.getAttribute('data-edit');
+        els.usersTbody.querySelectorAll('[data-row]').forEach((row) => {
+          row.addEventListener('click', (ev) => {
+            const interactive = ev.target && ev.target.closest ? ev.target.closest('button, a, input, label') : null;
+            if (interactive) return;
+            const email = row.getAttribute('data-row');
             const user = users.find((item) => String(item.email || '').toLowerCase() === String(email || '').toLowerCase());
             if (!user) return;
             editingEmail = String(user.email || '').toLowerCase();
+            selectedEmail = editingEmail;
             els.formTitle.textContent = 'Editar usuario';
             els.emailInput.value = user.email || '';
             els.nameInput.value = user.name || '';
             els.roleInput.value = user.role || 'viewer';
             applyModuleState(user.modules || {});
             applySubmoduleState(user.submodules || {});
+            renderSelectionSummary(user);
             setStatus(els.formStatus, 'Editando ' + user.email + '.', 'ok');
+            renderUsers();
+          });
+        });
+        els.usersTbody.querySelectorAll('[data-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const email = btn.getAttribute('data-edit');
+            const user = users.find((item) => String(item.email || '').toLowerCase() === String(email || '').toLowerCase());
+            if (!user) return;
+            editingEmail = String(user.email || '').toLowerCase();
+            selectedEmail = editingEmail;
+            els.formTitle.textContent = 'Editar usuario';
+            els.emailInput.value = user.email || '';
+            els.nameInput.value = user.name || '';
+            els.roleInput.value = user.role || 'viewer';
+            applyModuleState(user.modules || {});
+            applySubmoduleState(user.submodules || {});
+            renderSelectionSummary(user);
+            setStatus(els.formStatus, 'Editando ' + user.email + '.', 'ok');
+            renderUsers();
           });
         });
         els.usersTbody.querySelectorAll('[data-delete]').forEach((btn) => {
@@ -6952,6 +7021,15 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || 'No se pudieron cargar los usuarios');
           users = Array.isArray(data.users) ? data.users : [];
+          if (selectedEmail) {
+            const selectedUser = users.find((user) => String(user.email || '').toLowerCase() === selectedEmail);
+            if (selectedUser) {
+              renderSelectionSummary(selectedUser);
+            } else {
+              selectedEmail = '';
+              renderSelectionSummary(null);
+            }
+          }
           renderUsers();
         } catch (err) {
           setStatus(els.listStatus, err && err.message ? err.message : 'Error cargando usuarios.', 'error');
