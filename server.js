@@ -233,6 +233,16 @@ const BACKEND_SUBMODULES = {
 const VISIBLE_BACKEND_SUBMODULES = Object.fromEntries(
   Object.entries(BACKEND_SUBMODULES).filter(([moduleKey]) => moduleKey !== 'viceroyPilot')
 );
+const SIMCA_BACKEND_SUBMODULE_KEYS = ['faes', 'forms', 'roi', 'hojaReserva', 'horarios', 'financiamiento', 'tablaPagos'];
+const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'reservas', 'registros', 'tablaPagos'];
+
+function getBackendAccessScope(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return 'none';
+  if (normalized === GERENTE_EMAIL) return 'gerente';
+  if (isInternalUserEmail(normalized)) return 'simca';
+  return 'viceroy';
+}
 
 const formats = {
   '35': { name: 'FR-VEN-35 Aviso de Privacidad', file: 'format-35.html' },
@@ -2258,14 +2268,31 @@ function defaultBackendUserAccessData() {
   };
 }
 
-function normalizeBackendUserModules(rawModules) {
-  const source = rawModules && typeof rawModules === 'object' ? rawModules : {};
-  return {
-    simca: Boolean(source.simca),
-    viceroy: Boolean(source.viceroy),
-    viceroyPilot: Boolean(source.viceroyPilot),
-    usersAdmin: Boolean(source.usersAdmin)
+function normalizeBackendUserModules(rawModules, email) {
+  const scope = getBackendAccessScope(email);
+  const out = {
+    simca: false,
+    viceroy: false,
+    viceroyPilot: false,
+    usersAdmin: false
   };
+  if (scope === 'gerente') {
+    out.simca = true;
+    out.viceroy = true;
+    out.viceroyPilot = true;
+    out.usersAdmin = true;
+    return out;
+  }
+  if (scope === 'simca') {
+    out.simca = true;
+    out.viceroy = true;
+  } else if (scope === 'viceroy') {
+    out.simca = false;
+    out.viceroy = true;
+  }
+  out.viceroyPilot = false;
+  out.usersAdmin = false;
+  return out;
 }
 
 function defaultBackendSubmoduleAccess(moduleKey) {
@@ -2276,14 +2303,20 @@ function defaultBackendSubmoduleAccess(moduleKey) {
   }, {});
 }
 
-function normalizeBackendUserSubmodules(rawSubmodules) {
-  const source = rawSubmodules && typeof rawSubmodules === 'object' ? rawSubmodules : {};
+function normalizeBackendUserSubmodules(rawSubmodules, email) {
   const out = {};
+  const scope = getBackendAccessScope(email);
   Object.keys(BACKEND_SUBMODULES).forEach((moduleKey) => {
-    const moduleValue = source[moduleKey] && typeof source[moduleKey] === 'object' ? source[moduleKey] : {};
     out[moduleKey] = defaultBackendSubmoduleAccess(moduleKey);
+    const allowedKeys = scope === 'gerente'
+      ? Object.keys(out[moduleKey])
+      : (moduleKey === 'simca'
+        ? (scope === 'simca' ? SIMCA_BACKEND_SUBMODULE_KEYS : [])
+        : (moduleKey === 'viceroy'
+          ? VICEROY_BACKEND_SUBMODULE_KEYS
+          : []));
     Object.keys(out[moduleKey]).forEach((featureKey) => {
-      out[moduleKey][featureKey] = Boolean(moduleValue[featureKey]);
+      out[moduleKey][featureKey] = allowedKeys.includes(featureKey);
     });
   });
   return out;
@@ -2294,8 +2327,8 @@ function normalizeBackendUserRecord(rawUser) {
   const email = String(source.email || '').trim().toLowerCase();
   if (!email) return null;
   const now = new Date().toISOString();
-  const modules = normalizeBackendUserModules(source.modules);
-  const submodules = normalizeBackendUserSubmodules(source.submodules);
+  const modules = normalizeBackendUserModules(source.modules, email);
+  const submodules = normalizeBackendUserSubmodules(source.submodules, email);
   const isGerente = email === GERENTE_EMAIL;
   if (isGerente) {
     modules.simca = true;
@@ -2311,7 +2344,7 @@ function normalizeBackendUserRecord(rawUser) {
   const roleRaw = String(source.role || '').trim().toLowerCase();
   const role = isGerente
     ? 'admin'
-    : (['admin', 'editor', 'viewer'].includes(roleRaw) ? roleRaw : (modules.usersAdmin ? 'admin' : 'viewer'));
+    : (['admin', 'editor', 'viewer'].includes(roleRaw) ? roleRaw : 'viewer');
   return {
     email,
     name: String(source.name || '').trim() || email,
@@ -2380,7 +2413,7 @@ async function buildBackendLegacyUserSeeds() {
       submodules: normalizeBackendUserSubmodules({
         ...previous.submodules,
         ...(patch.submodules || {})
-      })
+      }, normalized)
     };
     seeds.set(normalized, next);
   };
@@ -2485,13 +2518,13 @@ function legacyModuleAccessFallback(email, moduleKey) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return false;
   if (normalized === GERENTE_EMAIL) return true;
-  if (moduleKey === 'simca' || moduleKey === 'viceroy') {
-    if (isInternalUserEmail(normalized)) return true;
-    if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
-    return false;
+  const scope = getBackendAccessScope(normalized);
+  if (scope === 'simca') {
+    return moduleKey === 'simca' || moduleKey === 'viceroy';
   }
-  if (moduleKey === 'viceroyPilot') return false;
-  if (moduleKey === 'usersAdmin') return false;
+  if (scope === 'viceroy') {
+    return moduleKey === 'viceroy';
+  }
   return false;
 }
 
@@ -2501,7 +2534,6 @@ function canAccessBackendModule(email, moduleKey) {
   if (normalized === GERENTE_EMAIL) return true;
   const user = getBackendUserRecord(normalized);
   if (user) {
-    if (user.role === 'admin') return true;
     return Boolean(user.modules && user.modules[moduleKey]);
   }
   return legacyModuleAccessFallback(normalized, moduleKey);
@@ -2517,7 +2549,6 @@ function canAccessBackendFeature(email, moduleKey, featureKey) {
   if (normalized === GERENTE_EMAIL) return true;
   const user = getBackendUserRecord(normalized);
   if (user) {
-    if (user.role === 'admin') return true;
     const moduleAllowed = Boolean(user.modules && user.modules[moduleKey]);
     if (!moduleAllowed) return false;
     const submodules = user.submodules && typeof user.submodules === 'object' ? user.submodules : null;
@@ -2529,7 +2560,19 @@ function canAccessBackendFeature(email, moduleKey, featureKey) {
   }
   const fallback = legacyModuleAccessFallback(normalized, moduleKey);
   if (!fallback) return false;
-  return true;
+  const scope = getBackendAccessScope(normalized);
+  if (scope === 'gerente') return true;
+  if (scope === 'simca') {
+    return moduleKey === 'simca'
+      ? SIMCA_BACKEND_SUBMODULE_KEYS.includes(featureKey)
+      : moduleKey === 'viceroy'
+        ? VICEROY_BACKEND_SUBMODULE_KEYS.includes(featureKey)
+        : false;
+  }
+  if (scope === 'viceroy') {
+    return moduleKey === 'viceroy' && VICEROY_BACKEND_SUBMODULE_KEYS.includes(featureKey);
+  }
+  return false;
 }
 
 function backendAllowedLoginEmails() {
@@ -6793,7 +6836,7 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
             <button class="btn primary" id="saveBtn" type="button">Guardar usuario</button>
             <button class="btn" id="resetBtn" type="button">Limpiar</button>
           </div>
-          <div class="note">Si dejas un usuario sin permisos explícitos, seguirá usando el acceso heredado solo si todavía no existe en este panel. En cuanto lo agregas aquí, este registro manda.</div>
+          <div class="note">Los correos de SIMCA reciben automáticamente SIMCA + Viceroy con sus submódulos permitidos; los correos externos solo reciben Viceroy. Al guardar, el panel ya conserva los submódulos correctamente.</div>
           <div id="formStatus" class="status"></div>
         </section>
         <section class="card">
@@ -7106,12 +7149,27 @@ app.post('/api/admin/users', requireBackendUsersAdmin, (req, res) => {
   }
   const data = readBackendUserAccessData();
   const users = Array.isArray(data.users) ? [...data.users] : [];
-  const normalizedModules = normalizeBackendUserModules(modulesRaw);
+  const normalizedModules = normalizeBackendUserModules(modulesRaw, email);
+  const normalizedSubmodules = normalizeBackendUserSubmodules(req.body && req.body.submodules && typeof req.body.submodules === 'object'
+    ? req.body.submodules
+    : {}, email);
+  const accessScope = getBackendAccessScope(email);
   if (email === GERENTE_EMAIL) {
     normalizedModules.simca = true;
     normalizedModules.viceroy = true;
     normalizedModules.viceroyPilot = true;
     normalizedModules.usersAdmin = true;
+  }
+  if (accessScope === 'simca') {
+    normalizedModules.simca = true;
+    normalizedModules.viceroy = true;
+    normalizedModules.viceroyPilot = false;
+    normalizedModules.usersAdmin = false;
+  } else if (accessScope === 'viceroy') {
+    normalizedModules.simca = false;
+    normalizedModules.viceroy = true;
+    normalizedModules.viceroyPilot = false;
+    normalizedModules.usersAdmin = false;
   }
   let idx = users.findIndex((user) => user.email === originalEmail);
   if (idx < 0) idx = users.findIndex((user) => user.email === email);
@@ -7120,6 +7178,7 @@ app.post('/api/admin/users', requireBackendUsersAdmin, (req, res) => {
     name: name || email,
     role: roleRaw,
     modules: normalizedModules,
+    submodules: normalizedSubmodules,
     createdAt: idx >= 0 && users[idx] ? users[idx].createdAt : new Date().toISOString(),
     updatedAt: new Date().toISOString()
   });
