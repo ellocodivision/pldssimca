@@ -197,6 +197,42 @@ const BACKEND_MODULES = [
     description: 'Panel para dar de alta correos y controlar acceso por módulo.'
   }
 ];
+const VISIBLE_BACKEND_MODULES = BACKEND_MODULES.filter((mod) => mod.key !== 'viceroyPilot');
+
+const BACKEND_SUBMODULES = {
+  simca: [
+    { key: 'faes', label: 'FAES' },
+    { key: 'roi', label: 'ROI' },
+    { key: 'brokers', label: 'Brokers' },
+    { key: 'presentaciones', label: 'Presentaciones' },
+    { key: 'tablaPagos', label: 'Tabla de Pagos' },
+    { key: 'hojaReserva', label: 'Hoja de Reserva' },
+    { key: 'horarios', label: 'Horarios Comerciales' },
+    { key: 'ownerServices', label: 'Owner Services' },
+    { key: 'planoVentas', label: 'Plano Ventas' },
+    { key: 'forms', label: 'Formularios PLDS' }
+  ],
+  viceroy: [
+    { key: 'inicio', label: 'Inicio' },
+    { key: 'whisperlist', label: 'Whisperlist' },
+    { key: 'registros', label: 'Registros' },
+    { key: 'tablaPagos', label: 'Tabla de Pago' },
+    { key: 'reservas', label: 'Reservas' },
+    { key: 'demanda', label: 'Demanda por Tipología' },
+    { key: 'pilotoInventario', label: 'Edición Viceroy Inventario' },
+    { key: 'pilotoPresentacion', label: 'Presentación Viceroy' }
+  ],
+  viceroyPilot: [
+    { key: 'inventario', label: 'Edición inventario' },
+    { key: 'presentacion', label: 'Presentación' }
+  ],
+  usersAdmin: [
+    { key: 'access', label: 'Panel de usuarios' }
+  ]
+};
+const VISIBLE_BACKEND_SUBMODULES = Object.fromEntries(
+  Object.entries(BACKEND_SUBMODULES).filter(([moduleKey]) => moduleKey !== 'viceroyPilot')
+);
 
 const formats = {
   '35': { name: 'FR-VEN-35 Aviso de Privacidad', file: 'format-35.html' },
@@ -422,6 +458,24 @@ function requireBackendUsersAdmin(req, res, next) {
   return res.redirect('/');
 }
 
+function requireBackendFeature(moduleKey, featureKey) {
+  return function (req, res, next) {
+    if (LOCAL_NO_AUTH) return next();
+    if (!(req.isAuthenticated && req.isAuthenticated())) {
+      if (String(req.path || '').startsWith('/api/')) {
+        return res.status(401).json({ error: 'No autenticado' });
+      }
+      return res.redirect('/login');
+    }
+    const email = String(req.user && req.user.email || '').trim().toLowerCase();
+    if (canAccessBackendFeature(email, moduleKey, featureKey)) return next();
+    if (String(req.path || '').startsWith('/api/')) {
+      return res.status(403).json({ error: 'No tienes permisos para este submódulo' });
+    }
+    return res.redirect('/');
+  };
+}
+
 function canManageViceroyReservations(email) {
   const normalized = String(email || '').trim().toLowerCase();
   return Boolean(
@@ -434,7 +488,7 @@ function requireViceroyPresentAccess(req, res, next) {
   if (LOCAL_NO_AUTH) return next();
   if (req.isAuthenticated && req.isAuthenticated()) {
     const email = String(req.user && req.user.email || '').trim().toLowerCase();
-    if (canAccessBackendModule(email, 'viceroyPilot')) return next();
+    if (canAccessBackendFeature(email, 'viceroy', 'pilotoPresentacion')) return next();
   }
   if (!VICEROY_PRESENT_TOKEN) return next();
   const token = String(req.query && req.query.token || '').trim();
@@ -2191,6 +2245,12 @@ function defaultBackendUserAccessData() {
           viceroyPilot: true,
           usersAdmin: true
         },
+        submodules: {
+          simca: Object.fromEntries(BACKEND_SUBMODULES.simca.map((item) => [item.key, true])),
+          viceroy: Object.fromEntries(BACKEND_SUBMODULES.viceroy.map((item) => [item.key, true])),
+          viceroyPilot: Object.fromEntries(BACKEND_SUBMODULES.viceroyPilot.map((item) => [item.key, true])),
+          usersAdmin: { access: true }
+        },
         createdAt: now,
         updatedAt: now
       }
@@ -2208,18 +2268,45 @@ function normalizeBackendUserModules(rawModules) {
   };
 }
 
+function defaultBackendSubmoduleAccess(moduleKey) {
+  const list = Array.isArray(BACKEND_SUBMODULES[moduleKey]) ? BACKEND_SUBMODULES[moduleKey] : [];
+  return list.reduce((acc, item) => {
+    acc[item.key] = false;
+    return acc;
+  }, {});
+}
+
+function normalizeBackendUserSubmodules(rawSubmodules) {
+  const source = rawSubmodules && typeof rawSubmodules === 'object' ? rawSubmodules : {};
+  const out = {};
+  Object.keys(BACKEND_SUBMODULES).forEach((moduleKey) => {
+    const moduleValue = source[moduleKey] && typeof source[moduleKey] === 'object' ? source[moduleKey] : {};
+    out[moduleKey] = defaultBackendSubmoduleAccess(moduleKey);
+    Object.keys(out[moduleKey]).forEach((featureKey) => {
+      out[moduleKey][featureKey] = Boolean(moduleValue[featureKey]);
+    });
+  });
+  return out;
+}
+
 function normalizeBackendUserRecord(rawUser) {
   const source = rawUser && typeof rawUser === 'object' ? rawUser : {};
   const email = String(source.email || '').trim().toLowerCase();
   if (!email) return null;
   const now = new Date().toISOString();
   const modules = normalizeBackendUserModules(source.modules);
+  const submodules = normalizeBackendUserSubmodules(source.submodules);
   const isGerente = email === GERENTE_EMAIL;
   if (isGerente) {
     modules.simca = true;
     modules.viceroy = true;
     modules.viceroyPilot = true;
     modules.usersAdmin = true;
+    Object.keys(submodules).forEach((moduleKey) => {
+      Object.keys(submodules[moduleKey] || {}).forEach((featureKey) => {
+        submodules[moduleKey][featureKey] = true;
+      });
+    });
   }
   const roleRaw = String(source.role || '').trim().toLowerCase();
   const role = isGerente
@@ -2230,6 +2317,7 @@ function normalizeBackendUserRecord(rawUser) {
     name: String(source.name || '').trim() || email,
     role,
     modules,
+    submodules,
     createdAt: String(source.createdAt || now).trim(),
     updatedAt: String(source.updatedAt || now).trim()
   };
@@ -2260,6 +2348,106 @@ function readBackendUserAccessData() {
     updatedAt: String(raw && raw.updatedAt || new Date().toISOString()),
     users: Array.from(byEmail.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'es', { numeric: true, sensitivity: 'base' }))
   };
+}
+
+async function buildBackendLegacyUserSeeds() {
+  const seeds = new Map();
+  const add = (email, patch = {}) => {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized) return;
+    const previous = seeds.get(normalized) || {
+      email: normalized,
+      name: normalized,
+      role: 'viewer',
+      modules: {
+        simca: false,
+        viceroy: false,
+        viceroyPilot: false,
+        usersAdmin: false
+      },
+      submodules: normalizeBackendUserSubmodules({}),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      legacySeed: true
+    };
+    const next = {
+      ...previous,
+      ...patch,
+      modules: {
+        ...previous.modules,
+        ...(patch.modules || {})
+      },
+      submodules: normalizeBackendUserSubmodules({
+        ...previous.submodules,
+        ...(patch.submodules || {})
+      })
+    };
+    seeds.set(normalized, next);
+  };
+
+  add(GERENTE_EMAIL, {
+    name: 'Martin Barroso',
+    role: 'admin',
+    modules: { simca: true, viceroy: true, viceroyPilot: true, usersAdmin: true },
+    submodules: {
+      simca: Object.fromEntries(BACKEND_SUBMODULES.simca.map((item) => [item.key, true])),
+      viceroy: Object.fromEntries(BACKEND_SUBMODULES.viceroy.map((item) => [item.key, true])),
+      viceroyPilot: Object.fromEntries(BACKEND_SUBMODULES.viceroyPilot.map((item) => [item.key, true])),
+      usersAdmin: { access: true }
+    }
+  });
+
+  for (const email of Array.from(EXTRA_ALLOWED_EMAILS || [])) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized || normalized === GERENTE_EMAIL) continue;
+    add(normalized, {
+      name: normalized,
+      role: 'viewer',
+      modules: {
+        simca: normalized.endsWith(`@${ALLOWED_DOMAIN}`) || normalized === SOLAR_MIDTOWN_EDITOR_EMAIL || normalized === CEIBA_EDITOR_EMAIL,
+        viceroy: normalized === VICEROY_RECEPTION_EMAIL || normalized.endsWith(`@${ALLOWED_DOMAIN}`),
+        viceroyPilot: false,
+        usersAdmin: false
+      }
+    });
+  }
+
+  const whisperEmails = await whisperlistAllowedEmails().catch(() => new Set());
+  whisperEmails.forEach((email) => {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized || normalized === GERENTE_EMAIL) return;
+    add(normalized, {
+      name: normalized,
+      role: 'viewer',
+      modules: { viceroy: true }
+    });
+  });
+
+  const registrosEmails = await viceroyRegistrosAllowedEmails().catch(() => new Set());
+  registrosEmails.forEach((email) => {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized || normalized === GERENTE_EMAIL) return;
+    add(normalized, {
+      name: normalized,
+      role: 'viewer',
+      modules: { viceroy: true }
+    });
+  });
+
+  return Array.from(seeds.values()).map((user) => normalizeBackendUserRecord(user)).filter(Boolean);
+}
+
+async function syncBackendUserAccessSeed() {
+  const current = readBackendUserAccessData();
+  const seeded = await buildBackendLegacyUserSeeds();
+  const byEmail = new Map();
+  seeded.forEach((user) => byEmail.set(user.email, user));
+  current.users.forEach((user) => {
+    byEmail.set(user.email, user);
+  });
+  const merged = Array.from(byEmail.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'es', { numeric: true, sensitivity: 'base' }));
+  saveBackendUserAccessData({ users: merged });
+  return merged;
 }
 
 function saveBackendUserAccessData(data) {
@@ -2297,7 +2485,11 @@ function legacyModuleAccessFallback(email, moduleKey) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return false;
   if (normalized === GERENTE_EMAIL) return true;
-  if (moduleKey === 'simca' || moduleKey === 'viceroy') return isInternalUserEmail(normalized);
+  if (moduleKey === 'simca' || moduleKey === 'viceroy') {
+    if (isInternalUserEmail(normalized)) return true;
+    if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
+    return false;
+  }
   if (moduleKey === 'viceroyPilot') return false;
   if (moduleKey === 'usersAdmin') return false;
   return false;
@@ -2317,6 +2509,27 @@ function canAccessBackendModule(email, moduleKey) {
 
 function canManageBackendUsers(email) {
   return canAccessBackendModule(email, 'usersAdmin');
+}
+
+function canAccessBackendFeature(email, moduleKey, featureKey) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === GERENTE_EMAIL) return true;
+  const user = getBackendUserRecord(normalized);
+  if (user) {
+    if (user.role === 'admin') return true;
+    const moduleAllowed = Boolean(user.modules && user.modules[moduleKey]);
+    if (!moduleAllowed) return false;
+    const submodules = user.submodules && typeof user.submodules === 'object' ? user.submodules : null;
+    const moduleSubmodules = submodules && submodules[moduleKey] && typeof submodules[moduleKey] === 'object'
+      ? submodules[moduleKey]
+      : null;
+    if (!moduleSubmodules) return moduleAllowed;
+    return Boolean(moduleSubmodules[featureKey]);
+  }
+  const fallback = legacyModuleAccessFallback(normalized, moduleKey);
+  if (!fallback) return false;
+  return true;
 }
 
 function backendAllowedLoginEmails() {
@@ -5789,49 +6002,49 @@ function renderSimcaHome(req, res, options) {
   const isGerente = currentEmail === GERENTE_EMAIL;
   const titleText = options && options.titleText ? String(options.titleText) : 'SIMCA';
   const subtitleText = options && options.subtitleText ? String(options.subtitleText) : 'Módulos internos de SIMCA.';
-  const ownerServicesCard = isGerente ? `
+  const ownerServicesCard = canAccessBackendFeature(currentEmail, 'simca', 'ownerServices') ? `
         <a class="card" href="/owner-services">
           <span class="tag">Módulo</span>
           <h2 class="name">Owner Services</h2>
           <p class="desc">Prioriza entregas y coordina obra, jurídico y finanzas.</p>
         </a>` : '';
-  const gerenteCard = isGerente ? `
+  const gerenteCard = canAccessBackendFeature(currentEmail, 'simca', 'planoVentas') ? `
         <a class="card" href="/gerente-ventas">
           <span class="tag">Módulo</span>
           <h2 class="name">Gerente Ventas</h2>
           <p class="desc">Acceso directo a herramientas de planos, edición y descarga PDF.</p>
         </a>` : '';
-  const presentacionesCard = `
+  const presentacionesCard = canAccessBackendFeature(currentEmail, 'simca', 'presentaciones') ? `
         <a class="card" href="/presentaciones">
           <span class="tag">Módulo</span>
           <h2 class="name">Presentaciones</h2>
           <p class="desc">Generación de presentaciones por proyecto con unidades seleccionadas.</p>
-        </a>`;
-  const tablaPagosCard = `
+        </a>` : '';
+  const tablaPagosCard = canAccessBackendFeature(currentEmail, 'simca', 'tablaPagos') ? `
         <a class="card" href="/tabla-pagos">
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pagos</h2>
           <p class="desc">Calcula enganche, pagos semestrales y balance de entrega por esquema.${isGerente ? ' Incluye acceso al editor PDF dentro del módulo.' : ''}</p>
-        </a>`;
-  const financiamientoCard = `
+        </a>` : '';
+  const financiamientoCard = canAccessBackendFeature(currentEmail, 'simca', 'financiamiento') ? `
         <a class="card" href="/financiamiento-simca">
           <span class="tag">Módulo</span>
           <h2 class="name">Financiamiento SIMCA</h2>
           <p class="desc">Cotiza mensualidades y tabla de amortización con balloons por unidad.${isGerente ? ' Incluye acceso al editor PDF dentro del módulo.' : ''}</p>
-        </a>`;
-  const horariosCard = `
+        </a>` : '';
+  const horariosCard = canAccessBackendFeature(currentEmail, 'simca', 'horarios') ? `
         <a class="card" href="/horarios-simca">
           <span class="tag">Módulo</span>
           <h2 class="name">Horarios Comerciales</h2>
           <p class="desc">Consulta la semana del equipo con rotación de Gran Tulum, guardias y turnos justos.</p>
-        </a>`;
-  const hojaReservaCard = `
+        </a>` : '';
+  const hojaReservaCard = canAccessBackendFeature(currentEmail, 'simca', 'hojaReserva') ? `
         <a class="card" href="/hoja-reserva-simca">
           <span class="tag">Módulo</span>
           <h2 class="name">Hoja de Reserva</h2>
           <p class="desc">Captura los datos de reserva y descarga el PDF exacto con layout SIMCA.${isGerente ? ' Incluye acceso al editor PDF dentro del módulo.' : ''}</p>
-        </a>`;
-  const brokersCard = isGerente ? `
+        </a>` : '';
+  const brokersCard = canAccessBackendFeature(currentEmail, 'simca', 'brokers') ? `
         <a class="card" href="/brokers.simca.mx">
           <span class="tag">Módulo</span>
           <h2 class="name">Brokers.simca.mx</h2>
@@ -6013,7 +6226,6 @@ app.get('/', requireAuth, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').toLowerCase();
   const canSimca = canAccessBackendModule(currentEmail, 'simca');
   const canViceroy = canAccessBackendModule(currentEmail, 'viceroy');
-  const canViceroyPilot = canAccessBackendModule(currentEmail, 'viceroyPilot');
   const canUsersAdmin = canManageBackendUsers(currentEmail);
   const cards = [];
   if (canSimca) {
@@ -6030,14 +6242,6 @@ app.get('/', requireAuth, (req, res) => {
           <span class="tag">Módulo</span>
           <h2 class="name">VICEROY</h2>
           <p class="desc">Acceso a Whisperlist, Registros, Tabla de Pago Viceroy, editor PDF y módulos internos de Viceroy.</p>
-        </a>`);
-  }
-  if (canViceroyPilot) {
-    cards.push(`
-        <a class="card" href="/viceroy-piloto">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Piloto</h2>
-          <p class="desc">Inventario, presentación comercial y exportaciones de planos del piloto.</p>
         </a>`);
   }
   if (canUsersAdmin) {
@@ -6102,59 +6306,59 @@ app.get('/simca', requireBackendModule('simca'), (req, res) => {
 });
 
 app.use('/legacy', requireBackendModule('simca'));
-app.use('/generador-faes', requireBackendModule('simca'));
-app.use('/plds', requireBackendModule('simca'));
-app.use('/generador-roi', requireBackendModule('simca'));
-app.use('/financiamiento-simca', requireBackendModule('simca'));
-app.use('/horarios-simca', requireBackendModule('simca'));
-app.use('/api/horarios-simca', requireBackendModule('simca'));
-app.use('/horarios-viceroy', requireBackendModule('viceroy'));
-app.use('/api/horarios-viceroy', requireBackendModule('viceroy'));
-app.use('/tabla-pagos', requireBackendModule('simca'));
-app.use('/hoja-reserva-simca', requireBackendModule('simca'));
-app.use('/form', requireBackendModule('simca'));
-app.use('/form-nacional', requireBackendModule('simca'));
-app.use('/form-nacional-moral', requireBackendModule('simca'));
-app.use('/form-extranjera-moral', requireBackendModule('simca'));
-app.use('/format', requireBackendModule('simca'));
-app.use('/format-nacional', requireBackendModule('simca'));
-app.use('/format-nacional-moral', requireBackendModule('simca'));
-app.use('/format-extranjera-moral', requireBackendModule('simca'));
-app.use('/submissions', requireBackendModule('simca'));
-app.use('/api/plds', requireBackendModule('simca'));
-app.use('/api/roi', requireBackendModule('simca'));
-app.use('/api/tabla-pagos', requireBackendModule('simca'));
-app.use('/api/hoja-reserva-simca', requireBackendModule('simca'));
+app.use('/generador-faes', requireBackendFeature('simca', 'faes'));
+app.use('/plds', requireBackendFeature('simca', 'forms'));
+app.use('/generador-roi', requireBackendFeature('simca', 'roi'));
+app.use('/financiamiento-simca', requireBackendFeature('simca', 'financiamiento'));
+app.use('/horarios-simca', requireBackendFeature('simca', 'horarios'));
+app.use('/api/horarios-simca', requireBackendFeature('simca', 'horarios'));
+app.use('/horarios-viceroy', requireBackendFeature('viceroy', 'reservas'));
+app.use('/api/horarios-viceroy', requireBackendFeature('viceroy', 'reservas'));
+app.use('/tabla-pagos', requireBackendFeature('simca', 'tablaPagos'));
+app.use('/hoja-reserva-simca', requireBackendFeature('simca', 'hojaReserva'));
+app.use('/form', requireBackendFeature('simca', 'forms'));
+app.use('/form-nacional', requireBackendFeature('simca', 'forms'));
+app.use('/form-nacional-moral', requireBackendFeature('simca', 'forms'));
+app.use('/form-extranjera-moral', requireBackendFeature('simca', 'forms'));
+app.use('/format', requireBackendFeature('simca', 'forms'));
+app.use('/format-nacional', requireBackendFeature('simca', 'forms'));
+app.use('/format-nacional-moral', requireBackendFeature('simca', 'forms'));
+app.use('/format-extranjera-moral', requireBackendFeature('simca', 'forms'));
+app.use('/submissions', requireBackendFeature('simca', 'forms'));
+app.use('/api/plds', requireBackendFeature('simca', 'forms'));
+app.use('/api/roi', requireBackendFeature('simca', 'roi'));
+app.use('/api/tabla-pagos', requireBackendFeature('simca', 'tablaPagos'));
+app.use('/api/hoja-reserva-simca', requireBackendFeature('simca', 'hojaReserva'));
 app.use('/brokers.simca.mx', requireGerente);
 app.use('/api/brokers-simca-mx', requireGerente);
-app.use('/presentaciones', requireBackendModule('simca'));
-app.use('/api/presentaciones', requireBackendModule('simca'));
+app.use('/presentaciones', requireBackendFeature('simca', 'presentaciones'));
+app.use('/api/presentaciones', requireBackendFeature('simca', 'presentaciones'));
 app.use('/viceroy', requireBackendModule('viceroy'));
-app.use('/viceroy/reservas', requireBackendModule('viceroy'));
-app.use('/api/viceroy/reservas', requireBackendModule('viceroy'));
-app.use('/viceroy/tipologias-demanda', requireBackendModule('viceroy'));
-app.use('/api/viceroy/tipologias-demanda', requireBackendModule('viceroy'));
-app.use('/viceroy/inicio', requireBackendModule('viceroy'));
-app.use('/viceroy-piloto/', requireBackendModule('viceroyPilot'));
+app.use('/viceroy/reservas', requireBackendFeature('viceroy', 'reservas'));
+app.use('/api/viceroy/reservas', requireBackendFeature('viceroy', 'reservas'));
+app.use('/viceroy/tipologias-demanda', requireBackendFeature('viceroy', 'demanda'));
+app.use('/api/viceroy/tipologias-demanda', requireBackendFeature('viceroy', 'demanda'));
+app.use('/viceroy/inicio', requireBackendFeature('viceroy', 'inicio'));
+app.use('/viceroy-piloto/', requireBackendFeature('viceroy', 'pilotoInventario'));
 app.use('/api/viceroy-piloto', (req, res, next) => {
   if (String(req.path || '').startsWith('/public-data')) {
     return requireViceroyPresentAccess(req, res, next);
   }
-  return requireBackendModule('viceroyPilot')(req, res, next);
+  return requireBackendFeature('viceroy', 'pilotoInventario')(req, res, next);
 });
-app.use('/viceroy/registros', requireBackendModule('viceroy'));
-app.use('/api/viceroy/registros', requireBackendModule('viceroy'));
-app.use('/whisperlist/qr', requireBackendModule('viceroy'));
-app.use('/whisperlist', requireBackendModule('viceroy'));
-app.use('/api/whisperlist', requireBackendModule('viceroy'));
-app.use('/owner-services', requireBackendModule('simca'));
-app.use('/api/owner-services', requireBackendModule('simca'));
+app.use('/viceroy/registros', requireBackendFeature('viceroy', 'registros'));
+app.use('/api/viceroy/registros', requireBackendFeature('viceroy', 'registros'));
+app.use('/whisperlist/qr', requireBackendFeature('viceroy', 'whisperlist'));
+app.use('/whisperlist', requireBackendFeature('viceroy', 'whisperlist'));
+app.use('/api/whisperlist', requireBackendFeature('viceroy', 'whisperlist'));
+app.use('/owner-services', requireBackendFeature('simca', 'ownerServices'));
+app.use('/api/owner-services', requireBackendFeature('simca', 'ownerServices'));
 
-app.use('/gerente-ventas', requireBackendModule('simca'));
-app.use('/plano-interactivo', requireBackendModule('simca'));
-app.use('/plano-ventas', requireBackendModule('simca'));
-app.use('/plano-descargar', requireBackendModule('simca'));
-app.use('/api/plano-ventas', requireBackendModule('simca'));
+app.use('/gerente-ventas', requireBackendFeature('simca', 'planoVentas'));
+app.use('/plano-interactivo', requireBackendFeature('simca', 'planoVentas'));
+app.use('/plano-ventas', requireBackendFeature('simca', 'planoVentas'));
+app.use('/plano-descargar', requireBackendFeature('simca', 'planoVentas'));
+app.use('/api/plano-ventas', requireBackendFeature('simca', 'planoVentas'));
 
 app.get('/legacy/formatos', (req, res) => {
   const items = Object.entries(formats)
@@ -6440,6 +6644,13 @@ app.post('/api/financiamiento-simca/render-pdf', async (req, res) => {
 
 app.get('/api/session-info', requireAuth, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const submodules = {};
+  Object.keys(BACKEND_SUBMODULES).forEach((moduleKey) => {
+    submodules[moduleKey] = {};
+    (BACKEND_SUBMODULES[moduleKey] || []).forEach((item) => {
+      submodules[moduleKey][item.key] = canAccessBackendFeature(currentEmail, moduleKey, item.key);
+    });
+  });
   return res.json({
     ok: true,
     email: currentEmail,
@@ -6451,18 +6662,33 @@ app.get('/api/session-info', requireAuth, (req, res) => {
       viceroy: canAccessBackendModule(currentEmail, 'viceroy'),
       viceroyPilot: canAccessBackendModule(currentEmail, 'viceroyPilot'),
       usersAdmin: canAccessBackendModule(currentEmail, 'usersAdmin')
-    }
+    },
+    submodules
   });
 });
 
 app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const moduleRows = BACKEND_MODULES.map((mod) => `
+  const moduleRows = VISIBLE_BACKEND_MODULES.map((mod) => `
       <label class="module-chip">
         <input type="checkbox" name="module_${escapeHtml(mod.key)}" value="1">
         <span><strong>${escapeHtml(mod.label)}</strong><small>${escapeHtml(mod.description)}</small></span>
       </label>
   `).join('');
+  const submoduleRows = Object.entries(VISIBLE_BACKEND_SUBMODULES).map(([moduleKey, items]) => {
+    const chips = (Array.isArray(items) ? items : []).map((item) => `
+        <label class="submodule-chip">
+          <input type="checkbox" name="submodule_${escapeHtml(moduleKey)}_${escapeHtml(item.key)}" value="1">
+          <span>${escapeHtml(item.label)}</span>
+        </label>
+    `).join('');
+    return `
+      <div class="subgroup">
+        <h3>${escapeHtml((VISIBLE_BACKEND_MODULES.find((m) => m.key === moduleKey) || { label: moduleKey }).label)} · Submódulos</h3>
+        <div class="subgrid">${chips}</div>
+      </div>
+    `;
+  }).join('');
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -6490,6 +6716,13 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
     .module-chip span{display:block}
     .module-chip strong{display:block;font-size:14px}
     .module-chip small{display:block;color:var(--muted);line-height:1.35;margin-top:2px}
+    .submodules{display:grid;gap:12px;margin:14px 0 16px}
+    .subgroup{padding:12px;border:1px solid #ddd6c4;border-radius:16px;background:#fcfaf3}
+    .subgroup h3{margin:0 0 10px;font-size:14px}
+    .subgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .submodule-chip{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid #e6dfcf;border-radius:12px;background:#fff}
+    .submodule-chip input{margin-top:2px}
+    .submodule-chip span{font-size:13px;line-height:1.3}
     .actions{display:flex;gap:10px;flex-wrap:wrap}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
     .btn.primary{background:var(--accent)}
@@ -6541,6 +6774,9 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
           <div class="modules" id="modulesBox">
             ${moduleRows}
           </div>
+          <div class="submodules" id="submodulesBox">
+            ${submoduleRows}
+          </div>
           <div class="actions">
             <button class="btn primary" id="saveBtn" type="button">Guardar usuario</button>
             <button class="btn" id="resetBtn" type="button">Limpiar</button>
@@ -6572,7 +6808,8 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
       </div>
     </div>
     <script>
-      const MODULES = ${JSON.stringify(BACKEND_MODULES)};
+      const MODULES = ${JSON.stringify(VISIBLE_BACKEND_MODULES)};
+      const SUBMODULES = ${JSON.stringify(VISIBLE_BACKEND_SUBMODULES)};
       const CURRENT_EMAIL = ${JSON.stringify(currentEmail)};
       const els = {
         formTitle: document.getElementById('formTitle'),
@@ -6580,6 +6817,7 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
         nameInput: document.getElementById('nameInput'),
         roleInput: document.getElementById('roleInput'),
         modulesBox: document.getElementById('modulesBox'),
+        submodulesBox: document.getElementById('submodulesBox'),
         saveBtn: document.getElementById('saveBtn'),
         resetBtn: document.getElementById('resetBtn'),
         formStatus: document.getElementById('formStatus'),
@@ -6613,13 +6851,37 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
         });
       }
 
+      function currentSubmoduleState() {
+        const submodules = {};
+        Object.keys(SUBMODULES).forEach((moduleKey) => {
+          submodules[moduleKey] = {};
+          (SUBMODULES[moduleKey] || []).forEach((item) => {
+            const selector = 'input[name="submodule_' + moduleKey + '_' + item.key + '"]';
+            const input = els.submodulesBox.querySelector(selector);
+            submodules[moduleKey][item.key] = Boolean(input && input.checked);
+          });
+        });
+        return submodules;
+      }
+
+      function applySubmoduleState(submodules) {
+        Object.keys(SUBMODULES).forEach((moduleKey) => {
+          (SUBMODULES[moduleKey] || []).forEach((item) => {
+            const selector = 'input[name="submodule_' + moduleKey + '_' + item.key + '"]';
+            const input = els.submodulesBox.querySelector(selector);
+            if (input) input.checked = Boolean(submodules && submodules[moduleKey] && submodules[moduleKey][item.key]);
+          });
+        });
+      }
+
       function resetForm() {
         editingEmail = '';
         els.formTitle.textContent = 'Agregar usuario';
         els.emailInput.value = '';
         els.nameInput.value = '';
         els.roleInput.value = 'viewer';
-        applyModuleState({ simca: false, viceroy: false, viceroyPilot: false, usersAdmin: false });
+        applyModuleState({ simca: false, viceroy: false, usersAdmin: false });
+        applySubmoduleState({});
         setStatus(els.formStatus, '', '');
       }
 
@@ -6663,6 +6925,7 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
             els.nameInput.value = user.name || '';
             els.roleInput.value = user.role || 'viewer';
             applyModuleState(user.modules || {});
+            applySubmoduleState(user.submodules || {});
             setStatus(els.formStatus, 'Editando ' + user.email + '.', 'ok');
           });
         });
@@ -6714,6 +6977,7 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
               name,
               role,
               modules: currentModuleState(),
+              submodules: currentSubmoduleState(),
               originalEmail: editingEmail || email
             })
           });
@@ -6737,14 +7001,15 @@ app.get('/usuarios', requireBackendUsersAdmin, (req, res) => {
   </body></html>`);
 });
 
-app.get('/api/admin/users', requireBackendUsersAdmin, (req, res) => {
+app.get('/api/admin/users', requireBackendUsersAdmin, async (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  await syncBackendUserAccessSeed().catch(() => null);
   const data = readBackendUserAccessData();
   return res.json({
     ok: true,
     currentUser: currentEmail,
     users: data.users,
-    modules: BACKEND_MODULES,
+    modules: VISIBLE_BACKEND_MODULES,
     updatedAt: data.updatedAt
   });
 });
@@ -8195,31 +8460,60 @@ app.get('/api/presentaciones/solar-midtown/download.pdf', async (req, res) => {
 
 app.get('/viceroy', (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const showMartinCards = currentEmail === GERENTE_EMAIL;
-  const tablaPagosViceroyCard = `
+  const tablaPagosViceroyCard = canAccessBackendFeature(currentEmail, 'viceroy', 'tablaPagos') ? `
         <a class="card" href="/viceroy/tabla-pagos">
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pago Viceroy</h2>
           <p class="desc">Versión comercial Viceroy basada en acuerdos de RELATED.</p>
         </a>
-        ${showMartinCards ? `
+        ${currentEmail === GERENTE_EMAIL ? `
         <a class="card" href="/viceroy/tabla-pagos/editor">
           <span class="tag">Editor</span>
           <h2 class="name">Editor PDF Viceroy</h2>
           <p class="desc">Ajusta márgenes, escalas, líneas y orden visual de la hoja final.</p>
-        </a>` : ''}`;
-  const inventoryCard = showMartinCards ? `
+        </a>` : ''}` : '';
+  const inicioCard = canAccessBackendFeature(currentEmail, 'viceroy', 'inicio') ? `
+        <a class="card" href="/viceroy/inicio">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Inicio</h2>
+          <p class="desc">Acceso al módulo de presentación comercial.</p>
+        </a>` : '';
+  const whisperlistCard = canAccessBackendFeature(currentEmail, 'viceroy', 'whisperlist') ? `
+        <a class="card" href="/whisperlist">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Whisperlist</h2>
+          <p class="desc">Módulo original de Whisperlist.</p>
+        </a>` : '';
+  const demandaCard = canAccessBackendFeature(currentEmail, 'viceroy', 'demanda') ? `
+        <a class="card" href="/viceroy/tipologias-demanda">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Demanda por Tipología</h2>
+          <p class="desc">Reporte comercial de absorción e interés por tipología con base en selecciones reales.</p>
+        </a>` : '';
+  const reservasCard = canAccessBackendFeature(currentEmail, 'viceroy', 'reservas') ? `
+        <a class="card" href="/viceroy/reservas">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Reserva de oficinas</h2>
+          <p class="desc">Reserva sala grande o sala chica por horario.</p>
+        </a>` : '';
+  const horariosCard = canAccessBackendFeature(currentEmail, 'viceroy', 'reservas') ? `
+        <a class="card" href="/horarios-viceroy">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Horarios Viceroy</h2>
+          <p class="desc">Consulta la semana comercial del equipo Viceroy.</p>
+        </a>` : '';
+  const registrosCard = canAccessBackendFeature(currentEmail, 'viceroy', 'registros') ? `
+        <a class="card" href="/viceroy/registros">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Viceroy Registros</h2>
+          <p class="desc">Duplicado de Whisperlist para operación separada.</p>
+        </a>` : '';
+  const pilotoCard = canAccessBackendFeature(currentEmail, 'viceroyPilot', 'inventario') ? `
         <a class="card" href="/viceroy-piloto">
           <span class="tag">Módulo</span>
           <h2 class="name">Edición Viceroy Inventario</h2>
           <p class="desc">Flujo visual de tipologías e inventario por piso.</p>
         </a>` : '';
-  const inicioCard = `
-        <a class="card" href="/viceroy/inicio">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Inicio</h2>
-          <p class="desc">Acceso al módulo de presentación comercial.</p>
-        </a>`;
   res.send(`<!doctype html>
   <html lang="es"><head><meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8251,33 +8545,13 @@ app.get('/viceroy', (req, res) => {
       </div>
       <div class="grid">
         ${inicioCard}
-        <a class="card" href="/whisperlist">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Whisperlist</h2>
-          <p class="desc">Módulo original de Whisperlist.</p>
-        </a>
-        <a class="card" href="/viceroy/tipologias-demanda">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Demanda por Tipología</h2>
-          <p class="desc">Reporte comercial de absorción e interés por tipología con base en selecciones reales.</p>
-        </a>
-        <a class="card" href="/viceroy/reservas">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Reserva de oficinas</h2>
-          <p class="desc">Reserva sala grande o sala chica por horario.</p>
-        </a>
-        <a class="card" href="/horarios-viceroy">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Horarios Viceroy</h2>
-          <p class="desc">Consulta la semana comercial del equipo Viceroy.</p>
-        </a>
-        <a class="card" href="/viceroy/registros">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Registros</h2>
-          <p class="desc">Duplicado de Whisperlist para operación separada.</p>
-        </a>
+        ${whisperlistCard}
+        ${demandaCard}
+        ${reservasCard}
+        ${horariosCard}
+        ${registrosCard}
         ${tablaPagosViceroyCard}
-        ${inventoryCard}
+        ${pilotoCard}
       </div>
     </div>
   </body></html>`);
@@ -9523,7 +9797,7 @@ app.post('/api/viceroy-piloto/export-floors-pdf', requireViceroyPresentAccess, a
   }
 });
 
-app.get('/viceroy-piloto', requireBackendModule('viceroyPilot'), (req, res) => {
+app.get('/viceroy-piloto', requireBackendFeature('viceroy', 'pilotoInventario'), (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-piloto.html'));
 });
 
@@ -10959,6 +11233,12 @@ async function startServer() {
     .catch((err) => {
       log(`Fallo inicializando Whisperlist storage: ${err && err.stack ? err.stack : err}`);
     });
+  try {
+    const users = await syncBackendUserAccessSeed();
+    log(`Accesos de backend sincronizados: ${Array.isArray(users) ? users.length : 0} usuarios`);
+  } catch (err) {
+    log(`Fallo sincronizando accesos de backend: ${err && err.stack ? err.stack : err}`);
+  }
   const server = app.listen(PORT, HOST, () => {
     log(`Servidor listo en http://${HOST}:${PORT}`);
     startViceroyDailyReservationsScheduler();
