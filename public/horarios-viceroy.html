@@ -512,7 +512,7 @@
   const FIXED_SCHEDULES = {
     karenka: { type: 'fixed0916', offDayIndex: 5 },
     laura: { type: 'fixed1220', offDayIndex: 6 },
-    santiago: { type: 'fixed0917', offDayIndex: 5 }
+    santiago: { type: 'fixed0917', offDayIndex: 6 }
   };
 
   const boardEl = document.getElementById('board');
@@ -594,7 +594,7 @@
     if (advisor.kind === 'fixed') {
       if (advisor.id === 'karenka') return 'Teórico: 9 a 4 · Descanso sáb';
       if (advisor.id === 'laura') return 'Teórico: 12 a 20';
-      if (advisor.id === 'santiago') return 'Teórico: 9 a 5 · Descanso sáb';
+      if (advisor.id === 'santiago') return 'Teórico: 9 a 5 · Descanso dom';
       return 'Teórico: Fijo';
     }
     const role = getRoleForAdvisor(advisor, weekIndex);
@@ -669,6 +669,12 @@
     sim.days.forEach((day) => {
       const dayKey = dateKey(day.date);
       ADVISORS.forEach((advisor) => {
+        if (advisor.id === 'santiago') {
+          day.cells[advisor.id] = day.date.getDay() === 0
+            ? buildCell('free', 'Descanso fijo', false)
+            : buildCell('fixed0917', 'Horario fijo', false);
+          return;
+        }
         const override = lookup.get(`${dayKey}__${advisor.id}`);
         if (override) {
           day.cells[advisor.id] = buildCell(override.type, 'Ajuste manual', true);
