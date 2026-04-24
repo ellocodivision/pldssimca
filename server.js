@@ -208,6 +208,7 @@ const BACKEND_SUBMODULES = {
     { key: 'tablaPagos', label: 'Tabla de Pagos' },
     { key: 'hojaReserva', label: 'Hoja de Reserva' },
     { key: 'horarios', label: 'Horarios Comerciales' },
+    { key: 'financiamiento', label: 'Financiamiento SIMCA' },
     { key: 'ownerServices', label: 'Owner Services' },
     { key: 'planoVentas', label: 'Plano Ventas' },
     { key: 'forms', label: 'Formularios PLDS' }
@@ -218,6 +219,7 @@ const BACKEND_SUBMODULES = {
     { key: 'registros', label: 'Registros' },
     { key: 'tablaPagos', label: 'Tabla de Pago' },
     { key: 'reservas', label: 'Reservas' },
+    { key: 'horarios', label: 'Horarios Viceroy' },
     { key: 'demanda', label: 'Demanda por Tipología' },
     { key: 'pilotoInventario', label: 'Edición Viceroy Inventario' },
     { key: 'pilotoPresentacion', label: 'Presentación Viceroy' }
@@ -234,7 +236,7 @@ const VISIBLE_BACKEND_SUBMODULES = Object.fromEntries(
   Object.entries(BACKEND_SUBMODULES).filter(([moduleKey]) => moduleKey !== 'viceroyPilot')
 );
 const SIMCA_BACKEND_SUBMODULE_KEYS = ['faes', 'forms', 'roi', 'hojaReserva', 'horarios', 'financiamiento', 'tablaPagos'];
-const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'reservas', 'registros', 'tablaPagos'];
+const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'reservas', 'horarios', 'registros', 'tablaPagos'];
 
 function getBackendAccessScope(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -2304,9 +2306,11 @@ function defaultBackendSubmoduleAccess(moduleKey) {
 }
 
 function normalizeBackendUserSubmodules(rawSubmodules, email) {
+  const source = rawSubmodules && typeof rawSubmodules === 'object' ? rawSubmodules : {};
   const out = {};
   const scope = getBackendAccessScope(email);
   Object.keys(BACKEND_SUBMODULES).forEach((moduleKey) => {
+    const moduleValue = source[moduleKey] && typeof source[moduleKey] === 'object' ? source[moduleKey] : {};
     out[moduleKey] = defaultBackendSubmoduleAccess(moduleKey);
     const allowedKeys = scope === 'gerente'
       ? Object.keys(out[moduleKey])
@@ -2316,7 +2320,7 @@ function normalizeBackendUserSubmodules(rawSubmodules, email) {
           ? VICEROY_BACKEND_SUBMODULE_KEYS
           : []));
     Object.keys(out[moduleKey]).forEach((featureKey) => {
-      out[moduleKey][featureKey] = allowedKeys.includes(featureKey);
+      out[moduleKey][featureKey] = allowedKeys.includes(featureKey) && Boolean(moduleValue[featureKey]);
     });
   });
   return out;
@@ -6355,8 +6359,8 @@ app.use('/generador-roi', requireBackendFeature('simca', 'roi'));
 app.use('/financiamiento-simca', requireBackendFeature('simca', 'financiamiento'));
 app.use('/horarios-simca', requireBackendFeature('simca', 'horarios'));
 app.use('/api/horarios-simca', requireBackendFeature('simca', 'horarios'));
-app.use('/horarios-viceroy', requireBackendFeature('viceroy', 'reservas'));
-app.use('/api/horarios-viceroy', requireBackendFeature('viceroy', 'reservas'));
+app.use('/horarios-viceroy', requireBackendFeature('viceroy', 'horarios'));
+app.use('/api/horarios-viceroy', requireBackendFeature('viceroy', 'horarios'));
 app.use('/tabla-pagos', requireBackendFeature('simca', 'tablaPagos'));
 app.use('/hoja-reserva-simca', requireBackendFeature('simca', 'hojaReserva'));
 app.use('/form', requireBackendFeature('simca', 'forms'));
@@ -8633,7 +8637,7 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Reserva de oficinas</h2>
           <p class="desc">Reserva sala grande o sala chica por horario.</p>
         </a>` : '';
-  const horariosCard = canAccessBackendFeature(currentEmail, 'viceroy', 'reservas') ? `
+  const horariosCard = canAccessBackendFeature(currentEmail, 'viceroy', 'horarios') ? `
         <a class="card" href="/horarios-viceroy">
           <span class="tag">Módulo</span>
           <h2 class="name">Horarios Viceroy</h2>
