@@ -2936,6 +2936,32 @@ function getViceroyTipologiaThumbUrl(tipologiaId) {
   return `/api/viceroy-piloto/tipologia-image?id=${encodeURIComponent(id)}`;
 }
 
+const VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING = new Set();
+let VICEROY_TIPOLOGIA_THUMB_WARMUP_CHAIN = Promise.resolve();
+
+function scheduleViceroyTipologiaThumbWarmup(tipologiaId, cropInput, planLinkInput) {
+  const id = String(tipologiaId || '').trim();
+  if (!id) return;
+  const key = getViceroyTipologiaThumbKey(id, cropInput, planLinkInput);
+  if (VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING.has(key)) return;
+  VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING.add(key);
+  VICEROY_TIPOLOGIA_THUMB_WARMUP_CHAIN = VICEROY_TIPOLOGIA_THUMB_WARMUP_CHAIN
+    .catch(() => {})
+    .then(async () => {
+      try {
+        const crop = normalizeViceroyTipologiaCrop(cropInput);
+        const planLink = String(planLinkInput || '').trim() || getViceroyTipologiaSourcePlanLink(id);
+        if (!planLink) return;
+        const filePath = getViceroyTipologiaThumbFilePath(id, crop, planLink);
+        if (fs.existsSync(filePath)) return;
+        await renderViceroyTipologiaThumbFile(id, crop, planLink);
+      } catch (_) {
+      } finally {
+        VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING.delete(key);
+      }
+    });
+}
+
 function readCurrentViceroyInventoryRows() {
   const candidates = resolveInventoryCandidatesByDevSlug('viceroy-piloto');
   for (const candidate of candidates) {
@@ -10351,6 +10377,17 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     inventoryRows = cached.rows;
     inventoryFileName = cached.fileName || inventoryFileName;
   }
+  const tipologias = buildViceroyTipologiaRows(inventoryRows);
+  setImmediate(() => {
+    tipologias.forEach((tip) => {
+      const id = String(tip && tip.id || '').trim();
+      const planLink = String(tip && tip.planLink || '').trim();
+      if (!id || !planLink) return;
+      const cropMap = readViceroyTipologiaCropMap();
+      const crop = cropMap[id] || defaultViceroyTipologiaCrop();
+      scheduleViceroyTipologiaThumbWarmup(id, crop, planLink);
+    });
+  });
   return res.json({
     ok: true,
     dev: devSlug,
@@ -10361,7 +10398,7 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     inventoryFileName,
     inventoryRows,
     tipologiaCrops: readViceroyTipologiaCropMap(),
-    tipologias: buildViceroyTipologiaRows(inventoryRows)
+    tipologias
   });
 });
 
@@ -10387,13 +10424,7 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
   if (!planLink) {
     return res.status(404).json({ error: 'No hay imagen generada para esta tipología' });
   }
-  try {
-    const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
-    if (generatedPath && fs.existsSync(generatedPath)) {
-      res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
-      return res.sendFile(generatedPath);
-    }
-  } catch {}
+  scheduleViceroyTipologiaThumbWarmup(id, crop, planLink);
   return res.redirect(302, `/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(planLink)}`);
 });
 
@@ -10419,6 +10450,7 @@ app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) 
     removeViceroyTipologiaThumbFile(id);
     const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
     if (!generatedPath) thumbGenerated = false;
+    scheduleViceroyTipologiaThumbWarmup(id, crop, planLink);
   } catch (err) {
     log(`No se pudo generar thumbnail Viceroy para ${id}: ${err && err.message ? err.message : err}`);
     thumbGenerated = false;
