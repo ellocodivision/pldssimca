@@ -5048,6 +5048,79 @@ function findViceroyInventoryHeaderRow(sheet) {
   return bestScore >= 3 ? bestRow + 1 : 1;
 }
 
+function looksLikeViceroyNewInventoryLayout(headers) {
+  const normalized = Array.isArray(headers) ? headers.map((cell) => normalizeHeaderKey(cell)) : [];
+  const matchesAt = (index, aliases) => Boolean(normalized[index] && aliases.includes(normalized[index]));
+  return matchesAt(0, VICEROY_PILOTO_COLUMN_ALIASES.planLink)
+    && matchesAt(1, VICEROY_PILOTO_COLUMN_ALIASES.view)
+    && matchesAt(4, VICEROY_PILOTO_COLUMN_ALIASES.unit)
+    && matchesAt(5, VICEROY_PILOTO_COLUMN_ALIASES.level)
+    && matchesAt(7, VICEROY_PILOTO_COLUMN_ALIASES.tipologia)
+    && matchesAt(16, VICEROY_PILOTO_COLUMN_ALIASES.m2)
+    && matchesAt(17, VICEROY_PILOTO_COLUMN_ALIASES.recamaras)
+    && matchesAt(18, VICEROY_PILOTO_COLUMN_ALIASES.den)
+    && matchesAt(20, ['m2', 'precio_por_m2', 'precio_de_lista', 'price_per_m2', 'priceperm2', 'precio_m2']);
+}
+
+function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  const headerIndex = Math.max(0, Number(headerRowNumber || 1) - 1);
+  const headerRow = Array.isArray(grid[headerIndex]) ? grid[headerIndex] : [];
+  if (!looksLikeViceroyNewInventoryLayout(headerRow)) return [];
+  const out = [];
+  for (let i = headerIndex + 1; i < grid.length; i += 1) {
+    const values = Array.isArray(grid[i]) ? grid[i] : [];
+    const planLink = normalizeViceroyPlanLink(values[0]);
+    const view = String(values[1] == null ? '' : values[1]).trim();
+    const unit = extractUnitCode(values[4]);
+    if (!unit) continue;
+    const level = String(values[5] == null ? '' : values[5]).trim();
+    const rawType = String(values[7] == null ? '' : values[7]).trim();
+    const totalRaw = values[16];
+    const bedRaw = values[17];
+    const denRaw = values[18];
+    const pricePerM2Raw = values[20];
+    const total = parseCurrencyLike(totalRaw);
+    const pricePerM2 = parseCurrencyLike(pricePerM2Raw);
+    const effectivePricePerM2 = Number.isFinite(pricePerM2)
+      ? Math.max(pricePerM2, Number.isFinite(VICEROY_PILOTO_MIN_PRICE_PER_M2) ? VICEROY_PILOTO_MIN_PRICE_PER_M2 : 7100)
+      : NaN;
+    const price = (Number.isFinite(total) && Number.isFinite(effectivePricePerM2))
+      ? (total * effectivePricePerM2)
+      : '';
+    const den = hasViceroyDen(denRaw) ? '1' : '';
+    let recamaras = String(bedRaw == null ? '' : bedRaw).trim().toUpperCase().replace(/\s+/g, '');
+    if (!recamaras && rawType) {
+      const typeKey = normalizeHeaderKey(rawType);
+      if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('3')) recamaras = '3PH';
+      else if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('2')) recamaras = '2PH';
+      else if (typeKey.includes('3')) recamaras = '3B';
+      else if (typeKey.includes('2')) recamaras = '2B';
+      else if (typeKey.includes('1')) recamaras = '1B';
+    }
+    if (den && recamaras && !/\+/.test(recamaras)) recamaras = `${recamaras}+DEN`;
+    out.push({
+      development: '',
+      unidad: unit,
+      level,
+      groupCode: '',
+      planLink,
+      recamaras,
+      edificio: '',
+      tipologia: rawType,
+      vista: view,
+      asignacion: '',
+      m2: totalRaw === '' ? '' : totalRaw,
+      sqft: '',
+      price,
+      pricePerM2: Number.isFinite(pricePerM2) ? pricePerM2 : '',
+      status: 'disponible',
+      listPricePerM2: Number.isFinite(pricePerM2) ? { 0: pricePerM2 } : {}
+    });
+  }
+  return out;
+}
+
 const VICEROY_PILOTO_COLUMN_ALIASES = {
   development: ['development', 'desarrollo', 'proyecto'],
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
@@ -5063,6 +5136,7 @@ const VICEROY_PILOTO_COLUMN_ALIASES = {
   m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area', 'total', 'total_m2'],
   sqft: ['sqft', 'ft2', 'pies2', 'pies_cuadrados', 'square_feet', 'area_sqft'],
   price: ['precio_final', 'precio', 'precio_venta', 'precio_de_lista', 'precio_lista', 'list_price', 'price_list', 'sale_price', 'price'],
+  pricePerM2: ['price_per_m2', 'priceperm2', 'precio_por_m2', 'precio_m2', 'm2_rate', 'rate_m2', 'usd_m2'],
   status: ['estatus', 'estado', 'status', 'disponibilidad', 'availability', 'inventario']
 };
 
@@ -5744,6 +5818,13 @@ function parseViceroyInventoryFile(filePath) {
     const parsed = dedupeViceroyRows(parseViceroyRowsByPreciosProforma(workbook.Sheets[preciosProformaSheetName]));
     if (parsed.length) return parsed;
   }
+
+  // 1) New layout: header row 5 with fixed columns A/B/E/F/H/Q/R/S/U.
+  try {
+    const headerRowNumber = findViceroyInventoryHeaderRow(firstSheet);
+    const fixedLayoutRows = dedupeViceroyRows(parseViceroyInventoryNewLayout(firstSheet, headerRowNumber));
+    if (fixedLayoutRows.length) return fixedLayoutRows;
+  } catch {}
 
   // 1) Preferred: header-driven parsing (supports Unit/Type style inventories).
   try {
