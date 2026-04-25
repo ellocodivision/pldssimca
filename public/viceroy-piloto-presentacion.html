@@ -1406,12 +1406,18 @@
           const offsetY = ((frameHeight - (sh * scale)) / 2) - (sy * scale);
           img.style.opacity = '1';
           img.style.visibility = 'visible';
+          img.style.inset = 'auto';
+          img.style.right = 'auto';
+          img.style.bottom = 'auto';
           img.style.width = renderedW + 'px';
           img.style.height = renderedH + 'px';
           img.style.left = offsetX + 'px';
           img.style.top = offsetY + 'px';
+          img.style.maxWidth = 'none';
+          img.style.maxHeight = 'none';
           img.style.objectFit = 'unset';
           img.style.objectPosition = 'unset';
+          img.style.transform = 'none';
           img.dataset.croppedKey = nextKey;
         } catch (_) {}
       }
