@@ -826,7 +826,8 @@
         isGerente: false,
         whisperlistRows: [],
         selectedUnitInfo: null,
-        autoRefreshTimer: null
+        autoRefreshTimer: null,
+        tipologiaCropsKey: ''
       };
 
       const els = {
@@ -1403,6 +1404,25 @@
           if (!crop) return;
           cropTipologiaThumbImage(img, crop).catch(function () {});
         });
+      }
+
+      async function refreshTipologiaCropsIfChanged() {
+        try {
+          const res = await fetch('/api/viceroy-piloto/tipologia-crops', {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) return;
+          const nextCrops = data && data.crops && typeof data.crops === 'object' ? data.crops : {};
+          const nextKey = JSON.stringify(nextCrops);
+          if (state.tipologiaCropsKey === nextKey) return;
+          state.tipologiaCrops = nextCrops;
+          state.tipologiaCropsKey = nextKey;
+          if (state.view === 'tipologias') {
+            renderTipologias();
+          }
+        } catch (_) {}
       }
 
       function truncateCanvasText(ctx, text, maxWidth) {
@@ -2621,6 +2641,7 @@
         state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
         state.inventoryFileName = String(data.inventoryFileName || '').trim();
         state.tipologiaCrops = data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {};
+        state.tipologiaCropsKey = JSON.stringify(state.tipologiaCrops || {});
         orderFloors();
         buildUnitIndex();
         applyPresentationLayout();
@@ -2945,6 +2966,20 @@
           downloadCurrentInventoryFile();
         });
       }
+
+      window.addEventListener('storage', function (event) {
+        if (event && event.key === 'viceroy-tipologia-crops-updated-at') {
+          refreshTipologiaCropsIfChanged();
+        }
+      });
+      window.addEventListener('focus', function () {
+        refreshTipologiaCropsIfChanged();
+      });
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) {
+          refreshTipologiaCropsIfChanged();
+        }
+      });
 
       applyRouteState();
       load().then(function () {

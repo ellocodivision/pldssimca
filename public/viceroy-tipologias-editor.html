@@ -225,6 +225,11 @@
       function cropKey(crop) {
         return JSON.stringify(normalizeCrop(crop));
       }
+      function markTipologiaCropsUpdated() {
+        try {
+          localStorage.setItem('viceroy-tipologia-crops-updated-at', String(Date.now()));
+        } catch (_) {}
+      }
       async function detectPlanBounds(img) {
         const src = String(img && img.dataset && img.dataset.planSrc || img && img.getAttribute && img.getAttribute('src') || '').trim();
         if (!src) return DEFAULT_CROP;
@@ -403,6 +408,7 @@
             return;
           }
           state.crops[id] = normalizeCrop(data.crop || crop);
+          markTipologiaCropsUpdated();
           applyFilter();
           closeEditor();
           els.status.textContent = 'Recorte guardado para ' + id + '.';
@@ -428,6 +434,7 @@
             return;
           }
           state.crops[id] = normalizeCrop(data.crop || DEFAULT_CROP);
+          markTipologiaCropsUpdated();
           syncEditorUi(state.crops[id]);
           els.cropResultImg.removeAttribute('src');
           els.cropResultHint.textContent = 'Pulsa “Vista previa”.';
