@@ -2993,8 +2993,7 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   } catch {}
 
-  const proxyUrl = `${APP_BASE_URL_NORMALIZED}/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(sourcePlanLink)}`;
-  const upstream = await fetch(proxyUrl);
+  const upstream = await fetch(sourcePlanLink);
   if (!upstream.ok) {
     throw new Error(`No se pudo descargar plano (${upstream.status})`);
   }
@@ -10349,7 +10348,7 @@ app.get('/viceroy-piloto-presentacion', requireViceroyPresentAccess, (req, res) 
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-piloto-presentacion.html'));
 });
 
-app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, async (req, res) => {
+app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, res) => {
   const devSlug = 'viceroy-piloto';
   const config = readViceroyPilotoConfig();
   const requestedName = typeof req.query.name === 'string' ? req.query.name.trim() : '';
@@ -10379,20 +10378,16 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, async (r
     inventoryFileName = cached.fileName || inventoryFileName;
   }
   const tipologias = buildViceroyTipologiaRows(inventoryRows);
-  const cropMap = readViceroyTipologiaCropMap();
-  for (const tip of tipologias) {
-    const id = String(tip && tip.id || '').trim();
-    const planLink = String(tip && tip.planLink || '').trim();
-    if (!id || !planLink) continue;
-    const crop = cropMap[id] || defaultViceroyTipologiaCrop();
-    const filePath = getViceroyTipologiaThumbFilePath(id, crop, planLink);
-    if (fs.existsSync(filePath)) continue;
-    try {
-      await renderViceroyTipologiaThumbFile(id, crop, planLink);
-    } catch (err) {
-      log(`No se pudo precargar thumbnail Viceroy para ${id}: ${err && err.message ? err.message : err}`);
-    }
-  }
+  setImmediate(() => {
+    tipologias.forEach((tip) => {
+      const id = String(tip && tip.id || '').trim();
+      const planLink = String(tip && tip.planLink || '').trim();
+      if (!id || !planLink) return;
+      const cropMap = readViceroyTipologiaCropMap();
+      const crop = cropMap[id] || defaultViceroyTipologiaCrop();
+      scheduleViceroyTipologiaThumbWarmup(id, crop, planLink);
+    });
+  });
   return res.json({
     ok: true,
     dev: devSlug,
