@@ -810,6 +810,7 @@
         config: { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] },
         showUnitLabels: false,
         inventoryRows: [],
+        tipologias: [],
         inventoryFileName: '',
         canUploadInventory: false,
         byUnit: new Map(),
@@ -2223,21 +2224,25 @@
       function getTipologiasByBedroom(bucketId) {
         const out = [];
         const seen = new Set();
+        const makeThumbUrl = function (id) {
+          const cleanId = String(id || '').trim();
+          if (!cleanId) return '';
+          return '/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(cleanId) + '&v=' + encodeURIComponent(String(state.tipologiaCropsKey || '')) + (token ? ('&token=' + encodeURIComponent(token)) : '');
+        };
 
-        state.inventoryRows.forEach(function (row) {
+        state.tipologias.forEach(function (row) {
           const rec = normalizeBedroom(row.recamaras);
-          const id = String(row.tipologia || '').trim();
+          const id = String(row.id || '').trim();
           if (!id || seen.has(norm(id))) return;
           if (!rec) return;
           if (bucketId && rec !== bucketId) return;
           seen.add(norm(id));
-          const originalPlanLink = String(row.planLink || row.link || row.plano || '').trim();
           out.push({
             id: id,
-            name: id,
+            name: String(row.name || id),
             recamaras: rec || bucketId,
-            planLink: originalPlanLink,
-            imageUrl: originalPlanLink ? ('/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(id) + '&v=' + encodeURIComponent(String(state.tipologiaCropsKey || '')) + (token ? ('&token=' + encodeURIComponent(token)) : '')) : '',
+            planLink: String(row.planLink || '').trim(),
+            imageUrl: makeThumbUrl(id),
             sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null,
             thumbPath: String(row.thumbPath || '').trim(),
             thumbFolder: String(row.thumbFolder || '').trim(),
@@ -2257,7 +2262,7 @@
             name: String(tip.name || id),
             recamaras: rec || bucketId,
             planLink: String(tip.imageUrl || '').trim(),
-            imageUrl: String(tip.imageUrl || '').trim(),
+            imageUrl: makeThumbUrl(id),
             sourceRowIndex: null,
             thumbPath: '',
             thumbFolder: '',
@@ -2340,11 +2345,10 @@
         }
 
         els.tipoGrid.innerHTML = tips.map(function (tip) {
-          const imageUrl = String(tip.imageUrl || getInventoryPlanForTipologia(tip.id) || '').trim();
-          const proxyUrl = getPlanImageProxyUrl(imageUrl);
+          const imageUrl = String(tip.imageUrl || '').trim();
           const crop = state.tipologiaCrops && state.tipologiaCrops[tip.id] ? state.tipologiaCrops[tip.id] : null;
-          const thumb = proxyUrl
-            ? '<img src="' + esc(proxyUrl) + '" data-plan-src="' + esc(proxyUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '" onerror="this.remove();">'
+          const thumb = imageUrl
+            ? '<img src="' + esc(imageUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '" onerror="this.remove();">'
             : '<span>Tipologia</span>';
           const thumbPath = String(tip.thumbPath || '').trim();
           const thumbFolder = String(tip.thumbFolder || '').trim();
@@ -2636,6 +2640,22 @@
         state.showUnitLabels = false;
         state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
         state.inventoryFileName = String(data.inventoryFileName || '').trim();
+        const tipologias = Array.isArray(data.tipologias) ? data.tipologias : [];
+        state.tipologias = tipologias.map(function (item) {
+          const id = String(item && item.id || '').trim();
+          return {
+            id: id,
+            name: String(item && item.name || '').trim() || id,
+            recamaras: String(item && item.recamaras || '').trim(),
+            planLink: String(item && item.planLink || '').trim(),
+            units: Array.isArray(item && item.units) ? item.units.slice() : [],
+            sourceRowIndex: Number.isFinite(Number(item && item.sourceRowIndex)) ? Number(item.sourceRowIndex) : null,
+            thumbPath: String(item && item.thumbPath || '').trim(),
+            thumbFolder: String(item && item.thumbFolder || '').trim(),
+            thumbFileName: String(item && item.thumbFileName || '').trim(),
+            thumbExists: Boolean(item && item.thumbExists)
+          };
+        }).filter(function (item) { return item.id; });
         state.tipologiaCrops = Object.assign(
           {},
           data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {},

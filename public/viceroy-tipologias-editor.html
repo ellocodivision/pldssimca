@@ -593,7 +593,12 @@
             name: String(item && item.name || '').trim() || String(item && item.id || '').trim(),
             recamaras: String(item && item.recamaras || '').trim(),
             planLink: String(item && item.planLink || '').trim(),
-            units: Array.isArray(item && item.units) ? item.units.slice() : []
+            units: Array.isArray(item && item.units) ? item.units.slice() : [],
+            sourceRowIndex: Number.isFinite(Number(item && item.sourceRowIndex)) ? Number(item.sourceRowIndex) : null,
+            thumbPath: String(item && item.thumbPath || '').trim(),
+            thumbFolder: String(item && item.thumbFolder || '').trim(),
+            thumbFileName: String(item && item.thumbFileName || '').trim(),
+            thumbExists: Boolean(item && item.thumbExists)
           };
         }).filter(function (item) { return item.id; });
         state.filtered = state.tipologias.slice();
