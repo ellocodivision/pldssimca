@@ -5921,6 +5921,18 @@ function resolveCurrentViceroyInventoryFile() {
   return null;
 }
 
+function resolvePreferredViceroyInventoryCandidates() {
+  const devSlug = 'viceroy-piloto';
+  const currentFile = resolveCurrentViceroyInventoryFile();
+  const candidates = resolveInventoryCandidatesByDevSlug(devSlug)
+    .sort((a, b) => (b.mtimeMs || 0) - (a.mtimeMs || 0));
+  if (!currentFile) return candidates;
+  return [
+    currentFile,
+    ...candidates.filter((candidate) => candidate.fullPath !== currentFile.fullPath)
+  ];
+}
+
 function readMergedFloorsByDevelopment(devSlug) {
   const floorDirs = getDevelopmentFloorSearchDirs(devSlug);
   const entries = [];
@@ -10026,7 +10038,7 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
   if ((!Array.isArray(floorsData.floors) || !floorsData.floors.length) && selectedName) {
     floorsData = readMergedFloorsByDevelopment(devSlug);
   }
-  const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
+  const candidates = resolvePreferredViceroyInventoryCandidates();
   let inventoryRows = [];
   let inventoryFileName = '';
   for (const candidate of candidates) {
@@ -10166,7 +10178,7 @@ app.get('/api/viceroy-piloto/floors', (req, res) => {
 
 app.get('/api/viceroy-piloto/inventory', (req, res) => {
   const devSlug = 'viceroy-piloto';
-  const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
+  const candidates = resolvePreferredViceroyInventoryCandidates();
   if (!candidates.length) {
     return res.status(404).json({
       error: 'No se encontró el archivo permitido de inventario para VICEROY PILOTO',
