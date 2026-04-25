@@ -84,6 +84,12 @@
       position: relative;
       z-index: 1;
     }
+    .home-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
     .logo {
       text-align: center;
       line-height: 1;
@@ -650,6 +656,9 @@
 
   <section id="homeView" class="home">
     <div class="home-card">
+      <div class="home-actions">
+        <button id="homeBackToViceroyBtn" class="btn" type="button">Volver a Viceroy</button>
+      </div>
       <div class="logo">
         <div class="v1">VICEROY</div>
         <div class="v2">RESIDENCES</div>
@@ -666,6 +675,7 @@
     <div class="topbar">
       <span class="label" id="tipoTopLabel">Tipologias</span>
       <div class="topbar-actions">
+        <button id="backToViceroyFromTiposBtn" class="btn" type="button">Volver a Viceroy</button>
         <button id="editTipologiasBtn" class="btn hidden" type="button">Editar recortes</button>
         <button id="backToHomeBtn" class="btn" type="button">Volver a recamaras</button>
       </div>
@@ -680,6 +690,7 @@
     <div class="topbar">
       <span class="label" id="floorsTopLabel">Plano interactivo</span>
       <div class="topbar-actions">
+        <button id="backToViceroyFromFloorsBtn" class="btn" type="button">Volver a Viceroy</button>
         <select id="advisorFilterSelect" class="mini-select">
           <option value="">Todos los usuarios</option>
         </select>
@@ -861,6 +872,9 @@
         overlay: document.getElementById('overlay'),
         mapInfoOverlay: document.querySelector('.map-info-overlay'),
         backToHomeBtn: document.getElementById('backToHomeBtn'),
+        homeBackToViceroyBtn: document.getElementById('homeBackToViceroyBtn'),
+        backToViceroyFromTiposBtn: document.getElementById('backToViceroyFromTiposBtn'),
+        backToViceroyFromFloorsBtn: document.getElementById('backToViceroyFromFloorsBtn'),
         editTipologiasBtn: document.getElementById('editTipologiasBtn'),
         backToTiposBtn: document.getElementById('backToTiposBtn'),
         showAllOnMapBtn: document.getElementById('showAllOnMapBtn'),
@@ -2324,18 +2338,9 @@
           const thumb = imageUrl
             ? '<img src="' + esc(imageUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '" onerror="this.remove();">'
             : '<span>Tipologia</span>';
-          const thumbPath = String(tip.thumbPath || '').trim();
-          const thumbFolder = String(tip.thumbFolder || '').trim();
-          const imageLink = imageUrl
-            ? '<a href="' + esc(imageUrl) + '" target="_blank" rel="noreferrer" class="tipo-open-link" style="display:inline-block;margin-top:6px;font-size:11px;color:#5f3dc4;text-decoration:underline;word-break:break-all;" title="' + esc(imageUrl) + '">Abrir imagen</a>'
-            : '';
-          const thumbDebug = thumbPath
-            ? '<p class="tipo-sub" style="margin-top:4px;font-size:10px;letter-spacing:0.01em;color:#5f6572;word-break:break-all;" title="' + esc(thumbPath) + '">png ' + esc(thumbPath.length > 60 ? (thumbPath.slice(0, 57) + '...') : thumbPath) + '</p>' +
-              (thumbFolder ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#7a4b7d;word-break:break-all;" title="' + esc(thumbFolder) + '">folder ' + esc(thumbFolder.length > 54 ? (thumbFolder.slice(0, 51) + '...') : thumbFolder) + '</p>' : '')
-            : '<p class="tipo-sub" style="margin-top:4px;font-size:10px;letter-spacing:0.01em;color:#8a8a8a;">sin ruta PNG</p>';
           return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '" data-crop="' + esc(crop ? JSON.stringify(crop) : '') + '">' +
             '<div class="tipo-thumb">' + thumb + '</div>' +
-            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + imageLink + thumbDebug + '</div>' +
+            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p></div>' +
           '</article>';
         }).join('');
 
@@ -2795,6 +2800,18 @@
         showView('home');
       });
 
+      if (els.homeBackToViceroyBtn) {
+        els.homeBackToViceroyBtn.addEventListener('click', function () {
+          window.location.href = '/viceroy';
+        });
+      }
+
+      if (els.backToViceroyFromTiposBtn) {
+        els.backToViceroyFromTiposBtn.addEventListener('click', function () {
+          window.location.href = '/viceroy';
+        });
+      }
+
       if (els.editTipologiasBtn) {
         els.editTipologiasBtn.addEventListener('click', function () {
           const query = token ? ('?token=' + encodeURIComponent(token)) : '';
@@ -2806,6 +2823,12 @@
         hideAssignmentBox();
         showView('tipologias');
       });
+
+      if (els.backToViceroyFromFloorsBtn) {
+        els.backToViceroyFromFloorsBtn.addEventListener('click', function () {
+          window.location.href = '/viceroy';
+        });
+      }
 
       els.showAllOnMapBtn.addEventListener('click', function () {
         state.showAllUnits = !state.showAllUnits;

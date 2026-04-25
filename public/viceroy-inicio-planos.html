@@ -5,7 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Viceroy Inicio - Planos</title>
   <style>
-    :root { --bg: #f4f1e8; --card: #fff; --ink: #1a1a1a; --muted: #5f5f5f; --line: #d8d1c1; }
+    :root {
+      --bg: #f4f1e8;
+      --card: #fff;
+      --ink: #1a1a1a;
+      --muted: #5f5f5f;
+      --line: #d8d1c1;
+      --accent: #a6ac9b;
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -13,21 +20,38 @@
       background: var(--bg);
       color: var(--ink);
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 20px;
     }
-    .card {
-      width: min(720px, 100%);
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 28px;
-      text-align: center;
+    .wrap {
+      width: min(1280px, 94vw);
+      margin: 0 auto;
+      padding: 24px 0 36px;
     }
-    h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 48px); }
-    p { margin: 0 0 18px; color: var(--muted); }
-    a {
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .title-wrap h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.05;
+    }
+    .title-wrap p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 680px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .btn {
       display: inline-block;
       padding: 10px 14px;
       border: 1px solid #bdb8a9;
@@ -37,14 +61,217 @@
       text-decoration: none;
       font-size: 13px;
       font-weight: 700;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: var(--accent);
+      border-color: #e2cf1a;
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 12px 28px rgba(65, 49, 24, 0.08);
+    }
+    .status {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+      background: #fff;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #f4f0e6;
+      color: #4a4a52;
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--line);
+    }
+    tbody td {
+      padding: 14px;
+      border-bottom: 1px solid #eee7d9;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    tbody tr:hover { background: #faf8f1; }
+    .unit {
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 4px;
+      word-break: break-word;
+    }
+    .plan-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #bdb8a9;
+      background: #fff;
+      color: #111;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .plan-btn.disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    .empty {
+      padding: 26px 18px;
+      color: var(--muted);
+      text-align: center;
+    }
+    @media (max-width: 760px) {
+      .wrap { width: min(100vw - 16px, 1280px); padding-top: 16px; }
+      .panel { border-radius: 18px; padding: 12px; }
+      .topbar { align-items: stretch; }
+      .actions { justify-content: flex-start; }
     }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>Planos</h1>
-    <p>Modulo base listo para conectar contenido.</p>
-    <a href="/viceroy/inicio">Volver a Viceroy Inicio</a>
+  <main class="wrap">
+    <header class="topbar">
+      <div class="title-wrap">
+        <h1>Planos</h1>
+        <p>Listado de unidades con el link original del plano desde la columna A del Excel.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy">Volver a Viceroy</a>
+        <button id="reloadBtn" class="btn primary" type="button">Recargar lista</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <p id="statusText" class="status">Cargando inventario...</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Unidad</th>
+              <th>Tipologia</th>
+              <th>Recamaras</th>
+              <th>Fila</th>
+              <th>Plano</th>
+            </tr>
+          </thead>
+          <tbody id="plansBody">
+            <tr><td colspan="5" class="empty">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
+
+  <script>
+    const els = {
+      statusText: document.getElementById('statusText'),
+      plansBody: document.getElementById('plansBody'),
+      reloadBtn: document.getElementById('reloadBtn')
+    };
+    const token = new URLSearchParams(window.location.search).get('token') || '';
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function norm(s) {
+      return String(s || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+    }
+
+    function uniquePlanRows(rows) {
+      const out = [];
+      const seen = new Set();
+      (Array.isArray(rows) ? rows : []).forEach((row, index) => {
+        const unit = String(row && row.unidad || '').trim();
+        const key = unit ? norm(unit) : ('row_' + index);
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({
+          unidad: unit || 'Sin unidad',
+          tipologia: String(row && row.tipologia || '').trim(),
+          recamaras: String(row && row.recamaras || '').trim(),
+          sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : (index + 1),
+          planLink: String(row && row.planLink || '').trim()
+        });
+      });
+      return out;
+    }
+
+    function renderRows(rows) {
+      if (!rows.length) {
+        els.plansBody.innerHTML = '<tr><td colspan="5" class="empty">No se encontró inventario.</td></tr>';
+        els.statusText.textContent = 'Sin datos para mostrar.';
+        return;
+      }
+
+      els.plansBody.innerHTML = rows.map((row) => {
+        const planLink = row.planLink;
+        const planBtn = planLink
+          ? '<a class="plan-btn" href="' + esc(planLink) + '" target="_blank" rel="noopener noreferrer">Plano</a>'
+          : '<span class="plan-btn disabled">Sin plano</span>';
+        return '<tr>' +
+          '<td><div class="unit">' + esc(row.unidad) + '</div></td>' +
+          '<td>' + esc(row.tipologia || '-') + '</td>' +
+          '<td>' + esc(row.recamaras || '-') + '</td>' +
+          '<td>' + esc(String(row.sourceRowIndex || '-')) + '</td>' +
+          '<td>' + planBtn + '</td>' +
+        '</tr>';
+      }).join('');
+      els.statusText.textContent = rows.length + ' unidades encontradas.';
+    }
+
+    async function loadPlans() {
+      els.statusText.textContent = 'Cargando inventario...';
+      els.plansBody.innerHTML = '<tr><td colspan="5" class="empty">Cargando...</td></tr>';
+      try {
+        const url = '/api/viceroy-piloto/public-data' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const rows = uniquePlanRows(Array.isArray(data.inventoryRows) ? data.inventoryRows : []);
+        renderRows(rows);
+      } catch (err) {
+        const msg = err && err.message ? err.message : 'Error desconocido';
+        els.statusText.textContent = 'No se pudo cargar el inventario: ' + msg;
+        els.plansBody.innerHTML = '<tr><td colspan="5" class="empty">Error al cargar la lista.</td></tr>';
+      }
+    }
+
+    els.reloadBtn.addEventListener('click', loadPlans);
+    loadPlans();
+  </script>
 </body>
 </html>
