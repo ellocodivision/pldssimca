@@ -5215,6 +5215,7 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
     }
     if (den && recamaras && !/\+/.test(recamaras)) recamaras = `${recamaras}+DEN`;
     out.push({
+      sourceRowIndex: i + 1,
       development: '',
       unidad: unit,
       level,
@@ -5317,7 +5318,7 @@ function extractViceroyListPricePerM2Map(normalizedRow) {
   return out;
 }
 
-function normalizeViceroyInventoryRow(rawRow) {
+function normalizeViceroyInventoryRow(rawRow, meta = {}) {
   const row = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
     row[normalizeHeaderKey(key)] = value;
@@ -5354,6 +5355,7 @@ function normalizeViceroyInventoryRow(rawRow) {
     development,
     unidad: unit,
     level,
+    sourceRowIndex: Number.isFinite(Number(meta && meta.sourceRowIndex)) ? Number(meta.sourceRowIndex) : null,
     groupCode,
     planLink,
     recamaras,
@@ -5940,7 +5942,7 @@ function parseViceroyInventoryFile(filePath) {
     const headerRows = rowsFromSheetWithHeaderRow(firstSheet, headerRowNumber);
     const normalizedRows = dedupeViceroyRows(
       headerRows
-        .map((rawRow) => normalizeViceroyInventoryRow(rawRow))
+        .map((rawRow, idx) => normalizeViceroyInventoryRow(rawRow, { sourceRowIndex: headerRowNumber + idx + 1 }))
         .filter(Boolean)
     );
     if (normalizedRows.length) return normalizedRows;
@@ -6038,7 +6040,7 @@ function resolvePreferredViceroyInventoryCandidates() {
 
 function buildViceroyTipologiaRows(inventoryRows) {
   const byTip = new Map();
-  (Array.isArray(inventoryRows) ? inventoryRows : []).forEach((row) => {
+  (Array.isArray(inventoryRows) ? inventoryRows : []).forEach((row, index) => {
     const id = String(row && row.tipologia || '').trim();
     if (!id) return;
     const existing = byTip.get(id) || {
@@ -6046,10 +6048,14 @@ function buildViceroyTipologiaRows(inventoryRows) {
       name: id,
       recamaras: String(row && row.recamaras || '').trim(),
       planLink: '',
-      units: []
+      units: [],
+      sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : (index + 1)
     };
     const planLink = String(row && row.planLink || '').trim();
     if (!existing.planLink && planLink) existing.planLink = planLink;
+    if (!Number.isFinite(Number(existing.sourceRowIndex)) && Number.isFinite(Number(row && row.sourceRowIndex))) {
+      existing.sourceRowIndex = Number(row.sourceRowIndex);
+    }
     const unit = String(row && row.unidad || '').trim();
     if (unit && !existing.units.includes(unit)) existing.units.push(unit);
     if (!existing.recamaras && String(row && row.recamaras || '').trim()) {
