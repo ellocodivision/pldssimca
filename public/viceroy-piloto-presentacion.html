@@ -1375,15 +1375,18 @@
         const nextKey = JSON.stringify(normalizeCropRect(crop));
         if (img.dataset.croppedKey === nextKey) return;
         try {
-          const helper = new Image();
-          helper.crossOrigin = 'anonymous';
-          await new Promise(function (resolve, reject) {
-            helper.onload = function () { resolve(true); };
-            helper.onerror = function () { reject(new Error('load-failed')); };
-            helper.src = src;
-          });
-          const iw = helper.naturalWidth || helper.width;
-          const ih = helper.naturalHeight || helper.height;
+          if (!img.complete || !img.naturalWidth || !img.naturalHeight) {
+            if (!img.dataset.cropApplyPending) {
+              img.dataset.cropApplyPending = '1';
+              img.addEventListener('load', function () {
+                delete img.dataset.cropApplyPending;
+                cropTipologiaThumbImage(img, crop).catch(function () {});
+              }, { once: true });
+            }
+            return;
+          }
+          const iw = img.naturalWidth || img.width;
+          const ih = img.naturalHeight || img.height;
           if (!iw || !ih) return;
           const c = normalizeCropRect(crop);
           const frame = img.parentElement && img.parentElement.getBoundingClientRect
@@ -1396,30 +1399,19 @@
           const sy = (c.y / 100) * ih;
           const sw = Math.max(1, (c.w / 100) * iw);
           const sh = Math.max(1, (c.h / 100) * ih);
-          // Use a "cover" scale so the selected crop fills the whole thumb.
-          // This keeps the crop deterministic and avoids showing the full sheet.
           const scale = Math.max(frameWidth / sw, frameHeight / sh);
           const renderedW = iw * scale;
           const renderedH = ih * scale;
           const offsetX = ((frameWidth - (sw * scale)) / 2) - (sx * scale);
           const offsetY = ((frameHeight - (sh * scale)) / 2) - (sy * scale);
-          const thumb = img.parentElement;
-          if (thumb) {
-            thumb.style.backgroundImage = `url("${src.replace(/"/g, '%22')}")`;
-            thumb.style.backgroundRepeat = 'no-repeat';
-            thumb.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
-            thumb.style.backgroundSize = `${renderedW}px ${renderedH}px`;
-            thumb.style.backgroundColor = '#fff';
-          }
-          img.src = src;
-          img.style.opacity = '0';
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.left = '0';
-          img.style.top = '0';
-          img.style.objectFit = 'contain';
-          img.style.objectPosition = 'center center';
-          img.style.visibility = 'hidden';
+          img.style.opacity = '1';
+          img.style.visibility = 'visible';
+          img.style.width = renderedW + 'px';
+          img.style.height = renderedH + 'px';
+          img.style.left = offsetX + 'px';
+          img.style.top = offsetY + 'px';
+          img.style.objectFit = 'unset';
+          img.style.objectPosition = 'unset';
           img.dataset.croppedKey = nextKey;
         } catch (_) {}
       }
