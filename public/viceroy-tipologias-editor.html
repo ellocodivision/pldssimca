@@ -474,7 +474,8 @@
         const crop = normalizeCrop(state.cropEditor.draft);
         els.cropSaveBtn.disabled = true;
         try {
-          const res = await fetch('/api/viceroy-piloto/tipologia-crop', {
+          const cropUrl = '/api/viceroy-piloto/tipologia-crop' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+          const res = await fetch(cropUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
@@ -503,7 +504,8 @@
         const id = state.cropEditor.id;
         if (!id) return;
         try {
-          const res = await fetch('/api/viceroy-piloto/tipologia-crop', {
+          const cropUrl = '/api/viceroy-piloto/tipologia-crop' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+          const res = await fetch(cropUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',

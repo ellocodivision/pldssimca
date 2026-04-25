@@ -1444,7 +1444,8 @@
 
       async function refreshTipologiaCropsIfChanged() {
         try {
-          const res = await fetch('/api/viceroy-piloto/tipologia-crops', {
+          const cropsUrl = '/api/viceroy-piloto/tipologia-crops' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+          const res = await fetch(cropsUrl, {
             cache: 'no-store',
             credentials: 'same-origin'
           });
@@ -2300,7 +2301,7 @@
             name: id,
             recamaras: rec || bucketId,
             planLink: originalPlanLink,
-            imageUrl: originalPlanLink ? ('/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(id) + '&v=' + encodeURIComponent(String(state.tipologiaCropsKey || ''))) : '',
+            imageUrl: originalPlanLink ? ('/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(id) + '&v=' + encodeURIComponent(String(state.tipologiaCropsKey || '')) + (token ? ('&token=' + encodeURIComponent(token)) : '')) : '',
             sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null
           });
         });
