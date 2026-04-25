@@ -5835,17 +5835,7 @@ function parseViceroyInventoryFile(filePath) {
   const firstSheet = pickedSheet.sheet;
   if (!firstSheet) return [];
 
-  // 0) Preferred for proforma simulation: explicit Precios Proforma sheet.
-  const preciosProformaSheetName = workbook.SheetNames.find((sheetName) => {
-    const key = normalizeHeaderKey(sheetName);
-    return key === normalizeHeaderKey('Precios Proforma') || key.includes(normalizeHeaderKey('Precios Proforma'));
-  });
-  if (preciosProformaSheetName && workbook.Sheets[preciosProformaSheetName]) {
-    const parsed = dedupeViceroyRows(parseViceroyRowsByPreciosProforma(workbook.Sheets[preciosProformaSheetName]));
-    if (parsed.length) return parsed;
-  }
-
-  // 1) New layout: header row 5 with fixed columns A/B/E/F/H/Q/R/S/U.
+  // 0) New layout: header row 5 with fixed columns A/B/E/F/H/Q/R/S/U.
   try {
     const headerRowNumber = findViceroyInventoryHeaderRow(firstSheet);
     const fixedLayoutRows = dedupeViceroyRows(parseViceroyInventoryNewLayout(firstSheet, headerRowNumber));
@@ -5864,7 +5854,17 @@ function parseViceroyInventoryFile(filePath) {
     if (normalizedRows.length) return normalizedRows;
   } catch {}
 
-  // 2) Fallback: legacy fixed-column parser (Lista de Precios V0).
+  // 2) Explicit Precios Proforma sheet, used only when the BD layout is not usable.
+  const preciosProformaSheetName = workbook.SheetNames.find((sheetName) => {
+    const key = normalizeHeaderKey(sheetName);
+    return key === normalizeHeaderKey('Precios Proforma') || key.includes(normalizeHeaderKey('Precios Proforma'));
+  });
+  if (preciosProformaSheetName && workbook.Sheets[preciosProformaSheetName]) {
+    const parsed = dedupeViceroyRows(parseViceroyRowsByPreciosProforma(workbook.Sheets[preciosProformaSheetName]));
+    if (parsed.length) return parsed;
+  }
+
+  // 3) Fallback: legacy fixed-column parser (Lista de Precios V0).
   const targetSheetKey = normalizeHeaderKey('Lista de Precios V0');
   const preferredSheetName = workbook.SheetNames.find((sheetName) => {
     const key = normalizeHeaderKey(sheetName);
