@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viceroy · Editor de tipologías</title>
+  <style>
+    :root{--bg:#f4f1e8;--card:#fff;--line:#d8d1c1;--ink:#1a1a1a;--muted:#5f5f5f;--accent:#ffe816}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1400px;margin:0 auto;padding:24px 16px 40px}
+    .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+    h1{margin:0;font-size:30px}
+    .sub{margin:6px 0 0;color:var(--muted)}
+    .btn{display:inline-block;padding:9px 12px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+    .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .search{flex:1;min-width:220px;padding:10px 12px;border:1px solid #c7c0b1;border-radius:10px;background:#fff}
+    .status{font-size:13px;color:var(--muted);margin:8px 0 0}
+    .table-wrap{overflow:auto;border:1px solid #ddd6c7;border-radius:12px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:1080px}
+    th,td{padding:9px 8px;border-bottom:1px solid #efecdf;text-align:left;font-size:13px;vertical-align:top}
+    th{background:#f8f6ef;color:#3d3f47;position:sticky;top:0;z-index:1}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .crop-btn{padding:6px 10px;border-radius:8px;border:1px solid #bbb29f;background:#fff;cursor:pointer;font-size:12px;font-weight:700}
+    .crop-btn:hover{background:#f8f5ee}
+    .crop-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#f1eaa8;color:#4a4311;font-size:11px;font-weight:700}
+    .modal{position:fixed;inset:0;display:none;z-index:50}
+    .modal.show{display:block}
+    .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+    .dialog{position:relative;max-width:1120px;margin:34px auto;background:#fff;border:1px solid #d6d0c2;border-radius:14px;padding:16px;z-index:1;max-height:calc(100vh - 68px);overflow:auto}
+    .dialog h2{margin:0 0 6px;font-size:24px}
+    .dialog .subtxt{margin:0 0 12px;color:#5f6572}
+    .crop-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+    .stage-box{border:1px solid #d4d7df;border-radius:12px;background:#f5f5f5;padding:10px}
+    .stage{position:relative;overflow:hidden;background:#ececec;border-radius:8px;height:min(66vh,680px)}
+    .image-area{position:absolute;overflow:hidden}
+    .image-area img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none}
+    .rect{position:absolute;border:2px solid #ffe816;background:rgba(255,232,22,.15);cursor:move;touch-action:none}
+    .rect .handle{position:absolute;width:14px;height:14px;right:-7px;bottom:-7px;border-radius:50%;background:#ffe816;border:2px solid #3f3f3f;cursor:nwse-resize}
+    .crop-controls{border:1px solid #ddd6c7;border-radius:12px;padding:12px;background:#faf8f2}
+    .control{margin-bottom:12px}
+    .control label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;font-weight:700;color:#3b3f49}
+    .control input[type="range"]{width:100%}
+    .control .val{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#5f6572}
+    .row-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+    .crop-preview-result{margin-top:10px;border:1px solid #ddd6c7;border-radius:10px;background:#fff;padding:8px}
+    .crop-preview-result h4{margin:0 0 6px;font-size:13px;color:#3b3f49}
+    .crop-preview-result .box{width:100%;aspect-ratio:16/10;background:#f1f1f1;border:1px solid #e2e2e2;border-radius:8px;overflow:hidden;display:grid;place-items:center}
+    .crop-preview-result img{max-width:100%;max-height:100%;display:block}
+    .crop-preview-result .hint{margin:6px 0 0;font-size:12px;color:#5f6572}
+    .top-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    @media (max-width:980px){.crop-layout{grid-template-columns:1fr}.stage{height:50vh}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="hero">
+      <div>
+        <h1>Viceroy · Editor de tipologías</h1>
+        <p class="sub">Marca manualmente los límites de cada tipología y guarda el recorte para usarlo en el piloto.</p>
+      </div>
+      <div class="top-actions">
+        <a id="backBtn" class="btn" href="/viceroy-piloto-presentacion">Volver al piloto</a>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="tools">
+        <input id="searchInput" class="search" type="text" placeholder="Buscar tipología, recámaras, unidad o plano...">
+      </div>
+      <p id="status" class="status">Cargando tipologías...</p>
+    </section>
+
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tipología</th>
+            <th>Recámaras</th>
+            <th>Unidades</th>
+            <th>Plano</th>
+            <th>Recorte</th>
+            <th>Editar</th>
+          </tr>
+        </thead>
+        <tbody id="rowsBody">
+          <tr><td colspan="6" class="small">Sin datos.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="cropModal" class="modal" aria-hidden="true">
+    <div class="backdrop" data-close="1"></div>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+      <h2 id="cropTitle">Editor de recorte</h2>
+      <p id="cropSub" class="subtxt">Ajusta el cuadro para quedarte solo con el plano útil. Usa los deslizadores o arrastra el cuadro.</p>
+      <div class="crop-layout">
+        <section class="stage-box">
+          <div id="cropStage" class="stage">
+            <div id="cropImageArea" class="image-area">
+              <img id="cropStageImg" alt="Plano">
+              <div id="cropRect" class="rect">
+                <span id="cropHandle" class="handle"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="crop-controls">
+          <div class="control">
+            <label for="cropX">X <span id="cropXVal" class="val">0%</span></label>
+            <input id="cropX" type="range" min="0" max="100" step="0.1" value="0">
+          </div>
+          <div class="control">
+            <label for="cropY">Y <span id="cropYVal" class="val">0%</span></label>
+            <input id="cropY" type="range" min="0" max="100" step="0.1" value="0">
+          </div>
+          <div class="control">
+            <label for="cropW">Ancho <span id="cropWVal" class="val">100%</span></label>
+            <input id="cropW" type="range" min="5" max="100" step="0.1" value="100">
+          </div>
+          <div class="control">
+            <label for="cropH">Alto <span id="cropHVal" class="val">100%</span></label>
+            <input id="cropH" type="range" min="5" max="100" step="0.1" value="100">
+          </div>
+          <p class="status" style="margin:0">Se guarda por tipología y se aplica en el piloto.</p>
+          <div class="row-actions">
+            <button id="cropPreviewBtn" class="btn" type="button">Vista previa</button>
+            <button id="cropResetBtn" class="btn" type="button">Restaurar</button>
+            <button id="cropCancelBtn" class="btn" type="button">Cancelar</button>
+            <button id="cropSaveBtn" class="btn" type="button" style="background:#ffe816;border-color:#cdbb0b;">Guardar</button>
+          </div>
+          <div class="crop-preview-result">
+            <h4>Resultado</h4>
+            <div class="box"><img id="cropResultImg" alt="Preview de recorte"></div>
+            <p id="cropResultHint" class="hint">Pulsa “Vista previa”.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search || '');
+      const token = params.get('token') || '';
+      const dataUrl = '/api/viceroy-piloto/public-data' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+      const MIN_SIZE = 5;
+      const DEFAULT_CROP = { x: 0, y: 0, w: 100, h: 100 };
+      const state = {
+        tipologias: [],
+        crops: {},
+        filtered: [],
+        cropEditor: { id: '', planLink: '', draft: { x: 0, y: 0, w: 100, h: 100 } }
+      };
+
+      const els = {
+        backBtn: document.getElementById('backBtn'),
+        searchInput: document.getElementById('searchInput'),
+        status: document.getElementById('status'),
+        rowsBody: document.getElementById('rowsBody'),
+        cropModal: document.getElementById('cropModal'),
+        cropSub: document.getElementById('cropSub'),
+        cropStage: document.getElementById('cropStage'),
+        cropImageArea: document.getElementById('cropImageArea'),
+        cropStageImg: document.getElementById('cropStageImg'),
+        cropRect: document.getElementById('cropRect'),
+        cropHandle: document.getElementById('cropHandle'),
+        cropX: document.getElementById('cropX'),
+        cropY: document.getElementById('cropY'),
+        cropW: document.getElementById('cropW'),
+        cropH: document.getElementById('cropH'),
+        cropXVal: document.getElementById('cropXVal'),
+        cropYVal: document.getElementById('cropYVal'),
+        cropWVal: document.getElementById('cropWVal'),
+        cropHVal: document.getElementById('cropHVal'),
+        cropPreviewBtn: document.getElementById('cropPreviewBtn'),
+        cropResultImg: document.getElementById('cropResultImg'),
+        cropResultHint: document.getElementById('cropResultHint'),
+        cropResetBtn: document.getElementById('cropResetBtn'),
+        cropCancelBtn: document.getElementById('cropCancelBtn'),
+        cropSaveBtn: document.getElementById('cropSaveBtn')
+      };
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      function normalizeCrop(input) {
+        const src = input && typeof input === 'object' ? input : {};
+        const w = clamp(Number(src.w), MIN_SIZE, 100);
+        const h = clamp(Number(src.h), MIN_SIZE, 100);
+        const x = clamp(Number(src.x), 0, 100 - w);
+        const y = clamp(Number(src.y), 0, 100 - h);
+        return {
+          x: Number.isFinite(x) ? x : 0,
+          y: Number.isFinite(y) ? y : 0,
+          w: Number.isFinite(w) ? w : 100,
+          h: Number.isFinite(h) ? h : 100
+        };
+      }
+      function proxyImageUrl(url) {
+        const value = String(url || '').trim();
+        if (!value) return '';
+        if (/^\/api\/presentaciones\/solar-midtown\/plan-image\?url=/i.test(value)) return value;
+        if (/^https?:\/\//i.test(value)) {
+          return '/api/presentaciones/solar-midtown/plan-image?url=' + encodeURIComponent(value);
+        }
+        return value;
+      }
+      function cropKey(crop) {
+        return JSON.stringify(normalizeCrop(crop));
+      }
+      function renderRows() {
+        if (!state.filtered.length) {
+          els.rowsBody.innerHTML = '<tr><td colspan="6" class="small">No hay tipologías para mostrar.</td></tr>';
+          return;
+        }
+        els.rowsBody.innerHTML = state.filtered.map(function (row) {
+          const crop = state.crops[row.id] ? normalizeCrop(state.crops[row.id]) : null;
+          return '<tr>' +
+            '<td><strong>' + esc(row.id || '-') + '</strong></td>' +
+            '<td>' + esc(row.recamaras || '-') + '</td>' +
+            '<td>' + esc((row.units || []).join(', ') || '-') + '</td>' +
+            '<td>' + (row.planLink ? '<a href="' + esc(proxyImageUrl(row.planLink)) + '" target="_blank" rel="noreferrer">Abrir plano</a>' : '<span class="status">Sin plano</span>') + '</td>' +
+            '<td>' + (crop ? '<span class="crop-badge">' + esc(crop.x.toFixed(1) + ' / ' + crop.y.toFixed(1) + ' / ' + crop.w.toFixed(1) + ' / ' + crop.h.toFixed(1)) + '</span>' : '<span class="status">Sin recorte</span>') + '</td>' +
+            '<td>' + (row.planLink ? '<button class="crop-btn" data-edit-id="' + esc(row.id) + '">Editar</button>' : '<span class="status">Sin plano</span>') + '</td>' +
+          '</tr>';
+        }).join('');
+      }
+      function applyFilter() {
+        const q = String(els.searchInput.value || '').trim().toLowerCase();
+        if (!q) {
+          state.filtered = state.tipologias.slice();
+          renderRows();
+          return;
+        }
+        state.filtered = state.tipologias.filter(function (row) {
+          return [row.id, row.name, row.recamaras, (row.units || []).join(' ')].join(' ').toLowerCase().includes(q);
+        });
+        renderRows();
+      }
+      function syncEditorUi(crop) {
+        const c = normalizeCrop(crop);
+        state.cropEditor.draft = c;
+        els.cropRect.style.left = c.x + '%';
+        els.cropRect.style.top = c.y + '%';
+        els.cropRect.style.width = c.w + '%';
+        els.cropRect.style.height = c.h + '%';
+        els.cropX.value = String(c.x);
+        els.cropY.value = String(c.y);
+        els.cropW.value = String(c.w);
+        els.cropH.value = String(c.h);
+        els.cropXVal.textContent = c.x.toFixed(1) + '%';
+        els.cropYVal.textContent = c.y.toFixed(1) + '%';
+        els.cropWVal.textContent = c.w.toFixed(1) + '%';
+        els.cropHVal.textContent = c.h.toFixed(1) + '%';
+      }
+      function updateImageAreaBounds() {
+        const img = els.cropStageImg;
+        const stage = els.cropStage;
+        if (!img || !img.naturalWidth || !img.naturalHeight || !stage) return;
+        const rect = stage.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
+        const rw = img.naturalWidth * scale;
+        const rh = img.naturalHeight * scale;
+        const ox = Math.max(0, (rect.width - rw) / 2);
+        const oy = Math.max(0, (rect.height - rh) / 2);
+        els.cropImageArea.style.left = ox + 'px';
+        els.cropImageArea.style.top = oy + 'px';
+        els.cropImageArea.style.width = rw + 'px';
+        els.cropImageArea.style.height = rh + 'px';
+      }
+      async function renderCropPreview() {
+        const img = els.cropStageImg;
+        const crop = normalizeCrop(state.cropEditor.draft);
+        if (!img || !img.naturalWidth || !img.naturalHeight) {
+          els.cropResultHint.textContent = 'Imagen aún cargando...';
+          return;
+        }
+        const iw = img.naturalWidth;
+        const ih = img.naturalHeight;
+        const sx = Math.round((crop.x / 100) * iw);
+        const sy = Math.round((crop.y / 100) * ih);
+        const sw = Math.max(1, Math.round((crop.w / 100) * iw));
+        const sh = Math.max(1, Math.round((crop.h / 100) * ih));
+        const canvas = document.createElement('canvas');
+        canvas.width = sw;
+        canvas.height = sh;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          els.cropResultHint.textContent = 'No se pudo generar preview.';
+          return;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        els.cropResultImg.src = canvas.toDataURL('image/png');
+        els.cropResultHint.textContent = 'Así se guardará este recorte.';
+      }
+      function openEditor(id) {
+        const row = state.tipologias.find(function (item) { return String(item.id || '') === String(id || ''); });
+        if (!row || !row.planLink) return;
+        state.cropEditor.id = row.id;
+        state.cropEditor.planLink = row.planLink;
+        const existing = state.crops[row.id] || DEFAULT_CROP;
+        syncEditorUi(existing);
+        els.cropStageImg.src = proxyImageUrl(row.planLink);
+        els.cropResultImg.removeAttribute('src');
+        els.cropResultHint.textContent = 'Pulsa “Vista previa”.';
+        els.cropSub.textContent = 'Tipología: ' + row.id + ' · Arrastra el cuadro o usa los deslizadores y guarda.';
+        els.cropModal.classList.add('show');
+        els.cropModal.setAttribute('aria-hidden', 'false');
+      }
+      function closeEditor() {
+        els.cropModal.classList.remove('show');
+        els.cropModal.setAttribute('aria-hidden', 'true');
+        state.cropEditor.id = '';
+        state.cropEditor.planLink = '';
+      }
+      async function saveCrop() {
+        const id = state.cropEditor.id;
+        if (!id) return;
+        const crop = normalizeCrop(state.cropEditor.draft);
+        els.cropSaveBtn.disabled = true;
+        try {
+          const res = await fetch('/api/viceroy-piloto/tipologia-crop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ id: id, crop: crop })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            els.status.textContent = data.error || 'No se pudo guardar el recorte.';
+            return;
+          }
+          state.crops[id] = normalizeCrop(data.crop || crop);
+          applyFilter();
+          closeEditor();
+          els.status.textContent = 'Recorte guardado para ' + id + '.';
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'Error al guardar.';
+        } finally {
+          els.cropSaveBtn.disabled = false;
+        }
+      }
+      async function resetCrop() {
+        const id = state.cropEditor.id;
+        if (!id) return;
+        try {
+          const res = await fetch('/api/viceroy-piloto/tipologia-crop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ id: id, reset: true })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            els.status.textContent = data.error || 'No se pudo restaurar.';
+            return;
+          }
+          state.crops[id] = normalizeCrop(data.crop || DEFAULT_CROP);
+          syncEditorUi(state.crops[id]);
+          els.cropResultImg.removeAttribute('src');
+          els.cropResultHint.textContent = 'Pulsa “Vista previa”.';
+          els.status.textContent = 'Recorte restaurado.';
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'Error al restaurar.';
+        }
+      }
+      function bindDrag() {
+        let drag = null;
+        function pointerToCrop(evt, base, mode) {
+          const rect = els.cropImageArea.getBoundingClientRect();
+          const px = clamp(((evt.clientX - rect.left) / rect.width) * 100, 0, 100);
+          const py = clamp(((evt.clientY - rect.top) / rect.height) * 100, 0, 100);
+          if (mode === 'move') {
+            const x = clamp(px - (base.w / 2), 0, 100 - base.w);
+            const y = clamp(py - (base.h / 2), 0, 100 - base.h);
+            return { x, y, w: base.w, h: base.h };
+          }
+          const w = clamp(px - base.x, MIN_SIZE, 100 - base.x);
+          const h = clamp(py - base.y, MIN_SIZE, 100 - base.y);
+          return { x: base.x, y: base.y, w, h };
+        }
+        els.cropRect.addEventListener('pointerdown', function (evt) {
+          if (evt.target === els.cropHandle) return;
+          evt.preventDefault();
+          evt.stopPropagation();
+          drag = { mode: 'move', base: normalizeCrop(state.cropEditor.draft) };
+          els.cropRect.setPointerCapture(evt.pointerId);
+        });
+        els.cropHandle.addEventListener('pointerdown', function (evt) {
+          evt.preventDefault();
+          evt.stopPropagation();
+          drag = { mode: 'resize', base: normalizeCrop(state.cropEditor.draft) };
+          els.cropHandle.setPointerCapture(evt.pointerId);
+        });
+        window.addEventListener('pointermove', function (evt) {
+          if (!drag) return;
+          syncEditorUi(pointerToCrop(evt, drag.base, drag.mode));
+          renderCropPreview().catch(function () {});
+        });
+        window.addEventListener('pointerup', function () {
+          drag = null;
+        });
+      }
+      async function load() {
+        const res = await fetch(dataUrl, { cache: 'no-store' });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar el piloto');
+        const tipologias = Array.isArray(data.tipologias) ? data.tipologias : [];
+        state.crops = data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {};
+        state.tipologias = tipologias.map(function (item) {
+          return {
+            id: String(item && item.id || '').trim(),
+            name: String(item && item.name || '').trim() || String(item && item.id || '').trim(),
+            recamaras: String(item && item.recamaras || '').trim(),
+            planLink: String(item && item.planLink || '').trim(),
+            units: Array.isArray(item && item.units) ? item.units.slice() : []
+          };
+        }).filter(function (item) { return item.id; });
+        state.filtered = state.tipologias.slice();
+        els.status.textContent = 'Tipologías detectadas: ' + state.tipologias.length + '.';
+        renderRows();
+      }
+
+      els.searchInput.addEventListener('input', applyFilter);
+      els.rowsBody.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('[data-edit-id]');
+        if (!btn) return;
+        openEditor(btn.getAttribute('data-edit-id') || '');
+      });
+      els.cropStageImg.addEventListener('load', function () {
+        updateImageAreaBounds();
+        if (state.cropEditor.id) renderCropPreview().catch(function () {});
+      });
+      [els.cropX, els.cropY, els.cropW, els.cropH].forEach(function (input) {
+        input.addEventListener('input', function () {
+          const next = normalizeCrop({
+            x: Number(els.cropX.value),
+            y: Number(els.cropY.value),
+            w: Number(els.cropW.value),
+            h: Number(els.cropH.value)
+          });
+          state.cropEditor.draft = next;
+          syncEditorUi(next);
+          renderCropPreview().catch(function () {});
+        });
+      });
+      els.cropPreviewBtn.addEventListener('click', function () { renderCropPreview().catch(function () {}); });
+      els.cropCancelBtn.addEventListener('click', closeEditor);
+      els.cropSaveBtn.addEventListener('click', saveCrop);
+      els.cropResetBtn.addEventListener('click', resetCrop);
+      els.cropModal.addEventListener('click', function (event) {
+        const t = event.target;
+        if (t && t.getAttribute && t.getAttribute('data-close') === '1') closeEditor();
+      });
+      if (els.backBtn) {
+        els.backBtn.href = '/viceroy-piloto-presentacion' + (token ? ('?token=' + encodeURIComponent(token)) : '');
+      }
+      window.addEventListener('resize', function () {
+        updateImageAreaBounds();
+      });
+      bindDrag();
+      load().catch(function (err) {
+        els.status.textContent = err && err.message ? err.message : 'Error de carga';
+      });
+    })();
+  </script>
+</body>
+</html>

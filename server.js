@@ -128,6 +128,8 @@ const VICEROY_PAYMENT_PLAN_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-payment-pl
 const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
 const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
 const CEIBA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-ceiba-crops.json');
+const VICEROY_TIPOLOGIA_CROPS_PATH = path.join(DATA_DIR, 'viceroy-tipologias-crops.json');
+const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'viceroy-tipologias-crops.json');
 const SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE = clampNumber(Number(process.env.SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE), 20, 5, 60);
 const SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY = clampNumber(Number(process.env.SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY), 6, 1, 16);
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
@@ -2675,6 +2677,10 @@ function defaultCeibaPlanCrop() {
   return { x: 0, y: 0, w: 100, h: 100 };
 }
 
+function defaultViceroyTipologiaCrop() {
+  return { x: 0, y: 0, w: 100, h: 100 };
+}
+
 function normalizeSolarMidtownPlanCrop(input) {
   const base = defaultSolarMidtownPlanCrop();
   const src = input && typeof input === 'object' ? input : {};
@@ -2722,6 +2728,29 @@ function normalizeCeibaPlanCrop(input) {
   };
 }
 
+function normalizeViceroyTipologiaCrop(input) {
+  const base = defaultViceroyTipologiaCrop();
+  const src = input && typeof input === 'object' ? input : {};
+  if (Object.prototype.hasOwnProperty.call(src, 'zoom') && !Object.prototype.hasOwnProperty.call(src, 'w')) {
+    const zoom = clampNumber(src.zoom, 1, 1, 4);
+    const boxW = clampNumber(100 / zoom, 100, 5, 100);
+    const boxH = clampNumber(100 / zoom, 100, 5, 100);
+    const centerX = clampNumber(src.x, 50, -300, 300);
+    const centerY = clampNumber(src.y, 50, -300, 300);
+    const left = centerX - (boxW / 2);
+    const top = centerY - (boxH / 2);
+    return { x: left, y: top, w: boxW, h: boxH };
+  }
+  const width = clampNumber(src.w, base.w, 5, 100);
+  const height = clampNumber(src.h, base.h, 5, 100);
+  return {
+    x: clampNumber(src.x, base.x, -300, 300),
+    y: clampNumber(src.y, base.y, -300, 300),
+    w: width,
+    h: height
+  };
+}
+
 function normalizeSolarMidtownCropMap(input) {
   const src = input && typeof input === 'object' ? input : {};
   const out = {};
@@ -2744,6 +2773,17 @@ function normalizeCeibaCropMap(input) {
   return out;
 }
 
+function normalizeViceroyTipologiaCropMap(input) {
+  const src = input && typeof input === 'object' ? input : {};
+  const out = {};
+  Object.keys(src).forEach((key) => {
+    const id = String(key || '').trim();
+    if (!id) return;
+    out[id] = normalizeViceroyTipologiaCrop(src[key]);
+  });
+  return out;
+}
+
 function isDefaultSolarMidtownCrop(cropInput) {
   const crop = normalizeSolarMidtownPlanCrop(cropInput);
   const def = defaultSolarMidtownPlanCrop();
@@ -2753,6 +2793,12 @@ function isDefaultSolarMidtownCrop(cropInput) {
 function isDefaultCeibaCrop(cropInput) {
   const crop = normalizeCeibaPlanCrop(cropInput);
   const def = defaultCeibaPlanCrop();
+  return crop.x === def.x && crop.y === def.y && crop.w === def.w && crop.h === def.h;
+}
+
+function isDefaultViceroyTipologiaCrop(cropInput) {
+  const crop = normalizeViceroyTipologiaCrop(cropInput);
+  const def = defaultViceroyTipologiaCrop();
   return crop.x === def.x && crop.y === def.y && crop.w === def.w && crop.h === def.h;
 }
 
@@ -2805,6 +2851,26 @@ function readCeibaCropMap() {
   return merged;
 }
 
+function readViceroyTipologiaCropMap() {
+  const repoRaw = readJson(VICEROY_TIPOLOGIA_CROPS_REPO_PATH, {});
+  const runtimeRaw = readJson(VICEROY_TIPOLOGIA_CROPS_PATH, {});
+  const repoMap = normalizeViceroyTipologiaCropMap(repoRaw);
+  const runtimeMap = normalizeViceroyTipologiaCropMap(runtimeRaw);
+  const merged = { ...repoMap };
+  Object.keys(runtimeMap).forEach((id) => {
+    const runtimeCrop = runtimeMap[id];
+    const repoCrop = merged[id];
+    if (!repoCrop) {
+      merged[id] = runtimeCrop;
+      return;
+    }
+    if (!isDefaultViceroyTipologiaCrop(runtimeCrop) || isDefaultViceroyTipologiaCrop(repoCrop)) {
+      merged[id] = runtimeCrop;
+    }
+  });
+  return merged;
+}
+
 function saveSolarMidtownCropMap(map) {
   const normalized = normalizeSolarMidtownCropMap(map);
   writeJson(SOLAR_MIDTOWN_CROPS_PATH, normalized);
@@ -2814,6 +2880,17 @@ function saveSolarMidtownCropMap(map) {
 function saveCeibaCropMap(map) {
   const normalized = normalizeCeibaCropMap(map);
   writeJson(CEIBA_CROPS_PATH, normalized);
+  return normalized;
+}
+
+function saveViceroyTipologiaCropMap(map) {
+  const normalized = normalizeViceroyTipologiaCropMap(map);
+  writeJson(VICEROY_TIPOLOGIA_CROPS_PATH, normalized);
+  try {
+    const repoDir = path.dirname(VICEROY_TIPOLOGIA_CROPS_REPO_PATH);
+    if (!fs.existsSync(repoDir)) fs.mkdirSync(repoDir, { recursive: true });
+    writeJson(VICEROY_TIPOLOGIA_CROPS_REPO_PATH, normalized);
+  } catch {}
   return normalized;
 }
 
@@ -5942,6 +6019,30 @@ function resolvePreferredViceroyInventoryCandidates() {
     currentFile,
     ...candidates.filter((candidate) => candidate.fullPath !== currentFile.fullPath)
   ];
+}
+
+function buildViceroyTipologiaRows(inventoryRows) {
+  const byTip = new Map();
+  (Array.isArray(inventoryRows) ? inventoryRows : []).forEach((row) => {
+    const id = String(row && row.tipologia || '').trim();
+    if (!id) return;
+    const existing = byTip.get(id) || {
+      id,
+      name: id,
+      recamaras: String(row && row.recamaras || '').trim(),
+      planLink: '',
+      units: []
+    };
+    const planLink = String(row && row.planLink || '').trim();
+    if (!existing.planLink && planLink) existing.planLink = planLink;
+    const unit = String(row && row.unidad || '').trim();
+    if (unit && !existing.units.includes(unit)) existing.units.push(unit);
+    if (!existing.recamaras && String(row && row.recamaras || '').trim()) {
+      existing.recamaras = String(row.recamaras || '').trim();
+    }
+    byTip.set(id, existing);
+  });
+  return Array.from(byTip.values()).sort((a, b) => String(a.id).localeCompare(String(b.id), 'es', { numeric: true, sensitivity: 'base' }));
 }
 
 function readMergedFloorsByDevelopment(devSlug) {
@@ -10075,8 +10176,36 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     showUnitLabels: floorsData.showUnitLabels !== false,
     config,
     inventoryFileName,
-    inventoryRows
+    inventoryRows,
+    tipologiaCrops: readViceroyTipologiaCropMap(),
+    tipologias: buildViceroyTipologiaRows(inventoryRows)
   });
+});
+
+app.get('/viceroy-piloto/tipologias-editor', requireViceroyPresentAccess, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-tipologias-editor.html'));
+});
+
+app.get('/api/viceroy-piloto/tipologia-crops', requireViceroyPresentAccess, (req, res) => {
+  return res.json({ ok: true, crops: readViceroyTipologiaCropMap() });
+});
+
+app.post('/api/viceroy-piloto/tipologia-crop', requireViceroyPresentAccess, (req, res) => {
+  const body = req.body || {};
+  const id = String(body.id || '').trim();
+  if (!id) {
+    return res.status(400).json({ error: 'Falta la tipología' });
+  }
+  const cropMap = readViceroyTipologiaCropMap();
+  if (body && body.reset) {
+    delete cropMap[id];
+    saveViceroyTipologiaCropMap(cropMap);
+    return res.json({ ok: true, id, crop: defaultViceroyTipologiaCrop(), reset: true });
+  }
+  const crop = normalizeViceroyTipologiaCrop(body.crop);
+  cropMap[id] = crop;
+  saveViceroyTipologiaCropMap(cropMap);
+  return res.json({ ok: true, id, crop, reset: false });
 });
 
 app.post('/api/viceroy-piloto/export-floors-pdf', requireViceroyPresentAccess, async (req, res) => {
