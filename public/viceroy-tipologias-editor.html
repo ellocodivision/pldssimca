@@ -159,7 +159,7 @@
         tipologias: [],
         crops: {},
         filtered: [],
-        cropEditor: { id: '', planLink: '', draft: { x: 0, y: 0, w: 100, h: 100 } }
+        cropEditor: { id: '', planLink: '', draft: { x: 0, y: 0, w: 100, h: 100 }, autoFitPending: false }
       };
 
       const els = {
@@ -209,6 +209,10 @@
           h: Number.isFinite(h) ? h : 100
         };
       }
+      function isDefaultCrop(input) {
+        const c = normalizeCrop(input || DEFAULT_CROP);
+        return c.x === DEFAULT_CROP.x && c.y === DEFAULT_CROP.y && c.w === DEFAULT_CROP.w && c.h === DEFAULT_CROP.h;
+      }
       function proxyImageUrl(url) {
         const value = String(url || '').trim();
         if (!value) return '';
@@ -220,6 +224,59 @@
       }
       function cropKey(crop) {
         return JSON.stringify(normalizeCrop(crop));
+      }
+      async function detectPlanBounds(img) {
+        const src = String(img && img.dataset && img.dataset.planSrc || img && img.getAttribute && img.getAttribute('src') || '').trim();
+        if (!src) return DEFAULT_CROP;
+        const helper = new Image();
+        helper.crossOrigin = 'anonymous';
+        await new Promise(function (resolve, reject) {
+          helper.onload = function () { resolve(true); };
+          helper.onerror = function () { reject(new Error('load-failed')); };
+          helper.src = src;
+        });
+        const iw = helper.naturalWidth || helper.width;
+        const ih = helper.naturalHeight || helper.height;
+        if (!iw || !ih) return DEFAULT_CROP;
+        const sampleW = Math.min(iw, 320);
+        const sampleH = Math.max(1, Math.round((ih / iw) * sampleW));
+        const canvas = document.createElement('canvas');
+        canvas.width = sampleW;
+        canvas.height = sampleH;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return DEFAULT_CROP;
+        ctx.drawImage(helper, 0, 0, sampleW, sampleH);
+        const data = ctx.getImageData(0, 0, sampleW, sampleH).data;
+        const limitY = Math.max(1, Math.floor(sampleH * 0.82));
+        let minX = sampleW;
+        let minY = limitY;
+        let maxX = -1;
+        let maxY = -1;
+        for (let y = 0; y < limitY; y += 2) {
+          for (let x = 0; x < sampleW; x += 2) {
+            const idx = (y * sampleW + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const a = data[idx + 3];
+            if (a < 20) continue;
+            const brightness = (r + g + b) / 3;
+            if (brightness > 247) continue;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+        if (maxX < 0 || maxY < 0) return DEFAULT_CROP;
+        const padX = Math.max(2, Math.round((maxX - minX) * 0.07));
+        const padY = Math.max(2, Math.round((maxY - minY) * 0.07));
+        return normalizeCrop({
+          x: clamp(((minX - padX) / sampleW) * 100, 0, 100),
+          y: clamp(((minY - padY) / sampleH) * 100, 0, 100),
+          w: clamp((((maxX - minX + 1) + (padX * 2)) / sampleW) * 100, MIN_SIZE, 100),
+          h: clamp((((maxY - minY + 1) + (padY * 2)) / sampleH) * 100, MIN_SIZE, 100)
+        });
       }
       function renderRows() {
         if (!state.filtered.length) {
@@ -313,6 +370,7 @@
         state.cropEditor.id = row.id;
         state.cropEditor.planLink = row.planLink;
         const existing = state.crops[row.id] || DEFAULT_CROP;
+        state.cropEditor.autoFitPending = isDefaultCrop(existing);
         syncEditorUi(existing);
         els.cropStageImg.src = proxyImageUrl(row.planLink);
         els.cropResultImg.removeAttribute('src');
@@ -443,7 +501,19 @@
       });
       els.cropStageImg.addEventListener('load', function () {
         updateImageAreaBounds();
-        if (state.cropEditor.id) renderCropPreview().catch(function () {});
+        if (!state.cropEditor.id) return;
+        if (state.cropEditor.autoFitPending) {
+          state.cropEditor.autoFitPending = false;
+          detectPlanBounds(els.cropStageImg).then(function (autoCrop) {
+            syncEditorUi(autoCrop);
+            renderCropPreview().catch(function () {});
+            els.cropResultHint.textContent = 'Ajuste sugerido automáticamente. Puedes moverlo y guardar.';
+          }).catch(function () {
+            renderCropPreview().catch(function () {});
+          });
+          return;
+        }
+        renderCropPreview().catch(function () {});
       });
       [els.cropX, els.cropY, els.cropW, els.cropH].forEach(function (input) {
         input.addEventListener('input', function () {

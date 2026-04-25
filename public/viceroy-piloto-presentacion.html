@@ -2690,6 +2690,9 @@
         if (!event || !event.persisted) return;
         refreshCurrentView({ silent: false, keepStatus: true }).catch(function () {});
       });
+      window.addEventListener('focus', function () {
+        refreshCurrentView({ silent: true }).catch(function () {});
+      });
 
       function startAutoRefresh() {
         if (state.autoRefreshTimer) window.clearInterval(state.autoRefreshTimer);

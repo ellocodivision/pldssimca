@@ -128,8 +128,10 @@ const VICEROY_PAYMENT_PLAN_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-payment-pl
 const BROKERS_SIMCA_TEMPLATE_PATH = path.join(DATA_DIR, 'brokers-simca-template.json');
 const CEIBA_CROPS_PATH = path.join(DATA_DIR, 'presentaciones-ceiba-crops.json');
 const CEIBA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'presentaciones-ceiba-crops.json');
-const VICEROY_TIPOLOGIA_CROPS_PATH = path.join(DATA_DIR, 'viceroy-tipologias-crops.json');
-const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'viceroy-tipologias-crops.json');
+const VICEROY_PILOTO_DATA_DIR = path.join(DATA_DIR, 'developments', 'viceroy-piloto');
+const VICEROY_TIPOLOGIA_CROPS_PATH = path.join(VICEROY_PILOTO_DATA_DIR, 'viceroy-tipologias-crops.json');
+const VICEROY_TIPOLOGIA_CROPS_ROOT_PATH = path.join(DATA_DIR, 'viceroy-tipologias-crops.json');
+const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto', 'viceroy-tipologias-crops.json');
 const SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE = clampNumber(Number(process.env.SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE), 20, 5, 60);
 const SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY = clampNumber(Number(process.env.SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY), 6, 1, 16);
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
@@ -2852,10 +2854,15 @@ function readCeibaCropMap() {
 }
 
 function readViceroyTipologiaCropMap() {
-  const repoRaw = readJson(VICEROY_TIPOLOGIA_CROPS_REPO_PATH, {});
-  const runtimeRaw = readJson(VICEROY_TIPOLOGIA_CROPS_PATH, {});
-  const repoMap = normalizeViceroyTipologiaCropMap(repoRaw);
+  const runtimeRaw = readFirstExistingJson([
+    VICEROY_TIPOLOGIA_CROPS_PATH,
+    VICEROY_TIPOLOGIA_CROPS_ROOT_PATH
+  ], {});
+  const repoRaw = readFirstExistingJson([
+    VICEROY_TIPOLOGIA_CROPS_REPO_PATH
+  ], {});
   const runtimeMap = normalizeViceroyTipologiaCropMap(runtimeRaw);
+  const repoMap = normalizeViceroyTipologiaCropMap(repoRaw);
   const merged = { ...repoMap };
   Object.keys(runtimeMap).forEach((id) => {
     const runtimeCrop = runtimeMap[id];
@@ -2885,7 +2892,15 @@ function saveCeibaCropMap(map) {
 
 function saveViceroyTipologiaCropMap(map) {
   const normalized = normalizeViceroyTipologiaCropMap(map);
+  try {
+    if (!fs.existsSync(VICEROY_PILOTO_DATA_DIR)) fs.mkdirSync(VICEROY_PILOTO_DATA_DIR, { recursive: true });
+  } catch {}
   writeJson(VICEROY_TIPOLOGIA_CROPS_PATH, normalized);
+  try {
+    const rootDir = path.dirname(VICEROY_TIPOLOGIA_CROPS_ROOT_PATH);
+    if (!fs.existsSync(rootDir)) fs.mkdirSync(rootDir, { recursive: true });
+    writeJson(VICEROY_TIPOLOGIA_CROPS_ROOT_PATH, normalized);
+  } catch {}
   try {
     const repoDir = path.dirname(VICEROY_TIPOLOGIA_CROPS_REPO_PATH);
     if (!fs.existsSync(repoDir)) fs.mkdirSync(repoDir, { recursive: true });
