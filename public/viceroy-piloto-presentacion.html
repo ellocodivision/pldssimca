@@ -188,12 +188,16 @@
     .tipo-thumb {
       height: 260px;
       background: linear-gradient(140deg, #e8e8df, #deddcf);
+      position: relative;
+      overflow: hidden;
       display: grid;
       place-items: center;
       color: #646876;
       font-size: 12px;
     }
     .tipo-thumb img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: contain;
@@ -1382,17 +1386,28 @@
           const ih = helper.naturalHeight || helper.height;
           if (!iw || !ih) return;
           const c = normalizeCropRect(crop);
-          const sx = Math.round((c.x / 100) * iw);
-          const sy = Math.round((c.y / 100) * ih);
-          const sw = Math.max(1, Math.round((c.w / 100) * iw));
-          const sh = Math.max(1, Math.round((c.h / 100) * ih));
-          const out = document.createElement('canvas');
-          out.width = sw;
-          out.height = sh;
-          const outCtx = out.getContext('2d');
-          if (!outCtx) return;
-          outCtx.drawImage(helper, sx, sy, sw, sh, 0, 0, sw, sh);
-          img.src = out.toDataURL('image/png');
+          const frame = img.parentElement && img.parentElement.getBoundingClientRect
+            ? img.parentElement.getBoundingClientRect()
+            : null;
+          const frameWidth = frame && frame.width ? frame.width : (img.parentElement && img.parentElement.clientWidth) || 0;
+          const frameHeight = frame && frame.height ? frame.height : (img.parentElement && img.parentElement.clientHeight) || 0;
+          if (!frameWidth || !frameHeight) return;
+          const sx = (c.x / 100) * iw;
+          const sy = (c.y / 100) * ih;
+          const sw = Math.max(1, (c.w / 100) * iw);
+          const sh = Math.max(1, (c.h / 100) * ih);
+          const scale = Math.min(frameWidth / sw, frameHeight / sh);
+          const renderedW = iw * scale;
+          const renderedH = ih * scale;
+          const offsetX = ((frameWidth - (sw * scale)) / 2) - (sx * scale);
+          const offsetY = ((frameHeight - (sh * scale)) / 2) - (sy * scale);
+          img.src = src;
+          img.style.width = renderedW + 'px';
+          img.style.height = renderedH + 'px';
+          img.style.left = offsetX + 'px';
+          img.style.top = offsetY + 'px';
+          img.style.objectFit = 'unset';
+          img.style.objectPosition = 'unset';
           img.dataset.croppedKey = nextKey;
         } catch (_) {}
       }
