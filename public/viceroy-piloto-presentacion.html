@@ -2371,13 +2371,17 @@
           const thumb = proxyUrl
             ? '<img src="' + esc(proxyUrl) + '" data-plan-src="' + esc(proxyUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '">'
             : '<span>Tipologia</span>';
+          const cropDebug = crop
+            ? '<p class="tipo-sub" style="margin-top:6px;font-size:10px;letter-spacing:0.02em;color:#7a4b7d;">crop ' + esc([crop.x, crop.y, crop.w, crop.h].map(function (n) { return Number(n || 0).toFixed(1); }).join(' / ')) + '</p>'
+            : '<p class="tipo-sub" style="margin-top:6px;font-size:10px;letter-spacing:0.02em;color:#8a8a8a;">sin crop</p>';
           return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '" data-crop="' + esc(crop ? JSON.stringify(crop) : '') + '">' +
             '<div class="tipo-thumb">' + thumb + '</div>' +
-            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p></div>' +
+            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + cropDebug + '</div>' +
           '</article>';
         }).join('');
 
-        els.tipoStatus.textContent = tips.length + ' tipologias disponibles en piloto.';
+        const cropCount = tips.filter(function (tip) { return Boolean(state.tipologiaCrops && state.tipologiaCrops[tip.id]); }).length;
+        els.tipoStatus.textContent = tips.length + ' tipologias disponibles en piloto.' + (cropCount ? (' Crops detectados: ' + cropCount + '.') : '');
         applyTipologiaThumbCrops();
       }
 

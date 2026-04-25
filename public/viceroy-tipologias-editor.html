@@ -442,7 +442,7 @@
         }
         ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
         els.cropResultImg.src = canvas.toDataURL('image/png');
-        els.cropResultHint.textContent = 'Así se guardará este recorte.';
+        els.cropResultHint.textContent = 'Vista del recorte seleccionado. La imagen completa se ve a la izquierda.';
       }
       function openEditor(id) {
         const row = state.tipologias.find(function (item) { return String(item.id || '') === String(id || ''); });
