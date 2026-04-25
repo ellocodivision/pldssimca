@@ -46,6 +46,7 @@ const VICEROY_RESERVAS_DAILY_EMAIL_TO = String(process.env.VICEROY_RESERVAS_DAIL
 const VICEROY_RESERVAS_DAILY_EMAIL_CC = String(process.env.VICEROY_RESERVAS_DAILY_EMAIL_CC || '').trim();
 const VICEROY_RESERVAS_CORPORATE_EMAIL = String(process.env.VICEROY_RESERVAS_CORPORATE_EMAIL || 'ernesto@relatedgroud.com').trim();
 const VICEROY_PILOTO_MIN_PRICE_PER_M2 = Number(process.env.VICEROY_PILOTO_MIN_PRICE_PER_M2 || 7100);
+const VICEROY_PILOTO_PRICE_MULTIPLIER = Number(process.env.VICEROY_PILOTO_PRICE_MULTIPLIER || 18.5);
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true' || SMTP_PORT === 465;
@@ -5346,7 +5347,7 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
       ? Math.max(pricePerM2, Number.isFinite(VICEROY_PILOTO_MIN_PRICE_PER_M2) ? VICEROY_PILOTO_MIN_PRICE_PER_M2 : 7100)
       : NaN;
     const price = (Number.isFinite(total) && Number.isFinite(effectivePricePerM2))
-      ? (total * effectivePricePerM2)
+      ? (total * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
       : '';
     const den = hasViceroyDen(denRaw) ? '1' : '';
     const forcePh = normalizeHeaderKey(level) === 'n6' || normalizeHeaderKey(level).includes('penthouse');
@@ -5616,7 +5617,7 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
       ? Math.max(pricePerM2, Number.isFinite(VICEROY_PILOTO_MIN_PRICE_PER_M2) ? VICEROY_PILOTO_MIN_PRICE_PER_M2 : 7100)
       : NaN;
     const price = (Number.isFinite(m2Value) && Number.isFinite(effectivePricePerM2))
-      ? (m2Value * effectivePricePerM2)
+      ? (m2Value * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
       : '';
     const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
     const den = hasViceroyDen(denRaw) ? '1' : '';
