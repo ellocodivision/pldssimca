@@ -5921,15 +5921,13 @@ function resolveInventoryCandidatesByDevSlug(devSlug) {
 
 function resolveCurrentViceroyInventoryFile() {
   const devSlug = 'viceroy-piloto';
-  const cache = readViceroyInventoryCache();
   const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
-  const cachedName = String(cache.fileName || '').trim().toLowerCase();
-  if (cachedName) {
-    const exact = candidates.find((candidate) => String(candidate.name || '').trim().toLowerCase() === cachedName);
-    if (exact) return exact;
-  }
   if (candidates.length) {
-    return [...candidates].sort((a, b) => (b.mtimeMs || 0) - (a.mtimeMs || 0))[0] || null;
+    return [...candidates].sort((a, b) => {
+      const mtimeDiff = (b.mtimeMs || 0) - (a.mtimeMs || 0);
+      if (mtimeDiff !== 0) return mtimeDiff;
+      return String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity: 'base', numeric: true });
+    })[0] || null;
   }
   return null;
 }
