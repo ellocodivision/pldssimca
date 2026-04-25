@@ -10378,7 +10378,7 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
   if (!id) return res.status(400).json({ error: 'Falta la tipología' });
   const cropMap = readViceroyTipologiaCropMap();
   const planLink = getViceroyTipologiaSourcePlanLink(id);
-  const crop = cropMap[id];
+  const crop = cropMap[id] || defaultViceroyTipologiaCrop();
   const filePath = getViceroyTipologiaThumbFilePath(id, crop, planLink);
   if (fs.existsSync(filePath)) {
     res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
@@ -10387,15 +10387,13 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
   if (!planLink) {
     return res.status(404).json({ error: 'No hay imagen generada para esta tipología' });
   }
-  if (crop) {
-    try {
-      const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
-      if (generatedPath && fs.existsSync(generatedPath)) {
-        res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
-        return res.sendFile(generatedPath);
-      }
-    } catch {}
-  }
+  try {
+    const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
+    if (generatedPath && fs.existsSync(generatedPath)) {
+      res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+      return res.sendFile(generatedPath);
+    }
+  } catch {}
   return res.redirect(302, `/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(planLink)}`);
 });
 
