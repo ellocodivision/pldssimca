@@ -186,14 +186,14 @@
     }
     .tipo-card:hover { border-color: #aeb5a0; }
     .tipo-thumb {
-      height: 210px;
+      height: 260px;
       background: linear-gradient(140deg, #e8e8df, #deddcf);
       display: grid;
       place-items: center;
       color: #646876;
       font-size: 12px;
     }
-    .tipo-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+    .tipo-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block; }
     .tipo-meta { padding: 10px; }
     .tipo-name { margin: 0; font-size: 16px; }
     .tipo-sub { margin: 4px 0 0; font-size: 12px; color: #60646f; }
@@ -1328,6 +1328,130 @@
         });
       }
 
+      function isPlanBackgroundPixel(r, g, b, a) {
+        if (a != null && a < 20) return true;
+        return r > 245 && g > 245 && b > 245;
+      }
+
+      function cropBandFromImageData(imageData, width, height) {
+        const rowBounds = new Array(height).fill(null);
+        const data = imageData && imageData.data ? imageData.data : [];
+        const sampleStep = Math.max(1, Math.floor(Math.max(width, height) / 1200));
+        const rowThreshold = Math.max(3, Math.floor(width * 0.006));
+        for (let y = 0; y < height; y += sampleStep) {
+          let minX = width;
+          let maxX = -1;
+          let count = 0;
+          for (let x = 0; x < width; x += sampleStep) {
+            const idx = ((y * width) + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const a = data[idx + 3];
+            if (isPlanBackgroundPixel(r, g, b, a)) continue;
+            count += 1;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+          }
+          if (count > rowThreshold) {
+            rowBounds[y] = { minX: minX, maxX: maxX, count: count };
+          }
+        }
+
+        const bands = [];
+        let current = null;
+        for (let y = 0; y < height; y += 1) {
+          const row = rowBounds[y];
+          if (!row) {
+            if (current) {
+              bands.push(current);
+              current = null;
+            }
+            continue;
+          }
+          if (!current) {
+            current = { startY: y, endY: y, ink: 0, minX: row.minX, maxX: row.maxX };
+          }
+          current.endY = y;
+          current.ink += row.count;
+          if (row.minX < current.minX) current.minX = row.minX;
+          if (row.maxX > current.maxX) current.maxX = row.maxX;
+        }
+        if (current) bands.push(current);
+
+        if (!bands.length) return null;
+
+        const chosen = bands.sort(function (a, b) {
+          const inkDiff = (b.ink || 0) - (a.ink || 0);
+          if (inkDiff !== 0) return inkDiff;
+          const heightDiff = (b.endY - b.startY) - (a.endY - a.startY);
+          if (heightDiff !== 0) return heightDiff;
+          return a.startY - b.startY;
+        })[0];
+        if (!chosen) return null;
+
+        let minX = chosen.minX;
+        let maxX = chosen.maxX;
+        let minY = chosen.startY;
+        let maxY = chosen.endY;
+        const padX = Math.max(8, Math.round((maxX - minX) * 0.06));
+        const padY = Math.max(8, Math.round((maxY - minY) * 0.08));
+        minX = Math.max(0, minX - padX);
+        minY = Math.max(0, minY - padY);
+        maxX = Math.min(width - 1, maxX + padX);
+        maxY = Math.min(height - 1, maxY + padY);
+        if (maxX <= minX || maxY <= minY) return null;
+        return { x: minX, y: minY, w: (maxX - minX + 1), h: (maxY - minY + 1) };
+      }
+
+      async function cropTipologiaThumbImage(img) {
+        if (!img || img.dataset.cropped === '1' || img.dataset.cropping === '1') return;
+        const src = String(img.dataset.planSrc || img.getAttribute('src') || '').trim();
+        if (!src) return;
+        img.dataset.cropping = '1';
+        try {
+          const helper = new Image();
+          helper.crossOrigin = 'anonymous';
+          const loaded = await new Promise(function (resolve, reject) {
+            helper.onload = function () { resolve(true); };
+            helper.onerror = function () { reject(new Error('load-failed')); };
+            helper.src = src;
+          });
+          if (!loaded) return;
+          const iw = helper.naturalWidth || helper.width;
+          const ih = helper.naturalHeight || helper.height;
+          if (!iw || !ih) return;
+          const canvas = document.createElement('canvas');
+          canvas.width = iw;
+          canvas.height = ih;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.drawImage(helper, 0, 0);
+          const imageData = ctx.getImageData(0, 0, iw, ih);
+          const crop = cropBandFromImageData(imageData, iw, ih);
+          if (!crop) return;
+          const out = document.createElement('canvas');
+          out.width = crop.w;
+          out.height = crop.h;
+          const outCtx = out.getContext('2d');
+          if (!outCtx) return;
+          outCtx.drawImage(helper, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+          img.src = out.toDataURL('image/png');
+          img.dataset.cropped = '1';
+        } catch (_) {
+          img.dataset.cropped = '1';
+        } finally {
+          img.dataset.cropping = '0';
+        }
+      }
+
+      function cropVisibleTipologiaThumbs() {
+        const images = Array.from(document.querySelectorAll('.tipo-thumb img[data-plan-src], .tipo-thumb img[data-crop-plan]'));
+        images.forEach(function (img) {
+          cropTipologiaThumbImage(img).catch(function () {});
+        });
+      }
+
       function truncateCanvasText(ctx, text, maxWidth) {
         const value = String(text || '');
         if (!value) return '';
@@ -2255,7 +2379,7 @@
         els.tipoGrid.innerHTML = tips.map(function (tip) {
           const imageUrl = String(tip.imageUrl || getInventoryPlanForTipologia(tip.id) || '').trim();
           const thumb = imageUrl
-            ? '<img src="' + esc(imageUrl) + '" alt="' + esc(tip.name) + '">'
+            ? '<img src="' + esc(imageUrl) + '" data-plan-src="' + esc(imageUrl) + '" alt="' + esc(tip.name) + '">'
             : '<span>Tipologia</span>';
           return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '">' +
             '<div class="tipo-thumb">' + thumb + '</div>' +
@@ -2264,6 +2388,7 @@
         }).join('');
 
         els.tipoStatus.textContent = tips.length + ' tipologias disponibles en piloto.';
+        cropVisibleTipologiaThumbs();
       }
 
       function renderFloorTabs() {
