@@ -5893,6 +5893,18 @@ function resolveInventoryCandidatesByDevSlug(devSlug) {
   return [...canonical, ...latest];
 }
 
+function resolveCurrentViceroyInventoryFile() {
+  const devSlug = 'viceroy-piloto';
+  const cache = readViceroyInventoryCache();
+  const candidates = resolveInventoryCandidatesByDevSlug(devSlug);
+  const cachedName = String(cache.fileName || '').trim().toLowerCase();
+  if (cachedName) {
+    const exact = candidates.find((candidate) => String(candidate.name || '').trim().toLowerCase() === cachedName);
+    if (exact) return exact;
+  }
+  return candidates[0] || null;
+}
+
 function readMergedFloorsByDevelopment(devSlug) {
   const floorDirs = getDevelopmentFloorSearchDirs(devSlug);
   const entries = [];
@@ -10189,6 +10201,17 @@ app.get('/api/viceroy-piloto/inventory', (req, res) => {
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
+});
+
+app.get('/api/viceroy-piloto/inventory/download', requireViceroyPresentAccess, (req, res) => {
+  const file = resolveCurrentViceroyInventoryFile();
+  if (!file || !file.fullPath || !fs.existsSync(file.fullPath)) {
+    return res.status(404).json({ error: 'No hay inventario cargado para descargar' });
+  }
+  const fileName = String(file.name || path.basename(file.fullPath) || 'inventario-viceroy.xlsx').trim();
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"`);
+  res.setHeader('Content-Type', 'application/octet-stream');
+  return res.sendFile(file.fullPath);
 });
 
 app.post('/api/viceroy-piloto/inventory', (req, res) => {

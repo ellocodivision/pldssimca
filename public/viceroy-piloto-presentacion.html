@@ -595,6 +595,12 @@
       padding: 6px 8px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.12);
     }
+    .upload-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 180px;
+    }
     .upload-status {
       font-size: 11px;
       color: #5f6573;
@@ -624,7 +630,11 @@
   <div class="upload-tools hidden">
     <input id="inventoryUploadInput" type="file" accept=".xlsx,.xls,.csv" class="hidden">
     <button id="inventoryUploadBtn" class="btn" type="button">Cargar Excel</button>
-    <span id="inventoryUploadStatus" class="upload-status">Sin carga nueva</span>
+    <button id="inventoryDownloadBtn" class="btn" type="button">Descargar Excel actual</button>
+    <div class="upload-meta">
+      <span id="inventoryFileNameLabel" class="upload-status">Archivo actual: sin carga</span>
+      <span id="inventoryUploadStatus" class="upload-status">Sin carga nueva</span>
+    </div>
   </div>
 
   <section id="homeView" class="home">
@@ -786,6 +796,7 @@
         config: { tipologias: [], unitTipologiaMap: {}, unitRecamarasMap: {}, mapFloorOrder: [], pages: [] },
         showUnitLabels: false,
         inventoryRows: [],
+        inventoryFileName: '',
         canUploadInventory: false,
         byUnit: new Map(),
         selectedBedroom: '',
@@ -853,6 +864,8 @@
         unitHoverTooltip: document.getElementById('unitHoverTooltip'),
         inventoryUploadInput: document.getElementById('inventoryUploadInput'),
         inventoryUploadBtn: document.getElementById('inventoryUploadBtn'),
+        inventoryDownloadBtn: document.getElementById('inventoryDownloadBtn'),
+        inventoryFileNameLabel: document.getElementById('inventoryFileNameLabel'),
         inventoryUploadStatus: document.getElementById('inventoryUploadStatus')
       };
 
@@ -1038,6 +1051,23 @@
           const detail = err && err.message ? (' (' + err.message + ')') : '';
           els.inventoryUploadStatus.textContent = 'Error al subir Excel. Revisa sesion interna' + detail;
         }
+      }
+
+      function refreshInventoryUploadMeta() {
+        const fileName = String(state.inventoryFileName || '').trim();
+        if (els.inventoryFileNameLabel) {
+          els.inventoryFileNameLabel.textContent = fileName
+            ? ('Archivo actual: ' + fileName)
+            : 'Archivo actual: sin carga';
+        }
+        if (els.inventoryDownloadBtn) {
+          els.inventoryDownloadBtn.disabled = !fileName;
+        }
+      }
+
+      function downloadCurrentInventoryFile() {
+        if (!state.inventoryFileName) return;
+        window.location.href = '/api/viceroy-piloto/inventory/download';
       }
 
       function formatPrice(value, isDemo) {
@@ -2172,6 +2202,12 @@
         } else {
           els.homeStatus.textContent = 'Sin inventario cargado aun. Se muestran datos piloto.';
         }
+        if (els.inventoryFileNameLabel) {
+          const fileName = String(state.inventoryFileName || '').trim();
+          els.inventoryFileNameLabel.textContent = fileName
+            ? ('Archivo actual: ' + fileName)
+            : 'Archivo actual: sin carga';
+        }
       }
 
       function renderTipologias() {
@@ -2470,9 +2506,11 @@
         state.config = normalizeConfig(data.config);
         state.showUnitLabels = false;
         state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
+        state.inventoryFileName = String(data.inventoryFileName || '').trim();
         orderFloors();
         buildUnitIndex();
         applyPresentationLayout();
+        refreshInventoryUploadMeta();
         restoreCurrentView();
 
         try {
@@ -2765,11 +2803,17 @@
           if (!state.canUploadInventory) return;
           els.inventoryUploadInput.click();
         });
-
         els.inventoryUploadInput.addEventListener('change', function () {
           const file = els.inventoryUploadInput.files && els.inventoryUploadInput.files[0];
           uploadInventoryFile(file);
           els.inventoryUploadInput.value = '';
+        });
+      }
+
+      if (els.inventoryDownloadBtn) {
+        els.inventoryDownloadBtn.addEventListener('click', function () {
+          if (!state.inventoryFileName) return;
+          downloadCurrentInventoryFile();
         });
       }
 
