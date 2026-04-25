@@ -267,11 +267,51 @@
         if (!ctx) return DEFAULT_CROP;
         ctx.drawImage(helper, 0, 0, sampleW, sampleH);
         const data = ctx.getImageData(0, 0, sampleW, sampleH).data;
-        const limitY = Math.max(1, Math.floor(sampleH * 0.82));
+
+        function rgbAt(x, y) {
+          const idx = ((y * sampleW) + x) * 4;
+          return [data[idx], data[idx + 1], data[idx + 2], data[idx + 3]];
+        }
+        function avgCorners(size) {
+          const points = [
+            [0, 0],
+            [sampleW - size, 0],
+            [0, sampleH - size],
+            [sampleW - size, sampleH - size]
+          ];
+          const acc = [0, 0, 0, 0];
+          let count = 0;
+          points.forEach(function (pair) {
+            const px = clamp(pair[0], 0, Math.max(0, sampleW - 1));
+            const py = clamp(pair[1], 0, Math.max(0, sampleH - 1));
+            for (let y = 0; y < size; y += 1) {
+              for (let x = 0; x < size; x += 1) {
+                const [r, g, b, a] = rgbAt(clamp(px + x, 0, sampleW - 1), clamp(py + y, 0, sampleH - 1));
+                acc[0] += r;
+                acc[1] += g;
+                acc[2] += b;
+                acc[3] += a;
+                count += 1;
+              }
+            }
+          });
+          return count ? acc.map(function (v) { return v / count; }) : [255, 255, 255, 255];
+        }
+        function colorDistance(r1, g1, b1, r2, g2, b2) {
+          const dr = r1 - r2;
+          const dg = g1 - g2;
+          const db = b1 - b2;
+          return Math.sqrt((dr * dr) + (dg * dg) + (db * db));
+        }
+
+        const bg = avgCorners(Math.max(4, Math.round(Math.min(sampleW, sampleH) * 0.03)));
+        const bgBrightness = (bg[0] + bg[1] + bg[2]) / 3;
+        const limitY = Math.max(1, Math.floor(sampleH * 0.95));
         let minX = sampleW;
         let minY = limitY;
         let maxX = -1;
         let maxY = -1;
+        let found = false;
         for (let y = 0; y < limitY; y += 2) {
           for (let x = 0; x < sampleW; x += 2) {
             const idx = (y * sampleW + x) * 4;
@@ -281,11 +321,31 @@
             const a = data[idx + 3];
             if (a < 20) continue;
             const brightness = (r + g + b) / 3;
-            if (brightness > 247) continue;
+            const dist = colorDistance(r, g, b, bg[0], bg[1], bg[2]);
+            if (dist < 18 && brightness >= bgBrightness - 10) continue;
             if (x < minX) minX = x;
             if (y < minY) minY = y;
             if (x > maxX) maxX = x;
             if (y > maxY) maxY = y;
+            found = true;
+          }
+        }
+        if (!found) {
+          for (let y = 0; y < limitY; y += 2) {
+            for (let x = 0; x < sampleW; x += 2) {
+              const idx = (y * sampleW + x) * 4;
+              const r = data[idx];
+              const g = data[idx + 1];
+              const b = data[idx + 2];
+              const a = data[idx + 3];
+              if (a < 20) continue;
+              const brightness = (r + g + b) / 3;
+              if (brightness > 247) continue;
+              if (x < minX) minX = x;
+              if (y < minY) minY = y;
+              if (x > maxX) maxX = x;
+              if (y > maxY) maxY = y;
+            }
           }
         }
         if (maxX < 0 || maxY < 0) return DEFAULT_CROP;
