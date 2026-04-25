@@ -368,11 +368,22 @@
           const sourceRowIndex = Number.isFinite(Number(row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null;
           const planLinkLabel = row.planLink ? '<a href="' + esc(proxyImageUrl(row.planLink)) + '" target="_blank" rel="noreferrer">Abrir plano</a>' : '<span class="status">Sin plano</span>';
           const sourceLabel = sourceRowIndex ? '<div class="small" style="margin-top:4px;color:#6c7280">Fila origen: ' + esc(String(sourceRowIndex)) + '</div>' : '<div class="small" style="margin-top:4px;color:#9aa0aa">Fila origen: N/D</div>';
+          const thumbPath = String(row.thumbPath || '').trim();
+          const thumbFolder = String(row.thumbFolder || '').trim();
+          const thumbLabel = thumbPath
+            ? '<div class="small" style="margin-top:4px;color:#4c4b7a;word-break:break-all" title="' + esc(thumbPath) + '">PNG: ' + esc(thumbPath.length > 58 ? (thumbPath.slice(0, 55) + '...') : thumbPath) + '</div>'
+            : '<div class="small" style="margin-top:4px;color:#9aa0aa">PNG: sin ruta</div>';
+          const thumbFolderLabel = thumbFolder
+            ? '<div class="small" style="margin-top:2px;color:#7a4b7d;word-break:break-all" title="' + esc(thumbFolder) + '">Carpeta: ' + esc(thumbFolder.length > 54 ? (thumbFolder.slice(0, 51) + '...') : thumbFolder) + '</div>'
+            : '';
+          const thumbState = row.thumbExists
+            ? '<div class="small" style="margin-top:2px;color:#4f7b55">Guardado en carpeta</div>'
+            : '<div class="small" style="margin-top:2px;color:#a25b5b">PNG no existe aún</div>';
           return '<tr>' +
             '<td><strong>' + esc(row.id || '-') + '</strong></td>' +
             '<td>' + esc(row.recamaras || '-') + '</td>' +
             '<td>' + esc((row.units || []).join(', ') || '-') + '</td>' +
-            '<td>' + planLinkLabel + sourceLabel + '</td>' +
+            '<td>' + planLinkLabel + sourceLabel + thumbLabel + thumbFolderLabel + thumbState + '</td>' +
             '<td>' + (crop ? '<span class="crop-badge">' + esc(crop.x.toFixed(1) + ' / ' + crop.y.toFixed(1) + ' / ' + crop.w.toFixed(1) + ' / ' + crop.h.toFixed(1)) + '</span>' : '<span class="status">Sin recorte</span>') + '</td>' +
             '<td>' + (row.planLink ? '<button class="crop-btn" data-edit-id="' + esc(row.id) + '">Editar</button>' : '<span class="status">Sin plano</span>') + '</td>' +
           '</tr>';
@@ -491,8 +502,8 @@
           markTipologiaCropsUpdated();
           applyFilter();
           closeEditor();
-          els.status.textContent = data.thumbGenerated === false
-            ? ('Recorte guardado para ' + id + ', pero no se pudo generar la miniatura recortada.')
+          els.status.textContent = data.thumbPath
+            ? ('Recorte guardado para ' + id + '. PNG: ' + data.thumbPath + (data.thumbFolder ? (' · Carpeta: ' + data.thumbFolder) : ''))
             : ('Recorte guardado para ' + id + '.');
         } catch (err) {
           els.status.textContent = err && err.message ? err.message : 'Error al guardar.';

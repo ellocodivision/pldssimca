@@ -1368,70 +1368,6 @@
         };
       }
 
-      async function cropTipologiaThumbImage(img, crop) {
-        if (!img || !crop) return;
-        const src = String(img.dataset.planSrc || img.getAttribute('src') || '').trim();
-        if (!src) return;
-        const nextKey = JSON.stringify(normalizeCropRect(crop));
-        if (img.dataset.croppedKey === nextKey) return;
-        try {
-          if (!img.complete || !img.naturalWidth || !img.naturalHeight) {
-            if (!img.dataset.cropApplyPending) {
-              img.dataset.cropApplyPending = '1';
-              img.addEventListener('load', function () {
-                delete img.dataset.cropApplyPending;
-                cropTipologiaThumbImage(img, crop).catch(function () {});
-              }, { once: true });
-            }
-            return;
-          }
-          const iw = img.naturalWidth || img.width;
-          const ih = img.naturalHeight || img.height;
-          if (!iw || !ih) return;
-          const c = normalizeCropRect(crop);
-          const frame = img.parentElement && img.parentElement.getBoundingClientRect
-            ? img.parentElement.getBoundingClientRect()
-            : null;
-          const frameWidth = frame && frame.width ? frame.width : (img.parentElement && img.parentElement.clientWidth) || 0;
-          const frameHeight = frame && frame.height ? frame.height : (img.parentElement && img.parentElement.clientHeight) || 0;
-          if (!frameWidth || !frameHeight) return;
-          const sx = (c.x / 100) * iw;
-          const sy = (c.y / 100) * ih;
-          const sw = Math.max(1, (c.w / 100) * iw);
-          const sh = Math.max(1, (c.h / 100) * ih);
-          const scale = Math.max(frameWidth / sw, frameHeight / sh);
-          const renderedW = iw * scale;
-          const renderedH = ih * scale;
-          const offsetX = ((frameWidth - (sw * scale)) / 2) - (sx * scale);
-          const offsetY = ((frameHeight - (sh * scale)) / 2) - (sy * scale);
-          img.style.opacity = '1';
-          img.style.visibility = 'visible';
-          img.style.inset = 'auto';
-          img.style.right = 'auto';
-          img.style.bottom = 'auto';
-          img.style.width = renderedW + 'px';
-          img.style.height = renderedH + 'px';
-          img.style.left = offsetX + 'px';
-          img.style.top = offsetY + 'px';
-          img.style.maxWidth = 'none';
-          img.style.maxHeight = 'none';
-          img.style.objectFit = 'unset';
-          img.style.objectPosition = 'unset';
-          img.style.transform = 'none';
-          img.dataset.croppedKey = nextKey;
-        } catch (_) {}
-      }
-
-      function applyTipologiaThumbCrops() {
-        const images = Array.from(document.querySelectorAll('.tipo-thumb img[data-plan-src][data-tipologia-id]'));
-        images.forEach(function (img) {
-          const id = String(img.dataset.tipologiaId || '').trim();
-          const crop = state.tipologiaCrops && state.tipologiaCrops[id];
-          if (!crop) return;
-          cropTipologiaThumbImage(img, crop).catch(function () {});
-        });
-      }
-
       function readStoredTipologiaCrops() {
         try {
           const raw = localStorage.getItem(CROP_OVERRIDE_KEY);
@@ -2302,7 +2238,11 @@
             recamaras: rec || bucketId,
             planLink: originalPlanLink,
             imageUrl: originalPlanLink ? ('/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(id) + '&v=' + encodeURIComponent(String(state.tipologiaCropsKey || '')) + (token ? ('&token=' + encodeURIComponent(token)) : '')) : '',
-            sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null
+            sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null,
+            thumbPath: String(row.thumbPath || '').trim(),
+            thumbFolder: String(row.thumbFolder || '').trim(),
+            thumbFileName: String(row.thumbFileName || '').trim(),
+            thumbExists: Boolean(row.thumbExists)
           });
         });
 
@@ -2318,7 +2258,11 @@
             recamaras: rec || bucketId,
             planLink: String(tip.imageUrl || '').trim(),
             imageUrl: String(tip.imageUrl || '').trim(),
-            sourceRowIndex: null
+            sourceRowIndex: null,
+            thumbPath: '',
+            thumbFolder: '',
+            thumbFileName: '',
+            thumbExists: false
           });
         });
 
@@ -2400,12 +2344,17 @@
           const proxyUrl = getPlanImageProxyUrl(imageUrl);
           const crop = state.tipologiaCrops && state.tipologiaCrops[tip.id] ? state.tipologiaCrops[tip.id] : null;
           const thumb = proxyUrl
-            ? '<img src="' + esc(proxyUrl) + '" data-plan-src="' + esc(proxyUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '">'
+            ? '<img src="' + esc(proxyUrl) + '" data-plan-src="' + esc(proxyUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '" onerror="this.remove();">'
             : '<span>Tipologia</span>';
-          const cropDebug = '';
+          const thumbPath = String(tip.thumbPath || '').trim();
+          const thumbFolder = String(tip.thumbFolder || '').trim();
+          const thumbDebug = thumbPath
+            ? '<p class="tipo-sub" style="margin-top:4px;font-size:10px;letter-spacing:0.01em;color:#5f6572;word-break:break-all;" title="' + esc(thumbPath) + '">png ' + esc(thumbPath.length > 60 ? (thumbPath.slice(0, 57) + '...') : thumbPath) + '</p>' +
+              (thumbFolder ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#7a4b7d;word-break:break-all;" title="' + esc(thumbFolder) + '">folder ' + esc(thumbFolder.length > 54 ? (thumbFolder.slice(0, 51) + '...') : thumbFolder) + '</p>' : '')
+            : '<p class="tipo-sub" style="margin-top:4px;font-size:10px;letter-spacing:0.01em;color:#8a8a8a;">sin ruta PNG</p>';
           return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '" data-crop="' + esc(crop ? JSON.stringify(crop) : '') + '">' +
             '<div class="tipo-thumb">' + thumb + '</div>' +
-            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + cropDebug + '</div>' +
+            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + thumbDebug + '</div>' +
           '</article>';
         }).join('');
 

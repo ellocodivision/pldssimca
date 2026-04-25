@@ -2936,32 +2936,6 @@ function getViceroyTipologiaThumbUrl(tipologiaId) {
   return `/api/viceroy-piloto/tipologia-image?id=${encodeURIComponent(id)}`;
 }
 
-const VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING = new Set();
-let VICEROY_TIPOLOGIA_THUMB_WARMUP_CHAIN = Promise.resolve();
-
-function scheduleViceroyTipologiaThumbWarmup(tipologiaId, cropInput, planLinkInput) {
-  const id = String(tipologiaId || '').trim();
-  if (!id) return;
-  const key = getViceroyTipologiaThumbKey(id, cropInput, planLinkInput);
-  if (VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING.has(key)) return;
-  VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING.add(key);
-  VICEROY_TIPOLOGIA_THUMB_WARMUP_CHAIN = VICEROY_TIPOLOGIA_THUMB_WARMUP_CHAIN
-    .catch(() => {})
-    .then(async () => {
-      try {
-        const crop = normalizeViceroyTipologiaCrop(cropInput);
-        const planLink = String(planLinkInput || '').trim() || getViceroyTipologiaSourcePlanLink(id);
-        if (!planLink) return;
-        const filePath = getViceroyTipologiaThumbFilePath(id, crop, planLink);
-        if (fs.existsSync(filePath)) return;
-        await renderViceroyTipologiaThumbFile(id, crop, planLink);
-      } catch (_) {
-      } finally {
-        VICEROY_TIPOLOGIA_THUMB_WARMUP_PENDING.delete(key);
-      }
-    });
-}
-
 function readCurrentViceroyInventoryRows() {
   const candidates = resolveInventoryCandidatesByDevSlug('viceroy-piloto');
   for (const candidate of candidates) {
@@ -6227,6 +6201,7 @@ function resolvePreferredViceroyInventoryCandidates() {
 }
 
 function buildViceroyTipologiaRows(inventoryRows) {
+  const cropMap = readViceroyTipologiaCropMap();
   const byTip = new Map();
   (Array.isArray(inventoryRows) ? inventoryRows : []).forEach((row, index) => {
     const id = String(row && row.tipologia || '').trim();
@@ -6237,7 +6212,11 @@ function buildViceroyTipologiaRows(inventoryRows) {
       recamaras: String(row && row.recamaras || '').trim(),
       planLink: '',
       units: [],
-      sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : (index + 1)
+      sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : (index + 1),
+      thumbPath: '',
+      thumbFolder: '',
+      thumbFileName: '',
+      thumbExists: false
     };
     const planLink = String(row && row.planLink || '').trim();
     if (!existing.planLink && planLink) existing.planLink = planLink;
@@ -6249,6 +6228,12 @@ function buildViceroyTipologiaRows(inventoryRows) {
     if (!existing.recamaras && String(row && row.recamaras || '').trim()) {
       existing.recamaras = String(row.recamaras || '').trim();
     }
+    const crop = cropMap[id] || defaultViceroyTipologiaCrop();
+    const thumbPath = getViceroyTipologiaThumbFilePath(id, crop, existing.planLink || planLink);
+    existing.thumbPath = thumbPath;
+    existing.thumbFolder = path.dirname(thumbPath);
+    existing.thumbFileName = path.basename(thumbPath);
+    existing.thumbExists = fs.existsSync(thumbPath);
     byTip.set(id, existing);
   });
   return Array.from(byTip.values()).sort((a, b) => String(a.id).localeCompare(String(b.id), 'es', { numeric: true, sensitivity: 'base' }));
@@ -10378,16 +10363,6 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     inventoryFileName = cached.fileName || inventoryFileName;
   }
   const tipologias = buildViceroyTipologiaRows(inventoryRows);
-  setImmediate(() => {
-    tipologias.forEach((tip) => {
-      const id = String(tip && tip.id || '').trim();
-      const planLink = String(tip && tip.planLink || '').trim();
-      if (!id || !planLink) return;
-      const cropMap = readViceroyTipologiaCropMap();
-      const crop = cropMap[id] || defaultViceroyTipologiaCrop();
-      scheduleViceroyTipologiaThumbWarmup(id, crop, planLink);
-    });
-  });
   return res.json({
     ok: true,
     dev: devSlug,
@@ -10421,11 +10396,13 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
     return res.sendFile(filePath);
   }
-  if (!planLink) {
-    return res.status(404).json({ error: 'No hay imagen generada para esta tipología' });
-  }
-  scheduleViceroyTipologiaThumbWarmup(id, crop, planLink);
-  return res.redirect(302, `/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(planLink)}`);
+  return res.status(404).json({
+    error: 'No existe PNG generado para esta tipología',
+    thumbPath: filePath,
+    folder: path.dirname(filePath),
+    fileName: path.basename(filePath),
+    planLink: planLink || ''
+  });
 });
 
 app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) => {
@@ -10439,7 +10416,15 @@ app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) 
     delete cropMap[id];
     saveViceroyTipologiaCropMap(cropMap);
     removeViceroyTipologiaThumbFile(id);
-    return res.json({ ok: true, id, crop: defaultViceroyTipologiaCrop(), reset: true });
+    return res.json({
+      ok: true,
+      id,
+      crop: defaultViceroyTipologiaCrop(),
+      reset: true,
+      thumbPath: '',
+      thumbFolder: '',
+      thumbFileName: ''
+    });
   }
   const crop = normalizeViceroyTipologiaCrop(body.crop);
   cropMap[id] = crop;
@@ -10447,15 +10432,23 @@ app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) 
   let thumbGenerated = true;
   try {
     const planLink = String(body.planLink || '').trim() || getViceroyTipologiaSourcePlanLink(id);
-    removeViceroyTipologiaThumbFile(id);
     const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
     if (!generatedPath) thumbGenerated = false;
-    scheduleViceroyTipologiaThumbWarmup(id, crop, planLink);
   } catch (err) {
     log(`No se pudo generar thumbnail Viceroy para ${id}: ${err && err.message ? err.message : err}`);
     thumbGenerated = false;
   }
-  return res.json({ ok: true, id, crop, reset: false, thumbGenerated });
+  const thumbPath = getViceroyTipologiaThumbFilePath(id, crop, String(body.planLink || '').trim() || getViceroyTipologiaSourcePlanLink(id));
+  return res.json({
+    ok: true,
+    id,
+    crop,
+    reset: false,
+    thumbGenerated,
+    thumbPath,
+    thumbFolder: path.dirname(thumbPath),
+    thumbFileName: path.basename(thumbPath)
+  });
 });
 
 app.post('/api/viceroy-piloto/export-floors-pdf', requireViceroyPresentAccess, async (req, res) => {
