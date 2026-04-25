@@ -2916,9 +2916,18 @@ function sanitizeViceroyTipologiaAssetName(rawName) {
   return clean || 'TIPOLOGIA';
 }
 
-function getViceroyTipologiaThumbFilePath(tipologiaId) {
+function getViceroyTipologiaThumbKey(tipologiaId, cropInput, planLinkInput) {
+  const crop = normalizeViceroyTipologiaCrop(cropInput);
+  const planLink = String(planLinkInput || '').trim();
+  const payload = JSON.stringify(crop) + '|' + planLink;
+  const hash = crypto.createHash('sha1').update(payload).digest('hex').slice(0, 12);
+  return `${sanitizeViceroyTipologiaAssetName(tipologiaId)}-${hash}`;
+}
+
+function getViceroyTipologiaThumbFilePath(tipologiaId, cropInput, planLinkInput) {
   const safeId = sanitizeViceroyTipologiaAssetName(tipologiaId);
-  return path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${safeId}.png`);
+  const key = cropInput || planLinkInput ? getViceroyTipologiaThumbKey(tipologiaId, cropInput, planLinkInput) : safeId;
+  return path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${key}.png`);
 }
 
 function getViceroyTipologiaThumbUrl(tipologiaId) {
@@ -2953,10 +2962,18 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
   const crop = normalizeViceroyTipologiaCrop(cropInput);
   const sourcePlanLink = String(planLinkInput || '').trim() || getViceroyTipologiaSourcePlanLink(id);
   if (!sourcePlanLink) return null;
-  const outputPath = getViceroyTipologiaThumbFilePath(id);
+  const outputPath = getViceroyTipologiaThumbFilePath(id, crop, sourcePlanLink);
   try {
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   } catch {}
+
+  const upstream = await fetch(sourcePlanLink);
+  if (!upstream.ok) {
+    throw new Error(`No se pudo descargar plano (${upstream.status})`);
+  }
+  const contentType = upstream.headers.get('content-type') || 'image/png';
+  const dataBuffer = Buffer.from(await upstream.arrayBuffer());
+  const dataUrl = `data:${contentType};base64,${dataBuffer.toString('base64')}`;
 
   const browser = await getSharedPdfBrowser();
   const page = await browser.newPage();
@@ -2968,11 +2985,6 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
       height: 5000,
       deviceScaleFactor: 1
     });
-    const safeSourcePlanLink = String(sourcePlanLink || '')
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
     const html = `<!doctype html>
       <html>
         <head>
@@ -2985,7 +2997,7 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
         </head>
         <body>
           <div id="frame">
-            <img id="source" src="${safeSourcePlanLink}" crossorigin="anonymous" alt="">
+            <img id="source" src="${dataUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="">
           </div>
           <script>
             (function () {
@@ -3045,11 +3057,18 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
 }
 
 function removeViceroyTipologiaThumbFile(tipologiaId) {
-  const filePath = getViceroyTipologiaThumbFilePath(tipologiaId);
+  const safeId = sanitizeViceroyTipologiaAssetName(tipologiaId);
   try {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(VICEROY_TIPOLOGIA_THUMBS_DIR)) {
+      const entries = fs.readdirSync(VICEROY_TIPOLOGIA_THUMBS_DIR);
+      entries.forEach((entry) => {
+        if (entry === `${safeId}.png` || entry.startsWith(`${safeId}-`)) {
+          try { fs.unlinkSync(path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, entry)); } catch {}
+        }
+      });
+    }
   } catch {}
-  return filePath;
+  return path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${safeId}.png`);
 }
 
 function getSolarMidtownCropForId(rowId, cropMap) {
@@ -10346,30 +10365,41 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
   });
 });
 
-app.get('/viceroy-piloto/tipologias-editor', requireViceroyPresentAccess, (req, res) => {
+app.get('/viceroy-piloto/tipologias-editor', requireGerente, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-tipologias-editor.html'));
 });
 
-app.get('/api/viceroy-piloto/tipologia-crops', requireViceroyPresentAccess, (req, res) => {
+app.get('/api/viceroy-piloto/tipologia-crops', requireGerente, (req, res) => {
   return res.json({ ok: true, crops: readViceroyTipologiaCropMap() });
 });
 
-app.get('/api/viceroy-piloto/tipologia-image', (req, res) => {
+app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
   const id = String(req.query && req.query.id || '').trim();
   if (!id) return res.status(400).json({ error: 'Falta la tipología' });
-  const filePath = getViceroyTipologiaThumbFilePath(id);
+  const cropMap = readViceroyTipologiaCropMap();
+  const planLink = getViceroyTipologiaSourcePlanLink(id);
+  const crop = cropMap[id];
+  const filePath = getViceroyTipologiaThumbFilePath(id, crop, planLink);
   if (fs.existsSync(filePath)) {
     res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
     return res.sendFile(filePath);
   }
-  const planLink = getViceroyTipologiaSourcePlanLink(id);
   if (!planLink) {
     return res.status(404).json({ error: 'No hay imagen generada para esta tipología' });
+  }
+  if (crop) {
+    try {
+      const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
+      if (generatedPath && fs.existsSync(generatedPath)) {
+        res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        return res.sendFile(generatedPath);
+      }
+    } catch {}
   }
   return res.redirect(302, planLink);
 });
 
-app.post('/api/viceroy-piloto/tipologia-crop', requireViceroyPresentAccess, async (req, res) => {
+app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) => {
   const body = req.body || {};
   const id = String(body.id || '').trim();
   if (!id) {
@@ -10388,6 +10418,7 @@ app.post('/api/viceroy-piloto/tipologia-crop', requireViceroyPresentAccess, asyn
   let thumbGenerated = true;
   try {
     const planLink = String(body.planLink || '').trim() || getViceroyTipologiaSourcePlanLink(id);
+    removeViceroyTipologiaThumbFile(id);
     const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
     if (!generatedPath) thumbGenerated = false;
   } catch (err) {

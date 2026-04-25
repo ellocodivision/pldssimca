@@ -666,7 +666,7 @@
     <div class="topbar">
       <span class="label" id="tipoTopLabel">Tipologias</span>
       <div class="topbar-actions">
-        <button id="editTipologiasBtn" class="btn" type="button">Editar recortes</button>
+        <button id="editTipologiasBtn" class="btn hidden" type="button">Editar recortes</button>
         <button id="backToHomeBtn" class="btn" type="button">Volver a recamaras</button>
       </div>
     </div>
@@ -2397,25 +2397,15 @@
 
         els.tipoGrid.innerHTML = tips.map(function (tip) {
           const imageUrl = String(tip.imageUrl || getInventoryPlanForTipologia(tip.id) || '').trim();
-          const planLink = String(tip.planLink || getInventoryPlanForTipologia(tip.id) || '').trim();
           const proxyUrl = getPlanImageProxyUrl(imageUrl);
           const crop = state.tipologiaCrops && state.tipologiaCrops[tip.id] ? state.tipologiaCrops[tip.id] : null;
-          const sourceRowIndex = Number.isFinite(Number(tip.sourceRowIndex)) ? Number(tip.sourceRowIndex) : null;
           const thumb = proxyUrl
             ? '<img src="' + esc(proxyUrl) + '" data-plan-src="' + esc(proxyUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '">'
             : '<span>Tipologia</span>';
-          const planDebug = planLink
-            ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#5f6572;word-break:break-all;" title="' + esc(planLink) + '">plan ' + esc(planLink.length > 46 ? (planLink.slice(0, 43) + '...') : planLink) + '</p>'
-            : '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#8a8a8a;">sin planLink</p>';
-          const sourceDebug = sourceRowIndex
-            ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#5f6572;">fila ' + esc(String(sourceRowIndex)) + '</p>'
-            : '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#8a8a8a;">sin fila origen</p>';
-          const cropDebug = crop
-            ? '<p class="tipo-sub" style="margin-top:6px;font-size:10px;letter-spacing:0.02em;color:#7a4b7d;">crop ' + esc([crop.x, crop.y, crop.w, crop.h].map(function (n) { return Number(n || 0).toFixed(1); }).join(' / ')) + '</p>'
-            : '<p class="tipo-sub" style="margin-top:6px;font-size:10px;letter-spacing:0.02em;color:#8a8a8a;">sin crop</p>';
+          const cropDebug = '';
           return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '" data-crop="' + esc(crop ? JSON.stringify(crop) : '') + '">' +
             '<div class="tipo-thumb">' + thumb + '</div>' +
-            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + planDebug + sourceDebug + cropDebug + '</div>' +
+            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + cropDebug + '</div>' +
           '</article>';
         }).join('');
 
@@ -2727,15 +2717,24 @@
             state.currentEmail = String(whisperData.currentEmail || '').trim().toLowerCase();
             state.isGerente = Boolean(whisperData.isGerente);
             state.whisperlistRows = Array.isArray(whisperData.rows) ? whisperData.rows : [];
+            if (els.editTipologiasBtn) {
+              els.editTipologiasBtn.classList.toggle('hidden', !state.isGerente);
+            }
           } else {
             state.currentEmail = '';
             state.isGerente = false;
             state.whisperlistRows = [];
+            if (els.editTipologiasBtn) {
+              els.editTipologiasBtn.classList.add('hidden');
+            }
           }
         } catch (_) {
           state.currentEmail = '';
           state.isGerente = false;
           state.whisperlistRows = [];
+          if (els.editTipologiasBtn) {
+            els.editTipologiasBtn.classList.add('hidden');
+          }
         }
         renderWhisperFilters();
         renderZoneAttributeFilters();
