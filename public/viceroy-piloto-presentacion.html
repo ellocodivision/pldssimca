@@ -2287,20 +2287,6 @@
         const out = [];
         const seen = new Set();
 
-        state.config.tipologias.forEach(function (tip) {
-          const rec = normalizeBedroom(tip.recamaras);
-          const id = String(tip.id || tip.name || '').trim();
-          if (!id || seen.has(norm(id))) return;
-          if (bucketId && rec !== bucketId) return;
-          seen.add(norm(id));
-          out.push({
-            id: id,
-            name: String(tip.name || id),
-            recamaras: rec || bucketId,
-            imageUrl: String(tip.imageUrl || '').trim()
-          });
-        });
-
         state.inventoryRows.forEach(function (row) {
           const rec = normalizeBedroom(row.recamaras);
           const id = String(row.tipologia || '').trim();
@@ -2314,6 +2300,21 @@
             recamaras: rec || bucketId,
             imageUrl: String(row.planLink || row.link || row.plano || '').trim(),
             sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null
+          });
+        });
+
+        state.config.tipologias.forEach(function (tip) {
+          const rec = normalizeBedroom(tip.recamaras);
+          const id = String(tip.id || tip.name || '').trim();
+          if (!id || seen.has(norm(id))) return;
+          if (bucketId && rec !== bucketId) return;
+          seen.add(norm(id));
+          out.push({
+            id: id,
+            name: String(tip.name || id),
+            recamaras: rec || bucketId,
+            imageUrl: String(tip.imageUrl || '').trim(),
+            sourceRowIndex: null
           });
         });
 
