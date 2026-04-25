@@ -10388,10 +10388,13 @@ app.get('/api/viceroy-piloto/tipologia-crops', requireGerente, (req, res) => {
 app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
   const id = String(req.query && req.query.id || '').trim();
   if (!id) return res.status(400).json({ error: 'Falta la tipología' });
+  const rows = buildViceroyTipologiaRows(readCurrentViceroyInventoryRows());
+  const row = rows.find((item) => norm(String(item && item.id || '')) === norm(id)) || null;
   const cropMap = readViceroyTipologiaCropMap();
-  const planLink = getViceroyTipologiaSourcePlanLink(id);
   const crop = cropMap[id] || defaultViceroyTipologiaCrop();
-  const filePath = getViceroyTipologiaThumbFilePath(id, crop, planLink);
+  const filePath = row && String(row.thumbPath || '').trim()
+    ? String(row.thumbPath || '').trim()
+    : getViceroyTipologiaThumbFilePath(id, crop, row && row.planLink ? row.planLink : getViceroyTipologiaSourcePlanLink(id));
   if (fs.existsSync(filePath)) {
     res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
     return res.sendFile(filePath);
@@ -10401,7 +10404,7 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
     thumbPath: filePath,
     folder: path.dirname(filePath),
     fileName: path.basename(filePath),
-    planLink: planLink || ''
+    planLink: row && row.planLink ? row.planLink : (getViceroyTipologiaSourcePlanLink(id) || '')
   });
 });
 
