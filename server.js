@@ -2968,7 +2968,11 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
       height: 5000,
       deviceScaleFactor: 1
     });
-    const proxyUrl = `${APP_BASE_URL_NORMALIZED}/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(sourcePlanLink)}`;
+    const safeSourcePlanLink = String(sourcePlanLink || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
     const html = `<!doctype html>
       <html>
         <head>
@@ -2981,7 +2985,7 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
         </head>
         <body>
           <div id="frame">
-            <img id="source" src="${proxyUrl.replace(/"/g, '&quot;')}" crossorigin="anonymous" alt="">
+            <img id="source" src="${safeSourcePlanLink}" crossorigin="anonymous" alt="">
           </div>
           <script>
             (function () {
@@ -10350,7 +10354,7 @@ app.get('/api/viceroy-piloto/tipologia-crops', requireViceroyPresentAccess, (req
   return res.json({ ok: true, crops: readViceroyTipologiaCropMap() });
 });
 
-app.get('/api/viceroy-piloto/tipologia-image', requireViceroyPresentAccess, (req, res) => {
+app.get('/api/viceroy-piloto/tipologia-image', (req, res) => {
   const id = String(req.query && req.query.id || '').trim();
   if (!id) return res.status(400).json({ error: 'Falta la tipología' });
   const filePath = getViceroyTipologiaThumbFilePath(id);
@@ -10362,7 +10366,7 @@ app.get('/api/viceroy-piloto/tipologia-image', requireViceroyPresentAccess, (req
   if (!planLink) {
     return res.status(404).json({ error: 'No hay imagen generada para esta tipología' });
   }
-  return res.redirect(302, `/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(planLink)}`);
+  return res.redirect(302, planLink);
 });
 
 app.post('/api/viceroy-piloto/tipologia-crop', requireViceroyPresentAccess, async (req, res) => {
