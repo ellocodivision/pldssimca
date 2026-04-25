@@ -5018,21 +5018,51 @@ function rowsFromSheetWithHeaderRow(sheet, headerRowNumber) {
   return rows;
 }
 
+function findViceroyInventoryHeaderRow(sheet) {
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  const headerAliasGroups = [
+    VICEROY_PILOTO_COLUMN_ALIASES.planLink,
+    VICEROY_PILOTO_COLUMN_ALIASES.view,
+    VICEROY_PILOTO_COLUMN_ALIASES.unit,
+    VICEROY_PILOTO_COLUMN_ALIASES.level,
+    VICEROY_PILOTO_COLUMN_ALIASES.tipologia,
+    VICEROY_PILOTO_COLUMN_ALIASES.m2,
+    VICEROY_PILOTO_COLUMN_ALIASES.recamaras,
+    VICEROY_PILOTO_COLUMN_ALIASES.den,
+    VICEROY_PILOTO_COLUMN_ALIASES.price
+  ];
+  let bestRow = 0;
+  let bestScore = 0;
+  for (let i = 0; i < Math.min(grid.length, 12); i += 1) {
+    const row = Array.isArray(grid[i]) ? grid[i] : [];
+    const normalizedHeaders = row.map((cell) => normalizeHeaderKey(cell));
+    let score = 0;
+    headerAliasGroups.forEach((aliases) => {
+      if (normalizedHeaders.some((header) => aliases.includes(header))) score += 1;
+    });
+    if (score > bestScore) {
+      bestScore = score;
+      bestRow = i;
+    }
+  }
+  return bestScore >= 3 ? bestRow + 1 : 1;
+}
+
 const VICEROY_PILOTO_COLUMN_ALIASES = {
   development: ['development', 'desarrollo', 'proyecto'],
   unit: ['unidad', 'departamento', 'depto', 'unit', 'unit_id', 'unitid', 'no'],
   level: ['level', 'nivel', 'floor', 'piso'],
   planLink: ['link', 'plano', 'plan_link', 'planlink', 'url_plano', 'urlplano', 'plano_url', 'image_url', 'imageurl'],
-  recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'bed', 'habitaciones'],
+  recamaras: ['recamaras', 'recamaras_', 'rec', 'bedrooms', 'beds', 'bed', 'bedroom', 'habitaciones'],
   den: ['den', 'estudio', 'studio_plus', 'plus_den'],
   groupCode: ['group', 'grupo', 'group_code', 'groupcode'],
   building: ['edificio', 'building', 'torre', 'tower', 'fase', 'phase'],
   tipologia: ['tipologia', 'tipologia_', 'typology', 'tipo', 'tipo_unidad', 'type'],
   view: ['vista', 'view', 'vistas'],
   assignment: ['asignacion', 'assignment', 'assigned_to', 'assignedto', 'asesor', 'advisor', 'broker'],
-  m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area', 'total'],
+  m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area', 'total', 'total_m2'],
   sqft: ['sqft', 'ft2', 'pies2', 'pies_cuadrados', 'square_feet', 'area_sqft'],
-  price: ['precio_final', 'precio final', 'precio', 'precio_venta', 'venta', 'sale_price', 'price'],
+  price: ['precio_final', 'precio', 'precio_venta', 'precio_de_lista', 'precio_lista', 'list_price', 'price_list', 'sale_price', 'price'],
   status: ['estatus', 'estado', 'status', 'disponibilidad', 'availability', 'inventario']
 };
 
@@ -5717,7 +5747,8 @@ function parseViceroyInventoryFile(filePath) {
 
   // 1) Preferred: header-driven parsing (supports Unit/Type style inventories).
   try {
-    const headerRows = rowsFromSheetWithHeaderRow(firstSheet, 1);
+    const headerRowNumber = findViceroyInventoryHeaderRow(firstSheet);
+    const headerRows = rowsFromSheetWithHeaderRow(firstSheet, headerRowNumber);
     const normalizedRows = dedupeViceroyRows(
       headerRows
         .map((rawRow) => normalizeViceroyInventoryRow(rawRow))
