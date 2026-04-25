@@ -829,6 +829,7 @@
         autoRefreshTimer: null,
         tipologiaCropsKey: ''
       };
+      const CROP_OVERRIDE_KEY = 'viceroy-tipologia-crops-override-v1';
 
       const els = {
         uploadTools: document.querySelector('.upload-tools'),
@@ -1406,6 +1407,16 @@
         });
       }
 
+      function readStoredTipologiaCrops() {
+        try {
+          const raw = localStorage.getItem(CROP_OVERRIDE_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (_) {
+          return {};
+        }
+      }
+
       async function refreshTipologiaCropsIfChanged() {
         try {
           const res = await fetch('/api/viceroy-piloto/tipologia-crops', {
@@ -1414,7 +1425,11 @@
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) return;
-          const nextCrops = data && data.crops && typeof data.crops === 'object' ? data.crops : {};
+          const nextCrops = Object.assign(
+            {},
+            data && data.crops && typeof data.crops === 'object' ? data.crops : {},
+            readStoredTipologiaCrops()
+          );
           const nextKey = JSON.stringify(nextCrops);
           if (state.tipologiaCropsKey === nextKey) return;
           state.tipologiaCrops = nextCrops;
@@ -2640,7 +2655,11 @@
         state.showUnitLabels = false;
         state.inventoryRows = Array.isArray(data.inventoryRows) ? data.inventoryRows : [];
         state.inventoryFileName = String(data.inventoryFileName || '').trim();
-        state.tipologiaCrops = data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {};
+        state.tipologiaCrops = Object.assign(
+          {},
+          data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {},
+          readStoredTipologiaCrops()
+        );
         state.tipologiaCropsKey = JSON.stringify(state.tipologiaCrops || {});
         orderFloors();
         buildUnitIndex();

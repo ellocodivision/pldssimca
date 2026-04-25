@@ -161,6 +161,7 @@
         filtered: [],
         cropEditor: { id: '', planLink: '', draft: { x: 0, y: 0, w: 100, h: 100 }, autoFitPending: false }
       };
+      const CROP_OVERRIDE_KEY = 'viceroy-tipologia-crops-override-v1';
 
       const els = {
         backBtn: document.getElementById('backBtn'),
@@ -224,6 +225,20 @@
       }
       function cropKey(crop) {
         return JSON.stringify(normalizeCrop(crop));
+      }
+      function readStoredTipologiaCrops() {
+        try {
+          const raw = localStorage.getItem(CROP_OVERRIDE_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (_) {
+          return {};
+        }
+      }
+      function persistStoredTipologiaCrops(map) {
+        try {
+          localStorage.setItem(CROP_OVERRIDE_KEY, JSON.stringify(map && typeof map === 'object' ? map : {}));
+        } catch (_) {}
       }
       function markTipologiaCropsUpdated() {
         try {
@@ -408,6 +423,7 @@
             return;
           }
           state.crops[id] = normalizeCrop(data.crop || crop);
+          persistStoredTipologiaCrops(Object.assign({}, readStoredTipologiaCrops(), { [id]: state.crops[id] }));
           markTipologiaCropsUpdated();
           applyFilter();
           closeEditor();
@@ -434,6 +450,9 @@
             return;
           }
           state.crops[id] = normalizeCrop(data.crop || DEFAULT_CROP);
+          const nextStored = Object.assign({}, readStoredTipologiaCrops());
+          delete nextStored[id];
+          persistStoredTipologiaCrops(nextStored);
           markTipologiaCropsUpdated();
           syncEditorUi(state.crops[id]);
           els.cropResultImg.removeAttribute('src');
@@ -485,7 +504,11 @@
         const data = await res.json().catch(function () { return {}; });
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el piloto');
         const tipologias = Array.isArray(data.tipologias) ? data.tipologias : [];
-        state.crops = data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {};
+        state.crops = Object.assign(
+          {},
+          data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {},
+          readStoredTipologiaCrops()
+        );
         state.tipologias = tipologias.map(function (item) {
           return {
             id: String(item && item.id || '').trim(),
