@@ -2992,7 +2992,11 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   } catch {}
 
-  const upstream = await fetch(sourcePlanLink);
+  const proxyUrl = `${APP_BASE_URL_NORMALIZED}/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(sourcePlanLink)}`;
+  let upstream = await fetch(proxyUrl);
+  if (!upstream.ok) {
+    upstream = await fetch(sourcePlanLink);
+  }
   if (!upstream.ok) {
     throw new Error(`No se pudo descargar plano (${upstream.status})`);
   }

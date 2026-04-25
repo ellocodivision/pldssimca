@@ -504,9 +504,11 @@
           markTipologiaCropsUpdated();
           applyFilter();
           closeEditor();
-          els.status.textContent = data.thumbPath
-            ? ('Recorte guardado para ' + id + '. PNG: ' + data.thumbPath + (data.thumbFolder ? (' · Carpeta: ' + data.thumbFolder) : ''))
-            : ('Recorte guardado para ' + id + '.');
+          els.status.textContent = data.thumbGenerated === false
+            ? ('Recorte guardado para ' + id + ', pero no se pudo generar el PNG. PNG: ' + (data.thumbPath || 'sin ruta') + (data.thumbFolder ? (' · Carpeta: ' + data.thumbFolder) : ''))
+            : (data.thumbPath
+              ? ('Recorte guardado para ' + id + '. PNG: ' + data.thumbPath + (data.thumbFolder ? (' · Carpeta: ' + data.thumbFolder) : ''))
+              : ('Recorte guardado para ' + id + '.'));
         } catch (err) {
           els.status.textContent = err && err.message ? err.message : 'Error al guardar.';
         } finally {
