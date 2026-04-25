@@ -5126,7 +5126,7 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
       development: '',
       unidad: unit,
       level,
-      groupCode: '',
+      groupCode: groupRaw,
       planLink,
       recamaras,
       edificio: '',

@@ -781,6 +781,8 @@
         { id: '3B+DEN', name: 'THREE BEDROOM + DEN', aliases: ['3B + DEN', '3BDEN', '3 REC + DEN'] },
         { id: '4B', name: 'FOUR BEDROOM', aliases: ['4B', '4 BR', '4BR', '4 REC'] },
         { id: '4B+DEN', name: 'FOUR BEDROOM + DEN', aliases: ['4B + DEN', '4BDEN', '4 REC + DEN'] },
+        { id: 'PH1', name: 'ONE BEDROOM PH', aliases: ['1PH', 'PH1', 'PH 1', 'ONE BEDROOM PH'] },
+        { id: 'PH1+DEN', name: 'ONE BEDROOM PH + DEN', aliases: ['1PH + DEN', 'PH1 + DEN', 'PH 1 + DEN', 'ONE BEDROOM PH + DEN'] },
         { id: 'PH2', name: 'TWO BEDROOM PH', aliases: ['2PH', 'PH2', 'PH 2', 'TWO BEDROOM PH'] },
         { id: 'PH2+DEN', name: 'TWO BEDROOM PH + DEN', aliases: ['2PH + DEN', 'PH2 + DEN', 'PH 2 + DEN', 'TWO BEDROOM PH + DEN'] },
         { id: 'PH3', name: 'THREE BEDROOM PH', aliases: ['3PH', 'PH3', 'PH 3', 'THREE BEDROOM PH'] },
@@ -963,6 +965,22 @@
         return v.replace(/\s+/g, '');
       }
 
+      function isPenthouseLevel(level) {
+        const key = norm(level);
+        return key === 'n6' || key.includes('penthouse');
+      }
+
+      function normalizeBedroomForRow(row) {
+        const base = normalizeBedroom(row && (row.recamaras || row.bedrooms || row.groupCode || ''));
+        if (!base) return '';
+        if (base.startsWith('PH')) return base;
+        const level = String(row && row.level || '').trim();
+        if (!isPenthouseLevel(level)) return base;
+        const match = base.match(/^(\d)B(\+DEN)?$/);
+        if (match) return `PH${match[1]}${match[2] || ''}`;
+        return base;
+      }
+
       function getBucketMeta(bucketId) {
         return BEDROOM_BUCKETS.find(function (b) { return b.id === bucketId; }) || { id: bucketId, name: bucketId };
       }
@@ -993,6 +1011,8 @@
           '3B+DEN': '3+1',
           '4B': '4',
           '4B+DEN': '4+1',
+          'PH1': '1PH',
+          'PH1+DEN': '1PH+1',
           'PH2': '2PH',
           'PH2+DEN': '2PH+1',
           'PH3': '3PH',
@@ -1226,11 +1246,11 @@
         const row = state.byUnit.get(u) || null;
         const tipologia = String((row && row.tipologia) || '').trim();
         const recSource = String((row && row.recamaras) || state.config.unitRecamarasMap[u] || '').trim();
-        const rec = getBedroomDisplayName(recSource || normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || ''));
+        const rec = getBedroomDisplayName(normalizeBedroomForRow(row) || recSource || normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || ''));
         const status = row && String(row.status || '').toLowerCase() === 'vendida' ? 'vendida' : 'disponible';
         const m2 = row && row.m2 != null ? row.m2 : (row && row.metros2 != null ? row.metros2 : null);
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
-        const vista = String((row && (row.vista || row.view)) || '').trim();
+        const vista = String((row && (row.vista || row.view)) || zone.vista || zone.view || '').trim();
         const edificio = String((row && (row.edificio || row.building || row.torre || row.phase)) || '').trim();
         const price = row && row.price != null ? row.price : (row && row.precio != null ? row.precio : null);
         const planLink = String((row && (row.planLink || row.link || row.plano || row.urlPlano)) || '').trim() || getTipologiaImageUrl(tipologia);
@@ -2097,7 +2117,7 @@
 
       function getMinimumPriceByBedroom(bucketId) {
         const matches = state.inventoryRows
-          .filter(function (r) { return normalizeBedroom(r.recamaras) === bucketId; })
+          .filter(function (r) { return normalizeBedroomForRow(r) === bucketId; })
           .map(function (r) {
             return parseMoneyLike(r.price || r.precio || r.precio_desde || r.starting_price || r.startingprice || r.importe);
           })
@@ -2168,7 +2188,7 @@
         if (!state.inventoryRows.length) return BEDROOM_BUCKETS;
         const present = new Set();
         state.inventoryRows.forEach(function (r) {
-          const b = normalizeBedroom(r.recamaras);
+          const b = normalizeBedroomForRow(r);
           if (b) present.add(b);
         });
         const filtered = BEDROOM_BUCKETS.filter(function (b) { return present.has(b.id); });
