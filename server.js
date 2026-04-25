@@ -1961,7 +1961,7 @@ function sanitizeExcelFileName(rawName) {
   if (!value) return '';
   const base = path.basename(value).replace(/[^\w\-(). ]+/g, '_');
   const ext = (base.split('.').pop() || '').toLowerCase();
-  if (!['xls', 'xlsx', 'csv'].includes(ext)) return '';
+  if (!['xls', 'xlsx', 'xlsm', 'csv'].includes(ext)) return '';
   return base;
 }
 
