@@ -2916,43 +2916,9 @@ function sanitizeViceroyTipologiaAssetName(rawName) {
   return clean || 'TIPOLOGIA';
 }
 
-function getViceroyTipologiaThumbKey(tipologiaId, cropInput, planLinkInput) {
-  const crop = normalizeViceroyTipologiaCrop(cropInput);
-  const planLink = String(planLinkInput || '').trim();
-  const payload = JSON.stringify(crop) + '|' + planLink;
-  const hash = crypto.createHash('sha1').update(payload).digest('hex').slice(0, 12);
-  return `${sanitizeViceroyTipologiaAssetName(tipologiaId)}-${hash}`;
-}
-
 function getViceroyTipologiaThumbFilePath(tipologiaId, cropInput, planLinkInput) {
   const safeId = sanitizeViceroyTipologiaAssetName(tipologiaId);
   return path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${safeId}.png`);
-}
-
-function getViceroyTipologiaLegacyThumbPaths(tipologiaId) {
-  const safeId = sanitizeViceroyTipologiaAssetName(tipologiaId);
-  try {
-    if (!fs.existsSync(VICEROY_TIPOLOGIA_THUMBS_DIR)) return [];
-    return fs.readdirSync(VICEROY_TIPOLOGIA_THUMBS_DIR)
-      .filter((name) => {
-        const lower = String(name || '').toLowerCase();
-        return lower.endsWith('.png') && lower.startsWith(`${safeId.toLowerCase()}-`);
-      })
-      .map((name) => path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, name))
-      .sort((a, b) => String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' }));
-  } catch {
-    return [];
-  }
-}
-
-function resolveExistingViceroyTipologiaThumbFilePath(tipologiaId, cropInput, planLinkInput) {
-  const preferred = getViceroyTipologiaThumbFilePath(tipologiaId, cropInput, planLinkInput);
-  if (preferred && fs.existsSync(preferred)) return preferred;
-  const legacy = getViceroyTipologiaLegacyThumbPaths(tipologiaId);
-  for (const candidate of legacy) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  return preferred;
 }
 
 function getViceroyTipologiaThumbUrl(tipologiaId) {
@@ -2993,17 +2959,6 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
   } catch {}
 
   const proxyUrl = `${APP_BASE_URL_NORMALIZED}/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(sourcePlanLink)}`;
-  let upstream = await fetch(proxyUrl);
-  if (!upstream.ok) {
-    upstream = await fetch(sourcePlanLink);
-  }
-  if (!upstream.ok) {
-    throw new Error(`No se pudo descargar plano (${upstream.status})`);
-  }
-  const contentType = upstream.headers.get('content-type') || 'image/png';
-  const dataBuffer = Buffer.from(await upstream.arrayBuffer());
-  const dataUrl = `data:${contentType};base64,${dataBuffer.toString('base64')}`;
-
   const browser = await getSharedPdfBrowser();
   const page = await browser.newPage();
   try {
@@ -3026,11 +2981,13 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
         </head>
         <body>
           <div id="frame">
-            <img id="source" src="${dataUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="">
+            <img id="source" src="${proxyUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="">
           </div>
           <script>
             (function () {
               const crop = ${JSON.stringify(crop)};
+              const proxySrc = ${JSON.stringify(proxyUrl)};
+              const directSrc = ${JSON.stringify(sourcePlanLink)};
               const img = document.getElementById('source');
               const frame = document.getElementById('frame');
               window.__thumbReady = false;
@@ -3050,7 +3007,14 @@ async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkI
                 img.style.top = (-sy) + 'px';
                 done();
               };
-              img.onerror = done;
+              img.onerror = function () {
+                if (!img.dataset.triedDirect && directSrc && directSrc !== proxySrc) {
+                  img.dataset.triedDirect = '1';
+                  img.src = directSrc;
+                  return;
+                }
+                done();
+              };
             })();
           </script>
         </body>
@@ -6258,7 +6222,7 @@ function buildViceroyTipologiaRows(inventoryRows) {
       existing.recamaras = String(row.recamaras || '').trim();
     }
     const crop = cropMap[id] || defaultViceroyTipologiaCrop();
-    const thumbPath = resolveExistingViceroyTipologiaThumbFilePath(id, crop, existing.planLink || planLink);
+    const thumbPath = getViceroyTipologiaThumbFilePath(id, crop, existing.planLink || planLink);
     existing.thumbPath = thumbPath;
     existing.thumbFolder = path.dirname(thumbPath);
     existing.thumbFileName = path.basename(thumbPath);
@@ -10415,28 +10379,31 @@ app.get('/api/viceroy-piloto/tipologia-crops', requireGerente, (req, res) => {
 });
 
 app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
+  const id = String(req.query && req.query.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'Falta la tipología' });
+  const safeId = sanitizeViceroyTipologiaAssetName(id);
+  const filePath = path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${safeId}.png`);
+  let planLink = '';
   try {
-    const id = String(req.query && req.query.id || '').trim();
-    if (!id) return res.status(400).json({ error: 'Falta la tipología' });
-    const cropMap = readViceroyTipologiaCropMap();
-    const crop = cropMap[id] || defaultViceroyTipologiaCrop();
-    const planLink = getViceroyTipologiaSourcePlanLink(id);
-    const filePath = resolveExistingViceroyTipologiaThumbFilePath(id, crop, planLink);
-    if (fs.existsSync(filePath)) {
-      res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
-      return res.sendFile(filePath);
-    }
-    return res.status(404).json({
-      error: 'No existe PNG generado para esta tipología',
-      thumbPath: filePath,
-      folder: path.dirname(filePath),
-      fileName: path.basename(filePath),
-      planLink: planLink || ''
-    });
+    planLink = getViceroyTipologiaSourcePlanLink(id);
   } catch (err) {
-    log(`Error sirviendo tipologia-image: ${err && err.stack ? err.stack : err}`);
-    return res.status(500).json({ error: 'Error interno al buscar la miniatura' });
+    log(`No se pudo resolver planLink para ${id}: ${err && err.message ? err.message : err}`);
   }
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    return res.sendFile(filePath, (err) => {
+      if (err) {
+        log(`Error enviando PNG Viceroy ${filePath}: ${err && err.message ? err.message : err}`);
+      }
+    });
+  }
+  return res.status(404).json({
+    error: 'No existe PNG generado para esta tipología',
+    thumbPath: filePath,
+    folder: path.dirname(filePath),
+    fileName: path.basename(filePath),
+    planLink: planLink || ''
+  });
 });
 
 app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) => {

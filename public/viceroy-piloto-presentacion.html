@@ -831,8 +831,6 @@
         isGerente: false,
         whisperlistRows: [],
         selectedUnitInfo: null,
-        autoRefreshTimer: null,
-        tipologiaCropsKey: ''
       };
       const CROP_OVERRIDE_KEY = 'viceroy-tipologia-crops-override-v1';
 
@@ -1377,30 +1375,6 @@
         } catch (_) {
           return {};
         }
-      }
-
-      async function refreshTipologiaCropsIfChanged() {
-        try {
-          const cropsUrl = '/api/viceroy-piloto/tipologia-crops' + (token ? ('?token=' + encodeURIComponent(token)) : '');
-          const res = await fetch(cropsUrl, {
-            cache: 'no-store',
-            credentials: 'same-origin'
-          });
-          const data = await res.json().catch(function () { return {}; });
-          if (!res.ok) return;
-          const nextCrops = Object.assign(
-            {},
-            data && data.crops && typeof data.crops === 'object' ? data.crops : {},
-            readStoredTipologiaCrops()
-          );
-          const nextKey = JSON.stringify(nextCrops);
-          if (state.tipologiaCropsKey === nextKey) return;
-          state.tipologiaCrops = nextCrops;
-          state.tipologiaCropsKey = nextKey;
-          if (state.view === 'tipologias') {
-            renderTipologias();
-          }
-        } catch (_) {}
       }
 
       function truncateCanvasText(ctx, text, maxWidth) {
@@ -2664,7 +2638,6 @@
           data && data.tipologiaCrops && typeof data.tipologiaCrops === 'object' ? data.tipologiaCrops : {},
           readStoredTipologiaCrops()
         );
-        state.tipologiaCropsKey = JSON.stringify(state.tipologiaCrops || {});
         orderFloors();
         buildUnitIndex();
         applyPresentationLayout();
@@ -2746,13 +2719,6 @@
       window.addEventListener('focus', function () {
         refreshCurrentView({ silent: true }).catch(function () {});
       });
-
-      function startAutoRefresh() {
-        if (state.autoRefreshTimer) window.clearInterval(state.autoRefreshTimer);
-        state.autoRefreshTimer = window.setInterval(function () {
-          refreshCurrentView({ silent: true }).catch(function () {});
-        }, 20000);
-      }
 
       els.bedGrid.addEventListener('click', function (ev) {
         const card = ev.target.closest('.bed-card');
@@ -2999,23 +2965,8 @@
         });
       }
 
-      window.addEventListener('storage', function (event) {
-        if (event && event.key === 'viceroy-tipologia-crops-updated-at') {
-          refreshTipologiaCropsIfChanged();
-        }
-      });
-      window.addEventListener('focus', function () {
-        refreshTipologiaCropsIfChanged();
-      });
-      document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) {
-          refreshTipologiaCropsIfChanged();
-        }
-      });
-
       applyRouteState();
-      load().then(function () {
-      }).catch(function (err) {
+      load().catch(function (err) {
         const msg = err && err.message ? err.message : 'Error de carga';
         els.homeStatus.textContent = msg;
         els.tipoStatus.textContent = msg;
