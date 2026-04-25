@@ -2227,7 +2227,7 @@
         const makeThumbUrl = function (id) {
           const cleanId = String(id || '').trim();
           if (!cleanId) return '';
-          return '/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(cleanId) + '&v=' + encodeURIComponent(String(state.tipologiaCropsKey || '')) + (token ? ('&token=' + encodeURIComponent(token)) : '');
+          return '/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(cleanId) + (token ? ('&token=' + encodeURIComponent(token)) : '');
         };
 
         state.tipologias.forEach(function (row) {
