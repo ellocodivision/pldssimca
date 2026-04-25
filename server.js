@@ -132,6 +132,7 @@ const VICEROY_PILOTO_DATA_DIR = path.join(DATA_DIR, 'developments', 'viceroy-pil
 const VICEROY_TIPOLOGIA_CROPS_PATH = path.join(VICEROY_PILOTO_DATA_DIR, 'viceroy-tipologias-crops.json');
 const VICEROY_TIPOLOGIA_CROPS_ROOT_PATH = path.join(DATA_DIR, 'viceroy-tipologias-crops.json');
 const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto', 'viceroy-tipologias-crops.json');
+const VICEROY_TIPOLOGIA_THUMBS_DIR = path.join(VICEROY_PILOTO_DATA_DIR, 'tipologia-thumbs');
 const SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE = clampNumber(Number(process.env.SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE), 20, 5, 60);
 const SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY = clampNumber(Number(process.env.SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY), 6, 1, 16);
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
@@ -2907,6 +2908,144 @@ function saveViceroyTipologiaCropMap(map) {
     writeJson(VICEROY_TIPOLOGIA_CROPS_REPO_PATH, normalized);
   } catch {}
   return normalized;
+}
+
+function sanitizeViceroyTipologiaAssetName(rawName) {
+  const value = String(rawName || '').trim().toUpperCase();
+  const clean = value.replace(/[^A-Z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
+  return clean || 'TIPOLOGIA';
+}
+
+function getViceroyTipologiaThumbFilePath(tipologiaId) {
+  const safeId = sanitizeViceroyTipologiaAssetName(tipologiaId);
+  return path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${safeId}.png`);
+}
+
+function getViceroyTipologiaThumbUrl(tipologiaId) {
+  const id = String(tipologiaId || '').trim();
+  if (!id) return '';
+  return `/api/viceroy-piloto/tipologia-image?id=${encodeURIComponent(id)}`;
+}
+
+function readCurrentViceroyInventoryRows() {
+  const candidates = resolveInventoryCandidatesByDevSlug('viceroy-piloto');
+  for (const candidate of candidates) {
+    try {
+      const parsedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(candidate.fullPath));
+      if (parsedRows.length) return parsedRows;
+    } catch {}
+  }
+  const cached = readViceroyInventoryCache();
+  return Array.isArray(cached && cached.rows) ? cached.rows : [];
+}
+
+function getViceroyTipologiaSourcePlanLink(tipologiaId, inventoryRows) {
+  const target = norm(tipologiaId);
+  if (!target) return '';
+  const rows = Array.isArray(inventoryRows) ? inventoryRows : readCurrentViceroyInventoryRows();
+  const hit = rows.find((row) => norm(String(row && row.tipologia || '')) === target && String(row && row.planLink || '').trim());
+  return hit ? String(hit.planLink || '').trim() : '';
+}
+
+async function renderViceroyTipologiaThumbFile(tipologiaId, cropInput, planLinkInput) {
+  const id = String(tipologiaId || '').trim();
+  if (!id) return null;
+  const crop = normalizeViceroyTipologiaCrop(cropInput);
+  const sourcePlanLink = String(planLinkInput || '').trim() || getViceroyTipologiaSourcePlanLink(id);
+  if (!sourcePlanLink) return null;
+  const outputPath = getViceroyTipologiaThumbFilePath(id);
+  try {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  } catch {}
+
+  const browser = await getSharedPdfBrowser();
+  const page = await browser.newPage();
+  try {
+    page.setDefaultTimeout(120000);
+    page.setDefaultNavigationTimeout(120000);
+    await page.setViewport({
+      width: 5000,
+      height: 5000,
+      deviceScaleFactor: 1
+    });
+    const proxyUrl = `${APP_BASE_URL_NORMALIZED}/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(sourcePlanLink)}`;
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            html, body { margin: 0; padding: 0; background: #fff; overflow: hidden; }
+            #frame { position: relative; overflow: hidden; background: #fff; }
+            #source { position: absolute; display: block; max-width: none; max-height: none; }
+          </style>
+        </head>
+        <body>
+          <div id="frame">
+            <img id="source" src="${proxyUrl.replace(/"/g, '&quot;')}" crossorigin="anonymous" alt="">
+          </div>
+          <script>
+            (function () {
+              const crop = ${JSON.stringify(crop)};
+              const img = document.getElementById('source');
+              const frame = document.getElementById('frame');
+              window.__thumbReady = false;
+              function done() { window.__thumbReady = true; }
+              img.onload = function () {
+                const iw = img.naturalWidth || img.width || 1;
+                const ih = img.naturalHeight || img.height || 1;
+                const sx = Math.round((crop.x / 100) * iw);
+                const sy = Math.round((crop.y / 100) * ih);
+                const sw = Math.max(1, Math.round((crop.w / 100) * iw));
+                const sh = Math.max(1, Math.round((crop.h / 100) * ih));
+                frame.style.width = sw + 'px';
+                frame.style.height = sh + 'px';
+                img.style.width = iw + 'px';
+                img.style.height = ih + 'px';
+                img.style.left = (-sx) + 'px';
+                img.style.top = (-sy) + 'px';
+                done();
+              };
+              img.onerror = done;
+            })();
+          </script>
+        </body>
+      </html>`;
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    try {
+      await page.waitForFunction(() => window.__thumbReady === true, { timeout: 60000 });
+    } catch {}
+    const sourceSize = await page.$eval('#source', (el) => ({
+      width: Number(el.naturalWidth || el.width || 0),
+      height: Number(el.naturalHeight || el.height || 0)
+    })).catch(() => ({ width: 0, height: 0 }));
+    if (!Number.isFinite(sourceSize.width) || !Number.isFinite(sourceSize.height) || sourceSize.width <= 0 || sourceSize.height <= 0) {
+      throw new Error('No se pudo cargar la imagen original del plano');
+    }
+    const frameRect = await page.$eval('#frame', (el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        width: Math.max(1, Math.round(rect.width)),
+        height: Math.max(1, Math.round(rect.height))
+      };
+    }).catch(() => ({ width: 1, height: 1 }));
+    await page.screenshot({
+      path: outputPath,
+      type: 'png',
+      clip: { x: 0, y: 0, width: frameRect.width, height: frameRect.height },
+      omitBackground: false
+    });
+    return outputPath;
+  } finally {
+    try { await page.close(); } catch {}
+  }
+}
+
+function removeViceroyTipologiaThumbFile(tipologiaId) {
+  const filePath = getViceroyTipologiaThumbFilePath(tipologiaId);
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch {}
+  return filePath;
 }
 
 function getSolarMidtownCropForId(rowId, cropMap) {
@@ -10211,7 +10350,22 @@ app.get('/api/viceroy-piloto/tipologia-crops', requireViceroyPresentAccess, (req
   return res.json({ ok: true, crops: readViceroyTipologiaCropMap() });
 });
 
-app.post('/api/viceroy-piloto/tipologia-crop', requireViceroyPresentAccess, (req, res) => {
+app.get('/api/viceroy-piloto/tipologia-image', requireViceroyPresentAccess, (req, res) => {
+  const id = String(req.query && req.query.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'Falta la tipología' });
+  const filePath = getViceroyTipologiaThumbFilePath(id);
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    return res.sendFile(filePath);
+  }
+  const planLink = getViceroyTipologiaSourcePlanLink(id);
+  if (!planLink) {
+    return res.status(404).json({ error: 'No hay imagen generada para esta tipología' });
+  }
+  return res.redirect(302, `/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(planLink)}`);
+});
+
+app.post('/api/viceroy-piloto/tipologia-crop', requireViceroyPresentAccess, async (req, res) => {
   const body = req.body || {};
   const id = String(body.id || '').trim();
   if (!id) {
@@ -10221,12 +10375,22 @@ app.post('/api/viceroy-piloto/tipologia-crop', requireViceroyPresentAccess, (req
   if (body && body.reset) {
     delete cropMap[id];
     saveViceroyTipologiaCropMap(cropMap);
+    removeViceroyTipologiaThumbFile(id);
     return res.json({ ok: true, id, crop: defaultViceroyTipologiaCrop(), reset: true });
   }
   const crop = normalizeViceroyTipologiaCrop(body.crop);
   cropMap[id] = crop;
   saveViceroyTipologiaCropMap(cropMap);
-  return res.json({ ok: true, id, crop, reset: false });
+  let thumbGenerated = true;
+  try {
+    const planLink = String(body.planLink || '').trim() || getViceroyTipologiaSourcePlanLink(id);
+    const generatedPath = await renderViceroyTipologiaThumbFile(id, crop, planLink);
+    if (!generatedPath) thumbGenerated = false;
+  } catch (err) {
+    log(`No se pudo generar thumbnail Viceroy para ${id}: ${err && err.message ? err.message : err}`);
+    thumbGenerated = false;
+  }
+  return res.json({ ok: true, id, crop, reset: false, thumbGenerated });
 });
 
 app.post('/api/viceroy-piloto/export-floors-pdf', requireViceroyPresentAccess, async (req, res) => {

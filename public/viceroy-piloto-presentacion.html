@@ -2294,11 +2294,13 @@
           if (!rec) return;
           if (bucketId && rec !== bucketId) return;
           seen.add(norm(id));
+          const originalPlanLink = String(row.planLink || row.link || row.plano || '').trim();
           out.push({
             id: id,
             name: id,
             recamaras: rec || bucketId,
-            imageUrl: String(row.planLink || row.link || row.plano || '').trim(),
+            planLink: originalPlanLink,
+            imageUrl: originalPlanLink ? ('/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(id) + '&v=' + encodeURIComponent(String(state.tipologiaCropsKey || ''))) : '',
             sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null
           });
         });
@@ -2313,6 +2315,7 @@
             id: id,
             name: String(tip.name || id),
             recamaras: rec || bucketId,
+            planLink: String(tip.imageUrl || '').trim(),
             imageUrl: String(tip.imageUrl || '').trim(),
             sourceRowIndex: null
           });
@@ -2393,14 +2396,15 @@
 
         els.tipoGrid.innerHTML = tips.map(function (tip) {
           const imageUrl = String(tip.imageUrl || getInventoryPlanForTipologia(tip.id) || '').trim();
+          const planLink = String(tip.planLink || getInventoryPlanForTipologia(tip.id) || '').trim();
           const proxyUrl = getPlanImageProxyUrl(imageUrl);
           const crop = state.tipologiaCrops && state.tipologiaCrops[tip.id] ? state.tipologiaCrops[tip.id] : null;
           const sourceRowIndex = Number.isFinite(Number(tip.sourceRowIndex)) ? Number(tip.sourceRowIndex) : null;
           const thumb = proxyUrl
             ? '<img src="' + esc(proxyUrl) + '" data-plan-src="' + esc(proxyUrl) + '" data-tipologia-id="' + esc(tip.id) + '" alt="' + esc(tip.name) + '">'
             : '<span>Tipologia</span>';
-          const planDebug = imageUrl
-            ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#5f6572;word-break:break-all;" title="' + esc(imageUrl) + '">plan ' + esc(imageUrl.length > 46 ? (imageUrl.slice(0, 43) + '...') : imageUrl) + '</p>'
+          const planDebug = planLink
+            ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#5f6572;word-break:break-all;" title="' + esc(planLink) + '">plan ' + esc(planLink.length > 46 ? (planLink.slice(0, 43) + '...') : planLink) + '</p>'
             : '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#8a8a8a;">sin planLink</p>';
           const sourceDebug = sourceRowIndex
             ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#5f6572;">fila ' + esc(String(sourceRowIndex)) + '</p>'
@@ -2416,7 +2420,6 @@
 
         const cropCount = tips.filter(function (tip) { return Boolean(state.tipologiaCrops && state.tipologiaCrops[tip.id]); }).length;
         els.tipoStatus.textContent = tips.length + ' tipologias disponibles en piloto.' + (cropCount ? (' Crops detectados: ' + cropCount + '.') : '');
-        applyTipologiaThumbCrops();
       }
 
       function renderFloorTabs() {

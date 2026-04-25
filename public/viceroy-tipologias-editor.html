@@ -117,19 +117,19 @@
         <section class="crop-controls">
           <div class="control">
             <label for="cropX">X <span id="cropXVal" class="val">0%</span></label>
-            <input id="cropX" type="range" min="0" max="100" step="0.1" value="0">
+            <input id="cropX" type="range" min="0" max="100" step="0.05" value="0">
           </div>
           <div class="control">
             <label for="cropY">Y <span id="cropYVal" class="val">0%</span></label>
-            <input id="cropY" type="range" min="0" max="100" step="0.1" value="0">
+            <input id="cropY" type="range" min="0" max="100" step="0.05" value="0">
           </div>
           <div class="control">
             <label for="cropW">Ancho <span id="cropWVal" class="val">100%</span></label>
-            <input id="cropW" type="range" min="5" max="100" step="0.1" value="100">
+            <input id="cropW" type="range" min="1" max="100" step="0.05" value="100">
           </div>
           <div class="control">
             <label for="cropH">Alto <span id="cropHVal" class="val">100%</span></label>
-            <input id="cropH" type="range" min="5" max="100" step="0.1" value="100">
+            <input id="cropH" type="range" min="1" max="100" step="0.05" value="100">
           </div>
           <p class="status" style="margin:0">Se guarda por tipología y se aplica en el piloto.</p>
           <div class="row-actions">
@@ -153,7 +153,7 @@
       const params = new URLSearchParams(window.location.search || '');
       const token = params.get('token') || '';
       const dataUrl = '/api/viceroy-piloto/public-data' + (token ? ('?token=' + encodeURIComponent(token)) : '');
-      const MIN_SIZE = 5;
+      const MIN_SIZE = 1;
       const DEFAULT_CROP = { x: 0, y: 0, w: 100, h: 100 };
       const state = {
         tipologias: [],
@@ -478,7 +478,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ id: id, crop: crop })
+            body: JSON.stringify({ id: id, crop: crop, planLink: state.cropEditor.planLink || '' })
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) {
@@ -490,7 +490,9 @@
           markTipologiaCropsUpdated();
           applyFilter();
           closeEditor();
-          els.status.textContent = 'Recorte guardado para ' + id + '.';
+          els.status.textContent = data.thumbGenerated === false
+            ? ('Recorte guardado para ' + id + ', pero no se pudo generar la miniatura recortada.')
+            : ('Recorte guardado para ' + id + '.');
         } catch (err) {
           els.status.textContent = err && err.message ? err.message : 'Error al guardar.';
         } finally {
@@ -505,7 +507,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ id: id, reset: true })
+            body: JSON.stringify({ id: id, reset: true, planLink: state.cropEditor.planLink || '' })
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) {
