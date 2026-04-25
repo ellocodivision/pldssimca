@@ -186,14 +186,14 @@
     }
     .tipo-card:hover { border-color: #aeb5a0; }
     .tipo-thumb {
-      height: 150px;
+      height: 210px;
       background: linear-gradient(140deg, #e8e8df, #deddcf);
       display: grid;
       place-items: center;
       color: #646876;
       font-size: 12px;
     }
-    .tipo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tipo-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
     .tipo-meta { padding: 10px; }
     .tipo-name { margin: 0; font-size: 16px; }
     .tipo-sub { margin: 4px 0 0; font-size: 12px; color: #60646f; }
@@ -564,18 +564,58 @@
       position: fixed;
       z-index: 40;
       pointer-events: none;
-      max-width: 240px;
-      padding: 8px 10px;
+      width: 320px;
+      max-width: calc(100vw - 24px);
+      padding: 10px;
       border-radius: 10px;
       background: rgba(16, 18, 22, 0.92);
       color: #fff;
       font-size: 12px;
       line-height: 1.35;
-      white-space: pre-line;
       box-shadow: 0 10px 24px rgba(0,0,0,0.18);
       opacity: 0;
       transform: translateY(4px);
       transition: opacity 120ms ease, transform 120ms ease;
+    }
+    .unit-hover-tooltip-inner {
+      display: grid;
+      gap: 8px;
+    }
+    .unit-hover-tooltip-plan {
+      width: 100%;
+      height: 170px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #1f232b;
+      display: grid;
+      place-items: center;
+    }
+    .unit-hover-tooltip-plan img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+    }
+    .unit-hover-tooltip-plan span {
+      color: #c6cad5;
+      font-size: 11px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .unit-hover-tooltip-meta {
+      display: grid;
+      gap: 2px;
+    }
+    .unit-hover-tooltip-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .unit-hover-tooltip-copy {
+      white-space: pre-line;
+      color: #eef1f8;
     }
     .unit-hover-tooltip.show {
       opacity: 1;
@@ -1597,9 +1637,9 @@
           els.filterRecamarasSelect.value = String(state.selectedRecamarasFilter || '');
         }
         if (els.filterVistaSelect) {
-          els.filterVistaSelect.innerHTML = buildOptions(vistaRows.map(function (row) { return row.vista || ''; }), 'Todas');
+          els.filterVistaSelect.innerHTML = buildOptions(vistaRows.map(function (row) { return row.vista || row.view || ''; }), 'Todas');
           if (state.selectedVistaFilter && !vistaRows.some(function (row) {
-            return String(row && row.vista || '').trim() === String(state.selectedVistaFilter || '').trim();
+            return String((row && (row.vista || row.view)) || '').trim() === String(state.selectedVistaFilter || '').trim();
           })) {
             state.selectedVistaFilter = '';
             didResetFilter = true;
@@ -1702,10 +1742,25 @@
           hideHoverTooltip();
           return;
         }
-        els.unitHoverTooltip.textContent = text;
+        const previewUrl = String(text.planLink || text.link || text.plano || '').trim();
+        const assignmentsText = Array.isArray(text.whisperAssignments) && text.whisperAssignments.length
+          ? formatWhisperAssignments(text.whisperAssignments)
+          : 'Sin asignación';
+        const title = [text.unidad || '', text.recamaras || '', text.vista || ''].filter(Boolean).join(' · ');
+        els.unitHoverTooltip.innerHTML = [
+          '<div class="unit-hover-tooltip-inner">',
+          '<div class="unit-hover-tooltip-plan">' + (previewUrl
+            ? '<img src="' + esc(previewUrl) + '" alt="' + esc(text.unidad || 'Plano') + '">'
+            : '<span>Sin plano</span>') + '</div>',
+          '<div class="unit-hover-tooltip-meta">',
+          '<div class="unit-hover-tooltip-title">' + esc(title || (text.unidad || 'Unidad')) + '</div>',
+          '<div class="unit-hover-tooltip-copy">' + esc(assignmentsText) + '</div>',
+          '</div>',
+          '</div>'
+        ].join('');
         els.unitHoverTooltip.classList.remove('hidden');
-        const left = Math.min(window.innerWidth - 260, Math.max(12, clientX + 14));
-        const top = Math.min(window.innerHeight - 80, Math.max(12, clientY + 14));
+        const left = Math.min(window.innerWidth - 340, Math.max(12, clientX + 14));
+        const top = Math.min(window.innerHeight - 240, Math.max(12, clientY + 14));
         els.unitHoverTooltip.style.left = left + 'px';
         els.unitHoverTooltip.style.top = top + 'px';
         els.unitHoverTooltip.classList.add('show');
@@ -2143,7 +2198,6 @@
       function getTipologiasByBedroom(bucketId) {
         const out = [];
         const seen = new Set();
-        const mappedUnitKeys = getMappedUnitKeys();
 
         state.config.tipologias.forEach(function (tip) {
           const rec = normalizeBedroom(tip.recamaras);
@@ -2160,10 +2214,8 @@
         });
 
         state.inventoryRows.forEach(function (row) {
-          const unit = unitKey(row && row.unidad);
           const rec = normalizeBedroom(row.recamaras);
           const id = String(row.tipologia || '').trim();
-          if (!unit || !mappedUnitKeys.has(unit)) return;
           if (!id || seen.has(norm(id))) return;
           if (!rec) return;
           if (bucketId && rec !== bucketId) return;
@@ -2172,7 +2224,7 @@
             id: id,
             name: id,
             recamaras: rec || bucketId,
-            imageUrl: ''
+            imageUrl: String(row.planLink || row.link || row.plano || '').trim()
           });
         });
 
@@ -2182,6 +2234,15 @@
         }
 
         return out;
+      }
+
+      function getInventoryPlanForTipologia(tipologiaId) {
+        const target = norm(tipologiaId);
+        if (!target) return '';
+        const hit = state.inventoryRows.find(function (row) {
+          return norm(String(row && row.tipologia || '')) === target && String(row && row.planLink || '').trim();
+        });
+        return hit ? String(hit.planLink || '').trim() : '';
       }
 
       function visibleBedroomBuckets() {
@@ -2241,8 +2302,9 @@
         }
 
         els.tipoGrid.innerHTML = tips.map(function (tip) {
-          const thumb = tip.imageUrl
-            ? '<img src="' + esc(tip.imageUrl) + '" alt="' + esc(tip.name) + '">'
+          const imageUrl = String(tip.imageUrl || getInventoryPlanForTipologia(tip.id) || '').trim();
+          const thumb = imageUrl
+            ? '<img src="' + esc(imageUrl) + '" alt="' + esc(tip.name) + '">'
             : '<span>Tipologia</span>';
           return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '">' +
             '<div class="tipo-thumb">' + thumb + '</div>' +
@@ -2658,11 +2720,11 @@
         const info = state.selectedFloorRows.find(function (row) {
           return String(row.unidad || '') === unidad;
         }) || null;
-        if (!info || !Array.isArray(info.whisperAssignments) || !info.whisperAssignments.length) {
+        if (!info) {
           hideHoverTooltip();
           return;
         }
-        showHoverTooltip(formatWhisperAssignments(info.whisperAssignments), ev.clientX, ev.clientY);
+        showHoverTooltip(info, ev.clientX, ev.clientY);
       });
 
       els.overlay.addEventListener('mouseleave', function () {
