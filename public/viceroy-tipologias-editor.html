@@ -367,6 +367,8 @@
           const crop = state.crops[row.id] ? normalizeCrop(state.crops[row.id]) : null;
           const sourceRowIndex = Number.isFinite(Number(row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null;
           const planLinkLabel = row.planLink ? '<a href="' + esc(proxyImageUrl(row.planLink)) + '" target="_blank" rel="noreferrer">Abrir plano</a>' : '<span class="status">Sin plano</span>';
+          const thumbUrl = '/api/viceroy-piloto/tipologia-image?id=' + encodeURIComponent(String(row.id || '').trim()) + (token ? ('&token=' + encodeURIComponent(token)) : '');
+          const thumbOpenLabel = row.id ? '<a href="' + esc(thumbUrl) + '" target="_blank" rel="noreferrer">Ver PNG</a>' : '<span class="status">Sin PNG</span>';
           const sourceLabel = sourceRowIndex ? '<div class="small" style="margin-top:4px;color:#6c7280">Fila origen: ' + esc(String(sourceRowIndex)) + '</div>' : '<div class="small" style="margin-top:4px;color:#9aa0aa">Fila origen: N/D</div>';
           const thumbPath = String(row.thumbPath || '').trim();
           const thumbFolder = String(row.thumbFolder || '').trim();
@@ -383,7 +385,7 @@
             '<td><strong>' + esc(row.id || '-') + '</strong></td>' +
             '<td>' + esc(row.recamaras || '-') + '</td>' +
             '<td>' + esc((row.units || []).join(', ') || '-') + '</td>' +
-            '<td>' + planLinkLabel + sourceLabel + thumbLabel + thumbFolderLabel + thumbState + '</td>' +
+            '<td>' + planLinkLabel + '<div class="small" style="margin-top:4px">' + thumbOpenLabel + '</div>' + sourceLabel + thumbLabel + thumbFolderLabel + thumbState + '</td>' +
             '<td>' + (crop ? '<span class="crop-badge">' + esc(crop.x.toFixed(1) + ' / ' + crop.y.toFixed(1) + ' / ' + crop.w.toFixed(1) + ' / ' + crop.h.toFixed(1)) + '</span>' : '<span class="status">Sin recorte</span>') + '</td>' +
             '<td>' + (row.planLink ? '<button class="crop-btn" data-edit-id="' + esc(row.id) + '">Editar</button>' : '<span class="status">Sin plano</span>') + '</td>' +
           '</tr>';
