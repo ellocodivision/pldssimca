@@ -10396,7 +10396,7 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
       }
     } catch {}
   }
-  return res.redirect(302, planLink);
+  return res.redirect(302, `/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(planLink)}`);
 });
 
 app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) => {
