@@ -2352,13 +2352,16 @@
             : '<span>Tipologia</span>';
           const thumbPath = String(tip.thumbPath || '').trim();
           const thumbFolder = String(tip.thumbFolder || '').trim();
+          const imageLink = imageUrl
+            ? '<a href="' + esc(imageUrl) + '" target="_blank" rel="noreferrer" class="tipo-open-link" style="display:inline-block;margin-top:6px;font-size:11px;color:#5f3dc4;text-decoration:underline;word-break:break-all;" title="' + esc(imageUrl) + '">Abrir imagen</a>'
+            : '';
           const thumbDebug = thumbPath
             ? '<p class="tipo-sub" style="margin-top:4px;font-size:10px;letter-spacing:0.01em;color:#5f6572;word-break:break-all;" title="' + esc(thumbPath) + '">png ' + esc(thumbPath.length > 60 ? (thumbPath.slice(0, 57) + '...') : thumbPath) + '</p>' +
               (thumbFolder ? '<p class="tipo-sub" style="margin-top:2px;font-size:10px;letter-spacing:0.01em;color:#7a4b7d;word-break:break-all;" title="' + esc(thumbFolder) + '">folder ' + esc(thumbFolder.length > 54 ? (thumbFolder.slice(0, 51) + '...') : thumbFolder) + '</p>' : '')
             : '<p class="tipo-sub" style="margin-top:4px;font-size:10px;letter-spacing:0.01em;color:#8a8a8a;">sin ruta PNG</p>';
           return '<article class="tipo-card" data-tipologia="' + esc(tip.id) + '" data-crop="' + esc(crop ? JSON.stringify(crop) : '') + '">' +
             '<div class="tipo-thumb">' + thumb + '</div>' +
-            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + thumbDebug + '</div>' +
+            '<div class="tipo-meta"><p class="tipo-name">' + esc(tip.name) + '</p><p class="tipo-sub">' + esc(bucket.name) + '</p>' + imageLink + thumbDebug + '</div>' +
           '</article>';
         }).join('');
 
