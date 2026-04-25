@@ -5062,6 +5062,18 @@ function looksLikeViceroyNewInventoryLayout(headers) {
     && matchesAt(20, ['m2', 'precio_por_m2', 'precio_de_lista', 'price_per_m2', 'priceperm2', 'precio_m2']);
 }
 
+function pickViceroyInventorySheet(workbook) {
+  const sheetNames = Array.isArray(workbook && workbook.SheetNames) ? workbook.SheetNames : [];
+  if (!sheetNames.length) return { sheetName: '', sheet: null };
+  const preferredName = sheetNames.find((name) => normalizeHeaderKey(name) === 'bd')
+    || sheetNames.find((name) => normalizeHeaderKey(name).includes('bd'));
+  const sheetName = preferredName || sheetNames[0];
+  return {
+    sheetName,
+    sheet: workbook && workbook.Sheets ? workbook.Sheets[sheetName] : null
+  };
+}
+
 function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
   const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
   const headerIndex = Math.max(0, Number(headerRowNumber || 1) - 1);
@@ -5805,8 +5817,9 @@ function parseViceroyInventoryFile(filePath) {
   const workbook = ext === '.csv'
     ? XLSX.read(fs.readFileSync(filePath, 'utf-8'), { type: 'string' })
     : XLSX.readFile(filePath);
-  const firstSheetName = workbook.SheetNames[0];
-  const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
+  const pickedSheet = pickViceroyInventorySheet(workbook);
+  const firstSheetName = pickedSheet.sheetName;
+  const firstSheet = pickedSheet.sheet;
   if (!firstSheet) return [];
 
   // 0) Preferred for proforma simulation: explicit Precios Proforma sheet.
@@ -5902,7 +5915,10 @@ function resolveCurrentViceroyInventoryFile() {
     const exact = candidates.find((candidate) => String(candidate.name || '').trim().toLowerCase() === cachedName);
     if (exact) return exact;
   }
-  return candidates[0] || null;
+  if (candidates.length) {
+    return [...candidates].sort((a, b) => (b.mtimeMs || 0) - (a.mtimeMs || 0))[0] || null;
+  }
+  return null;
 }
 
 function readMergedFloorsByDevelopment(devSlug) {
