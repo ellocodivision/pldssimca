@@ -2926,8 +2926,33 @@ function getViceroyTipologiaThumbKey(tipologiaId, cropInput, planLinkInput) {
 
 function getViceroyTipologiaThumbFilePath(tipologiaId, cropInput, planLinkInput) {
   const safeId = sanitizeViceroyTipologiaAssetName(tipologiaId);
-  const key = cropInput || planLinkInput ? getViceroyTipologiaThumbKey(tipologiaId, cropInput, planLinkInput) : safeId;
-  return path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${key}.png`);
+  return path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, `${safeId}.png`);
+}
+
+function getViceroyTipologiaLegacyThumbPaths(tipologiaId) {
+  const safeId = sanitizeViceroyTipologiaAssetName(tipologiaId);
+  try {
+    if (!fs.existsSync(VICEROY_TIPOLOGIA_THUMBS_DIR)) return [];
+    return fs.readdirSync(VICEROY_TIPOLOGIA_THUMBS_DIR)
+      .filter((name) => {
+        const lower = String(name || '').toLowerCase();
+        return lower.endsWith('.png') && lower.startsWith(`${safeId.toLowerCase()}-`);
+      })
+      .map((name) => path.join(VICEROY_TIPOLOGIA_THUMBS_DIR, name))
+      .sort((a, b) => String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' }));
+  } catch {
+    return [];
+  }
+}
+
+function resolveExistingViceroyTipologiaThumbFilePath(tipologiaId, cropInput, planLinkInput) {
+  const preferred = getViceroyTipologiaThumbFilePath(tipologiaId, cropInput, planLinkInput);
+  if (preferred && fs.existsSync(preferred)) return preferred;
+  const legacy = getViceroyTipologiaLegacyThumbPaths(tipologiaId);
+  for (const candidate of legacy) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return preferred;
 }
 
 function getViceroyTipologiaThumbUrl(tipologiaId) {
@@ -6229,7 +6254,7 @@ function buildViceroyTipologiaRows(inventoryRows) {
       existing.recamaras = String(row.recamaras || '').trim();
     }
     const crop = cropMap[id] || defaultViceroyTipologiaCrop();
-    const thumbPath = getViceroyTipologiaThumbFilePath(id, crop, existing.planLink || planLink);
+    const thumbPath = resolveExistingViceroyTipologiaThumbFilePath(id, crop, existing.planLink || planLink);
     existing.thumbPath = thumbPath;
     existing.thumbFolder = path.dirname(thumbPath);
     existing.thumbFileName = path.basename(thumbPath);
@@ -10394,7 +10419,7 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
   const crop = cropMap[id] || defaultViceroyTipologiaCrop();
   const filePath = row && String(row.thumbPath || '').trim()
     ? String(row.thumbPath || '').trim()
-    : getViceroyTipologiaThumbFilePath(id, crop, row && row.planLink ? row.planLink : getViceroyTipologiaSourcePlanLink(id));
+    : resolveExistingViceroyTipologiaThumbFilePath(id, crop, row && row.planLink ? row.planLink : getViceroyTipologiaSourcePlanLink(id));
   if (fs.existsSync(filePath)) {
     res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
     return res.sendFile(filePath);
