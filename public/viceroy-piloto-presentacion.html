@@ -159,6 +159,23 @@
     }
     .btn:hover { border-color: #8f9587; }
     .btn.primary { background: #a6ac9b; border-color: #a6ac9b; color: #0d1015; font-weight: 700; }
+    .fx-rate-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid #d0d3c7;
+      border-radius: 10px;
+      background: #f9faf7;
+      color: #2c3238;
+      font-size: 12px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .fx-rate-badge strong {
+      font-size: 13px;
+      font-weight: 700;
+    }
     .mini-select {
       min-width: 210px;
       max-width: 260px;
@@ -691,6 +708,7 @@
       <span class="label" id="floorsTopLabel">Plano interactivo</span>
       <div class="topbar-actions">
         <button id="backToViceroyFromFloorsBtn" class="btn" type="button">Volver a Viceroy</button>
+        <div id="banxicoRateBadge" class="fx-rate-badge" aria-live="polite">TC Banxico: cargando...</div>
         <select id="advisorFilterSelect" class="mini-select">
           <option value="">Todos los usuarios</option>
         </select>
@@ -856,6 +874,7 @@
         tipoGrid: document.getElementById('tipoGrid'),
         tipoStatus: document.getElementById('tipoStatus'),
         floorsTopLabel: document.getElementById('floorsTopLabel'),
+        banxicoRateBadge: document.getElementById('banxicoRateBadge'),
         advisorFilterSelect: document.getElementById('advisorFilterSelect'),
         exportFloorsBtn: document.getElementById('exportFloorsBtn'),
         activeFilterChips: document.getElementById('activeFilterChips'),
@@ -2299,6 +2318,26 @@
         persistRouteState();
       }
 
+      async function loadBanxicoRate() {
+        if (!els.banxicoRateBadge) return;
+        els.banxicoRateBadge.textContent = 'TC Banxico: cargando...';
+        try {
+          const res = await fetch('/api/viceroy-piloto/tipo-cambio', {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo obtener');
+          }
+          const date = String(data.date || '').trim();
+          const value = String(data.formatted || '').trim();
+          els.banxicoRateBadge.innerHTML = '<strong>TC Banxico</strong>' + (date ? ' · ' + esc(date) : '') + ' · ' + esc(value || 'N/D');
+        } catch (err) {
+          els.banxicoRateBadge.textContent = 'TC Banxico: N/D';
+        }
+      }
+
       function renderHome() {
         els.bedGrid.innerHTML = visibleBedroomBuckets().map(function (bucket) {
           const p = getMinimumPriceByBedroom(bucket.id);
@@ -2688,6 +2727,7 @@
         }
         renderWhisperFilters();
         renderZoneAttributeFilters();
+        loadBanxicoRate().catch(function () {});
         if (state.view === 'home') {
           renderHome();
         } else if (state.view === 'tipologias') {

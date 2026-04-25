@@ -47,6 +47,7 @@ const VICEROY_RESERVAS_DAILY_EMAIL_CC = String(process.env.VICEROY_RESERVAS_DAIL
 const VICEROY_RESERVAS_CORPORATE_EMAIL = String(process.env.VICEROY_RESERVAS_CORPORATE_EMAIL || 'ernesto@relatedgroud.com').trim();
 const VICEROY_PILOTO_MIN_PRICE_PER_M2 = Number(process.env.VICEROY_PILOTO_MIN_PRICE_PER_M2 || 7100);
 const VICEROY_PILOTO_PRICE_MULTIPLIER = Number(process.env.VICEROY_PILOTO_PRICE_MULTIPLIER || 18.5);
+const BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL = 'https://www.banxico.org.mx/tipcamb/tipCamMIAction.do?idioma=sp';
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true' || SMTP_PORT === 465;
@@ -104,6 +105,7 @@ function resolveDataDir() {
 }
 
 const DATA_DIR = resolveDataDir();
+const BANXICO_TIPO_CAMBIO_PARA_PAGOS_CACHE_PATH = path.join(DATA_DIR, 'banxico-tipo-cambio-para-pagos.json');
 const DATA_PATH = path.join(DATA_DIR, 'sample.json');
 const ROI_MASTER_CSV_PATH = path.join(DATA_DIR, 'roi-master.csv');
 const SOLAR_MIDTOWN_BROCHURE_ES_ENV_PATH = String(process.env.SOLAR_MIDTOWN_BROCHURE_ES_PATH || '').trim();
@@ -1998,6 +2000,135 @@ function parsePercentLike(raw) {
   if (base == null) return null;
   if (hasPercent) return base;
   return base <= 1 ? base * 100 : base;
+}
+
+function formatDateKeyInTimeZone(date, timeZone) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date || new Date());
+}
+
+function stripHtmlText(raw) {
+  return String(raw == null ? '' : raw)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, '\'')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_, num) => {
+      const code = Number(num);
+      return Number.isFinite(code) ? String.fromCharCode(code) : '';
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseBanxicoTipoCambioParaPagosHtml(html) {
+  const text = String(html == null ? '' : html);
+  const rowMatches = Array.from(text.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi));
+  for (const rowMatch of rowMatches) {
+    const cellMatches = Array.from(String(rowMatch[1] || '').matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi));
+    const cells = cellMatches.map((match) => stripHtmlText(match[1]));
+    if (cells.length < 4) continue;
+    const date = String(cells[0] || '').trim();
+    const pagosRaw = String(cells[3] || '').trim();
+    const value = parseCurrencyLike(pagosRaw);
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(date) || !Number.isFinite(value)) continue;
+    return {
+      date,
+      value,
+      pagosRaw,
+      source: 'row'
+    };
+  }
+
+  const flat = stripHtmlText(text).replace(/\s+/g, ' ');
+  const fallbackMatch = flat.match(/(\d{2}\/\d{2}\/\d{4}).{0,120}?Para pagos.{0,60}?([0-9]+(?:\.[0-9]+)?)/i);
+  if (fallbackMatch) {
+    const value = parseCurrencyLike(fallbackMatch[2]);
+    if (Number.isFinite(value)) {
+      return {
+        date: fallbackMatch[1],
+        value,
+        pagosRaw: fallbackMatch[2],
+        source: 'fallback'
+      };
+    }
+  }
+
+  return null;
+}
+
+function readBanxicoTipoCambioCache() {
+  try {
+    const cached = readJson(BANXICO_TIPO_CAMBIO_PARA_PAGOS_CACHE_PATH, null);
+    if (cached && typeof cached === 'object') return cached;
+  } catch {}
+  return null;
+}
+
+function writeBanxicoTipoCambioCache(payload) {
+  try {
+    fs.mkdirSync(path.dirname(BANXICO_TIPO_CAMBIO_PARA_PAGOS_CACHE_PATH), { recursive: true });
+    writeJson(BANXICO_TIPO_CAMBIO_PARA_PAGOS_CACHE_PATH, payload);
+  } catch (err) {
+    log(`No se pudo guardar cache de Banxico: ${err && err.message ? err.message : err}`);
+  }
+}
+
+async function fetchBanxicoTipoCambioParaPagos(options = {}) {
+  const forceFresh = Boolean(options && options.forceFresh);
+  const todayKey = formatDateKeyInTimeZone(new Date(), APP_TIMEZONE);
+  const cached = readBanxicoTipoCambioCache();
+  if (!forceFresh && cached && cached.dateKey === todayKey && Number.isFinite(Number(cached.value))) {
+    return cached;
+  }
+
+  try {
+    const upstream = await fetch(BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL, {
+      cache: 'no-store',
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Codex; Banxico tipo cambio)',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+    if (!upstream.ok) {
+      throw new Error(`HTTP ${upstream.status}`);
+    }
+    const html = Buffer.from(await upstream.arrayBuffer()).toString('latin1');
+    const parsed = parseBanxicoTipoCambioParaPagosHtml(html);
+    if (!parsed) {
+      throw new Error('No se pudo leer la tabla de tipo de cambio');
+    }
+    const payload = {
+      ok: true,
+      sourceUrl: BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL,
+      dateKey: todayKey,
+      asOfDate: parsed.date,
+      value: Number(parsed.value),
+      rawValue: parsed.pagosRaw,
+      source: parsed.source,
+      fetchedAt: new Date().toISOString()
+    };
+    writeBanxicoTipoCambioCache(payload);
+    return payload;
+  } catch (err) {
+    if (cached && Number.isFinite(Number(cached.value))) {
+      return {
+        ...cached,
+        ok: true,
+        stale: true,
+        sourceUrl: BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL,
+        error: err && err.message ? err.message : 'No se pudo actualizar'
+      };
+    }
+    throw err;
+  }
 }
 
 function formatCurrency(value) {
@@ -10405,6 +10536,28 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
     fileName: path.basename(filePath),
     planLink: planLink || ''
   });
+});
+
+app.get('/api/viceroy-piloto/tipo-cambio', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const forceFresh = String(req.query && req.query.refresh || '').trim() === '1';
+    const data = await fetchBanxicoTipoCambioParaPagos({ forceFresh });
+    return res.json({
+      ok: true,
+      source: data.source || 'cache',
+      stale: Boolean(data.stale),
+      date: data.asOfDate || '',
+      value: Number(data.value) || 0,
+      formatted: Number.isFinite(Number(data.value))
+        ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(Number(data.value))
+        : '',
+      sourceUrl: data.sourceUrl || BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL,
+      fetchedAt: data.fetchedAt || null
+    });
+  } catch (err) {
+    const msg = err && err.message ? err.message : 'No se pudo obtener el tipo de cambio';
+    return res.status(500).json({ ok: false, error: msg });
+  }
 });
 
 app.post('/api/viceroy-piloto/tipologia-crop', requireGerente, async (req, res) => {
