@@ -524,6 +524,8 @@
         <input id="pdfOddRowInput" type="color" value="#fafcf9">
         <label for="pdfEvenRowInput" style="margin-top:8px;">Color fila par</label>
         <input id="pdfEvenRowInput" type="color" value="#ffffff">
+        <label for="pdfPageBgInput" style="margin-top:8px;">Color fondo hoja</label>
+        <input id="pdfPageBgInput" type="color" value="#ffffff">
         <label for="pdfFrameColorInput" style="margin-top:8px;">Color recuadro</label>
         <input id="pdfFrameColorInput" type="color" value="#d8cf6b">
         <label for="pdfFrameWidthInput" style="margin-top:8px;">Grosor recuadro (px)</label>
@@ -630,6 +632,7 @@
       pageMargin: "8mm",
       pageMaxWidth: "190mm",
       pageHeight: "278mm",
+      pageBackgroundColor: "#ffffff",
       borderColor: "#d8cf6b",
       borderWidth: "1.2px",
       logoDataUrl: "",
@@ -800,6 +803,7 @@
     const pdfTitleColorInput = document.getElementById("pdfTitleColorInput");
     const pdfOddRowInput = document.getElementById("pdfOddRowInput");
     const pdfEvenRowInput = document.getElementById("pdfEvenRowInput");
+    const pdfPageBgInput = document.getElementById("pdfPageBgInput");
     const pdfFrameColorInput = document.getElementById("pdfFrameColorInput");
     const pdfFrameWidthInput = document.getElementById("pdfFrameWidthInput");
     const workspace = document.querySelector(".workspace");
@@ -1650,24 +1654,25 @@
       return raw.replace(/rec[aá]maras?|bedrooms?|beds?/gi, "").trim();
     }
 
-    function formatUsdValue(value) {
+    function formatCurrencyValue(value) {
       const raw = String(value || "").trim();
       if (!raw) return "";
       const numeric = raw.replace(/[^0-9.-]/g, "");
       const asNumber = Number(numeric);
       if (!Number.isFinite(asNumber)) return raw;
       const hasDecimals = Math.abs(asNumber % 1) > 0.0001;
-      const formatted = new Intl.NumberFormat("en-US", {
+      const isRelated = DEV === "related";
+      const formatted = new Intl.NumberFormat(isRelated ? "es-MX" : "en-US", {
         minimumFractionDigits: hasDecimals ? 2 : 0,
         maximumFractionDigits: 2
       }).format(asNumber);
-      return `$${formatted} USD`;
+      return isRelated ? `$${formatted} MXN` : `$${formatted} USD`;
     }
 
     function displayCellValue(row, key) {
       if (!row) return "";
       if (key === "REC") return normalizeBedrooms(row[key]);
-      if (key === "PRECIO" || key === "PRECIO_FINAL") return formatUsdValue(row[key]);
+      if (key === "PRECIO" || key === "PRECIO_FINAL") return formatCurrencyValue(row[key]);
       return row[key] || "";
     }
 
@@ -2616,6 +2621,7 @@
       pdfTitleColorInput.value = layout.titleColor;
       pdfOddRowInput.value = layout.oddRowColor;
       pdfEvenRowInput.value = layout.evenRowColor;
+      pdfPageBgInput.value = layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor;
       pdfFrameColorInput.value = layout.borderColor;
       pdfFrameWidthInput.value = String(parseFloat(layout.borderWidth) || 1.2);
     }
@@ -2646,6 +2652,7 @@
         headerTextColor: pdfHeaderTextInput.value || PDF_LAYOUT.headerTextColor,
         oddRowColor: pdfOddRowInput.value || PDF_LAYOUT.oddRowColor,
         evenRowColor: pdfEvenRowInput.value || PDF_LAYOUT.evenRowColor,
+        pageBackgroundColor: pdfPageBgInput.value || PDF_LAYOUT.pageBackgroundColor,
         borderColor: pdfFrameColorInput.value || PDF_LAYOUT.borderColor,
         borderWidth: `${Math.min(4, Math.max(0.4, Number.isFinite(frameWidth) ? frameWidth : 1.2))}px`
       };
@@ -2708,7 +2715,14 @@
           ? `${Math.min(30, Math.max(5.5, pageBodyFontPx))}px`
           : layout.bodyFontSize;
         const titleHtml = pageTitle ? `<p class="title" style="margin-top:${pageTitleOffset};">${escapeHtml(pageTitle)}</p>` : "";
-        const notesHtml = `
+        const notesHtml = DEV === "related"
+          ? `
+            <div class="notes">
+              <p>Los precios están expresados en pesos mexicanos (MXN). Precios sujetos a cambios sin previo aviso.</p>
+              <p>*Prices are expressed in Mexican pesos (MXN). Prices are subject to change without prior notice.</p>
+            </div>
+        `
+          : `
             <div class="notes">
               <p>Los precios están expresados en dólares estadounidenses (USD) y están sujetos al tipo de cambio vigente en pesos mexicanos al momento de la transacción. Precios sujetos a cambios sin previo aviso.</p>
               <p>*Prices are expressed in United States dollars (USD) and are subject to the current exchange rate in Mexican pesos at the time of the transaction. Prices are subject to change without prior notice.</p>
@@ -2796,7 +2810,7 @@
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    body { margin: 0; font-family: ${bodyFontStack}; color: #101110; background: #fff; }
+    body { margin: 0; font-family: ${bodyFontStack}; color: #101110; background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")}; }
     .page {
       width: 100%;
       max-width: ${layout.pageMaxWidth};
@@ -2808,6 +2822,7 @@
       page-break-after: always;
       display: flex;
       flex-direction: column;
+      background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")};
     }
     .page:last-child { page-break-after: auto; }
     .head {
@@ -2832,7 +2847,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #fff;
+      background: rgba(255, 255, 255, 0.78);
     }
     .plan-wrap svg { width: 100%; height: 100%; display: block; }
     .table-wrap { margin-top: 2.5mm; transform-origin: top left; }
@@ -3227,10 +3242,10 @@
       const matrix = lines.map((line) => parseLine(line));
       const rows = matrix.slice(1).map((values) => {
         const development = String(values[COL.DEVELOPMENT] || "").trim();
-        const precio = formatUsdValue(values[COL.PRECIO] || "");
+        const precio = formatCurrencyValue(values[COL.PRECIO] || "");
         const precioFinalValue = DEV === "related"
           ? precio
-          : formatUsdValue(values[CEIBA_COL.K] || "");
+          : formatCurrencyValue(values[CEIBA_COL.K] || "");
         return {
           DEV: development,
           LINK: DEV === "related" ? "" : (values[CEIBA_COL.LINK] || ""),
@@ -3277,10 +3292,10 @@
           const link = linkCell && linkCell.l && linkCell.l.Target
             ? String(linkCell.l.Target)
             : (DEV === "related" ? "" : getValue(CEIBA_COL.LINK));
-          const precio = formatUsdValue(getValue(COL.PRECIO));
+          const precio = formatCurrencyValue(getValue(COL.PRECIO));
           const precioFinalValue = DEV === "related"
             ? precio
-            : formatUsdValue(getValue(CEIBA_COL.K));
+            : formatCurrencyValue(getValue(CEIBA_COL.K));
 
           const row = {
             DEV: development,
@@ -3734,6 +3749,7 @@
       pdfTitleColorInput,
       pdfOddRowInput,
       pdfEvenRowInput,
+      pdfPageBgInput,
       pdfFrameColorInput,
       pdfFrameWidthInput
     ].filter(Boolean).forEach((el) => {
