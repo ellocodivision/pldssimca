@@ -423,8 +423,7 @@
       nextZoneId: 1,
       zoom: 1,
       autoMapping: false,
-      imageLoadMode: "replace"
-      ,
+      imageLoadMode: "replace",
       whisperlistSellers: []
     };
 
@@ -686,6 +685,13 @@
 
     function getFloorBackgroundColor(floor) {
       return normalizeHexColor(floor && floor.imageBackgroundColor, "#ffffff");
+    }
+
+    function getRenderedFloorImageDataUrl(floor) {
+      if (!floor) return "";
+      const raw = String(floor.imageRawDataUrl || floor.imageDataUrl || "").trim();
+      if (!raw) return "";
+      return buildFloorImageWithBackground(raw, getFloorBackgroundColor(floor), floor.imageWidth || 1, floor.imageHeight || 1);
     }
 
     function buildFloorImageWithBackground(imageDataUrl, backgroundColor, width, height) {
@@ -1182,7 +1188,7 @@
         render();
         enableButtons();
       };
-      baseImage.src = floor.imageDataUrl;
+      baseImage.src = getRenderedFloorImageDataUrl(floor);
     }
 
     function setPaintMaskMode(enabled) {
@@ -2055,6 +2061,9 @@
       floor.imageBackgroundColor = nextColor;
       if (stage) stage.style.background = nextColor;
       if (floorBackgroundInput) floorBackgroundInput.value = nextColor;
+      if (baseImage && floor.imageWidth && floor.imageHeight) {
+        baseImage.src = getRenderedFloorImageDataUrl(floor);
+      }
       render();
     }
 
@@ -2091,6 +2100,7 @@
         const strokeWidth = Number.isFinite(Number(zone.borderWidth))
           ? Number(zone.borderWidth)
           : (isPrimary ? 3 : (isSelected ? 2.5 : 2));
+        const fillColor = "#2d8f63";
         const labelHtml = shouldShowUnitLabels() ? `
             <text
               data-label-zone-id="${zone.id}"
@@ -2110,7 +2120,7 @@
         ` : "";
         return `
           <g data-zone-id="${zone.id}">
-            <polygon points="${pts}" fill="var(--zone)" fill-opacity="0.24" stroke="${strokeColor}" stroke-width="${strokeWidth}" style="cursor: move;" />
+            <polygon points="${pts}" fill="${fillColor}" fill-opacity="0.34" stroke="${strokeColor}" stroke-width="${strokeWidth}" style="cursor: move;" />
             ${labelHtml}
           </g>
         `;
@@ -2310,12 +2320,13 @@
     function getPersistableState() {
       const floors = state.floors.map((floor) => {
         const backgroundColor = getFloorBackgroundColor(floor);
+        const rawImageDataUrl = String(floor.imageRawDataUrl || floor.imageDataUrl || "");
         return {
           ...floor,
           imageBackgroundColor: backgroundColor,
-          imageRawDataUrl: String(floor.imageDataUrl || ""),
+          imageRawDataUrl: rawImageDataUrl,
           imageDataUrl: buildFloorImageWithBackground(
-            floor.imageDataUrl,
+            rawImageDataUrl,
             backgroundColor,
             floor.imageWidth || 1,
             floor.imageHeight || 1
@@ -2442,6 +2453,7 @@
                 id: `floor-${Date.now()}-${index}`,
                 name: file.name,
                 imageDataUrl: dataUrl,
+                imageRawDataUrl: dataUrl,
                 imageBackgroundColor: "#ffffff",
                 imageWidth: width,
                 imageHeight: height,
@@ -2698,7 +2710,6 @@
         applyActiveFloorBackgroundColor("#ffffff");
       });
     }
-
     if (FORCE_HIDE_UNIT_LABELS) {
       state.showUnitLabels = false;
       showLabelsInput.checked = false;

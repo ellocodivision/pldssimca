@@ -244,7 +244,7 @@
       height: 100%;
       border: 0;
       border-radius: 0;
-      background: #f6f8f4;
+      background: var(--preview-bg-soft, #f6f8f4);
     }
     table {
       width: 100%;
@@ -530,6 +530,12 @@
         <input id="pdfFrameColorInput" type="color" value="#d8cf6b">
         <label for="pdfFrameWidthInput" style="margin-top:8px;">Grosor recuadro (px)</label>
         <input id="pdfFrameWidthInput" type="number" min="0.4" max="4" step="0.1" value="1.2">
+        <label for="statusDisponibleInput" style="margin-top:8px;">Color disponible</label>
+        <input id="statusDisponibleInput" type="color" value="#2f8f47">
+        <label for="statusReservadaInput" style="margin-top:8px;">Color reservada</label>
+        <input id="statusReservadaInput" type="color" value="#d89d27">
+        <label for="statusVendidaInput" style="margin-top:8px;">Color vendida</label>
+        <input id="statusVendidaInput" type="color" value="#c43c32">
         <div class="btn-row">
           <button id="pdfPreviewBtn">Abrir preview grande</button>
           <button id="pdfLogoClearBtn" type="button">Quitar logo</button>
@@ -620,7 +626,7 @@
     const QUICK_EXPORT_MODE = URL_PARAMS.get("quick_export") === "1";
     const DEFAULT_SPLIT_PAGE_CONTENT = new Set(["solar-mt", "related"]);
 
-    const statusColors = {
+    const DEFAULT_STATUS_COLORS = {
       disponible: "#2f8f47",
       reservada: "#d89d27",
       vendida: "#c43c32"
@@ -744,6 +750,7 @@
         rows: []
       },
       pdfLayout: {},
+      statusColors: { ...DEFAULT_STATUS_COLORS },
       unitNumberSizePx: 20,
       zoneBorderWidthPx: 2
     };
@@ -806,6 +813,9 @@
     const pdfPageBgInput = document.getElementById("pdfPageBgInput");
     const pdfFrameColorInput = document.getElementById("pdfFrameColorInput");
     const pdfFrameWidthInput = document.getElementById("pdfFrameWidthInput");
+    const statusDisponibleInput = document.getElementById("statusDisponibleInput");
+    const statusReservadaInput = document.getElementById("statusReservadaInput");
+    const statusVendidaInput = document.getElementById("statusVendidaInput");
     const workspace = document.querySelector(".workspace");
     const importBtn = document.getElementById("importBtn");
     const exportMappedJsonBtn = document.getElementById("exportMappedJsonBtn");
@@ -926,6 +936,11 @@
         .replace(/>/g, "&gt;")
         .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
+    }
+
+    function normalizeHexColor(value, fallback = "#ffffff") {
+      const raw = String(value || "").trim().toLowerCase();
+      return /^#[0-9a-f]{6}$/.test(raw) ? raw : fallback;
     }
 
     function polygonCenter(points) {
@@ -1551,7 +1566,7 @@
         const cy = baseY + dy;
         const label = escapeHtml(zone.label);
         const isActive = zone.id === state.selectedZoneId;
-        const fillColor = statusColors[zone.status] || statusColors.disponible;
+        const fillColor = getStatusColor(zone.status);
         const labelHtml = state.showUnitLabels !== false ? `
             <text
               data-label-zone-id="${zone.id}"
@@ -1636,7 +1651,7 @@
     }
 
     function statusPill(status) {
-      const color = statusColors[status] || "#94a39a";
+      const color = getStatusColor(status);
       return `<span class="status-pill" style="background:${color}">${escapeHtml(status || "-")}</span>`;
     }
 
@@ -1818,7 +1833,8 @@
         unitNumberSizePx: getUnitNumberSizePx(),
         zoneBorderWidthPx: getZoneBorderWidthPx(),
         excel: state.excel,
-        pdfLayout: state.pdfLayout
+        pdfLayout: state.pdfLayout,
+        statusColors: normalizeStatusColors(state.statusColors)
       };
     }
 
@@ -2394,6 +2410,7 @@
         state.excel = payload.excel || { headers: [], rows: [] };
       }
       state.pdfLayout = payload.pdfLayout || {};
+      state.statusColors = normalizeStatusColors(payload.statusColors || state.statusColors);
       syncZoneStatusesFromExcel();
       syncPdfControlsFromState();
     }
@@ -2567,7 +2584,7 @@
         const dy = zone.labelOffset && Number.isFinite(zone.labelOffset.y) ? zone.labelOffset.y : 0;
         const cx = baseX + dx;
         const cy = baseY + dy;
-        const fillColor = statusColors[zone.status] || statusColors.disponible;
+        const fillColor = getStatusColor(zone.status);
         const textMarkup = showLabels
           ? `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="Segoe UI, Tahoma, sans-serif" font-size="${numberSizePx}" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${escapeHtml(zone.label)}</text>`
           : "";
@@ -2600,6 +2617,21 @@
       return { ...PDF_LAYOUT, ...(state.pdfLayout || {}) };
     }
 
+    function normalizeStatusColors(raw) {
+      const source = raw && typeof raw === "object" ? raw : {};
+      return {
+        disponible: normalizeHexColor(source.disponible, DEFAULT_STATUS_COLORS.disponible),
+        reservada: normalizeHexColor(source.reservada, DEFAULT_STATUS_COLORS.reservada),
+        vendida: normalizeHexColor(source.vendida, DEFAULT_STATUS_COLORS.vendida)
+      };
+    }
+
+    function getStatusColor(status) {
+      const key = String(status || "").trim().toLowerCase();
+      const colors = normalizeStatusColors(state.statusColors);
+      return colors[key] || colors.disponible;
+    }
+
     function resolveFontStack(fontKey) {
       return PDF_FONT_OPTIONS[fontKey] || PDF_FONT_OPTIONS.arial;
     }
@@ -2610,9 +2642,14 @@
       if (pdfLiveWrap) {
         pdfLiveWrap.style.setProperty("--preview-bg", previewBg);
         pdfLiveWrap.style.setProperty("--preview-bg-soft", previewBg);
+        pdfLiveWrap.style.background = previewBg;
       }
       if (pdfLiveViewport) {
         pdfLiveViewport.style.setProperty("--preview-bg-soft", previewBg);
+        pdfLiveViewport.style.background = previewBg;
+      }
+      if (pdfLiveFrame) {
+        pdfLiveFrame.style.background = previewBg;
       }
       pdfLogoStatus.textContent = layout.logoDataUrl ? "Logo cargado" : "Sin logo cargado";
       pdfBrandTextInput.value = layout.brandText;
@@ -2632,6 +2669,28 @@
       pdfPageBgInput.value = layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor;
       pdfFrameColorInput.value = layout.borderColor;
       pdfFrameWidthInput.value = String(parseFloat(layout.borderWidth) || 1.2);
+      syncStatusColorControls();
+    }
+
+    function syncStatusColorControls() {
+      const colors = normalizeStatusColors(state.statusColors);
+      state.statusColors = colors;
+      if (statusDisponibleInput) statusDisponibleInput.value = colors.disponible;
+      if (statusReservadaInput) statusReservadaInput.value = colors.reservada;
+      if (statusVendidaInput) statusVendidaInput.value = colors.vendida;
+      document.documentElement.style.setProperty("--disp", colors.disponible);
+      document.documentElement.style.setProperty("--resv", colors.reservada);
+      document.documentElement.style.setProperty("--vend", colors.vendida);
+    }
+
+    function applyStatusColor(kind, color) {
+      const nextColor = normalizeHexColor(color, DEFAULT_STATUS_COLORS[kind] || "#2f8f47");
+      state.statusColors = {
+        ...normalizeStatusColors(state.statusColors),
+        [kind]: nextColor
+      };
+      syncStatusColorControls();
+      render();
     }
 
     function savePdfLayoutFromControls() {
@@ -2747,7 +2806,7 @@
           const rawStatus = row.ESTADO || "";
           const status = typeof rawStatus === "string" && rawStatus.trim() ? rawStatus.trim().toLowerCase() : "-";
           const statusLabel = status === "-" ? "-" : String(status).toUpperCase();
-          const color = statusColors[status] || "#8f9691";
+          const color = getStatusColor(status);
           const pillBg = `${color}2b`;
           return `<tr>${cells}<td class="status-cell" style="background:${pillBg}"><span class="pill" style="border-color:${color};background:${pillBg}">${escapeHtml(statusLabel)}</span></td></tr>`;
         }).join("");
@@ -3041,6 +3100,7 @@
         if (missingExcel) hints.push(`<li>Carga Excel ${escapeHtml(DEV_LABEL)}</li>`);
         const extra = !missingFloors && missingExcel ? "<p>JSON cargado. Falta estructura de Excel.</p>" : "";
         const previewBg = escapeHtml(layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor || "#ffffff");
+        if (pdfLiveFrame) pdfLiveFrame.style.background = previewBg;
         pdfLiveFrame.srcdoc = `<html><body style="font-family:Arial,sans-serif;background:${previewBg};color:#4c554d;padding:16px;"><p>Para ver la previsualizacion PDF en vivo:</p>${extra}<ol>${hints.join("")}</ol></body></html>`;
         pdfLiveFrame.onload = () => {
           applyPdfLiveZoom();
@@ -3745,6 +3805,15 @@
       syncPdfControlsFromState();
       schedulePdfLivePreview();
     });
+    if (statusDisponibleInput) {
+      statusDisponibleInput.addEventListener("input", () => applyStatusColor("disponible", statusDisponibleInput.value));
+    }
+    if (statusReservadaInput) {
+      statusReservadaInput.addEventListener("input", () => applyStatusColor("reservada", statusReservadaInput.value));
+    }
+    if (statusVendidaInput) {
+      statusVendidaInput.addEventListener("input", () => applyStatusColor("vendida", statusVendidaInput.value));
+    }
     [
       pdfBrandTextInput,
       pdfLogoSizeInput,
