@@ -214,6 +214,15 @@
           <button id="appendFloorsBtn" type="button">Agregar pisos</button>
         </div>
         <p class="hint">Usa "Agregar pisos" para anexar nuevas imágenes al JSON ya cargado.</p>
+        <div id="floorBackgroundSection" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #e3e8e4;">
+          <label for="floorBackgroundInput">Color fondo imagen</label>
+          <input id="floorBackgroundInput" type="color" value="#ffffff">
+          <div class="btn-row" style="margin-top:8px;">
+            <button id="applyFloorBackgroundBtn" type="button">Aplicar al piso</button>
+            <button id="resetFloorBackgroundBtn" type="button">Usar blanco</button>
+          </div>
+          <p class="hint">Solo aplica en Related y se guarda por piso en el JSON.</p>
+        </div>
         <div id="floorTabs" class="tabs"></div>
         <div class="btn-row" style="margin-top:8px;">
           <button id="moveFloorUpBtn" type="button" disabled>Subir piso</button>
@@ -373,6 +382,7 @@
     const devMatch = window.location.pathname.match(/^\/gerente-ventas\/([^/]+)\/plano-interactivo$/i);
     const DEV = (URL_PARAMS.get("dev") || (devMatch && devMatch[1]) || "ceiba").toLowerCase();
     const IS_VICEROY_PILOTO = DEV === "viceroy-piloto";
+    const SUPPORTS_FLOOR_BACKGROUND = DEV === "related";
     const DEV_BASE = `/gerente-ventas/${encodeURIComponent(DEV)}`;
     const STEP2_URL = `${DEV_BASE}/plano-ventas?dev=${encodeURIComponent(DEV)}`;
     const LOCAL_STATE_KEYS = [
@@ -423,6 +433,10 @@
     const imagesInput = document.getElementById("imagesInput");
     const replaceFloorsBtn = document.getElementById("replaceFloorsBtn");
     const appendFloorsBtn = document.getElementById("appendFloorsBtn");
+    const floorBackgroundSection = document.getElementById("floorBackgroundSection");
+    const floorBackgroundInput = document.getElementById("floorBackgroundInput");
+    const applyFloorBackgroundBtn = document.getElementById("applyFloorBackgroundBtn");
+    const resetFloorBackgroundBtn = document.getElementById("resetFloorBackgroundBtn");
     const floorTabs = document.getElementById("floorTabs");
     const moveFloorUpBtn = document.getElementById("moveFloorUpBtn");
     const moveFloorDownBtn = document.getElementById("moveFloorDownBtn");
@@ -494,6 +508,9 @@
     }
     if (autoMapWrap) {
       autoMapWrap.style.display = "block";
+    }
+    if (floorBackgroundSection) {
+      floorBackgroundSection.style.display = SUPPORTS_FLOOR_BACKGROUND ? "block" : "none";
     }
 
     function safeNameToken(value) {
@@ -660,6 +677,44 @@
         .replace(/>/g, "&gt;")
         .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
+    }
+
+    function normalizeHexColor(value, fallback = "#ffffff") {
+      const raw = String(value || "").trim().toLowerCase();
+      return /^#[0-9a-f]{6}$/.test(raw) ? raw : fallback;
+    }
+
+    function getFloorBackgroundColor(floor) {
+      return normalizeHexColor(floor && floor.imageBackgroundColor, "#ffffff");
+    }
+
+    function buildFloorImageWithBackground(imageDataUrl, backgroundColor, width, height) {
+      const raw = String(imageDataUrl || "").trim();
+      if (!raw) return "";
+      const bg = normalizeHexColor(backgroundColor, "#ffffff");
+      const safeWidth = Math.max(1, Math.round(Number(width) || 1));
+      const safeHeight = Math.max(1, Math.round(Number(height) || 1));
+      const svg = [
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${safeWidth}" height="${safeHeight}" viewBox="0 0 ${safeWidth} ${safeHeight}">`,
+        `<rect width="100%" height="100%" fill="${bg}"/>`,
+        `<image href="${escapeHtml(raw)}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="xMidYMid meet"/>`,
+        `</svg>`
+      ].join("");
+      if (typeof window.btoa === "function") {
+        try {
+          return `data:image/svg+xml;base64,${window.btoa(unescape(encodeURIComponent(svg)))}`;
+        } catch {}
+      }
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+
+    function loadImageDimensionsFromDataUrl(dataUrl) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.naturalWidth || 0, height: img.naturalHeight || 0 });
+        img.onerror = () => resolve({ width: 0, height: 0 });
+        img.src = String(dataUrl || "");
+      });
     }
 
     function polygonCenter(points) {
@@ -944,7 +999,8 @@
           return {
             id: floorId,
             name: String(floor.name || `Piso ${floorIndex + 1}`),
-            imageDataUrl: String(floor.imageDataUrl),
+            imageDataUrl: String(floor.imageRawDataUrl || floor.imageDataUrl || ""),
+            imageBackgroundColor: normalizeHexColor(floor.imageBackgroundColor, "#ffffff"),
             imageWidth: Number(floor.imageWidth) || 0,
             imageHeight: Number(floor.imageHeight) || 0,
             paintMaskDataUrl: String(floor.paintMaskDataUrl || ""),
@@ -1030,6 +1086,7 @@
       const floor = activeFloor();
       if (!floor) {
         baseImage.removeAttribute("src");
+        if (stage) stage.style.background = "#ffffff";
         overlay.innerHTML = "";
         if (editGuideOverlay) editGuideOverlay.innerHTML = "";
         if (paintMaskCtx && paintMaskCanvas) {
@@ -1037,6 +1094,7 @@
         }
         applyZoomToStage();
       } else {
+        syncFloorBackgroundControls();
         loadFloorImage(floor);
       }
       updateHint();
@@ -1092,6 +1150,7 @@
       baseImage.onload = () => {
         floor.imageWidth = baseImage.naturalWidth;
         floor.imageHeight = baseImage.naturalHeight;
+        if (stage) stage.style.background = getFloorBackgroundColor(floor);
         overlay.setAttribute("viewBox", `0 0 ${floor.imageWidth} ${floor.imageHeight}`);
         overlay.setAttribute("width", floor.imageWidth);
         overlay.setAttribute("height", floor.imageHeight);
@@ -1119,6 +1178,7 @@
           }
         }
         applyZoomToStage();
+        syncFloorBackgroundControls();
         render();
         enableButtons();
       };
@@ -1977,6 +2037,27 @@
       });
     }
 
+    function syncFloorBackgroundControls() {
+      if (!SUPPORTS_FLOOR_BACKGROUND || !floorBackgroundInput) return;
+      const floor = activeFloor();
+      const color = getFloorBackgroundColor(floor);
+      floorBackgroundInput.value = color;
+      if (stage) {
+        stage.style.background = color;
+      }
+    }
+
+    function applyActiveFloorBackgroundColor(color) {
+      if (!SUPPORTS_FLOOR_BACKGROUND) return;
+      const floor = activeFloor();
+      if (!floor) return;
+      const nextColor = normalizeHexColor(color, "#ffffff");
+      floor.imageBackgroundColor = nextColor;
+      if (stage) stage.style.background = nextColor;
+      if (floorBackgroundInput) floorBackgroundInput.value = nextColor;
+      render();
+    }
+
     function renderDrawingPreview() {
       if (!state.drawingPoints.length) return "";
       const circles = state.drawingPoints
@@ -2223,11 +2304,26 @@
       renderFloorTabs();
       renderOverlay();
       renderZoneList();
+      syncFloorBackgroundControls();
     }
 
     function getPersistableState() {
+      const floors = state.floors.map((floor) => {
+        const backgroundColor = getFloorBackgroundColor(floor);
+        return {
+          ...floor,
+          imageBackgroundColor: backgroundColor,
+          imageRawDataUrl: String(floor.imageDataUrl || ""),
+          imageDataUrl: buildFloorImageWithBackground(
+            floor.imageDataUrl,
+            backgroundColor,
+            floor.imageWidth || 1,
+            floor.imageHeight || 1
+          )
+        };
+      });
       return {
-        floors: state.floors,
+        floors,
         nextZoneId: state.nextZoneId,
         showUnitLabels: state.showUnitLabels
       };
@@ -2249,6 +2345,7 @@
       state.drawing = false;
       state.drawingPoints = [];
       state.cursorPoint = null;
+      syncFloorBackgroundControls();
       loadFloorImage(activeFloor());
       updateHint();
       render();
@@ -2339,14 +2436,18 @@
         return new Promise((resolve) => {
           const reader = new FileReader();
           reader.onload = () => {
-            resolve({
-              id: `floor-${Date.now()}-${index}`,
-              name: file.name,
-              imageDataUrl: reader.result,
-              imageWidth: 0,
-              imageHeight: 0,
-              paintMaskDataUrl: "",
-              zones: []
+            const dataUrl = String(reader.result || "");
+            loadImageDimensionsFromDataUrl(dataUrl).then(({ width, height }) => {
+              resolve({
+                id: `floor-${Date.now()}-${index}`,
+                name: file.name,
+                imageDataUrl: dataUrl,
+                imageBackgroundColor: "#ffffff",
+                imageWidth: width,
+                imageHeight: height,
+                paintMaskDataUrl: "",
+                zones: []
+              });
             });
           };
           reader.readAsDataURL(file);
@@ -2579,6 +2680,24 @@
       showLabelsInput.checked = state.showUnitLabels;
       renderOverlay();
     });
+    if (floorBackgroundInput) {
+      floorBackgroundInput.addEventListener("input", () => {
+        if (!SUPPORTS_FLOOR_BACKGROUND) return;
+        applyActiveFloorBackgroundColor(floorBackgroundInput.value);
+      });
+    }
+    if (applyFloorBackgroundBtn) {
+      applyFloorBackgroundBtn.addEventListener("click", () => {
+        if (!SUPPORTS_FLOOR_BACKGROUND) return;
+        applyActiveFloorBackgroundColor(floorBackgroundInput ? floorBackgroundInput.value : "#ffffff");
+      });
+    }
+    if (resetFloorBackgroundBtn) {
+      resetFloorBackgroundBtn.addEventListener("click", () => {
+        if (!SUPPORTS_FLOOR_BACKGROUND) return;
+        applyActiveFloorBackgroundColor("#ffffff");
+      });
+    }
 
     if (FORCE_HIDE_UNIT_LABELS) {
       state.showUnitLabels = false;
