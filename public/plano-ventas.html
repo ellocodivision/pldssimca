@@ -2569,7 +2569,7 @@
       return out;
     }
 
-    function buildFloorSvgMarkup(floor) {
+    function buildFloorSvgMarkup(floor, backgroundColor = "#ffffff") {
       const width = floor.imageWidth || 1200;
       const height = floor.imageHeight || 900;
       const numberSizePx = getUnitNumberSizePx();
@@ -2595,8 +2595,8 @@
       }).join("");
 
       return `
-        <svg viewBox="0 0 ${width} ${height}" width="100%" xmlns="http://www.w3.org/2000/svg" style="background:#fff">
-          <rect x="0" y="0" width="${width}" height="${height}" fill="#fff"></rect>
+        <svg viewBox="0 0 ${width} ${height}" width="100%" xmlns="http://www.w3.org/2000/svg" style="background:${escapeHtml(backgroundColor)}">
+          <rect x="0" y="0" width="${width}" height="${height}" fill="${escapeHtml(backgroundColor)}"></rect>
           <image href="${escapeAttr(floor.imageDataUrl)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet"></image>
           ${zonesMarkup}
         </svg>
@@ -2820,7 +2820,7 @@
               ${brandTextHtml}
               ${titleHtml}
             </div>
-            <div class="plan-wrap" style="height:${pagePlanHeight}; margin-top:${pagePlanOffset};">${buildFloorSvgMarkup(floor)}</div>
+            <div class="plan-wrap" style="height:${pagePlanHeight}; margin-top:${pagePlanOffset};">${buildFloorSvgMarkup(floor, layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor || "#ffffff")}</div>
           </div>
           <div class="page page-table" data-page-index="${index}-table" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
             <div class="head">
@@ -2847,7 +2847,7 @@
               ${brandTextHtml}
               ${titleHtml}
             </div>
-            <div class="plan-wrap" style="height:${pagePlanHeight}; margin-top:${pagePlanOffset};">${buildFloorSvgMarkup(floor)}</div>
+            <div class="plan-wrap" style="height:${pagePlanHeight}; margin-top:${pagePlanOffset};">${buildFloorSvgMarkup(floor, layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor || "#ffffff")}</div>
             <div class="table-wrap" style="margin-top:${pageTableOffset};">
               <table style="font-size:${pageBodyFontSize};">
                 <colgroup>${colsHtml}</colgroup>
