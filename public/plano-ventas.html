@@ -191,7 +191,7 @@
       padding: 10px;
     }
     .pdf-live-wrap {
-      background: #fff;
+      background: var(--preview-bg, #fff);
       border: 1px solid var(--line);
       border-radius: 14px;
       overflow: hidden;
@@ -232,7 +232,7 @@
       min-height: 220px;
       border: 1px solid #d9ded8;
       border-radius: 8px;
-      background: #f6f8f4;
+      background: var(--preview-bg-soft, #f6f8f4);
       overflow: auto;
     }
     .pdf-live-stage {
@@ -2606,6 +2606,14 @@
 
     function syncPdfControlsFromState() {
       const layout = getPdfLayout();
+      const previewBg = layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor || "#ffffff";
+      if (pdfLiveWrap) {
+        pdfLiveWrap.style.setProperty("--preview-bg", previewBg);
+        pdfLiveWrap.style.setProperty("--preview-bg-soft", previewBg);
+      }
+      if (pdfLiveViewport) {
+        pdfLiveViewport.style.setProperty("--preview-bg-soft", previewBg);
+      }
       pdfLogoStatus.textContent = layout.logoDataUrl ? "Logo cargado" : "Sin logo cargado";
       pdfBrandTextInput.value = layout.brandText;
       pdfLogoSizeInput.value = String(parseFloat(layout.logoMaxHeight) || 40);
@@ -2847,7 +2855,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, 0.78);
+      background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")};
     }
     .plan-wrap svg { width: 100%; height: 100%; display: block; }
     .table-wrap { margin-top: 2.5mm; transform-origin: top left; }
@@ -3032,7 +3040,8 @@
         if (missingFloors) hints.push("<li>Importa el JSON del paso 1</li>");
         if (missingExcel) hints.push(`<li>Carga Excel ${escapeHtml(DEV_LABEL)}</li>`);
         const extra = !missingFloors && missingExcel ? "<p>JSON cargado. Falta estructura de Excel.</p>" : "";
-        pdfLiveFrame.srcdoc = `<html><body style="font-family:Arial,sans-serif;background:#f6f8f4;color:#4c554d;padding:16px;"><p>Para ver la previsualizacion PDF en vivo:</p>${extra}<ol>${hints.join("")}</ol></body></html>`;
+        const previewBg = escapeHtml(layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor || "#ffffff");
+        pdfLiveFrame.srcdoc = `<html><body style="font-family:Arial,sans-serif;background:${previewBg};color:#4c554d;padding:16px;"><p>Para ver la previsualizacion PDF en vivo:</p>${extra}<ol>${hints.join("")}</ol></body></html>`;
         pdfLiveFrame.onload = () => {
           applyPdfLiveZoom();
           if (pdfLiveViewport) {
