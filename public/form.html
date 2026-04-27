@@ -571,8 +571,8 @@
     data.ciudad = data.txtCiudadES || '';
     data.cliente_nombre = data.spanNombreCompleto || '';
     data.cliente_identificacion = data.v21_tipo_id || data.spanTipoIdentificacion || '';
-    // Regla solicitada: en FR-VEN-21 "Nacionalidad" toma "Lugar de nacimiento" de FR-VEN-10.
-    data.cliente_nacionalidad = data.spanLugarNacimiento || data.spanNacionalidad || '';
+    // Para Personas Bloqueadas / FR-VEN-21 usamos Nacionalidad como fuente principal.
+    data.cliente_nacionalidad = data.spanNacionalidad || data.spanLugarNacimiento || '';
     data.cliente_domicilio = data.spanDomicilio || '';
     data.cliente_rfc = data.spanIdentificacionFiscal || '';
     data.cliente_curp = data.v21_curp || '';
