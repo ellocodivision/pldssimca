@@ -47,7 +47,6 @@ const VICEROY_RESERVAS_DAILY_EMAIL_CC = String(process.env.VICEROY_RESERVAS_DAIL
 const VICEROY_RESERVAS_CORPORATE_EMAIL = String(process.env.VICEROY_RESERVAS_CORPORATE_EMAIL || 'ernesto@relatedgroud.com').trim();
 const VICEROY_PILOTO_MIN_PRICE_PER_M2 = Number(process.env.VICEROY_PILOTO_MIN_PRICE_PER_M2 || 7100);
 const VICEROY_PILOTO_PRICE_MULTIPLIER = Number(process.env.VICEROY_PILOTO_PRICE_MULTIPLIER || 18.5);
-const VICEROY_RESERVATION_TEMPLATE_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'hoja-reserva-viceroy-rellenable.pdf');
 const VICEROY_RESERVATION_DEVELOPMENT = 'VICEROY RESIDENCES / PLAYA DEL CARMEN';
 const BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL = 'https://www.banxico.org.mx/tipcamb/tipCamMIAction.do?idioma=sp';
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
@@ -78,6 +77,7 @@ const PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.join(__dirna
 
 const TEMPLATE_DIR = path.join(__dirname, 'templates');
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const VICEROY_RESERVATION_TEMPLATE_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'hoja-reserva-viceroy-rellenable.pdf');
 const REPO_DATA_DIR = path.join(__dirname, 'data');
 function isWritableDir(dirPath) {
   try {
