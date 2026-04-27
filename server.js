@@ -5471,7 +5471,7 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
     const totalRaw = values[16];
     const bedRaw = values[17];
     const denRaw = values[18];
-    const pricePerM2Raw = values[20];
+    const pricePerM2Raw = values[31];
     const total = parseCurrencyLike(totalRaw);
     const pricePerM2 = parseCurrencyLike(pricePerM2Raw);
     const effectivePricePerM2 = Number.isFinite(pricePerM2)
