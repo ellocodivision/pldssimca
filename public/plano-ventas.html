@@ -1696,7 +1696,8 @@
       return `<a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener noreferrer" title="Abrir plano" aria-label="Abrir plano" class="plan-link-badge"><span class="plan-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="8" width="19" height="8" rx="1.5"></rect><path d="M6 8v3 M9 8v2 M12 8v3 M15 8v2 M18 8v3"></path></svg></span></a>`;
     }
 
-    function computeTableColWidths(rows, columns = getReportColumns()) {
+    function computeTableColWidths(rows, columns = getReportColumns(), options = {}) {
+      const includeStatusColumn = options.includeStatusColumn !== false;
       const metrics = columns.map((col) => {
         const bi = toBilingualHeader(col.label);
         const headerLength = Math.max(String(bi.top || "").length, String(bi.bottom || "").length, 4);
@@ -1713,7 +1714,7 @@
         statusWeight = Math.max(statusWeight, Math.min(20, statusValue.length || 1));
       });
 
-      const rawWeights = [...metrics.map((m) => m.weight), statusWeight];
+      const rawWeights = includeStatusColumn ? [...metrics.map((m) => m.weight), statusWeight] : metrics.map((m) => m.weight);
       const sum = rawWeights.reduce((a, b) => a + b, 0) || 1;
       const percents = rawWeights.map((w) => (w / sum) * 100);
       return percents.map((p) => `${p.toFixed(4)}%`);
@@ -1776,6 +1777,7 @@
 
     function renderDataTable() {
       const floor = activeFloor();
+      const showStatusColumn = shouldShowStatusColumn();
       if (!state.excel.rows.length) {
         tableSummary.innerHTML = "";
         tableContainer.innerHTML = `<span class='hint'>Carga un Excel ${escapeHtml(DEV_LABEL)} para ver la tabla aquí.</span>`;
@@ -1784,7 +1786,7 @@
       const rows = getRowsForFloorTable(floor, { availableOnly: true });
       const reportColumns = getReportColumns();
       const availableCount = rows.filter((r) => r.ESTADO === "disponible").length;
-      const colWidths = computeTableColWidths(rows, reportColumns);
+      const colWidths = computeTableColWidths(rows, reportColumns, { includeStatusColumn: showStatusColumn });
       const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
       const rowsHtml = rows.map((row) => {
         const cls = row.ESTADO === "disponible" ? "matched" : "";
@@ -1792,7 +1794,7 @@
           if (col.key === "LINK") return `<td>${buildPlanLinkCell(row.LINK)}</td>`;
           return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
         }).join("");
-        return `<tr class="${cls}">${cells}<td>${statusPill(row.ESTADO)}</td></tr>`;
+        return showStatusColumn ? `<tr class="${cls}">${cells}<td>${statusPill(row.ESTADO)}</td></tr>` : `<tr class="${cls}">${cells}</tr>`;
       }).join("");
 
       tableSummary.innerHTML = [
@@ -1806,10 +1808,10 @@
           <thead>
             <tr>
               ${reportColumns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("")}
-              <th>ESTADO</th>
+              ${showStatusColumn ? "<th>ESTADO</th>" : ""}
             </tr>
           </thead>
-          <tbody>${rowsHtml || `<tr><td colspan="${reportColumns.length + 1}">Sin unidades disponibles en este piso.</td></tr>`}</tbody>
+          <tbody>${rowsHtml || `<tr><td colspan="${reportColumns.length + (showStatusColumn ? 1 : 0)}">Sin unidades disponibles en este piso.</td></tr>`}</tbody>
         </table>
       `;
     }
@@ -2632,6 +2634,10 @@
       return colors[key] || colors.disponible;
     }
 
+    function shouldShowStatusColumn() {
+      return DEV !== "related";
+    }
+
     function resolveFontStack(fontKey) {
       return PDF_FONT_OPTIONS[fontKey] || PDF_FONT_OPTIONS.arial;
     }
@@ -2733,6 +2739,7 @@
     function buildPdfHtmlDocument(layout, floors, options = {}) {
       const autoPrint = options.autoPrint ? "true" : "false";
       const initialScrollY = Number.isFinite(options.initialScrollY) ? options.initialScrollY : 0;
+      const showStatusColumn = shouldShowStatusColumn();
       const headerFontStack = resolveFontStack(layout.headerFontKey);
       const bodyFontStack = resolveFontStack(layout.bodyFontKey);
       const titleFontStack = resolveFontStack(layout.titleFontKey || layout.headerFontKey);
@@ -2748,11 +2755,11 @@
         const bi = toBilingualHeader(col.label);
         return `<th><span class="th-top">${escapeHtml(bi.top)}</span><span class="th-bottom">${escapeHtml(bi.bottom)}</span></th>`;
       }).join("");
-      const colCount = reportColumns.length + 1;
+      const colCount = reportColumns.length + (showStatusColumn ? 1 : 0);
 
       const pagesHtml = floors.map((floor, index) => {
         const exportRows = buildExportRowsForFloor(floor);
-        const colWidths = computeTableColWidths(exportRows.map((entry) => entry.row || {}), reportColumns);
+        const colWidths = computeTableColWidths(exportRows.map((entry) => entry.row || {}), reportColumns, { includeStatusColumn: showStatusColumn });
         const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
         const defaultTitle = `INVENTARIO / INVENTORY - ${String((floor && floor.name) || `Piso ${index + 1}`).toUpperCase()}`;
         const pageTitle = String((floor && floor.pdfTitle) || defaultTitle).trim();
@@ -2803,6 +2810,9 @@
             }
             return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
           }).join("");
+          if (!showStatusColumn) {
+            return `<tr>${cells}</tr>`;
+          }
           const rawStatus = row.ESTADO || "";
           const status = typeof rawStatus === "string" && rawStatus.trim() ? rawStatus.trim().toLowerCase() : "-";
           const statusLabel = status === "-" ? "-" : String(status).toUpperCase();
@@ -2831,7 +2841,7 @@
             <div class="table-wrap" style="margin-top:${pageTableOffset};">
               <table style="font-size:${pageBodyFontSize};">
                 <colgroup>${colsHtml}</colgroup>
-                <thead style="font-size:${pageHeaderFontSize};"><tr>${tableHead}<th>ESTADO</th></tr></thead>
+                <thead style="font-size:${pageHeaderFontSize};"><tr>${tableHead}${showStatusColumn ? "<th>ESTADO</th>" : ""}</tr></thead>
                 <tbody style="font-size:${pageBodyFontSize};">${tableBodyHtml}</tbody>
               </table>
             </div>
@@ -2851,7 +2861,7 @@
             <div class="table-wrap" style="margin-top:${pageTableOffset};">
               <table style="font-size:${pageBodyFontSize};">
                 <colgroup>${colsHtml}</colgroup>
-                <thead style="font-size:${pageHeaderFontSize};"><tr>${tableHead}<th>ESTADO</th></tr></thead>
+                <thead style="font-size:${pageHeaderFontSize};"><tr>${tableHead}${showStatusColumn ? "<th>ESTADO</th>" : ""}</tr></thead>
                 <tbody style="font-size:${pageBodyFontSize};">${tableBodyHtml}</tbody>
               </table>
             </div>
