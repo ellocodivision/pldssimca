@@ -7062,7 +7062,8 @@ app.use('/api/viceroy/tipologias-demanda', requireBackendFeature('viceroy', 'dem
 app.use('/viceroy/inicio', requireBackendFeature('viceroy', 'inicio'));
 app.use('/viceroy-piloto/', requireBackendFeature('viceroy', 'pilotoInventario'));
 app.use('/api/viceroy-piloto', (req, res, next) => {
-  if (String(req.path || '').startsWith('/public-data')) {
+  const reqPath = String(req.path || '');
+  if (reqPath.startsWith('/public-data') || reqPath.startsWith('/tipologia-image')) {
     return requireViceroyPresentAccess(req, res, next);
   }
   return requireBackendFeature('viceroy', 'pilotoInventario')(req, res, next);
