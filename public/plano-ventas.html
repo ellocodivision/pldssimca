@@ -2799,10 +2799,12 @@
       const autoPrint = options.autoPrint ? "true" : "false";
       const initialScrollY = Number.isFinite(options.initialScrollY) ? options.initialScrollY : 0;
       const showStatusColumn = shouldShowStatusColumn();
-      const pageMargin = layout.pageMargin;
-      const pageMaxWidth = layout.pageMaxWidth;
+      const relatedFullBleed = DEV === "related";
+      const pageMargin = relatedFullBleed ? "0" : layout.pageMargin;
+      const pageMaxWidth = relatedFullBleed ? "100%" : layout.pageMaxWidth;
       const pageBorder = `${layout.borderWidth} solid ${layout.borderColor}`;
-      const pageOuterMargin = "0 auto 4mm";
+      const pageOuterMargin = relatedFullBleed ? "0" : "0 auto 4mm";
+      const pageHeight = relatedFullBleed ? "297mm" : layout.pageHeight;
       const headerFontStack = resolveFontStack(layout.headerFontKey);
       const bodyFontStack = resolveFontStack(layout.bodyFontKey);
       const titleFontStack = resolveFontStack(layout.titleFontKey || layout.headerFontKey);
@@ -2953,23 +2955,13 @@
       print-color-adjust: exact !important;
     }
     html, body { margin: 0; font-family: ${bodyFontStack}; color: #101110; background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")}; }
-    ${DEV === "related" ? `
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")};
-      pointer-events: none;
-      z-index: -1;
-    }
-    ` : ""}
     .page {
       width: 100%;
       max-width: ${pageMaxWidth};
       margin: ${pageOuterMargin};
       border: ${pageBorder};
       padding: 5mm 6mm 3.2mm;
-      height: ${layout.pageHeight};
+      height: ${pageHeight};
       overflow: hidden;
       page-break-after: always;
       display: flex;
