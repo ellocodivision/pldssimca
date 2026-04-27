@@ -2953,6 +2953,16 @@
       print-color-adjust: exact !important;
     }
     html, body { margin: 0; font-family: ${bodyFontStack}; color: #101110; background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")}; }
+    ${DEV === "related" ? `
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")};
+      pointer-events: none;
+      z-index: -1;
+    }
+    ` : ""}
     .page {
       width: 100%;
       max-width: ${pageMaxWidth};
