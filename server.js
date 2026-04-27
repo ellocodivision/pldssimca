@@ -6462,7 +6462,9 @@ function drawTextInRect(page, font, rect, text, options = {}) {
   const fontSize = fitTextToWidth(font, value, maxWidth, maxSize, minSize);
   const textHeight = font.heightAtSize(fontSize);
   const x = rect.x + marginX;
-  const y = rect.y + Math.max(1, (rect.height - textHeight) / 2 - 1);
+  const y = options.verticalAlign === 'top'
+    ? rect.y + Math.max(1, rect.height - marginY - textHeight)
+    : rect.y + Math.max(1, (rect.height - textHeight) / 2 - 1);
   page.drawText(value, {
     x,
     y,
@@ -6505,6 +6507,10 @@ function mapPdfWidgetsByField(pdfDoc) {
 function getReservationFieldValue(payload, key, fallback = '') {
   const value = payload && Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : fallback;
   return value == null ? '' : String(value).trim();
+}
+
+function stripLeadingCurrencySymbol(value) {
+  return String(value == null ? '' : value).replace(/^\s*\$\s*/, '').trim();
 }
 
 async function buildViceroyReservationPdfBuffer(payload) {
@@ -6550,7 +6556,7 @@ async function buildViceroyReservationPdfBuffer(payload) {
   drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 8.7 });
   drawField('Development / Desarrollo', development, { fontSize: 9.2 });
   drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
-  drawField('Price Listed / Precio de Lista', priceListed, { fontSize: 9.2 });
+  drawField('Price Listed / Precio de Lista', stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
   drawField('Card Number / Número de tarjeta', cardNumber, { fontSize: 8.9 });
   drawField('Name in the Card / Nombre en la tarjeta', cardName, { fontSize: 8.9 });
   drawField('Amount & Currency / Monto y Moneda', amountCurrency, { fontSize: 8.9 });
@@ -6623,7 +6629,16 @@ async function buildViceroyReservationPdfBuffer(payload) {
     getReservationFieldValue(payload, 'coOwnerNotes')
   ], { fontSize: 7.6 });
 
-  drawField('Observations / Observaciones', observations, { fontSize: 8.0 });
+  drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 3.5 });
+
+  const form = pdfDoc.getForm();
+  form.getFields().slice().forEach((field) => {
+    try {
+      form.removeField(field);
+    } catch (err) {
+      log(`No se pudo remover campo de formulario de Viceroy: ${field && field.getName ? field.getName() : 'desconocido'} :: ${err && err.message ? err.message : err}`);
+    }
+  });
 
   return Buffer.from(await pdfDoc.save());
 }
