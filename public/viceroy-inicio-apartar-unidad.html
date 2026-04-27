@@ -3,48 +3,809 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Viceroy Inicio - Apartar Unidad</title>
+  <title>Viceroy - Hoja de reserva</title>
   <style>
-    :root { --bg: #f4f1e8; --card: #fff; --ink: #1a1a1a; --muted: #5f5f5f; --line: #d8d1c1; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 20px;
+    :root{
+      --bg:#f4f1e8;
+      --panel:#fffdf8;
+      --card:#ffffff;
+      --ink:#1d1f26;
+      --muted:#646a78;
+      --line:#d7d0c1;
+      --accent:#ffe816;
+      --accent-ink:#111;
+      --soft:#f7f5ef;
+      --shadow:0 18px 42px rgba(38, 34, 20, .08);
+      --radius:20px;
+      --radius-sm:14px;
+      --font: Arial, Helvetica, sans-serif;
     }
-    .card {
-      width: min(720px, 100%);
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 28px;
-      text-align: center;
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:linear-gradient(180deg,#f7f3ea 0%, var(--bg) 100%);
+      color:var(--ink);
     }
-    h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 48px); }
-    p { margin: 0 0 18px; color: var(--muted); }
-    a {
-      display: inline-block;
-      padding: 10px 14px;
-      border: 1px solid #bdb8a9;
-      border-radius: 999px;
-      background: #fff;
-      color: #111;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 700;
+    .wrap{
+      width:min(1480px, 96vw);
+      margin:0 auto;
+      padding:18px 0 28px;
+    }
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      margin-bottom:16px;
+    }
+    .back,.btn{
+      appearance:none;
+      border:1px solid #bdb7a7;
+      border-radius:12px;
+      background:#fff;
+      color:#232323;
+      padding:10px 14px;
+      font:inherit;
+      font-size:13px;
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .btn.primary{
+      background:var(--accent);
+      border-color:#171717;
+      font-weight:700;
+    }
+    .hero{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:30px 22px 26px;
+      box-shadow:var(--shadow);
+      text-align:center;
+      margin-bottom:16px;
+    }
+    .brand{
+      margin:0;
+      line-height:1;
+      font-weight:700;
+      color:#42424f;
+      letter-spacing:.02em;
+    }
+    .brand .v1{font-size:clamp(56px, 8vw, 92px);}
+    .brand .v2{font-size:clamp(26px, 4vw, 46px); margin-top:4px;}
+    .brand .v3{font-size:clamp(28px, 4.8vw, 54px); margin-top:2px;}
+    .sub{
+      margin:12px 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns:minmax(0, 1.15fr) 360px;
+      gap:16px;
+      align-items:start;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .panel.sticky{
+      position:sticky;
+      top:12px;
+    }
+    .section{
+      margin-top:16px;
+      padding-top:16px;
+      border-top:1px solid #e4ddcf;
+    }
+    .section:first-child{margin-top:0;padding-top:0;border-top:0}
+    h1,h2,h3,p{margin:0}
+    h1{font-size:28px;line-height:1.05}
+    h2{
+      font-size:14px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
+    .grid.three{grid-template-columns:repeat(3, minmax(0, 1fr))}
+    .grid.one{grid-template-columns:1fr}
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:5px;
+    }
+    label{
+      font-size:12px;
+      color:#3f4654;
+      line-height:1.2;
+    }
+    input, select, textarea{
+      width:100%;
+      border:1px solid #cfc8b8;
+      border-radius:12px;
+      background:#fff;
+      color:#222;
+      font:inherit;
+      font-size:13px;
+      padding:10px 12px;
+      outline:none;
+    }
+    textarea{min-height:104px;resize:vertical}
+    input[readonly], select[disabled]{
+      background:#f7f7f4;
+      color:#464646;
+    }
+    .payments{
+      display:grid;
+      gap:10px;
+    }
+    .payment-row{
+      display:grid;
+      grid-template-columns:1.65fr .55fr .95fr .8fr;
+      gap:10px;
+      align-items:end;
+    }
+    .note{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+    .summary{
+      display:grid;
+      gap:12px;
+    }
+    .summary-card{
+      background:#fff;
+      border:1px solid #e1dacb;
+      border-radius:18px;
+      padding:14px;
+    }
+    .summary-title{
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+    .summary-list{
+      display:grid;
+      gap:8px;
+      font-size:13px;
+      color:#272b35;
+    }
+    .summary-list div{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding-bottom:8px;
+      border-bottom:1px dashed #e8e2d5;
+    }
+    .summary-list div:last-child{border-bottom:0;padding-bottom:0}
+    .summary-list strong{font-weight:700}
+    .status{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+      min-height:18px;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    .status-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:#f7f3e2;
+      border:1px solid #ded6b1;
+      font-size:12px;
+      color:#2e2e2e;
+      width:fit-content;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      border:1px solid #b9b9b9;
+      background:#fff;
+    }
+    .pill.ok{background:#e8f6e9;border-color:#92c89b;color:#195727}
+    .pill.warn{background:#fff4de;border-color:#e0b35b;color:#7d5212}
+    .hide{display:none !important}
+    @media (max-width: 1180px){
+      .layout{grid-template-columns:1fr}
+      .panel.sticky{position:static}
+      .payment-row{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width: 760px){
+      .grid,.grid.three{grid-template-columns:1fr}
+      .payment-row{grid-template-columns:1fr}
+      .topbar{flex-direction:column;align-items:flex-start}
     }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>Apartar Unidad</h1>
-    <p>Modulo base listo para conectar contenido.</p>
-    <a href="/viceroy/inicio">Volver a Viceroy</a>
-  </main>
+  <div class="wrap">
+    <div class="topbar">
+      <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
+      <div class="actions">
+        <button class="btn" type="button" id="saveBtn">Guardar borrador</button>
+        <button class="btn" type="button" id="resetBtn">Limpiar</button>
+        <button class="btn primary" type="button" id="downloadBtn">Descargar PDF exacto</button>
+      </div>
+    </div>
+
+    <section class="hero">
+      <p class="brand">
+        <span class="v1">VICEROY</span><br>
+        <span class="v2">RESIDENCES</span><br>
+        <span class="v3">PLAYA DEL CARMEN</span>
+      </p>
+      <p class="sub">Hoja de reserva / Reservation Form</p>
+    </section>
+
+    <div class="layout">
+      <main class="panel">
+        <section class="section">
+          <h2>Reserva</h2>
+          <div class="grid">
+            <div class="field"><label>Full Name / Nombre Completo</label><input id="fullName" type="text"></div>
+            <div class="field"><label>E-mail</label><input id="email" type="email"></div>
+            <div class="field"><label>*Phone / Teléfono</label><input id="phone" type="text"></div>
+            <div class="field"><label>Development / Desarrollo</label><input id="development" type="text" readonly></div>
+            <div class="field">
+              <label>Unit / No. Unidad</label>
+              <select id="unitNumber">
+                <option value="">Cargando unidades...</option>
+              </select>
+            </div>
+            <div class="field"><label>Price Listed / Precio de Lista</label><input id="priceListed" type="text" readonly></div>
+            <div class="field"><label>Amount & currency / Monto & moneda</label><input id="amountCurrency" type="text" value="MXN" readonly></div>
+            <div class="field"><label>Observations / Observaciones</label><textarea id="observations"></textarea></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Pago</h2>
+          <div class="note">La primera fila queda como reserva inicial. Las demás se pueden usar para pagos adicionales.</div>
+          <div class="payments" id="payments"></div>
+        </section>
+
+        <section class="section">
+          <h2>Pago con tarjeta</h2>
+          <div class="grid">
+            <div class="field"><label>Card Number / Número de tarjeta</label><input id="cardNumber" type="text"></div>
+            <div class="field"><label>Name in the Card / Nombre en la tarjeta</label><input id="cardName" type="text"></div>
+            <div class="field">
+              <label>VISA / MASTER CARD</label>
+              <select id="cardType">
+                <option value="">Selecciona...</option>
+                <option>VISA</option>
+                <option>MASTER CARD</option>
+              </select>
+            </div>
+            <div class="field"><label>Address / Dirección</label><input id="cardAddress" type="text"></div>
+            <div class="field"><label>City, Estate & Zip Code / Ciudad, Edo y C.P.</label><input id="cardCityStateZip" type="text"></div>
+            <div class="field"><label>Expiration Date / Fecha Expiración</label><input id="expirationDate" type="text" placeholder="MM/YY"></div>
+            <div class="field"><label>Security Code / Código de Seguridad</label><input id="securityCode" type="text"></div>
+            <div class="field"><label>Sign / Firma</label><input id="signature" type="text"></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Holder / Titular</h2>
+          <div class="grid">
+            <div class="field"><label>Name as in Passport / Nombre como el Pasaporte</label><input id="holderName" type="text"></div>
+            <div class="field"><label>Day & Place of Birth / Día y Lugar de Nacimiento</label><input id="holderBirth" type="text"></div>
+            <div class="field"><label>Occupation / Ocupación</label><input id="holderOccupation" type="text"></div>
+            <div class="field"><label>Nationality / Nacionalidad</label><input id="holderNationality" type="text"></div>
+            <div class="field"><label>Passport/ Pasaporte</label><input id="holderPassport" type="text"></div>
+            <div class="field"><label>Marital Status / Edo. Civil</label><input id="holderMaritalStatus" type="text"></div>
+            <div class="field"><label>Address / Dirección</label><input id="holderAddress" type="text"></div>
+            <div class="field"><label>City, Estate & Zip Code / Ciudad, Estado y C.P.</label><input id="holderCityStateZip" type="text"></div>
+            <div class="field"><label>Phone / Teléfono</label><input id="holderPhone" type="text"></div>
+            <div class="field"><label>Email</label><input id="holderEmail" type="email"></div>
+          </div>
+          <div class="grid one" style="margin-top:10px">
+            <div class="field"><label>Notes / RFC y CURP (solo ciudadanos Mexicanos)</label><input id="holderNotes" type="text"></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Co-owner / Copropietario</h2>
+          <div class="grid">
+            <div class="field"><label>Name as in Passport / Nombre como el Pasaporte</label><input id="coOwnerName" type="text"></div>
+            <div class="field"><label>Day & Place of Birth / Día y Lugar de Nacimiento</label><input id="coOwnerBirth" type="text"></div>
+            <div class="field"><label>Occupation / Ocupación</label><input id="coOwnerOccupation" type="text"></div>
+            <div class="field"><label>Nationality / Nacionalidad</label><input id="coOwnerNationality" type="text"></div>
+            <div class="field"><label>Passport/ Pasaporte</label><input id="coOwnerPassport" type="text"></div>
+            <div class="field"><label>Marital Status / Edo. Civil</label><input id="coOwnerMaritalStatus" type="text"></div>
+            <div class="field"><label>Address / Dirección</label><input id="coOwnerAddress" type="text"></div>
+            <div class="field"><label>City, Estate & Zip Code / Ciudad, Estado y C.P.</label><input id="coOwnerCityStateZip" type="text"></div>
+            <div class="field"><label>Phone / Teléfono</label><input id="coOwnerPhone" type="text"></div>
+            <div class="field"><label>Email</label><input id="coOwnerEmail" type="email"></div>
+          </div>
+          <div class="grid one" style="margin-top:10px">
+            <div class="field"><label>Notes / RFC y CURP (solo ciudadanos Mexicanos)</label><input id="coOwnerNotes" type="text"></div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="panel sticky">
+        <div class="summary">
+          <div class="summary-card">
+            <div class="summary-title">Estado</div>
+            <div class="status-chip" id="unitChip"><span class="pill warn">PENDIENTE</span><span id="unitChipText">Elige una unidad para empezar</span></div>
+            <div class="status" id="statusText" style="margin-top:10px;">Carga una unidad de Viceroy para autollenar el PDF.</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-title">Resumen</div>
+            <div class="summary-list">
+              <div><span>Unidad</span><strong id="summaryUnit">-</strong></div>
+              <div><span>Precio</span><strong id="summaryPrice">-</strong></div>
+              <div><span>Desarrollo</span><strong>VICEROY</strong></div>
+              <div><span>Monto & moneda</span><strong id="summaryCurrency">MXN</strong></div>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-title">Notas</div>
+            <div class="note">El PDF se descarga con la plantilla rellenable de Viceroy y conserva el diseño original del archivo adjunto.</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const DRAFT_KEY = 'viceroy-hoja-reserva-draft-v1';
+      const els = {
+        fullName: document.getElementById('fullName'),
+        email: document.getElementById('email'),
+        phone: document.getElementById('phone'),
+        development: document.getElementById('development'),
+        unitNumber: document.getElementById('unitNumber'),
+        priceListed: document.getElementById('priceListed'),
+        amountCurrency: document.getElementById('amountCurrency'),
+        observations: document.getElementById('observations'),
+        cardNumber: document.getElementById('cardNumber'),
+        cardName: document.getElementById('cardName'),
+        cardType: document.getElementById('cardType'),
+        cardAddress: document.getElementById('cardAddress'),
+        cardCityStateZip: document.getElementById('cardCityStateZip'),
+        expirationDate: document.getElementById('expirationDate'),
+        securityCode: document.getElementById('securityCode'),
+        signature: document.getElementById('signature'),
+        holderName: document.getElementById('holderName'),
+        holderBirth: document.getElementById('holderBirth'),
+        holderOccupation: document.getElementById('holderOccupation'),
+        holderNationality: document.getElementById('holderNationality'),
+        holderPassport: document.getElementById('holderPassport'),
+        holderMaritalStatus: document.getElementById('holderMaritalStatus'),
+        holderAddress: document.getElementById('holderAddress'),
+        holderCityStateZip: document.getElementById('holderCityStateZip'),
+        holderPhone: document.getElementById('holderPhone'),
+        holderEmail: document.getElementById('holderEmail'),
+        holderNotes: document.getElementById('holderNotes'),
+        coOwnerName: document.getElementById('coOwnerName'),
+        coOwnerBirth: document.getElementById('coOwnerBirth'),
+        coOwnerOccupation: document.getElementById('coOwnerOccupation'),
+        coOwnerNationality: document.getElementById('coOwnerNationality'),
+        coOwnerPassport: document.getElementById('coOwnerPassport'),
+        coOwnerMaritalStatus: document.getElementById('coOwnerMaritalStatus'),
+        coOwnerAddress: document.getElementById('coOwnerAddress'),
+        coOwnerCityStateZip: document.getElementById('coOwnerCityStateZip'),
+        coOwnerPhone: document.getElementById('coOwnerPhone'),
+        coOwnerEmail: document.getElementById('coOwnerEmail'),
+        coOwnerNotes: document.getElementById('coOwnerNotes'),
+        payments: document.getElementById('payments'),
+        statusText: document.getElementById('statusText'),
+        unitChip: document.getElementById('unitChip'),
+        unitChipText: document.getElementById('unitChipText'),
+        summaryUnit: document.getElementById('summaryUnit'),
+        summaryPrice: document.getElementById('summaryPrice'),
+        summaryCurrency: document.getElementById('summaryCurrency'),
+        saveBtn: document.getElementById('saveBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        downloadBtn: document.getElementById('downloadBtn')
+      };
+
+      const state = {
+        development: 'VICEROY RESIDENCES / PLAYA DEL CARMEN',
+        unitOptions: [],
+        selectedUnitPrice: 0,
+        payments: [
+          { label: 'Reservation Fee / Reserva', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' }
+        ]
+      };
+
+      function money(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return '';
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+      }
+
+      function readDraft() {
+        try {
+          const raw = localStorage.getItem(DRAFT_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function writeDraft(payload) {
+        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(payload)); } catch (_) {}
+      }
+
+      function collectState() {
+        return {
+          development: state.development,
+          unitNumber: els.unitNumber.value,
+          priceListed: els.priceListed.value,
+          amountCurrency: els.amountCurrency.value || 'MXN',
+          fullName: els.fullName.value,
+          email: els.email.value,
+          phone: els.phone.value,
+          observations: els.observations.value,
+          cardNumber: els.cardNumber.value,
+          cardName: els.cardName.value,
+          cardType: els.cardType.value,
+          cardAddress: els.cardAddress.value,
+          cardCityStateZip: els.cardCityStateZip.value,
+          expirationDate: els.expirationDate.value,
+          securityCode: els.securityCode.value,
+          signature: els.signature.value,
+          holderName: els.holderName.value,
+          holderBirth: els.holderBirth.value,
+          holderOccupation: els.holderOccupation.value,
+          holderNationality: els.holderNationality.value,
+          holderPassport: els.holderPassport.value,
+          holderMaritalStatus: els.holderMaritalStatus.value,
+          holderAddress: els.holderAddress.value,
+          holderCityStateZip: els.holderCityStateZip.value,
+          holderPhone: els.holderPhone.value,
+          holderEmail: els.holderEmail.value,
+          holderNotes: els.holderNotes.value,
+          coOwnerName: els.coOwnerName.value,
+          coOwnerBirth: els.coOwnerBirth.value,
+          coOwnerOccupation: els.coOwnerOccupation.value,
+          coOwnerNationality: els.coOwnerNationality.value,
+          coOwnerPassport: els.coOwnerPassport.value,
+          coOwnerMaritalStatus: els.coOwnerMaritalStatus.value,
+          coOwnerAddress: els.coOwnerAddress.value,
+          coOwnerCityStateZip: els.coOwnerCityStateZip.value,
+          coOwnerPhone: els.coOwnerPhone.value,
+          coOwnerEmail: els.coOwnerEmail.value,
+          coOwnerNotes: els.coOwnerNotes.value,
+          payments: state.payments.map((row) => ({ ...row }))
+        };
+      }
+
+      function applyDraft(payload) {
+        if (!payload || typeof payload !== 'object') return;
+        ['fullName','email','phone','development','unitNumber','priceListed','amountCurrency','observations','cardNumber','cardName','cardType','cardAddress','cardCityStateZip','expirationDate','securityCode','signature','holderName','holderBirth','holderOccupation','holderNationality','holderPassport','holderMaritalStatus','holderAddress','holderCityStateZip','holderPhone','holderEmail','holderNotes','coOwnerName','coOwnerBirth','coOwnerOccupation','coOwnerNationality','coOwnerPassport','coOwnerMaritalStatus','coOwnerAddress','coOwnerCityStateZip','coOwnerPhone','coOwnerEmail','coOwnerNotes'].forEach((key) => {
+          if (els[key]) els[key].value = payload[key] || '';
+        });
+        if (Array.isArray(payload.payments)) {
+          payload.payments.slice(0, 5).forEach((row, idx) => {
+            state.payments[idx] = {
+              label: row && row.label != null ? String(row.label) : state.payments[idx].label,
+              percent: row && row.percent != null ? String(row.percent) : '',
+              amount: row && row.amount != null ? String(row.amount) : '',
+              date: row && row.date != null ? String(row.date) : ''
+            };
+          });
+        }
+        renderPayments();
+        syncSummary();
+      }
+
+      function updatePaymentAmounts() {
+        const price = Number(String(els.priceListed.dataset.raw || '').replace(/[^0-9.\-]/g, '')) || state.selectedUnitPrice || 0;
+        state.payments.forEach((row, idx) => {
+          const percentEl = document.querySelector(`[data-payment-percent="${idx}"]`);
+          const amountEl = document.querySelector(`[data-payment-amount="${idx}"]`);
+          if (!percentEl || !amountEl) return;
+          const percent = Number(String(percentEl.value || '').replace(/[^0-9.\-]/g, ''));
+          if (!Number.isFinite(percent) || !Number.isFinite(price)) {
+            amountEl.value = '';
+            row.percent = percentEl.value || '';
+            row.amount = '';
+            return;
+          }
+          const amount = price * (percent / 100);
+          amountEl.value = money(amount);
+          row.percent = percentEl.value || '';
+          row.amount = amountEl.value;
+        });
+      }
+
+      function renderPayments() {
+        els.payments.innerHTML = state.payments.map((row, idx) => {
+          const labelReadonly = idx === 0 ? 'readonly' : '';
+          return `
+            <div class="payment-row">
+              <div class="field">
+                <label>Payment / Pago</label>
+                <input data-payment-label="${idx}" ${labelReadonly} value="${escapeHtml(row.label || '')}">
+              </div>
+              <div class="field">
+                <label>%</label>
+                <input data-payment-percent="${idx}" inputmode="decimal" value="${escapeHtml(row.percent || '')}">
+              </div>
+              <div class="field">
+                <label>Amount / Monto</label>
+                <input data-payment-amount="${idx}" readonly value="${escapeHtml(row.amount || '')}">
+              </div>
+              <div class="field">
+                <label>Date / Fecha</label>
+                <input data-payment-date="${idx}" type="date" value="${escapeHtml(row.date || '')}">
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        state.payments.forEach((row, idx) => {
+          const label = document.querySelector(`[data-payment-label="${idx}"]`);
+          const percent = document.querySelector(`[data-payment-percent="${idx}"]`);
+          const amount = document.querySelector(`[data-payment-amount="${idx}"]`);
+          const date = document.querySelector(`[data-payment-date="${idx}"]`);
+          if (label) {
+            label.addEventListener('input', function () {
+              row.label = label.value;
+            });
+          }
+          if (percent) {
+            percent.addEventListener('input', function () {
+              row.percent = percent.value;
+              updatePaymentAmounts();
+            });
+          }
+          if (date) {
+            date.addEventListener('change', function () {
+              row.date = date.value;
+            });
+          }
+          if (amount) {
+            row.amount = amount.value;
+          }
+        });
+      }
+
+      function syncSummary() {
+        updatePaymentAmounts();
+        const selected = state.unitOptions.find((row) => String(row.unit || '') === String(els.unitNumber.value || '')) || null;
+        const price = selected ? selected.price : 0;
+        const firstPaymentAmount = state.payments[0] && state.payments[0].amount ? String(state.payments[0].amount).trim() : '';
+        els.amountCurrency.value = firstPaymentAmount || 'MXN';
+        els.summaryUnit.textContent = selected ? selected.unit : '-';
+        els.summaryPrice.textContent = selected ? selected.priceLabel : '-';
+        els.summaryCurrency.textContent = els.amountCurrency.value || 'MXN';
+        els.unitChip.className = 'status-chip';
+        els.unitChip.innerHTML = selected
+          ? `<span class="pill ok">LISTO</span><span id="unitChipText">${escapeHtml(selected.unit + (selected.status ? ` · ${selected.status}` : ''))}</span>`
+          : `<span class="pill warn">PENDIENTE</span><span id="unitChipText">Elige una unidad para empezar</span>`;
+        els.unitChipText.textContent = selected ? (selected.unit + (selected.status ? ` · ${selected.status}` : '')) : 'Elige una unidad para empezar';
+        state.selectedUnitPrice = price;
+        els.priceListed.value = selected ? selected.priceLabel : '';
+        els.priceListed.dataset.raw = selected ? String(price) : '';
+        els.development.value = state.development;
+      }
+
+      function fillUnitOptions(units) {
+        state.unitOptions = Array.isArray(units) ? units : [];
+        const current = String(els.unitNumber.value || '').trim();
+        const options = ['<option value="">Selecciona...</option>'].concat(state.unitOptions.map((item) => {
+          const label = `${item.unit}${item.bed ? ` · ${item.bed}` : ''}${item.priceLabel ? ` · ${item.priceLabel}` : ''}${item.status === 'vendida' ? ' · vendida' : ''}`;
+          const selected = current && String(item.unit || '') === current ? ' selected' : '';
+          return `<option value="${escapeHtml(item.unit)}"${selected}>${escapeHtml(label)}</option>`;
+        }));
+        els.unitNumber.innerHTML = options.join('');
+        if (current && !state.unitOptions.some((item) => String(item.unit || '') === current)) {
+          els.unitNumber.value = '';
+        }
+        syncSummary();
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      async function loadOptions() {
+        try {
+          const res = await fetch('/api/viceroy/inicio/reservation-options', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          if (!res.ok) throw new Error(`No se pudieron cargar unidades (${res.status})`);
+          const data = await res.json().catch(() => ({}));
+          fillUnitOptions(Array.isArray(data.units) ? data.units : []);
+          if (data.development) {
+            state.development = String(data.development);
+            els.development.value = state.development;
+          }
+          els.statusText.textContent = 'Unidades cargadas. Selecciona una para autollenar el PDF.';
+        } catch (err) {
+          els.statusText.textContent = err && err.message ? err.message : 'No se pudieron cargar las unidades.';
+          fillUnitOptions([]);
+        }
+      }
+
+      function resetForm() {
+        els.fullName.value = '';
+        els.email.value = '';
+        els.phone.value = '';
+        els.unitNumber.value = '';
+        els.priceListed.value = '';
+        els.amountCurrency.value = 'MXN';
+        els.observations.value = '';
+        els.cardNumber.value = '';
+        els.cardName.value = '';
+        els.cardType.value = '';
+        els.cardAddress.value = '';
+        els.cardCityStateZip.value = '';
+        els.expirationDate.value = '';
+        els.securityCode.value = '';
+        els.signature.value = '';
+        els.holderName.value = '';
+        els.holderBirth.value = '';
+        els.holderOccupation.value = '';
+        els.holderNationality.value = '';
+        els.holderPassport.value = '';
+        els.holderMaritalStatus.value = '';
+        els.holderAddress.value = '';
+        els.holderCityStateZip.value = '';
+        els.holderPhone.value = '';
+        els.holderEmail.value = '';
+        els.holderNotes.value = '';
+        els.coOwnerName.value = '';
+        els.coOwnerBirth.value = '';
+        els.coOwnerOccupation.value = '';
+        els.coOwnerNationality.value = '';
+        els.coOwnerPassport.value = '';
+        els.coOwnerMaritalStatus.value = '';
+        els.coOwnerAddress.value = '';
+        els.coOwnerCityStateZip.value = '';
+        els.coOwnerPhone.value = '';
+        els.coOwnerEmail.value = '';
+        els.coOwnerNotes.value = '';
+        state.payments = [
+          { label: 'Reservation Fee / Reserva', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' },
+          { label: '', percent: '', amount: '', date: '' }
+        ];
+        renderPayments();
+        syncSummary();
+        try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
+        els.statusText.textContent = 'Formulario limpio.';
+      }
+
+      async function downloadPdf() {
+        const payload = collectState();
+        if (!payload.unitNumber) {
+          els.statusText.textContent = 'Selecciona una unidad antes de descargar.';
+          return;
+        }
+        const old = els.downloadBtn.textContent;
+        els.downloadBtn.disabled = true;
+        els.downloadBtn.textContent = 'Generando PDF...';
+        els.statusText.textContent = 'Generando PDF exacto...';
+        try {
+          const res = await fetch('/api/viceroy/inicio/reservation-form/pdf', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err && err.error ? err.error : `No se pudo generar el PDF (${res.status})`);
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `viceroy-hoja-reserva-${payload.unitNumber || 'unidad'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          writeDraft(payload);
+          els.statusText.textContent = 'PDF generado correctamente.';
+        } catch (err) {
+          els.statusText.textContent = err && err.message ? err.message : 'No se pudo generar el PDF.';
+        } finally {
+          els.downloadBtn.disabled = false;
+          els.downloadBtn.textContent = old;
+        }
+      }
+
+      function bindSimpleAutosave() {
+        const inputs = [
+          ...document.querySelectorAll('input, select, textarea')
+        ];
+        inputs.forEach((input) => {
+          input.addEventListener('input', function () {
+            if (input === els.unitNumber) {
+              const selected = state.unitOptions.find((row) => String(row.unit || '') === String(input.value || '')) || null;
+              els.priceListed.value = selected ? selected.priceLabel : '';
+              els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
+              syncSummary();
+            }
+            writeDraft(collectState());
+          });
+          input.addEventListener('change', function () {
+            if (input === els.unitNumber) {
+              const selected = state.unitOptions.find((row) => String(row.unit || '') === String(input.value || '')) || null;
+              els.priceListed.value = selected ? selected.priceLabel : '';
+              els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
+              syncSummary();
+            }
+            writeDraft(collectState());
+          });
+        });
+      }
+
+      els.saveBtn.addEventListener('click', function () {
+        writeDraft(collectState());
+        els.statusText.textContent = 'Borrador guardado.';
+      });
+      els.resetBtn.addEventListener('click', resetForm);
+      els.downloadBtn.addEventListener('click', downloadPdf);
+      els.unitNumber.addEventListener('change', function () {
+        const selected = state.unitOptions.find((row) => String(row.unit || '') === String(els.unitNumber.value || '')) || null;
+        els.priceListed.value = selected ? selected.priceLabel : '';
+        els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
+        syncSummary();
+        writeDraft(collectState());
+      });
+
+      renderPayments();
+      bindSimpleAutosave();
+
+      const draft = readDraft();
+      if (draft) applyDraft(draft);
+      els.development.value = state.development;
+      loadOptions().then(() => {
+        if (draft && draft.unitNumber) {
+          els.unitNumber.value = draft.unitNumber;
+          const selected = state.unitOptions.find((row) => String(row.unit || '') === String(draft.unitNumber || '')) || null;
+          els.priceListed.value = selected ? selected.priceLabel : (draft.priceListed || '');
+          els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
+          syncSummary();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

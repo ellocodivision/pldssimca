@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
 const session = require('express-session');
@@ -47,6 +47,8 @@ const VICEROY_RESERVAS_DAILY_EMAIL_CC = String(process.env.VICEROY_RESERVAS_DAIL
 const VICEROY_RESERVAS_CORPORATE_EMAIL = String(process.env.VICEROY_RESERVAS_CORPORATE_EMAIL || 'ernesto@relatedgroud.com').trim();
 const VICEROY_PILOTO_MIN_PRICE_PER_M2 = Number(process.env.VICEROY_PILOTO_MIN_PRICE_PER_M2 || 7100);
 const VICEROY_PILOTO_PRICE_MULTIPLIER = Number(process.env.VICEROY_PILOTO_PRICE_MULTIPLIER || 18.5);
+const VICEROY_RESERVATION_TEMPLATE_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'hoja-reserva-viceroy-rellenable.pdf');
+const VICEROY_RESERVATION_DEVELOPMENT = 'VICEROY RESIDENCES / PLAYA DEL CARMEN';
 const BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL = 'https://www.banxico.org.mx/tipcamb/tipCamMIAction.do?idioma=sp';
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -6397,6 +6399,235 @@ function parseViceroyRelatedInventoryRows(filePath) {
   return out;
 }
 
+function formatViceroyReservationCurrency(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0
+  }).format(n);
+}
+
+function getViceroyReservationInventoryRows() {
+  const candidates = resolvePreferredViceroyInventoryCandidates();
+  for (const candidate of candidates) {
+    try {
+      const rows = parseViceroyRelatedInventoryRows(candidate.fullPath)
+        .filter((row) => String(row && row.UNIDAD || '').trim());
+      if (rows.length) {
+        return rows;
+      }
+    } catch (err) {
+      log(`No se pudo leer inventario Viceroy para reserva desde ${candidate.fullPath}: ${err && err.message ? err.message : err}`);
+    }
+  }
+  return [];
+}
+
+function buildViceroyReservationInventoryOptions() {
+  const rows = getViceroyReservationInventoryRows();
+  const available = rows.filter((row) => String(row && row.ESTADO || '').trim().toLowerCase() !== 'vendida');
+  const source = available.length ? available : rows;
+  return source.map((row) => ({
+    unit: String(row.UNIDAD || '').trim(),
+    price: Number(row.PRECIO) || 0,
+    priceLabel: formatViceroyReservationCurrency(row.PRECIO),
+    plan: String(row.PLANO || '').trim(),
+    bed: String(row.BED || '').trim(),
+    status: String(row.ESTADO || '').trim().toLowerCase() || 'disponible',
+    m2: String(row.TOTAL_M2 || '').trim(),
+    sqft: String(row.TOTAL_SQFT || '').trim()
+  }));
+}
+
+function fitTextToWidth(font, text, maxWidth, maxSize, minSize = 6.5) {
+  const value = String(text || '').trim();
+  if (!value) return 0;
+  let size = Number(maxSize) || 10;
+  while (size > minSize && font.widthOfTextAtSize(value, size) > maxWidth) {
+    size -= 0.25;
+  }
+  return Math.max(minSize, size);
+}
+
+function drawTextInRect(page, font, rect, text, options = {}) {
+  const value = String(text == null ? '' : text).trim();
+  if (!value) return;
+  const marginX = Number.isFinite(options.marginX) ? options.marginX : 2.2;
+  const marginY = Number.isFinite(options.marginY) ? options.marginY : 2.0;
+  const maxWidth = Math.max(1, rect.width - (marginX * 2));
+  const maxSize = Number.isFinite(options.fontSize) ? options.fontSize : 8.8;
+  const minSize = Number.isFinite(options.minFontSize) ? options.minFontSize : 6.2;
+  const fontSize = fitTextToWidth(font, value, maxWidth, maxSize, minSize);
+  const textHeight = font.heightAtSize(fontSize);
+  const x = rect.x + marginX;
+  const y = rect.y + Math.max(1, (rect.height - textHeight) / 2 - 1);
+  page.drawText(value, {
+    x,
+    y,
+    size: fontSize,
+    font,
+    color: options.color || rgb(0.16, 0.16, 0.16),
+    maxWidth
+  });
+}
+
+function mapPdfWidgetsByField(pdfDoc) {
+  const pages = pdfDoc.getPages();
+  const pageIndexByRef = new Map(pages.map((page, idx) => {
+    const ref = page && page.ref && Number.isFinite(page.ref.objectNumber) ? page.ref.objectNumber : null;
+    return [ref, idx];
+  }));
+  const form = pdfDoc.getForm();
+  const out = new Map();
+  form.getFields().forEach((field) => {
+    const name = field.getName();
+    const widgets = field.acroField.getWidgets().map((widget) => {
+      const pageRef = widget && typeof widget.P === 'function' ? widget.P() : null;
+      const pageIndex = pageRef && Number.isFinite(pageRef.objectNumber)
+        ? (pageIndexByRef.get(pageRef.objectNumber) ?? 0)
+        : 0;
+      return {
+        pageIndex,
+        rect: widget.getRectangle()
+      };
+    }).sort((a, b) => {
+      if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex;
+      if (a.rect.y !== b.rect.y) return b.rect.y - a.rect.y;
+      return a.rect.x - b.rect.x;
+    });
+    out.set(name, widgets);
+  });
+  return out;
+}
+
+function getReservationFieldValue(payload, key, fallback = '') {
+  const value = payload && Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : fallback;
+  return value == null ? '' : String(value).trim();
+}
+
+async function buildViceroyReservationPdfBuffer(payload) {
+  if (!fs.existsSync(VICEROY_RESERVATION_TEMPLATE_PATH)) {
+    throw new Error('No se encontró la plantilla PDF de reserva de Viceroy');
+  }
+  const templateBytes = fs.readFileSync(VICEROY_RESERVATION_TEMPLATE_PATH);
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const widgetsByField = mapPdfWidgetsByField(pdfDoc);
+  const pages = pdfDoc.getPages();
+
+  const drawField = (fieldName, values, options = {}) => {
+    const widgets = widgetsByField.get(fieldName) || [];
+    const sourceValues = Array.isArray(values) ? values : [values];
+    widgets.forEach((widget, idx) => {
+      const value = sourceValues[idx] != null ? sourceValues[idx] : sourceValues[sourceValues.length - 1];
+      if (!value) return;
+      const page = pages[widget.pageIndex] || pages[0];
+      drawTextInRect(page, font, widget.rect, value, options);
+    });
+  };
+
+  const fullName = getReservationFieldValue(payload, 'fullName');
+  const email = getReservationFieldValue(payload, 'email');
+  const phone = getReservationFieldValue(payload, 'phone');
+  const development = getReservationFieldValue(payload, 'development', VICEROY_RESERVATION_DEVELOPMENT);
+  const unitNumber = getReservationFieldValue(payload, 'unitNumber');
+  const priceListed = getReservationFieldValue(payload, 'priceListed');
+  const observations = getReservationFieldValue(payload, 'observations');
+  const cardNumber = getReservationFieldValue(payload, 'cardNumber');
+  const cardName = getReservationFieldValue(payload, 'cardName');
+  const cardType = getReservationFieldValue(payload, 'cardType');
+  const cardAddress = getReservationFieldValue(payload, 'cardAddress');
+  const cardCityStateZip = getReservationFieldValue(payload, 'cardCityStateZip');
+  const expirationDate = getReservationFieldValue(payload, 'expirationDate');
+  const securityCode = getReservationFieldValue(payload, 'securityCode');
+  const signature = getReservationFieldValue(payload, 'signature') || fullName;
+  const amountCurrency = getReservationFieldValue(payload, 'amountCurrency', 'MXN');
+
+  drawField('Full Name / Nombre Completo:', fullName, { fontSize: 9.4 });
+  drawField('E-mail', email, { fontSize: 9.2 });
+  drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 8.7 });
+  drawField('Development / Desarrollo', development, { fontSize: 9.2 });
+  drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
+  drawField('Price Listed / Precio de Lista', priceListed, { fontSize: 9.2 });
+  drawField('Card Number / Número de tarjeta', cardNumber, { fontSize: 8.9 });
+  drawField('Name in the Card / Nombre en la tarjeta', cardName, { fontSize: 8.9 });
+  drawField('Amount & Currency / Monto y Moneda', amountCurrency, { fontSize: 8.9 });
+  drawField('VISA / MASTERCARD', cardType, { fontSize: 8.8 });
+  drawField('Address / Dirección', [
+    cardAddress,
+    getReservationFieldValue(payload, 'holderAddress'),
+    getReservationFieldValue(payload, 'coOwnerAddress')
+  ], { fontSize: 8.2 });
+  drawField('City, Estate & Zip Code / Ciudad, Edo y C.P', cardCityStateZip, { fontSize: 8.2 });
+  drawField('Expiration Date / Fecha Expiración', expirationDate, { fontSize: 8.8 });
+  drawField('Security Code / Código de Seguridad', securityCode, { fontSize: 8.8 });
+  drawField('Sign / Firma', signature, { fontSize: 8.8 });
+
+  const paymentRows = Array.isArray(payload && payload.payments) ? payload.payments : [];
+  const normalizedPayments = Array.from({ length: 5 }, (_, idx) => {
+    const row = paymentRows[idx] || {};
+    return {
+      label: getReservationFieldValue(row, 'label', idx === 0 ? 'Reservation Fee / Reserva' : ''),
+      percent: getReservationFieldValue(row, 'percent'),
+      amount: getReservationFieldValue(row, 'amount'),
+      date: getReservationFieldValue(row, 'date')
+    };
+  });
+
+  drawField('Reservation Fee / Reserva', normalizedPayments.slice(1).map((row) => row.label), { fontSize: 7.8 });
+  drawField('%', normalizedPayments.map((row) => row.percent), { fontSize: 8.1 });
+  drawField('Date / Fecha', normalizedPayments.map((row) => row.date), { fontSize: 7.8 });
+  drawField('Amount / Monto', normalizedPayments.map((row) => row.amount), { fontSize: 7.8 });
+
+  drawField('Name as in Passport / Nombre como el Pasaporte', [
+    getReservationFieldValue(payload, 'holderName'),
+    getReservationFieldValue(payload, 'coOwnerName')
+  ], { fontSize: 8.3 });
+  drawField('Day & Place of Birth / Día y Lugar de Nacimiento', [
+    getReservationFieldValue(payload, 'holderBirth'),
+    getReservationFieldValue(payload, 'coOwnerBirth')
+  ], { fontSize: 8.0 });
+  drawField('Occupation / Ocupación', [
+    getReservationFieldValue(payload, 'holderOccupation'),
+    getReservationFieldValue(payload, 'coOwnerOccupation')
+  ], { fontSize: 8.2 });
+  drawField('Nationality / Nacionalidad', [
+    getReservationFieldValue(payload, 'holderNationality'),
+    getReservationFieldValue(payload, 'coOwnerNationality')
+  ], { fontSize: 8.2 });
+  drawField('Passport/ Pasaporte', [
+    getReservationFieldValue(payload, 'holderPassport'),
+    getReservationFieldValue(payload, 'coOwnerPassport')
+  ], { fontSize: 8.2 });
+  drawField('Marital Status / Edo. Civil', [
+    getReservationFieldValue(payload, 'holderMaritalStatus'),
+    getReservationFieldValue(payload, 'coOwnerMaritalStatus')
+  ], { fontSize: 8.2 });
+  drawField('City, Estate & Zip Code / Ciudad, Estado y C.P', [
+    getReservationFieldValue(payload, 'holderCityStateZip'),
+    getReservationFieldValue(payload, 'coOwnerCityStateZip')
+  ], { fontSize: 7.9 });
+  drawField('Phone / Teléfono', [
+    phone,
+    getReservationFieldValue(payload, 'holderPhone'),
+    getReservationFieldValue(payload, 'coOwnerPhone')
+  ], { fontSize: 8.2 });
+  drawField('Email', [
+    getReservationFieldValue(payload, 'holderEmail'),
+    getReservationFieldValue(payload, 'coOwnerEmail')
+  ], { fontSize: 8.2 });
+  drawField('Notes / RFC y CURP (solo ciudadanos Mexicanos)', [
+    getReservationFieldValue(payload, 'holderNotes'),
+    getReservationFieldValue(payload, 'coOwnerNotes')
+  ], { fontSize: 7.6 });
+
+  drawField('Observations / Observaciones', observations, { fontSize: 8.0 });
+
+  return Buffer.from(await pdfDoc.save());
+}
+
 function buildViceroyTipologiaRows(inventoryRows) {
   const cropMap = readViceroyTipologiaCropMap();
   const byTip = new Map();
@@ -7068,6 +7299,7 @@ app.use('/api/viceroy-piloto', (req, res, next) => {
   }
   return requireBackendFeature('viceroy', 'pilotoInventario')(req, res, next);
 });
+app.use('/api/viceroy/inicio', requireBackendFeature('viceroy', 'inicio'));
 app.use('/viceroy/registros', requireBackendFeature('viceroy', 'registros'));
 app.use('/api/viceroy/registros', requireBackendFeature('viceroy', 'registros'));
 app.use('/whisperlist/qr', requireBackendFeature('viceroy', 'whisperlist'));
@@ -9773,8 +10005,47 @@ app.get('/viceroy/inicio/ubicacion', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-ubicacion.html'));
 });
 
-app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
+app.get('/viceroy/inicio/hoja-reserva', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
+});
+
+app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
+  res.redirect(302, '/viceroy/inicio/hoja-reserva');
+});
+
+app.get('/api/viceroy/inicio/reservation-options', (req, res) => {
+  try {
+    const options = buildViceroyReservationInventoryOptions();
+    return res.json({
+      ok: true,
+      development: VICEROY_RESERVATION_DEVELOPMENT,
+      units: options
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudieron cargar las unidades para la hoja de reserva',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.post('/api/viceroy/inicio/reservation-form/pdf', async (req, res) => {
+  try {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const pdfBuffer = await buildViceroyReservationPdfBuffer(payload);
+    const safeUnit = String(payload.unitNumber || '').trim().replace(/[^\w\-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const safeName = String(payload.fullName || '').trim().replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').slice(0, 60);
+    const fileName = `viceroy-hoja-reserva${safeUnit ? `-${safeUnit}` : ''}${safeName ? `-${safeName}` : ''}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    log(`Error en /api/viceroy/inicio/reservation-form/pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF de reserva de Viceroy',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/hoja-reserva-simca', (req, res) => {
