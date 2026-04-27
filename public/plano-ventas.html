@@ -1737,7 +1737,7 @@
 
       rows.forEach((row) => {
         metrics.forEach((metric) => {
-          const value = metric.key === "LINK" ? "PLANO" : String(displayCellValue(row, metric.key) || "");
+          const value = (metric.key === "LINK" || metric.key === "PLANO") ? "PLANO" : String(displayCellValue(row, metric.key) || "");
           metric.weight = Math.max(metric.weight, Math.min(36, value.length || 1));
         });
         const statusValue = String((row.ESTADO || "").toUpperCase());
@@ -1848,12 +1848,13 @@
       const colsHtml = colWidths.map((w) => `<col style="width:${w}">`).join("");
       const rowsHtml = rows.map((row) => {
         const cls = row.ESTADO === "disponible" ? "matched" : "";
-        const cells = reportColumns.map((col) => {
-          if (col.key === "LINK") return `<td>${buildPlanLinkCell(row.LINK)}</td>`;
-          return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
+          const cells = reportColumns.map((col) => {
+            if (col.key === "LINK") return `<td>${buildPlanLinkCell(row.LINK)}</td>`;
+            if (DEV === "related" && col.key === "PLANO") return `<td>${buildPlanLinkCell(row.PLANO)}</td>`;
+            return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
+          }).join("");
+          return showStatusColumn ? `<tr class="${cls}">${cells}<td>${statusPill(row.ESTADO)}</td></tr>` : `<tr class="${cls}">${cells}</tr>`;
         }).join("");
-        return showStatusColumn ? `<tr class="${cls}">${cells}<td>${statusPill(row.ESTADO)}</td></tr>` : `<tr class="${cls}">${cells}</tr>`;
-      }).join("");
 
       tableSummary.innerHTML = [
         `<span class="chip">Piso activo: ${escapeHtml(floor ? floor.name : "-")}</span>`,
@@ -2865,6 +2866,9 @@
             if (col.key === "LINK") {
               const icon = buildPlanLinkCell(row.LINK);
               return `<td>${icon}</td>`;
+            }
+            if (DEV === "related" && col.key === "PLANO") {
+              return `<td>${buildPlanLinkCell(row.PLANO)}</td>`;
             }
             return `<td>${escapeHtml(displayCellValue(row, col.key) || "")}</td>`;
           }).join("");
