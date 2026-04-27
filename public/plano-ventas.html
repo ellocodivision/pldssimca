@@ -716,9 +716,19 @@
       { key: "DESCUENTO", label: "DESC / DISC %" },
       { key: "PRECIO_FINAL", label: "PRECIO FINAL / FINAL PRICE" }
     ];
+
+    const RELATED_REPORT_COLUMNS = [
+      { key: "PLANO", label: "PLANO / PLAN" },
+      { key: "UNIDAD", label: "UNIDAD / UNIT" },
+      { key: "TOTAL_M2", label: "TOTAL M2" },
+      { key: "TOTAL_SQFT", label: "TOTAL SQFT" },
+      { key: "BED", label: "BED" },
+      { key: "PRECIO", label: "PRECIO / PRICE" }
+    ];
+
     function getReportColumns() {
       if (DEV === "related") {
-        return REPORT_COLUMNS.filter((col) => !["LINK", "DESCUENTO", "PRECIO_FINAL"].includes(col.key));
+        return RELATED_REPORT_COLUMNS;
       }
       return REPORT_COLUMNS;
     }
@@ -1684,8 +1694,28 @@
       return isRelated ? `$${formatted} MXN` : `$${formatted} USD`;
     }
 
+    function formatRelatedBedValue(recValue, denValue) {
+      const raw = String(recValue || "").trim().toUpperCase().replace(/\s+/g, "");
+      if (!raw) return "";
+      const isPh = raw.includes("PH") || raw.includes("PENT");
+      const match = raw.match(/(\d+)/);
+      const base = match ? match[1] : raw.replace(/[^0-9]/g, "");
+      const rec = base ? (isPh ? `PH${base}` : base) : raw;
+      const den = String(denValue == null ? "" : denValue).trim();
+      if (!den || den === "0") return rec;
+      return rec.includes("+") ? rec : `${rec}+1`;
+    }
+
+    function parseNumericLike(value) {
+      const raw = String(value == null ? "" : value).replace(/[^0-9.-]/g, "");
+      if (!raw) return NaN;
+      const asNumber = Number(raw);
+      return Number.isFinite(asNumber) ? asNumber : NaN;
+    }
+
     function displayCellValue(row, key) {
       if (!row) return "";
+      if (key === "PLANO" || key === "BED") return row[key] || "";
       if (key === "REC") return normalizeBedrooms(row[key]);
       if (key === "PRECIO" || key === "PRECIO_FINAL") return formatCurrencyValue(row[key]);
       return row[key] || "";
@@ -1733,13 +1763,43 @@
       return map;
     }
 
+    function normalizeExcelRowStatusValue(row) {
+      const raw = String((row && (row.ESTADO || row.status || row.estado)) || "").trim().toLowerCase();
+      if (!raw) return "";
+      if (raw.includes("vend") || raw.includes("sold") || raw.includes("no_dispon") || raw.includes("no disponible")) return "vendida";
+      if (raw.includes("reserv")) return "reservada";
+      if (raw.includes("disp") || raw.includes("avail")) return "disponible";
+      return raw;
+    }
+
+    function normalizeRelatedCachedRow(row) {
+      if (!row || typeof row !== "object") return row;
+      if (row.PLANO || row.BED) return row;
+      return {
+        DEV: row.DEV || "RELATED",
+        PLANO: row.LINK || row.PLANO || "",
+        UNIDAD: row.UNIDAD || "",
+        TOTAL_M2: row.TOTAL_M2 || "",
+        TOTAL_SQFT: row.TOTAL_SQFT || "",
+        BED: row.REC || row.BED || "",
+        PRECIO: row.PRECIO || "",
+        ESTADO: row.ESTADO || row.status || "disponible"
+      };
+    }
+
     function syncZoneStatusesFromExcel() {
       if (!state.excel.rows.length) return;
       const unitMap = getExcelRowByUnitMap();
       state.floors.forEach((floor) => {
         floor.zones.forEach((zone) => {
-          const exists = getUnitCandidates(zone.label).some((candidate) => unitMap.has(candidate));
-          zone.status = exists ? "disponible" : "vendida";
+          let matchedRow = null;
+          for (const candidate of getUnitCandidates(zone.label)) {
+            if (unitMap.has(candidate)) {
+              matchedRow = unitMap.get(candidate);
+              break;
+            }
+          }
+          zone.status = normalizeExcelRowStatusValue(matchedRow) || (matchedRow ? "disponible" : "vendida");
         });
       });
     }
@@ -1759,16 +1819,14 @@
               break;
             }
           }
-          const status = row ? "disponible" : "vendida";
+          const status = normalizeExcelRowStatusValue(row) || (row ? "disponible" : "vendida");
           return {
-            LINK: row ? row.LINK : "",
+            PLANO: row ? row.PLANO || row.LINK || "" : "",
             UNIDAD: String(zone.label || ""),
-            REC: row ? row.REC : "",
             TOTAL_M2: row ? row.TOTAL_M2 : "",
             TOTAL_SQFT: row ? row.TOTAL_SQFT : "",
             PRECIO: row ? row.PRECIO : "",
-            DESCUENTO: row ? row.DESCUENTO : "",
-            PRECIO_FINAL: row ? row.PRECIO_FINAL : "",
+            BED: row ? row.BED || row.REC || "" : "",
             ESTADO: status
           };
         });
@@ -3293,6 +3351,58 @@
     function parseCsvText(text) {
       const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
       if (!lines.length) return { headers: [], rows: [] };
+      if (DEV === "related") {
+        const parseLine = (line) => {
+          const out = [];
+          let current = "";
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i += 1) {
+            const ch = line[i];
+            const next = line[i + 1];
+            if (ch === '"' && inQuotes && next === '"') {
+              current += '"';
+              i += 1;
+            } else if (ch === '"') {
+              inQuotes = !inQuotes;
+            } else if (ch === ',' && !inQuotes) {
+              out.push(current.trim());
+              current = "";
+            } else {
+              current += ch;
+            }
+          }
+          out.push(current.trim());
+          return out;
+        };
+
+        const matrix = lines.map((line) => parseLine(line));
+        const rows = matrix.slice(5).map((values) => {
+          const plano = String(values[0] || "").trim();
+          const unidad = String(values[4] || "").trim();
+          const m2Raw = values[16] || "";
+          const m2Value = parseNumericLike(m2Raw);
+          const recRaw = values[17] || "";
+          const denRaw = values[18] || "";
+          const priceListRaw = values[32] || "";
+          const priceListValue = parseNumericLike(priceListRaw);
+          return {
+            DEV: "RELATED",
+            PLANO: plano,
+            UNIDAD: unidad,
+            BED: formatRelatedBedValue(recRaw, denRaw),
+            TOTAL_M2: m2Raw,
+            TOTAL_SQFT: Number.isFinite(m2Value) ? String(Math.round(m2Value * 10.7639)) : "",
+            PRECIO: Number.isFinite(priceListValue) ? priceListValue * 18.5 : "",
+            ESTADO: "disponible"
+          };
+        }).filter((row) => row && row.UNIDAD);
+
+        return {
+          headers: RELATED_REPORT_COLUMNS.map((c) => c.label),
+          rows
+        };
+      }
+
       const COL = getExcelColumnMap();
 
       const parseLine = (line) => {
@@ -3349,6 +3459,50 @@
         alert("No se pudo cargar la librería de Excel. Intenta con CSV o recarga la página.");
         return { headers: [], rows: [] };
       }
+      if (DEV === "related") {
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const rows = [];
+        const sheetName = workbook.SheetNames[0];
+        const sheet = sheetName ? workbook.Sheets[sheetName] : null;
+        if (sheet && sheet["!ref"]) {
+          const range = XLSX.utils.decode_range(sheet["!ref"]);
+          for (let r = Math.max(range.s.r, 5); r <= range.e.r; r += 1) {
+            const getCell = (colIndex) => sheet[XLSX.utils.encode_cell({ c: colIndex, r })];
+            const getValue = (colIndex) => {
+              const cell = getCell(colIndex);
+              if (!cell || cell.v === undefined || cell.v === null) return "";
+              return String(cell.w !== undefined ? cell.w : cell.v).trim();
+            };
+            const planoCell = getCell(0);
+            const plano = planoCell && planoCell.l && planoCell.l.Target
+              ? String(planoCell.l.Target).trim()
+              : getValue(0);
+            const unidad = getValue(4);
+            if (!unidad) continue;
+            const m2Raw = getValue(16);
+            const m2Value = parseNumericLike(m2Raw);
+            const recRaw = getValue(17);
+            const denRaw = getValue(18);
+            const priceListRaw = getValue(32);
+            const priceListValue = parseNumericLike(priceListRaw);
+            rows.push({
+              DEV: "RELATED",
+              PLANO: plano,
+              UNIDAD: unidad,
+              BED: formatRelatedBedValue(recRaw, denRaw),
+              TOTAL_M2: m2Raw,
+              TOTAL_SQFT: Number.isFinite(m2Value) ? String(Math.round(m2Value * 10.7639)) : "",
+              PRECIO: Number.isFinite(priceListValue) ? priceListValue * 18.5 : "",
+              ESTADO: "disponible"
+            });
+          }
+        }
+        return {
+          headers: RELATED_REPORT_COLUMNS.map((c) => c.label),
+          rows
+        };
+      }
+
       const COL = getExcelColumnMap();
       const workbook = XLSX.read(buffer, { type: "array" });
       const rows = [];
@@ -3436,7 +3590,9 @@
         const cached = JSON.parse(raw);
         if (!cached || !Array.isArray(cached.rows) || !cached.rows.length) return false;
         state.excel.headers = Array.isArray(cached.headers) ? cached.headers : REPORT_COLUMNS.map((c) => c.label);
-        state.excel.rows = cached.rows;
+        state.excel.rows = DEV === "related"
+          ? cached.rows.map((row) => normalizeRelatedCachedRow(row)).filter(Boolean)
+          : cached.rows;
         syncZoneStatusesFromExcel();
         if (autoExcelStatus) {
           const stamp = cached.savedAt ? `, cache ${cached.savedAt}` : "";
@@ -3449,8 +3605,47 @@
       }
     }
 
+    async function loadRelatedInventoryOnOpen() {
+      if (!autoExcelStatus) return false;
+      autoExcelStatus.textContent = "Buscando inventario activo de Viceroy...";
+      try {
+        const response = await fetch("/api/viceroy-piloto/related-inventory", {
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+        if (!response.ok) {
+          const loaded = loadExcelFromCache();
+          if (!loaded) {
+            autoExcelStatus.textContent = `No se pudo cargar el inventario de Viceroy (HTTP ${response.status}).`;
+          }
+          return loaded;
+        }
+        const data = await response.json().catch(() => ({}));
+        const rows = Array.isArray(data.rows) ? data.rows : [];
+        if (!rows.length) {
+          autoExcelStatus.textContent = "Viceroy respondió sin filas válidas.";
+          return false;
+        }
+        applyParsedExcel({
+          headers: Array.isArray(data.headers) && data.headers.length ? data.headers : RELATED_REPORT_COLUMNS.map((c) => c.label),
+          rows
+        }, data.fileName || "Inventario activo Viceroy");
+        return true;
+      } catch (error) {
+        const loaded = loadExcelFromCache();
+        if (!loaded) {
+          autoExcelStatus.textContent = `No se pudo cargar el inventario de Viceroy: ${error && error.message ? error.message : "error desconocido"}.`;
+        }
+        return loaded;
+      }
+    }
+
     async function loadDefaultExcelOnOpen() {
       if (!autoExcelStatus) return;
+      if (DEV === "related") {
+        await loadRelatedInventoryOnOpen();
+        return;
+      }
       autoExcelStatus.textContent = `Buscando Excel automatico de ${DEV_LABEL}...`;
       try {
         const response = await fetch(`/api/plano-ventas/default-excel?dev=${encodeURIComponent(DEV)}`, { cache: "no-store" });

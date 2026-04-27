@@ -6325,6 +6325,78 @@ function resolvePreferredViceroyInventoryCandidates() {
   ];
 }
 
+function formatRelatedViceroyBedValue(recRaw, denRaw) {
+  const raw = String(recRaw == null ? '' : recRaw).trim().toUpperCase().replace(/\s+/g, '');
+  if (!raw) return '';
+  const isPh = raw.includes('PH') || raw.includes('PENT');
+  const match = raw.match(/(\d+)/);
+  const base = match ? match[1] : raw.replace(/[^0-9]/g, '');
+  const rec = base ? (isPh ? `PH${base}` : base) : raw;
+  if (!hasViceroyDen(denRaw)) return rec;
+  return rec.includes('+') ? rec : `${rec}+1`;
+}
+
+function parseViceroyRelatedInventoryRows(filePath) {
+  const ext = path.extname(String(filePath || '')).toLowerCase();
+  const workbook = ext === '.csv'
+    ? XLSX.read(fs.readFileSync(filePath, 'utf-8'), { type: 'string' })
+    : XLSX.readFile(filePath);
+  const pickedSheet = pickViceroyInventorySheet(workbook);
+  const sheet = pickedSheet && pickedSheet.sheet ? pickedSheet.sheet : null;
+  if (!sheet || !sheet['!ref']) return [];
+
+  const parsedStatusRows = filterViceroyInventoryRows(parseViceroyInventoryFile(filePath));
+  const statusByUnit = new Map();
+  parsedStatusRows.forEach((row) => {
+    const unitKey = normalizeHeaderKey(extractUnitCode(row && row.unidad || ''));
+    if (!unitKey) return;
+    statusByUnit.set(unitKey, row);
+  });
+
+  const range = XLSX.utils.decode_range(sheet['!ref']);
+  const startRow = Math.max(5, Math.min(range.e.r, 5));
+  const out = [];
+  for (let r = startRow; r <= range.e.r; r += 1) {
+    const getCell = (colIndex) => sheet[XLSX.utils.encode_cell({ c: colIndex, r })];
+    const getValue = (colIndex) => {
+      const cell = getCell(colIndex);
+      if (!cell || cell.v === undefined || cell.v === null) return '';
+      return String(cell.w !== undefined ? cell.w : cell.v).trim();
+    };
+
+    const planoCell = getCell(0);
+    const planoValue = planoCell && planoCell.l && planoCell.l.Target
+      ? String(planoCell.l.Target).trim()
+      : getValue(0);
+    const unidadRaw = getValue(4);
+    const unidad = extractUnitCode(unidadRaw);
+    if (!unidad) continue;
+    const unitKey = normalizeHeaderKey(unidad);
+    const m2Raw = getValue(16);
+    const m2Value = parseCurrencyLike(m2Raw);
+    const recRaw = getValue(17);
+    const denRaw = getValue(18);
+    const priceRaw = getValue(32);
+    const priceValue = parseCurrencyLike(priceRaw);
+    const statusSource = statusByUnit.get(unitKey) || {};
+    const estado = String(statusSource.status || statusSource.ESTADO || 'disponible').trim().toLowerCase() || 'disponible';
+
+    out.push({
+      DEV: 'RELATED',
+      PLANO: planoValue,
+      UNIDAD: unidad,
+      BED: formatRelatedViceroyBedValue(recRaw, denRaw),
+      TOTAL_M2: m2Raw === '' ? '' : m2Raw,
+      TOTAL_SQFT: Number.isFinite(m2Value) ? String(Math.round(m2Value * 10.7639)) : '',
+      PRECIO: Number.isFinite(priceValue) ? (priceValue * VICEROY_PILOTO_PRICE_MULTIPLIER) : '',
+      ESTADO: estado,
+      sourceRowIndex: r + 1
+    });
+  }
+
+  return out;
+}
+
 function buildViceroyTipologiaRows(inventoryRows) {
   const cropMap = readViceroyTipologiaCropMap();
   const byTip = new Map();
@@ -10500,6 +10572,36 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     tipologiaCrops: readViceroyTipologiaCropMap(),
     tipologias
   });
+});
+
+app.get('/api/viceroy-piloto/related-inventory', requireViceroyPresentAccess, (req, res) => {
+  try {
+    const file = resolveCurrentViceroyInventoryFile();
+    if (!file || !file.fullPath || !fs.existsSync(file.fullPath)) {
+      return res.status(404).json({
+        error: 'No se encontró el inventario activo de Viceroy',
+        expectedDir: path.join(DEVELOPMENTS_DIR, 'viceroy-piloto')
+      });
+    }
+    const rows = parseViceroyRelatedInventoryRows(file.fullPath);
+    if (!rows.length) {
+      return res.status(404).json({
+        error: 'No se pudieron leer filas válidas del inventario de Viceroy',
+        fileName: file.name || path.basename(file.fullPath)
+      });
+    }
+    return res.json({
+      ok: true,
+      fileName: file.name || path.basename(file.fullPath),
+      headers: ['PLANO', 'UNIDAD', 'TOTAL_M2', 'TOTAL_SQFT', 'BED', 'PRECIO'],
+      rows
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo cargar el inventario relacionado de Viceroy',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/viceroy-piloto/tipologias-editor', requireGerente, (req, res) => {
