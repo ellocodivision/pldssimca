@@ -2799,11 +2799,10 @@
       const autoPrint = options.autoPrint ? "true" : "false";
       const initialScrollY = Number.isFinite(options.initialScrollY) ? options.initialScrollY : 0;
       const showStatusColumn = shouldShowStatusColumn();
-      const relatedEdgeLayout = DEV === "related";
-      const pageMargin = relatedEdgeLayout ? "0mm" : layout.pageMargin;
-      const pageMaxWidth = relatedEdgeLayout ? "100%" : layout.pageMaxWidth;
+      const pageMargin = layout.pageMargin;
+      const pageMaxWidth = layout.pageMaxWidth;
       const pageBorder = `${layout.borderWidth} solid ${layout.borderColor}`;
-      const pageOuterMargin = relatedEdgeLayout ? "0" : "0 auto 4mm";
+      const pageOuterMargin = "0 auto 4mm";
       const headerFontStack = resolveFontStack(layout.headerFontKey);
       const bodyFontStack = resolveFontStack(layout.bodyFontKey);
       const titleFontStack = resolveFontStack(layout.titleFontKey || layout.headerFontKey);
@@ -2936,10 +2935,6 @@
           </div>
         `;
       }).join("");
-      const relatedBackdropHtml = DEV === "related"
-        ? `<div class="pdf-backdrop" aria-hidden="true"></div>`
-        : "";
-
       return `<!doctype html>
 <html lang="es">
 <head>
@@ -2958,14 +2953,6 @@
       print-color-adjust: exact !important;
     }
     html, body { margin: 0; font-family: ${bodyFontStack}; color: #101110; background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")}; }
-    body { position: relative; }
-    .pdf-backdrop {
-      position: fixed;
-      inset: 0;
-      background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")};
-      z-index: 0;
-      pointer-events: none;
-    }
     .page {
       width: 100%;
       max-width: ${pageMaxWidth};
@@ -2978,8 +2965,6 @@
       display: flex;
       flex-direction: column;
       background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")};
-      position: relative;
-      z-index: 1;
     }
     .page:last-child { page-break-after: auto; }
     .head {
@@ -3068,7 +3053,6 @@
   </style>
 </head>
 <body>
-  ${relatedBackdropHtml}
   ${pagesHtml}
   <script>
     function fitTableInPage(pageEl) {
