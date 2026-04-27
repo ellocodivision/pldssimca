@@ -2799,6 +2799,11 @@
       const autoPrint = options.autoPrint ? "true" : "false";
       const initialScrollY = Number.isFinite(options.initialScrollY) ? options.initialScrollY : 0;
       const showStatusColumn = shouldShowStatusColumn();
+      const fullBleed = DEV === "related";
+      const pageMargin = fullBleed ? "0mm" : layout.pageMargin;
+      const pageMaxWidth = fullBleed ? "100%" : layout.pageMaxWidth;
+      const pageBorder = fullBleed ? "none" : `${layout.borderWidth} solid ${layout.borderColor}`;
+      const pagePadding = fullBleed ? "0mm" : "5mm 6mm 3.2mm";
       const headerFontStack = resolveFontStack(layout.headerFontKey);
       const bodyFontStack = resolveFontStack(layout.bodyFontKey);
       const titleFontStack = resolveFontStack(layout.titleFontKey || layout.headerFontKey);
@@ -2943,7 +2948,7 @@
       src: url("/assets/fonts/BiroScriptPlus.ttf") format("truetype");
       font-display: swap;
     }
-    @page { size: ${layout.pageSize}; margin: ${layout.pageMargin}; }
+    @page { size: ${layout.pageSize}; margin: ${pageMargin}; }
     * {
       box-sizing: border-box;
       -webkit-print-color-adjust: exact !important;
@@ -2952,10 +2957,10 @@
     body { margin: 0; font-family: ${bodyFontStack}; color: #101110; background: ${escapeHtml(layout.pageBackgroundColor || "#ffffff")}; }
     .page {
       width: 100%;
-      max-width: ${layout.pageMaxWidth};
-      margin: 0 auto 4mm;
-      border: ${layout.borderWidth} solid ${layout.borderColor};
-      padding: 5mm 6mm 3.2mm;
+      max-width: ${pageMaxWidth};
+      margin: ${fullBleed ? "0" : "0 auto 4mm"};
+      border: ${pageBorder};
+      padding: ${pagePadding};
       height: ${layout.pageHeight};
       overflow: hidden;
       page-break-after: always;
