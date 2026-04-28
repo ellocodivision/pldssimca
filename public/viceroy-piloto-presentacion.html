@@ -1021,10 +1021,6 @@
       function normalizeBedroomForRow(row) {
         const base = normalizeBedroom(row && (row.recamaras || row.bedrooms || row.groupCode || ''));
         if (!base) return '';
-        const phHint = normalizeBedroom(row && (row.tipologia || row.tipology || row.type || row.unitType || row.groupCode || ''));
-        if (base === 'PH' || base === 'PH+DEN') {
-          if (phHint && phHint.startsWith('PH')) return phHint;
-        }
         if (base.startsWith('PH')) return base;
         const level = String(row && row.level || '').trim();
         if (!isPenthouseLevel(level)) return base;
@@ -1679,9 +1675,9 @@
         const vistaRows = filterRows({ vista: '' });
         const asignacionRows = filterRows({ asignacion: '' });
         if (els.filterRecamarasSelect) {
-          els.filterRecamarasSelect.innerHTML = buildBedroomOptions(recRows.map(function (row) { return normalizeBedroomForRow(row) || row.recamaras || ''; }), 'Todas');
+          els.filterRecamarasSelect.innerHTML = buildBedroomOptions(recRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
           if (state.selectedRecamarasFilter && !recRows.some(function (row) {
-            return String(normalizeBedroomForRow(row) || row && row.recamaras || '').trim() === String(state.selectedRecamarasFilter || '').trim();
+            return String(row && row.recamaras || '').trim() === String(state.selectedRecamarasFilter || '').trim();
           })) {
             state.selectedRecamarasFilter = '';
             didResetFilter = true;
@@ -2480,7 +2476,7 @@
           const m2 = Number.isFinite(m2Num)
             ? String(Math.round(m2Num))
             : (r.m2 == null || r.m2 === '' ? 'N/D' : String(r.m2));
-          const rec = getBedroomCompactLabel(normalizeBedroomForRow(r) || r.recamaras || '');
+          const rec = getBedroomCompactLabel(r.recamaras || '');
           const vista = r.vista || 'N/D';
           const priceNum = parseMoneyLike(r.price);
           const price = Number.isFinite(priceNum)
