@@ -5468,7 +5468,6 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
     const unit = extractUnitCode(values[4]);
     if (!unit) continue;
     const level = String(values[5] == null ? '' : values[5]).trim();
-    const groupRaw = String(values[8] == null ? '' : values[8]).trim();
     const rawType = String(values[7] == null ? '' : values[7]).trim();
     const totalRaw = values[16];
     const bedRaw = values[17];
@@ -5482,33 +5481,17 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
     const price = (Number.isFinite(total) && Number.isFinite(effectivePricePerM2))
       ? (total * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
       : '';
-    const den = hasViceroyDen(denRaw) ? '1' : '';
-    const forcePh = normalizeHeaderKey(level) === 'n6' || normalizeHeaderKey(level).includes('penthouse');
-    let recamaras = normalizeViceroyGroupToRecamaras(groupRaw, { level, forcePh });
-    if (!recamaras) {
-      recamaras = String(bedRaw == null ? '' : bedRaw).trim().toUpperCase().replace(/\s+/g, '');
-      if (forcePh && recamaras && !recamaras.startsWith('PH')) recamaras = `PH${recamaras}`;
-    }
-    if (!recamaras && rawType) {
-      const typeKey = normalizeHeaderKey(rawType);
-      if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('3')) recamaras = 'PH3';
-      else if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('2')) recamaras = 'PH2';
-      else if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('4')) recamaras = 'PH4';
-      else if (typeKey.includes('3')) recamaras = '3B';
-      else if (typeKey.includes('2')) recamaras = '2B';
-      else if (typeKey.includes('1')) recamaras = '1B';
-      if (forcePh && recamaras && !recamaras.startsWith('PH')) {
-        recamaras = recamaras.replace(/B$/, '');
-        recamaras = `PH${recamaras}`;
-      }
-    }
-    if (den && recamaras && !/\+/.test(recamaras)) recamaras = `${recamaras}+DEN`;
+    const recamaras = normalizeViceroyBedroomLabel(bedRaw, {
+      phHint: rawType,
+      denRaw,
+      fallbackRaw: ''
+    });
     out.push({
       sourceRowIndex: i + 1,
       development: '',
       unidad: unit,
       level,
-      groupCode: groupRaw,
+      groupCode: String(values[8] == null ? '' : values[8]).trim(),
       planLink,
       recamaras,
       edificio: '',
@@ -5620,18 +5603,13 @@ function normalizeViceroyInventoryRow(rawRow, meta = {}) {
   const groupCode = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.groupCode) || '').trim();
   const building = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.building) || '').trim();
   const rawType = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.tipologia) || '').trim();
-  let recamaras = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim().toUpperCase().replace(/\s+/g, '');
+  const recamarasRaw = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.recamaras) || '').trim();
   const denRaw = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.den) || '').trim();
-  const hasDen = hasViceroyDen(denRaw);
-  if (!recamaras && rawType) {
-    const typeKey = normalizeHeaderKey(rawType);
-    if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('3')) recamaras = '3PH';
-    else if ((typeKey.includes('ph') || typeKey.includes('pent')) && typeKey.includes('2')) recamaras = '2PH';
-    else if (typeKey.includes('3')) recamaras = '3B';
-    else if (typeKey.includes('2')) recamaras = '2B';
-    else if (typeKey.includes('1')) recamaras = '1B';
-  }
-  if (hasDen && recamaras && !/\+/.test(recamaras)) recamaras = `${recamaras}+DEN`;
+  const recamaras = normalizeViceroyBedroomLabel(recamarasRaw, {
+    phHint: rawType || groupCode || building,
+    denRaw,
+    fallbackRaw: groupCode
+  });
   const tipologia = rawType;
   const view = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.view) || '').trim();
   const assignment = String(pickValueByAliases(row, VICEROY_PILOTO_COLUMN_ALIASES.assignment) || '').trim();
@@ -5681,6 +5659,26 @@ function normalizeViceroyRawBedroom(value, options = {}) {
   if (countSource.includes('2') || countSource.includes('two') || countSource.includes('dos')) return '2B';
   if (countSource.includes('1') || countSource.includes('one') || countSource.includes('uno') || countSource.includes('una') || countSource === 'un') return '1B';
   return '';
+}
+
+function normalizeViceroyBedroomLabel(bedroomRaw, options = {}) {
+  const phHint = String(options && options.phHint || '').trim();
+  const denRaw = options && options.denRaw;
+  const fallbackRaw = String(options && options.fallbackRaw || '').trim();
+  const phLabel = phHint ? normalizeViceroyRawBedroom(phHint, { phHint }) : '';
+  let recamaras = phLabel && String(phLabel).startsWith('PH')
+    ? phLabel
+    : normalizeViceroyRawBedroom(bedroomRaw, { phHint });
+  if (!recamaras && fallbackRaw) {
+    recamaras = normalizeViceroyRawBedroom(fallbackRaw, { phHint });
+  }
+  if (!recamaras && phLabel) {
+    recamaras = phLabel;
+  }
+  if (hasViceroyDen(denRaw) && recamaras && !/\+/.test(recamaras)) {
+    recamaras = `${recamaras}+DEN`;
+  }
+  return recamaras;
 }
 
 function hasViceroyDen(value) {
