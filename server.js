@@ -6473,6 +6473,18 @@ function drawTextInRect(page, font, rect, text, options = {}) {
   });
 }
 
+function fillRect(page, rect, color = rgb(1, 1, 1)) {
+  page.drawRectangle({
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    color,
+    borderColor: color,
+    borderWidth: 0
+  });
+}
+
 function mapPdfWidgetsByField(pdfDoc) {
   const pages = pdfDoc.getPages();
   const pageIndexByRef = new Map(pages.map((page, idx) => {
@@ -6551,7 +6563,7 @@ async function buildViceroyReservationPdfBuffer(payload) {
 
   drawField('Full Name / Nombre Completo:', fullName, { fontSize: 9.4 });
   drawField('E-mail', email, { fontSize: 9.2 });
-  drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 8.7 });
+  drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
   drawField('Development / Desarrollo', development, { fontSize: 9.2 });
   drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
   drawField('Price Listed / Precio de Lista', stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
@@ -6627,7 +6639,11 @@ async function buildViceroyReservationPdfBuffer(payload) {
     getReservationFieldValue(payload, 'coOwnerNotes')
   ], { fontSize: 7.6 });
 
-  drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 3.5 });
+  (widgetsByField.get('Observations / Observaciones') || []).forEach((widget) => {
+    const page = pages[widget.pageIndex] || pages[0];
+    fillRect(page, widget.rect, rgb(1, 1, 1));
+  });
+  drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
 
   const form = pdfDoc.getForm();
   form.getFields().slice().forEach((field) => {
