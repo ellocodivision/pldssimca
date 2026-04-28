@@ -56,6 +56,14 @@
       border-color:#171717;
       font-weight:700;
     }
+    .btn.pill-link{
+      background:#f6f2e8;
+      border-color:#d6cfbf;
+    }
+    .btn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
     .hero{
       background:var(--panel);
       border:1px solid var(--line);
@@ -141,6 +149,10 @@
       outline:none;
     }
     textarea{min-height:104px;resize:vertical}
+    textarea.sheet-bg{
+      background:var(--bg);
+      background-image:linear-gradient(180deg,#f7f3ea 0%, var(--bg) 100%);
+    }
     input[readonly], select[disabled]{
       background:#f7f7f4;
       color:#464646;
@@ -248,6 +260,7 @@
       <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
       <div class="actions">
         <button class="btn" type="button" id="saveBtn">Guardar borrador</button>
+        <button class="btn pill-link" type="button" id="restoreBtn" disabled>Sin borrador</button>
         <button class="btn" type="button" id="resetBtn">Limpiar</button>
         <button class="btn primary" type="button" id="downloadBtn">Descargar PDF exacto</button>
       </div>
@@ -279,7 +292,7 @@
             </div>
             <div class="field"><label>Price Listed / Precio de Lista</label><input id="priceListed" type="text" readonly></div>
             <div class="field"><label>Amount & currency / Monto & moneda</label><input id="amountCurrency" type="text" value="MXN" readonly></div>
-            <div class="field"><label>Observations / Observaciones</label><textarea id="observations"></textarea></div>
+            <div class="field"><label>Observations / Observaciones</label><textarea id="observations" class="sheet-bg"></textarea></div>
           </div>
         </section>
 
@@ -424,6 +437,7 @@
         summaryPrice: document.getElementById('summaryPrice'),
         summaryCurrency: document.getElementById('summaryCurrency'),
         saveBtn: document.getElementById('saveBtn'),
+        restoreBtn: document.getElementById('restoreBtn'),
         resetBtn: document.getElementById('resetBtn'),
         downloadBtn: document.getElementById('downloadBtn')
       };
@@ -454,6 +468,15 @@
         } catch (_) {
           return null;
         }
+      }
+
+      function refreshDraftButton() {
+        if (!els.restoreBtn) return;
+        const draft = readDraft();
+        els.restoreBtn.disabled = !draft;
+        els.restoreBtn.textContent = draft
+          ? `Cargar borrador${draft.unitNumber ? ` (${draft.unitNumber})` : ''}`
+          : 'Sin borrador';
       }
 
       function writeDraft(payload) {
@@ -707,6 +730,7 @@
         renderPayments();
         syncSummary();
         try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
+        refreshDraftButton();
         els.statusText.textContent = 'Formulario limpio.';
       }
 
@@ -778,7 +802,25 @@
 
       els.saveBtn.addEventListener('click', function () {
         writeDraft(collectState());
+        refreshDraftButton();
         els.statusText.textContent = 'Borrador guardado.';
+      });
+      els.restoreBtn.addEventListener('click', function () {
+        const draft = readDraft();
+        if (!draft) {
+          els.statusText.textContent = 'No hay borrador guardado.';
+          refreshDraftButton();
+          return;
+        }
+        applyDraft(draft);
+        if (draft.unitNumber) {
+          els.unitNumber.value = draft.unitNumber;
+          const selected = state.unitOptions.find((row) => String(row.unit || '') === String(draft.unitNumber || '')) || null;
+          els.priceListed.value = selected ? selected.priceLabel : (draft.priceListed || '');
+          els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
+          syncSummary();
+        }
+        els.statusText.textContent = 'Borrador cargado.';
       });
       els.resetBtn.addEventListener('click', resetForm);
       els.downloadBtn.addEventListener('click', downloadPdf);
@@ -795,6 +837,7 @@
 
       const draft = readDraft();
       if (draft) applyDraft(draft);
+      refreshDraftButton();
       els.development.value = state.development;
       loadOptions().then(() => {
         if (draft && draft.unitNumber) {

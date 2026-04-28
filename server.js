@@ -6485,6 +6485,8 @@ function fillRect(page, rect, color = rgb(1, 1, 1)) {
   });
 }
 
+const VICEROY_RESERVATION_SHEET_BG = rgb(0.975, 0.963, 0.928);
+
 function clearPdfAnnotations(pdfDoc) {
   (pdfDoc.getPages() || []).forEach((page) => {
     try {
@@ -6637,11 +6639,6 @@ async function buildViceroyReservationPdfBuffer(payload) {
     getReservationFieldValue(payload, 'holderCityStateZip'),
     getReservationFieldValue(payload, 'coOwnerCityStateZip')
   ], { fontSize: 7.9 });
-  drawField('Phone / Teléfono', [
-    phone,
-    getReservationFieldValue(payload, 'holderPhone'),
-    getReservationFieldValue(payload, 'coOwnerPhone')
-  ], { fontSize: 8.2 });
   drawField('Email', [
     getReservationFieldValue(payload, 'holderEmail'),
     getReservationFieldValue(payload, 'coOwnerEmail')
@@ -6653,7 +6650,7 @@ async function buildViceroyReservationPdfBuffer(payload) {
 
   (widgetsByField.get('Observations / Observaciones') || []).forEach((widget) => {
     const page = pages[widget.pageIndex] || pages[0];
-    fillRect(page, widget.rect, rgb(1, 1, 1));
+    fillRect(page, widget.rect, VICEROY_RESERVATION_SHEET_BG);
   });
   drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
 
