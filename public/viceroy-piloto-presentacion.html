@@ -822,14 +822,14 @@
         { id: '3B+DEN', name: 'THREE BEDROOM + DEN', aliases: ['3B + DEN', '3BDEN', '3 REC + DEN'] },
         { id: '4B', name: 'FOUR BEDROOM', aliases: ['4B', '4 BR', '4BR', '4 REC'] },
         { id: '4B+DEN', name: 'FOUR BEDROOM + DEN', aliases: ['4B + DEN', '4BDEN', '4 REC + DEN'] },
-        { id: 'PH1', name: 'PH 1', aliases: ['1PH', 'PH1', 'PH 1', 'ONE BEDROOM PH', 'PH 1 BEDROOM'] },
-        { id: 'PH1+DEN', name: 'PH 1 + DEN', aliases: ['1PH + DEN', 'PH1 + DEN', 'PH 1 + DEN', 'ONE BEDROOM PH + DEN', 'PH 1 BEDROOM + DEN'] },
-        { id: 'PH2', name: 'PH 2', aliases: ['2PH', 'PH2', 'PH 2', 'TWO BEDROOM PH', 'PH 2 BEDROOM'] },
-        { id: 'PH2+DEN', name: 'PH 2 + DEN', aliases: ['2PH + DEN', 'PH2 + DEN', 'PH 2 + DEN', 'TWO BEDROOM PH + DEN', 'PH 2 BEDROOM + DEN'] },
-        { id: 'PH3', name: 'PH 3', aliases: ['3PH', 'PH3', 'PH 3', 'THREE BEDROOM PH', 'PH 3 BEDROOM'] },
-        { id: 'PH3+DEN', name: 'PH 3 + DEN', aliases: ['3PH + DEN', 'PH3 + DEN', 'PH 3 + DEN', 'THREE BEDROOM PH + DEN', 'PH 3 BEDROOM + DEN'] },
-        { id: 'PH4', name: 'PH 4', aliases: ['4PH', 'PH4', 'PH 4', 'FOUR BEDROOM PH', '4 BED PH', 'PH 4 BEDROOM'] },
-        { id: 'PH4+DEN', name: 'PH 4 + DEN', aliases: ['4PH + DEN', 'PH4 + DEN', 'PH 4 + DEN', 'FOUR BEDROOM PH + DEN', '4 BED PH + DEN', 'PH 4 BEDROOM + DEN'] }
+        { id: 'PH1', name: 'ONE BEDROOM PH', aliases: ['1PH', 'PH1', 'PH 1', 'ONE BEDROOM PH'] },
+        { id: 'PH1+DEN', name: 'ONE BEDROOM PH + DEN', aliases: ['1PH + DEN', 'PH1 + DEN', 'PH 1 + DEN', 'ONE BEDROOM PH + DEN'] },
+        { id: 'PH2', name: 'TWO BEDROOM PH', aliases: ['2PH', 'PH2', 'PH 2', 'TWO BEDROOM PH'] },
+        { id: 'PH2+DEN', name: 'TWO BEDROOM PH + DEN', aliases: ['2PH + DEN', 'PH2 + DEN', 'PH 2 + DEN', 'TWO BEDROOM PH + DEN'] },
+        { id: 'PH3', name: 'THREE BEDROOM PH', aliases: ['3PH', 'PH3', 'PH 3', 'THREE BEDROOM PH'] },
+        { id: 'PH3+DEN', name: 'THREE BEDROOM PH + DEN', aliases: ['3PH + DEN', 'PH3 + DEN', 'PH 3 + DEN', 'THREE BEDROOM PH + DEN'] },
+        { id: 'PH4', name: 'FOUR BEDROOM PH', aliases: ['4PH', 'PH4', 'PH 4', 'FOUR BEDROOM PH', '4 BED PH'] },
+        { id: 'PH4+DEN', name: 'FOUR BEDROOM PH + DEN', aliases: ['4PH + DEN', 'PH4 + DEN', 'PH 4 + DEN', 'FOUR BEDROOM PH + DEN', '4 BED PH + DEN'] }
       ];
 
       const state = {
@@ -1063,14 +1063,14 @@
           '3B+DEN': '3+1',
           '4B': '4',
           '4B+DEN': '4+1',
-          'PH1': 'PH 1',
-          'PH1+DEN': 'PH 1 + DEN',
-          'PH2': 'PH 2',
-          'PH2+DEN': 'PH 2 + DEN',
-          'PH3': 'PH 3',
-          'PH3+DEN': 'PH 3 + DEN',
-          'PH4': 'PH 4',
-          'PH4+DEN': 'PH 4 + DEN'
+          'PH1': '1PH',
+          'PH1+DEN': '1PH+1',
+          'PH2': '2PH',
+          'PH2+DEN': '2PH+1',
+          'PH3': '3PH',
+          'PH3+DEN': '3PH+1',
+          'PH4': '4PH',
+          'PH4+DEN': '4PH+1'
         };
         return map[bucketId] || bucketId;
       }
