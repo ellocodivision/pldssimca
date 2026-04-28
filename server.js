@@ -6532,6 +6532,15 @@ async function buildViceroyReservationPdfBuffer(payload) {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const widgetsByField = mapPdfWidgetsByField(pdfDoc);
   const pages = pdfDoc.getPages();
+  const form = pdfDoc.getForm();
+
+  form.getFields().slice().forEach((field) => {
+    try {
+      form.removeField(field);
+    } catch (err) {
+      log(`No se pudo remover campo de formulario de Viceroy: ${field && field.getName ? field.getName() : 'desconocido'} :: ${err && err.message ? err.message : err}`);
+    }
+  });
 
   const drawField = (fieldName, values, options = {}) => {
     const widgets = widgetsByField.get(fieldName) || [];
@@ -6644,15 +6653,6 @@ async function buildViceroyReservationPdfBuffer(payload) {
     fillRect(page, widget.rect, rgb(1, 1, 1));
   });
   drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
-
-  const form = pdfDoc.getForm();
-  form.getFields().slice().forEach((field) => {
-    try {
-      form.removeField(field);
-    } catch (err) {
-      log(`No se pudo remover campo de formulario de Viceroy: ${field && field.getName ? field.getName() : 'desconocido'} :: ${err && err.message ? err.message : err}`);
-    }
-  });
 
   return Buffer.from(await pdfDoc.save({ updateFieldAppearances: false }));
 }
