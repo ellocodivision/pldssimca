@@ -5482,9 +5482,9 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
       ? (total * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
       : '';
     const recamaras = normalizeViceroyBedroomLabel(bedRaw, {
-      phHint: rawType,
+      phHint: groupRaw || rawType,
       denRaw,
-      fallbackRaw: ''
+      fallbackRaw: rawType
     });
     out.push({
       sourceRowIndex: i + 1,
@@ -5665,20 +5665,26 @@ function normalizeViceroyBedroomLabel(bedroomRaw, options = {}) {
   const phHint = String(options && options.phHint || '').trim();
   const denRaw = options && options.denRaw;
   const fallbackRaw = String(options && options.fallbackRaw || '').trim();
-  const phLabel = phHint ? normalizeViceroyRawBedroom(phHint, { phHint }) : '';
-  let recamaras = phLabel && String(phLabel).startsWith('PH')
-    ? phLabel
-    : normalizeViceroyRawBedroom(bedroomRaw, { phHint });
-  if (!recamaras && fallbackRaw) {
-    recamaras = normalizeViceroyRawBedroom(fallbackRaw, { phHint });
+  const bedroomText = String(bedroomRaw == null ? '' : bedroomRaw).trim();
+  const fallbackText = String(fallbackRaw == null ? '' : fallbackRaw).trim();
+  const phKey = normalizeHeaderKey(phHint);
+  const isPh = phKey.includes('ph') || phKey.includes('pent');
+  const den = hasViceroyDen(denRaw);
+  const numberMatch = bedroomText.match(/(\d+)/) || fallbackText.match(/(\d+)/) || phKey.match(/(\d+)/);
+  const number = numberMatch ? String(Number(numberMatch[1])) : '';
+
+  if (isPh) {
+    if (!number) return den ? 'PH+DEN' : 'PH';
+    return den ? `PH${number}+DEN` : `PH${number}`;
   }
-  if (!recamaras && phLabel) {
-    recamaras = phLabel;
+
+  if (number) {
+    return den ? `${number}B+DEN` : `${number}B`;
   }
-  if (hasViceroyDen(denRaw) && recamaras && !/\+/.test(recamaras)) {
-    recamaras = `${recamaras}+DEN`;
-  }
-  return recamaras;
+
+  const fallbackRec = normalizeViceroyRawBedroom(bedroomText, { phHint });
+  if (!fallbackRec) return '';
+  return den && !/\+/.test(fallbackRec) ? `${fallbackRec}+DEN` : fallbackRec;
 }
 
 function hasViceroyDen(value) {
