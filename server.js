@@ -6638,7 +6638,7 @@ async function buildViceroyReservationPdfBuffer(payload) {
     }
   });
 
-  return Buffer.from(await pdfDoc.save());
+  return Buffer.from(await pdfDoc.save({ updateFieldAppearances: false }));
 }
 
 function buildViceroyTipologiaRows(inventoryRows) {
@@ -7303,7 +7303,7 @@ app.use('/viceroy/reservas', requireBackendFeature('viceroy', 'reservas'));
 app.use('/api/viceroy/reservas', requireBackendFeature('viceroy', 'reservas'));
 app.use('/viceroy/tipologias-demanda', requireBackendFeature('viceroy', 'demanda'));
 app.use('/api/viceroy/tipologias-demanda', requireBackendFeature('viceroy', 'demanda'));
-app.use('/viceroy/inicio', requireBackendFeature('viceroy', 'inicio'));
+app.use('/viceroy/inicio', requireBackendModule('viceroy'));
 app.use('/viceroy-piloto/', requireBackendFeature('viceroy', 'pilotoInventario'));
 app.use('/api/viceroy-piloto', (req, res, next) => {
   const reqPath = String(req.path || '');
@@ -7312,7 +7312,7 @@ app.use('/api/viceroy-piloto', (req, res, next) => {
   }
   return requireBackendFeature('viceroy', 'pilotoInventario')(req, res, next);
 });
-app.use('/api/viceroy/inicio', requireBackendFeature('viceroy', 'inicio'));
+app.use('/api/viceroy/inicio', requireBackendModule('viceroy'));
 app.use('/viceroy/registros', requireBackendFeature('viceroy', 'registros'));
 app.use('/api/viceroy/registros', requireBackendFeature('viceroy', 'registros'));
 app.use('/whisperlist/qr', requireBackendFeature('viceroy', 'whisperlist'));
