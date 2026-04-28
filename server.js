@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const { PDFDocument, StandardFonts, rgb, PDFName } = require('pdf-lib');
 const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
 const session = require('express-session');
@@ -6485,6 +6485,16 @@ function fillRect(page, rect, color = rgb(1, 1, 1)) {
   });
 }
 
+function clearPdfAnnotations(pdfDoc) {
+  (pdfDoc.getPages() || []).forEach((page) => {
+    try {
+      page.node.set(PDFName.of('Annots'), pdfDoc.context.obj([]));
+    } catch (err) {
+      log(`No se pudieron limpiar anotaciones de Viceroy: ${err && err.message ? err.message : err}`);
+    }
+  });
+}
+
 function mapPdfWidgetsByField(pdfDoc) {
   const pages = pdfDoc.getPages();
   const pageIndexByRef = new Map(pages.map((page, idx) => {
@@ -6533,14 +6543,7 @@ async function buildViceroyReservationPdfBuffer(payload) {
   const widgetsByField = mapPdfWidgetsByField(pdfDoc);
   const pages = pdfDoc.getPages();
   const form = pdfDoc.getForm();
-
-  form.getFields().slice().forEach((field) => {
-    try {
-      form.removeField(field);
-    } catch (err) {
-      log(`No se pudo remover campo de formulario de Viceroy: ${field && field.getName ? field.getName() : 'desconocido'} :: ${err && err.message ? err.message : err}`);
-    }
-  });
+  clearPdfAnnotations(pdfDoc);
 
   const drawField = (fieldName, values, options = {}) => {
     const widgets = widgetsByField.get(fieldName) || [];

@@ -2466,6 +2466,10 @@
         const visibleRows = (focusedUnitKey
           ? rows.filter(function (row) { return unitKey(row && row.unidad) === focusedUnitKey; })
           : rows).slice().sort(function (a, b) {
+            const unitA = unitKey(a && a.unidad);
+            const unitB = unitKey(b && b.unidad);
+            const unitOrder = String(unitA).localeCompare(String(unitB), 'es', { numeric: true, sensitivity: 'base' });
+            if (unitOrder !== 0) return unitOrder;
             const priceA = parseMoneyLike(a && a.price);
             const priceB = parseMoneyLike(b && b.price);
             const hasA = Number.isFinite(priceA);
