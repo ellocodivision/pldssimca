@@ -6400,11 +6400,9 @@ function parseViceroyRelatedInventoryRows(filePath) {
 function formatViceroyReservationCurrency(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'MXN',
+  return `MXN ${new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 0
-  }).format(n);
+  }).format(n)}`;
 }
 
 function getViceroyReservationInventoryRows() {
@@ -6486,6 +6484,15 @@ function fillRect(page, rect, color = rgb(1, 1, 1)) {
 }
 
 const VICEROY_RESERVATION_SHEET_BG = rgb(0.975, 0.963, 0.928);
+
+function coverPdfFieldLeft(page, rect, width = 18) {
+  fillRect(page, {
+    x: rect.x,
+    y: rect.y,
+    width: Math.max(0, Math.min(width, rect.width)),
+    height: rect.height
+  }, VICEROY_RESERVATION_SHEET_BG);
+}
 
 function clearPdfAnnotations(pdfDoc) {
   (pdfDoc.getPages() || []).forEach((page) => {
@@ -6574,6 +6581,17 @@ async function buildViceroyReservationPdfBuffer(payload) {
   const securityCode = getReservationFieldValue(payload, 'securityCode');
   const signature = getReservationFieldValue(payload, 'signature') || fullName;
   const amountCurrency = getReservationFieldValue(payload, 'amountCurrency', 'MXN');
+
+  [
+    'Price Listed / Precio de Lista',
+    'Amount / Monto',
+    'Amount & Currency / Monto y Moneda'
+  ].forEach((fieldName) => {
+    (widgetsByField.get(fieldName) || []).forEach((widget) => {
+      const page = pages[widget.pageIndex] || pages[0];
+      coverPdfFieldLeft(page, widget.rect, 10);
+    });
+  });
 
   drawField('Full Name / Nombre Completo:', fullName, { fontSize: 9.4 });
   drawField('E-mail', email, { fontSize: 9.2 });
@@ -10056,6 +10074,16 @@ app.get('/api/viceroy/inicio/reservation-options', (req, res) => {
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
+});
+
+app.get('/api/viceroy/session', requireBackendModule('viceroy'), (req, res) => {
+  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+  const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+  return res.json({
+    ok: true,
+    email: currentEmail,
+    name: currentName
+  });
 });
 
 app.post('/api/viceroy/inicio/reservation-form/pdf', async (req, res) => {
