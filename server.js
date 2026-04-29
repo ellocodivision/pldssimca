@@ -79,6 +79,78 @@ const PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.join(__dirna
 const TEMPLATE_DIR = path.join(__dirname, 'templates');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const VICEROY_RESERVATION_TEMPLATE_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'hoja-reserva-viceroy-rellenable.pdf');
+const VICEROY_RESERVATION_PAGE_HEIGHT = 792;
+const VICEROY_RESERVATION_STATIC_LAYOUT = {
+  page1: {
+    fullName: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 101, 540, 16),
+    email: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 136, 540, 16),
+    phone: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 171, 540, 16),
+    development: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 206, 262, 18),
+    unitNumber: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 206, 260, 18),
+    priceListed: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 244, 540, 18),
+    observations: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 284, 540, 18),
+    paymentLabelRows: [
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 99, 337, 170, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 99, 353, 170, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 99, 369, 170, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 99, 385, 170, 14)
+    ],
+    paymentPercentRows: [
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 248, 333, 28, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 248, 349, 28, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 248, 365, 28, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 248, 381, 28, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 248, 397, 28, 14)
+    ],
+    paymentAmountRows: [
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 300, 333, 92, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 300, 349, 92, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 300, 365, 92, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 300, 381, 92, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 300, 397, 92, 14)
+    ],
+    paymentDateRows: [
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 452, 333, 134, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 452, 349, 134, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 452, 365, 134, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 452, 381, 134, 14),
+      rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 452, 397, 134, 14)
+    ],
+    amountCurrency: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 427, 260, 18),
+    cardNumber: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 427, 260, 18),
+    cardName: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 459, 260, 18),
+    cardType: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 459, 260, 18),
+    cardAddress: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 491, 260, 18),
+    cardCityStateZip: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 523, 540, 18),
+    expirationDate: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 555, 260, 18),
+    securityCode: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 555, 260, 18),
+    signature: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 210, 640, 200, 18)
+  },
+  page2: {
+    holderName: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 110, 540, 18),
+    holderBirth: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 142, 540, 18),
+    holderOccupation: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 174, 250, 18),
+    holderNationality: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 174, 250, 18),
+    holderPassport: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 206, 250, 18),
+    holderMaritalStatus: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 206, 250, 18),
+    holderAddress: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 238, 540, 18),
+    holderCityStateZip: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 271, 540, 18),
+    holderPhone: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 303, 250, 18),
+    holderEmail: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 303, 250, 18),
+    holderNotes: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 335, 540, 18),
+    coOwnerName: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 381, 540, 18),
+    coOwnerBirth: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 413, 540, 18),
+    coOwnerOccupation: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 445, 250, 18),
+    coOwnerNationality: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 445, 250, 18),
+    coOwnerPassport: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 477, 250, 18),
+    coOwnerMaritalStatus: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 477, 250, 18),
+    coOwnerAddress: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 509, 540, 18),
+    coOwnerCityStateZip: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 541, 540, 18),
+    coOwnerPhone: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 573, 250, 18),
+    coOwnerEmail: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 329, 573, 250, 18),
+    coOwnerNotes: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 605, 540, 18)
+  }
+};
 const REPO_DATA_DIR = path.join(__dirname, 'data');
 function isWritableDir(dirPath) {
   try {
@@ -6461,6 +6533,15 @@ function drawTextInRect(page, font, rect, text, options = {}) {
   });
 }
 
+function rectFromTop(pageHeight, x, top, width, height = 16) {
+  return {
+    x,
+    y: pageHeight - top - height,
+    width,
+    height
+  };
+}
+
 function fillRect(page, rect, color = rgb(1, 1, 1)) {
   page.drawRectangle({
     x: rect.x,
@@ -6561,34 +6642,6 @@ async function buildViceroyReservationPdfBuffer(payload) {
   const signature = getReservationFieldValue(payload, 'signature') || fullName;
   const amountCurrency = getReservationFieldValue(payload, 'amountCurrency', 'MXN');
 
-  drawField('Full Name / Nombre Completo:', fullName, { fontSize: 9.4 });
-  drawField('E-mail', email, { fontSize: 9.2 });
-  drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
-  drawField('Development / Desarrollo', development, { fontSize: 9.2 });
-  const unitWidgets = widgetsByField.get('Unit /  No. Unidad') || [];
-  if (unitWidgets.length) {
-    drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
-  } else if (unitNumber) {
-    const unitPage = pages[0] || pages[pages.length - 1];
-    if (unitPage) {
-      drawTextInRect(unitPage, font, VICEROY_RESERVATION_UNIT_FALLBACK_RECT, unitNumber, { fontSize: 9.2, verticalAlign: 'top' });
-    }
-  }
-  drawField('Price Listed / Precio de Lista', stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
-  drawField('Card Number / Número de tarjeta', cardNumber, { fontSize: 8.9 });
-  drawField('Name in the Card / Nombre en la tarjeta', cardName, { fontSize: 8.9 });
-  drawField('Amount & Currency / Monto y Moneda', amountCurrency, { fontSize: 8.9 });
-  drawField('VISA / MASTERCARD', cardType, { fontSize: 8.8 });
-  drawField('Address / Dirección', [
-    cardAddress,
-    getReservationFieldValue(payload, 'holderAddress'),
-    getReservationFieldValue(payload, 'coOwnerAddress')
-  ], { fontSize: 8.2 });
-  drawField('City, Estate & Zip Code / Ciudad, Edo y C.P', cardCityStateZip, { fontSize: 8.2 });
-  drawField('Expiration Date / Fecha Expiración', expirationDate, { fontSize: 8.8 });
-  drawField('Security Code / Código de Seguridad', securityCode, { fontSize: 8.8 });
-  drawField('Sign / Firma', signature, { fontSize: 8.8 });
-
   const paymentRows = Array.isArray(payload && payload.payments) ? payload.payments : [];
   const normalizedPayments = Array.from({ length: 5 }, (_, idx) => {
     const row = paymentRows[idx] || {};
@@ -6600,49 +6653,135 @@ async function buildViceroyReservationPdfBuffer(payload) {
     };
   });
 
-  drawField('Reservation Fee / Reserva', normalizedPayments.slice(1).map((row) => row.label), { fontSize: 7.8 });
-  drawField('%', normalizedPayments.map((row) => row.percent), { fontSize: 8.1 });
-  drawField('Date / Fecha', normalizedPayments.map((row) => row.date), { fontSize: 7.8 });
-  drawField('Amount / Monto', normalizedPayments.map((row) => row.amount), { fontSize: 7.8 });
+  if (widgetsByField.size > 0) {
+    drawField('Full Name / Nombre Completo:', fullName, { fontSize: 9.4 });
+    drawField('E-mail', email, { fontSize: 9.2 });
+    drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
+    drawField('Development / Desarrollo', development, { fontSize: 9.2 });
+    const unitWidgets = widgetsByField.get('Unit /  No. Unidad') || [];
+    if (unitWidgets.length) {
+      drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
+    } else if (unitNumber) {
+      const unitPage = pages[0] || pages[pages.length - 1];
+      if (unitPage) {
+        drawTextInRect(unitPage, font, VICEROY_RESERVATION_UNIT_FALLBACK_RECT, unitNumber, { fontSize: 9.2, verticalAlign: 'top' });
+      }
+    }
+    drawField('Price Listed / Precio de Lista', stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
+    drawField('Card Number / Número de tarjeta', cardNumber, { fontSize: 8.9 });
+    drawField('Name in the Card / Nombre en la tarjeta', cardName, { fontSize: 8.9 });
+    drawField('Amount & Currency / Monto y Moneda', amountCurrency, { fontSize: 8.9 });
+    drawField('VISA / MASTERCARD', cardType, { fontSize: 8.8 });
+    drawField('Address / Dirección', [
+      cardAddress,
+      getReservationFieldValue(payload, 'holderAddress'),
+      getReservationFieldValue(payload, 'coOwnerAddress')
+    ], { fontSize: 8.2 });
+    drawField('City, Estate & Zip Code / Ciudad, Edo y C.P', cardCityStateZip, { fontSize: 8.2 });
+    drawField('Expiration Date / Fecha Expiración', expirationDate, { fontSize: 8.8 });
+    drawField('Security Code / Código de Seguridad', securityCode, { fontSize: 8.8 });
+    drawField('Sign / Firma', signature, { fontSize: 8.8 });
 
-  drawField('Name as in Passport / Nombre como el Pasaporte', [
-    getReservationFieldValue(payload, 'holderName'),
-    getReservationFieldValue(payload, 'coOwnerName')
-  ], { fontSize: 8.3 });
-  drawField('Day & Place of Birth / Día y Lugar de Nacimiento', [
-    getReservationFieldValue(payload, 'holderBirth'),
-    getReservationFieldValue(payload, 'coOwnerBirth')
-  ], { fontSize: 8.0 });
-  drawField('Occupation / Ocupación', [
-    getReservationFieldValue(payload, 'holderOccupation'),
-    getReservationFieldValue(payload, 'coOwnerOccupation')
-  ], { fontSize: 8.2 });
-  drawField('Nationality / Nacionalidad', [
-    getReservationFieldValue(payload, 'holderNationality'),
-    getReservationFieldValue(payload, 'coOwnerNationality')
-  ], { fontSize: 8.2 });
-  drawField('Passport/ Pasaporte', [
-    getReservationFieldValue(payload, 'holderPassport'),
-    getReservationFieldValue(payload, 'coOwnerPassport')
-  ], { fontSize: 8.2 });
-  drawField('Marital Status / Edo. Civil', [
-    getReservationFieldValue(payload, 'holderMaritalStatus'),
-    getReservationFieldValue(payload, 'coOwnerMaritalStatus')
-  ], { fontSize: 8.2 });
-  drawField('City, Estate & Zip Code / Ciudad, Estado y C.P', [
-    getReservationFieldValue(payload, 'holderCityStateZip'),
-    getReservationFieldValue(payload, 'coOwnerCityStateZip')
-  ], { fontSize: 7.9 });
-  drawField('Email', [
-    getReservationFieldValue(payload, 'holderEmail'),
-    getReservationFieldValue(payload, 'coOwnerEmail')
-  ], { fontSize: 8.2 });
-  drawField('Notes / RFC y CURP (solo ciudadanos Mexicanos)', [
-    getReservationFieldValue(payload, 'holderNotes'),
-    getReservationFieldValue(payload, 'coOwnerNotes')
-  ], { fontSize: 7.6 });
+    drawField('Reservation Fee / Reserva', normalizedPayments.slice(1).map((row) => row.label), { fontSize: 7.8 });
+    drawField('%', normalizedPayments.map((row) => row.percent), { fontSize: 8.1 });
+    drawField('Date / Fecha', normalizedPayments.map((row) => row.date), { fontSize: 7.8 });
+    drawField('Amount / Monto', normalizedPayments.map((row) => row.amount), { fontSize: 7.8 });
 
-  drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
+    drawField('Name as in Passport / Nombre como el Pasaporte', [
+      getReservationFieldValue(payload, 'holderName'),
+      getReservationFieldValue(payload, 'coOwnerName')
+    ], { fontSize: 8.3 });
+    drawField('Day & Place of Birth / Día y Lugar de Nacimiento', [
+      getReservationFieldValue(payload, 'holderBirth'),
+      getReservationFieldValue(payload, 'coOwnerBirth')
+    ], { fontSize: 8.0 });
+    drawField('Occupation / Ocupación', [
+      getReservationFieldValue(payload, 'holderOccupation'),
+      getReservationFieldValue(payload, 'coOwnerOccupation')
+    ], { fontSize: 8.2 });
+    drawField('Nationality / Nacionalidad', [
+      getReservationFieldValue(payload, 'holderNationality'),
+      getReservationFieldValue(payload, 'coOwnerNationality')
+    ], { fontSize: 8.2 });
+    drawField('Passport/ Pasaporte', [
+      getReservationFieldValue(payload, 'holderPassport'),
+      getReservationFieldValue(payload, 'coOwnerPassport')
+    ], { fontSize: 8.2 });
+    drawField('Marital Status / Edo. Civil', [
+      getReservationFieldValue(payload, 'holderMaritalStatus'),
+      getReservationFieldValue(payload, 'coOwnerMaritalStatus')
+    ], { fontSize: 8.2 });
+    drawField('City, Estate & Zip Code / Ciudad, Estado y C.P', [
+      getReservationFieldValue(payload, 'holderCityStateZip'),
+      getReservationFieldValue(payload, 'coOwnerCityStateZip')
+    ], { fontSize: 7.9 });
+    drawField('Email', [
+      getReservationFieldValue(payload, 'holderEmail'),
+      getReservationFieldValue(payload, 'coOwnerEmail')
+    ], { fontSize: 8.2 });
+    drawField('Notes / RFC y CURP (solo ciudadanos Mexicanos)', [
+      getReservationFieldValue(payload, 'holderNotes'),
+      getReservationFieldValue(payload, 'coOwnerNotes')
+    ], { fontSize: 7.6 });
+
+    drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
+  } else {
+    const page1 = pages[0] || pages[pages.length - 1];
+    const page2 = pages[1] || pages[0] || pages[pages.length - 1];
+    const layout1 = VICEROY_RESERVATION_STATIC_LAYOUT.page1;
+    const layout2 = VICEROY_RESERVATION_STATIC_LAYOUT.page2;
+
+    drawManualReservationField(page1, font, layout1.fullName, fullName, { fontSize: 9.4 });
+    drawManualReservationField(page1, font, layout1.email, email, { fontSize: 9.2 });
+    drawManualReservationField(page1, font, layout1.phone, phone, { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
+    drawManualReservationField(page1, font, layout1.development, development, { fontSize: 9.2 });
+    drawManualReservationField(page1, font, layout1.unitNumber, unitNumber, { fontSize: 9.2, verticalAlign: 'top' });
+    drawManualReservationField(page1, font, layout1.priceListed, stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
+    drawManualReservationField(page1, font, layout1.observations, observations, { fontSize: 8.0, verticalAlign: 'top' });
+
+    normalizedPayments.slice(1).forEach((row, idx) => {
+      drawManualReservationField(page1, font, layout1.paymentLabelRows[idx], row.label, { fontSize: 7.8 });
+    });
+    normalizedPayments.forEach((row, idx) => {
+      drawManualReservationField(page1, font, layout1.paymentPercentRows[idx], row.percent, { fontSize: 8.1 });
+      drawManualReservationField(page1, font, layout1.paymentAmountRows[idx], row.amount, { fontSize: 7.8 });
+      drawManualReservationField(page1, font, layout1.paymentDateRows[idx], row.date, { fontSize: 7.8 });
+    });
+
+    drawManualReservationField(page1, font, layout1.amountCurrency, amountCurrency, { fontSize: 8.8 });
+    drawManualReservationField(page1, font, layout1.cardNumber, cardNumber, { fontSize: 8.9 });
+    drawManualReservationField(page1, font, layout1.cardName, cardName, { fontSize: 8.9 });
+    drawManualReservationField(page1, font, layout1.cardType, cardType, { fontSize: 8.8 });
+    drawManualReservationField(page1, font, layout1.cardAddress, cardAddress, { fontSize: 8.2 });
+    drawManualReservationField(page1, font, layout1.cardCityStateZip, cardCityStateZip, { fontSize: 8.2 });
+    drawManualReservationField(page1, font, layout1.expirationDate, expirationDate, { fontSize: 8.8 });
+    drawManualReservationField(page1, font, layout1.securityCode, securityCode, { fontSize: 8.8 });
+    drawManualReservationField(page1, font, layout1.signature, signature, { fontSize: 8.8 });
+
+    drawManualReservationField(page2, font, layout2.holderName, getReservationFieldValue(payload, 'holderName'), { fontSize: 8.3 });
+    drawManualReservationField(page2, font, layout2.holderBirth, getReservationFieldValue(payload, 'holderBirth'), { fontSize: 8.0 });
+    drawManualReservationField(page2, font, layout2.holderOccupation, getReservationFieldValue(payload, 'holderOccupation'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.holderNationality, getReservationFieldValue(payload, 'holderNationality'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.holderPassport, getReservationFieldValue(payload, 'holderPassport'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.holderMaritalStatus, getReservationFieldValue(payload, 'holderMaritalStatus'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.holderAddress, getReservationFieldValue(payload, 'holderAddress'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.holderCityStateZip, getReservationFieldValue(payload, 'holderCityStateZip'), { fontSize: 7.9 });
+    drawManualReservationField(page2, font, layout2.holderPhone, getReservationFieldValue(payload, 'holderPhone'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.holderEmail, getReservationFieldValue(payload, 'holderEmail'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.holderNotes, getReservationFieldValue(payload, 'holderNotes'), { fontSize: 7.6 });
+
+    drawManualReservationField(page2, font, layout2.coOwnerName, getReservationFieldValue(payload, 'coOwnerName'), { fontSize: 8.3 });
+    drawManualReservationField(page2, font, layout2.coOwnerBirth, getReservationFieldValue(payload, 'coOwnerBirth'), { fontSize: 8.0 });
+    drawManualReservationField(page2, font, layout2.coOwnerOccupation, getReservationFieldValue(payload, 'coOwnerOccupation'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.coOwnerNationality, getReservationFieldValue(payload, 'coOwnerNationality'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.coOwnerPassport, getReservationFieldValue(payload, 'coOwnerPassport'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.coOwnerMaritalStatus, getReservationFieldValue(payload, 'coOwnerMaritalStatus'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.coOwnerAddress, getReservationFieldValue(payload, 'coOwnerAddress'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.coOwnerCityStateZip, getReservationFieldValue(payload, 'coOwnerCityStateZip'), { fontSize: 7.9 });
+    drawManualReservationField(page2, font, layout2.coOwnerPhone, getReservationFieldValue(payload, 'coOwnerPhone'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.coOwnerEmail, getReservationFieldValue(payload, 'coOwnerEmail'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, layout2.coOwnerNotes, getReservationFieldValue(payload, 'coOwnerNotes'), { fontSize: 7.6 });
+  }
 
   return Buffer.from(await pdfDoc.save({ updateFieldAppearances: false }));
 }
