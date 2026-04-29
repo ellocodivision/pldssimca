@@ -760,16 +760,11 @@
           <h2 class="section-title" id="sectionTitle">Formas de Pago:</h2>
 
           <div class="capture-grid" id="captureGrid">
-            <div class="field field-client">
-              <label for="whisperClient" id="labelWhisperClient">Cliente Whisperlist</label>
-              <select id="whisperClient">
-                <option value="">Cargando clientes...</option>
-              </select>
-              <p class="field-help" id="whisperClientHint">Al elegir un cliente, la unidad A se completa automáticamente.</p>
-            </div>
             <div class="field">
               <label for="unitName" id="labelUnit">Unidad</label>
-              <input id="unitName" type="text" value="402">
+              <input id="unitName" type="text" value="402" list="unitOptions">
+              <datalist id="unitOptions"></datalist>
+              <p class="field-help" id="unitHint">Escribe o selecciona una unidad; el precio se llena automáticamente.</p>
             </div>
             <div class="field">
               <label for="paymentPlan" id="labelPlan">Forma de pago</label>
@@ -958,9 +953,8 @@
           download: 'Descargar PDF exacto',
           headline: 'Tabla de pago Viceroy',
           section: 'Formas de Pago:',
-          whisperClient: 'Cliente Whisperlist',
-          whisperClientHint: 'Al elegir un cliente, la unidad A se completa automáticamente.',
           unit: 'Unidad',
+          unitHint: 'Escribe o selecciona una unidad; el precio se llena automáticamente.',
           paymentPlan: 'Forma de pago',
           listPrice: 'Precio de lista',
           discountToggle: 'Descuento',
@@ -990,9 +984,8 @@
           download: 'Download exact PDF',
           headline: 'Viceroy Payment Plan',
           section: 'Payment Structures:',
-          whisperClient: 'Whisperlist client',
-          whisperClientHint: 'Choosing a client auto-fills the A unit.',
           unit: 'Unit',
+          unitHint: 'Type or choose a unit; the price fills automatically.',
           paymentPlan: 'Payment plan',
           listPrice: 'List price',
           discountToggle: 'Discount',
@@ -1024,9 +1017,8 @@
         downloadPdfBtn: document.getElementById('downloadPdfBtn'),
         headline: document.getElementById('headline'),
         sectionTitle: document.getElementById('sectionTitle'),
-        labelWhisperClient: document.getElementById('labelWhisperClient'),
-        whisperClientHint: document.getElementById('whisperClientHint'),
         labelUnit: document.getElementById('labelUnit'),
+        unitHint: document.getElementById('unitHint'),
         labelPlan: document.getElementById('labelPlan'),
         labelListPrice: document.getElementById('labelListPrice'),
         labelApplyDiscount: document.getElementById('labelApplyDiscount'),
@@ -1046,8 +1038,8 @@
         headAmount: document.getElementById('headAmount'),
         footerLabel: document.getElementById('footerLabel'),
         captureGrid: document.getElementById('captureGrid'),
-        whisperClient: document.getElementById('whisperClient'),
         unitName: document.getElementById('unitName'),
+        unitOptions: document.getElementById('unitOptions'),
         paymentPlan: document.getElementById('paymentPlan'),
         listPrice: document.getElementById('listPrice'),
         applyDiscount: document.getElementById('applyDiscount'),
@@ -1071,13 +1063,8 @@
       let currentLang = initialLang;
       let currentLayout = normalizeLayout(defaultLayout);
       let paymentDates = [];
-      let whisperClients = [];
       let viceroyInventoryRows = [];
       let viceroyInventoryByUnit = new Map();
-      let selectedWhisperClientId = '';
-      try {
-        selectedWhisperClientId = String(localStorage.getItem('viceroyTablaPagosWhisperClientId') || '').trim();
-      } catch {}
 
       function sanitizeNumber(value) {
         const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
@@ -1120,6 +1107,36 @@
         return null;
       }
 
+      function compareUnitLabels(a, b) {
+        const textA = String(a || '').trim();
+        const textB = String(b || '').trim();
+        const numA = Number(textA);
+        const numB = Number(textB);
+        const aIsNum = textA !== '' && Number.isFinite(numA) && String(numA) === textA;
+        const bIsNum = textB !== '' && Number.isFinite(numB) && String(numB) === textB;
+        if (aIsNum && bIsNum) return numA - numB;
+        if (aIsNum) return -1;
+        if (bIsNum) return 1;
+        return textA.localeCompare(textB, 'es', { numeric: true, sensitivity: 'base' });
+      }
+
+      function renderUnitOptions() {
+        if (!els.unitOptions) return;
+        const seen = new Set();
+        const units = (viceroyInventoryRows || [])
+          .map(function (row) { return String(row && row.unidad || '').trim(); })
+          .filter(function (unit) {
+            if (!unit || seen.has(unit)) return false;
+            seen.add(unit);
+            return true;
+          })
+          .sort(compareUnitLabels);
+
+        els.unitOptions.innerHTML = units.map(function (unit) {
+          return '<option value="' + escapeHtml(unit) + '"></option>';
+        }).join('');
+      }
+
       async function loadViceroyInventory() {
         try {
           const res = await fetch('/api/viceroy-piloto/inventory', { credentials: 'same-origin' });
@@ -1136,6 +1153,7 @@
           viceroyInventoryRows = [];
           viceroyInventoryByUnit = new Map();
         }
+        renderUnitOptions();
         syncListPriceFromInventory({ clearOnMissing: true });
         update();
       }
@@ -1311,96 +1329,6 @@
         return yyyy + '-' + mm + '-' + dd;
       }
 
-      function getWhisperClientUnitA(row) {
-        return String(row && row.kpi && row.kpi.opcionA || '').trim();
-      }
-
-      function getWhisperClientLabel(row) {
-        const name = String(row && row.nombreCliente || '').trim() || 'Sin nombre';
-        const unitA = getWhisperClientUnitA(row);
-        return unitA ? (name + ' — A ' + unitA) : name;
-      }
-
-      function persistWhisperClientSelection(id) {
-        selectedWhisperClientId = String(id || '').trim();
-        try {
-          if (selectedWhisperClientId) localStorage.setItem('viceroyTablaPagosWhisperClientId', selectedWhisperClientId);
-          else localStorage.removeItem('viceroyTablaPagosWhisperClientId');
-        } catch {}
-      }
-
-      function applyWhisperClientSelection(id) {
-        const row = whisperClients.find(function (item) {
-          return String(item.id || '') === String(id || '');
-        });
-        if (!row) {
-          persistWhisperClientSelection('');
-          els.whisperClient.value = '';
-          return;
-        }
-        persistWhisperClientSelection(row.id);
-        els.whisperClient.value = String(row.id || '');
-        const unitA = getWhisperClientUnitA(row);
-        if (unitA) {
-          els.unitName.value = unitA;
-        }
-        syncListPriceFromInventory({ clearOnMissing: true, clearWhenEmpty: true });
-        update();
-      }
-
-      function renderWhisperClientOptions() {
-        const currentValue = selectedWhisperClientId || '';
-        els.whisperClient.innerHTML = '';
-
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = whisperClients.length ? (currentLang === 'en' ? 'Choose a client' : 'Elige un cliente') : (currentLang === 'en' ? 'No clients available' : 'Sin clientes disponibles');
-        els.whisperClient.appendChild(placeholder);
-
-        whisperClients.forEach(function (row) {
-          const option = document.createElement('option');
-          option.value = String(row.id || '');
-          option.textContent = getWhisperClientLabel(row);
-          els.whisperClient.appendChild(option);
-        });
-
-        if (currentValue && whisperClients.some(function (row) { return String(row.id || '') === currentValue; })) {
-          els.whisperClient.value = currentValue;
-        } else if (whisperClients.length) {
-          els.whisperClient.value = '';
-          persistWhisperClientSelection('');
-        } else {
-          els.whisperClient.value = '';
-        }
-      }
-
-      async function loadWhisperClients() {
-        try {
-          const res = await fetch('/api/whisperlist', { credentials: 'same-origin' });
-          const data = await res.json().catch(function () { return {}; });
-          const rows = Array.isArray(data.rows) ? data.rows : [];
-          whisperClients = rows.filter(function (row) {
-            return row && row.canViewClientData;
-          }).sort(function (a, b) {
-            const nameA = String(a && a.nombreCliente || '').trim();
-            const nameB = String(b && b.nombreCliente || '').trim();
-            const byName = nameA.localeCompare(nameB, 'es');
-            if (byName) return byName;
-            const idA = String(a && a.id || '');
-            const idB = String(b && b.id || '');
-            return idA.localeCompare(idB, 'es');
-          });
-        } catch {
-          whisperClients = [];
-        }
-        renderWhisperClientOptions();
-        if (selectedWhisperClientId && whisperClients.some(function (row) {
-          return String(row.id || '') === String(selectedWhisperClientId);
-        })) {
-          applyWhisperClientSelection(selectedWhisperClientId);
-        }
-      }
-
       function updateLanguage() {
         const t = translations[currentLang];
         els.backBtn.textContent = t.back;
@@ -1410,9 +1338,8 @@
         els.downloadPdfBtn.textContent = t.download;
         els.headline.textContent = t.headline;
         els.sectionTitle.textContent = t.section;
-        els.labelWhisperClient.textContent = t.whisperClient;
-        els.whisperClientHint.textContent = t.whisperClientHint;
         els.labelUnit.textContent = t.unit;
+        els.unitHint.textContent = t.unitHint;
         els.labelPlan.textContent = t.paymentPlan;
         els.labelListPrice.textContent = t.listPrice;
         els.labelApplyDiscount.textContent = t.discountToggle;
@@ -1431,7 +1358,6 @@
         els.headPercent.textContent = t.percent;
         els.headAmount.textContent = t.amount;
         els.footerLabel.textContent = t.totals;
-        if (els.whisperClient) renderWhisperClientOptions();
       }
 
       function syncDiscountVisibility() {
@@ -1547,36 +1473,32 @@
         if (head) {
           const style = clone.ownerDocument.createElement('style');
           style.textContent = `
-            @page { size: 1920px 1080px; margin: 0; }
-            html, body { margin: 0; padding: 0; background: #fff; width: 1920px; height: 1080px; }
+            @page { size: A4 portrait; margin: 0; }
+            html, body { margin: 0; padding: 0; background: #fff; width: 794px; min-height: 1123px; }
             body.pdf-export {
               background: #fff !important;
               padding: 0 !important;
-              min-height: 1080px !important;
-              width: 1920px;
-              height: 1080px;
-              overflow: hidden;
+              min-height: 1123px !important;
+              width: 794px;
+              overflow: visible;
               position: relative;
             }
             body.pdf-export .page {
-              position: absolute;
-              left: 50%;
-              top: 0;
-              width: 1920px;
-              height: 1080px;
+              position: relative;
+              width: 794px;
               max-width: none;
-              margin: 0;
+              margin: 0 auto;
               padding: 0;
-              overflow: hidden;
-              transform: translateX(-50%);
+              overflow: visible;
+              transform: none;
             }
             body.pdf-export .sheet {
-              width: 1920px;
-              height: 1080px;
+              width: 794px;
+              min-height: 1123px;
               border: none;
               box-shadow: none;
               background: #fff;
-              overflow: hidden;
+              overflow: visible;
             }
             body.pdf-export .topbar,
             body.pdf-export .form-section,
@@ -1704,9 +1626,6 @@
       });
 
       els.paymentPlan.addEventListener('change', update);
-      els.whisperClient.addEventListener('change', function () {
-        applyWhisperClientSelection(els.whisperClient.value);
-      });
       els.unitName.addEventListener('input', update);
       els.unitName.addEventListener('change', function () {
         syncListPriceFromInventory({ clearOnMissing: true, clearWhenEmpty: true });
@@ -1752,7 +1671,6 @@
       syncDiscountVisibility();
       update();
       loadViceroyInventory();
-      loadWhisperClients();
       loadLayout();
       syncAccessControls();
     })();

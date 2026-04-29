@@ -8384,6 +8384,10 @@ app.get('/viceroy/tabla-pagos', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-viceroy.html'));
 });
 
+app.get('/viceroy/inicio/tabla-pagos', (req, res) => {
+  res.redirect(302, '/viceroy/tabla-pagos');
+});
+
 app.get('/viceroy/tabla-pagos/editor', requireGerente, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'tabla-pagos-viceroy-editor.html'));
 });
