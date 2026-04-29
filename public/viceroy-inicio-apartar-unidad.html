@@ -491,6 +491,7 @@
         unitOptions: [],
         selectedUnitPrice: 0,
         currentUserKey: 'guest',
+        amountCurrencyTouched: false,
         payments: [
           { label: 'Reservation Fee / Reserva', percent: '', amount: '', date: '' },
           { label: '', percent: '', amount: '', date: '' },
@@ -718,6 +719,7 @@
         ['fullName','email','phone','development','unitNumber','priceListed','amountCurrency','observations','cardNumber','cardName','cardType','cardAddress','cardCityStateZip','expirationDate','securityCode','signature','holderName','holderBirth','holderOccupation','holderNationality','holderPassport','holderMaritalStatus','holderAddress','holderCityStateZip','holderPhone','holderEmail','holderNotes','coOwnerName','coOwnerBirth','coOwnerOccupation','coOwnerNationality','coOwnerPassport','coOwnerMaritalStatus','coOwnerAddress','coOwnerCityStateZip','coOwnerPhone','coOwnerEmail','coOwnerNotes'].forEach((key) => {
           if (els[key]) els[key].value = payload[key] || '';
         });
+        state.amountCurrencyTouched = Boolean(String(payload.amountCurrency || '').trim());
         if (Array.isArray(payload.payments)) {
           payload.payments.slice(0, 5).forEach((row, idx) => {
             state.payments[idx] = {
@@ -809,7 +811,9 @@
         const selected = state.unitOptions.find((row) => String(row.unit || '') === String(els.unitNumber.value || '')) || null;
         const price = selected ? selected.price : 0;
         const firstPaymentAmount = state.payments[0] && state.payments[0].amount ? String(state.payments[0].amount).trim() : '';
-        els.amountCurrency.value = firstPaymentAmount || 'MXN';
+        if (!state.amountCurrencyTouched) {
+          els.amountCurrency.value = firstPaymentAmount || els.amountCurrency.value || 'MXN';
+        }
         els.summaryUnit.textContent = selected ? selected.unit : '-';
         els.summaryPrice.textContent = selected ? selected.priceLabel : '-';
         els.summaryCurrency.textContent = els.amountCurrency.value || 'MXN';
@@ -906,6 +910,7 @@
         els.coOwnerPhone.value = '';
         els.coOwnerEmail.value = '';
         els.coOwnerNotes.value = '';
+        state.amountCurrencyTouched = false;
         state.payments = [
           { label: 'Reservation Fee / Reserva', percent: '', amount: '', date: '' },
           { label: '', percent: '', amount: '', date: '' },
@@ -1003,6 +1008,9 @@
         ];
         inputs.forEach((input) => {
           input.addEventListener('input', function () {
+            if (input === els.amountCurrency) {
+              state.amountCurrencyTouched = true;
+            }
             if (input === els.unitNumber) {
               const selected = state.unitOptions.find((row) => String(row.unit || '') === String(input.value || '')) || null;
               els.priceListed.value = selected ? selected.priceLabel : '';
@@ -1012,6 +1020,9 @@
             writeWorkingDraft(collectState());
           });
           input.addEventListener('change', function () {
+            if (input === els.amountCurrency) {
+              state.amountCurrencyTouched = true;
+            }
             if (input === els.unitNumber) {
               const selected = state.unitOptions.find((row) => String(row.unit || '') === String(input.value || '')) || null;
               els.priceListed.value = selected ? selected.priceLabel : '';
