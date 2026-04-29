@@ -6452,7 +6452,7 @@ function fitTextToWidth(font, text, maxWidth, maxSize, minSize = 6.5) {
 function drawTextInRect(page, font, rect, text, options = {}) {
   const value = String(text == null ? '' : text).trim();
   if (!value) return;
-  const marginX = Number.isFinite(options.marginX) ? options.marginX : 1.6;
+  const marginX = Number.isFinite(options.marginX) ? options.marginX : 2.2;
   const marginY = Number.isFinite(options.marginY) ? options.marginY : 2.0;
   const maxWidth = Math.max(1, rect.width - (marginX * 2));
   const maxSize = Number.isFinite(options.fontSize) ? options.fontSize : 8.8;
@@ -6485,7 +6485,7 @@ function fillRect(page, rect, color = rgb(1, 1, 1)) {
   });
 }
 
-const VICEROY_RESERVATION_SHEET_BG = rgb(0.957, 0.945, 0.91);
+const VICEROY_RESERVATION_SHEET_BG = rgb(0.975, 0.963, 0.928);
 
 function clearPdfAnnotations(pdfDoc) {
   (pdfDoc.getPages() || []).forEach((page) => {
@@ -10056,16 +10056,6 @@ app.get('/api/viceroy/inicio/reservation-options', (req, res) => {
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
-});
-
-app.get('/api/viceroy/session', requireBackendModule('viceroy'), (req, res) => {
-  const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-  const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-  return res.json({
-    ok: true,
-    email: currentEmail,
-    name: currentName
-  });
 });
 
 app.post('/api/viceroy/inicio/reservation-form/pdf', async (req, res) => {
