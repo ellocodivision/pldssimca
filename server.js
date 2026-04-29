@@ -5539,7 +5539,7 @@ const VICEROY_PILOTO_COLUMN_ALIASES = {
   assignment: ['asignacion', 'assignment', 'assigned_to', 'assignedto', 'asesor', 'advisor', 'broker'],
   m2: ['m2', 'metros2', 'metros_cuadrados', 'metros cuadrados', 'm²', 'area_m2', 'area', 'total', 'total_m2'],
   sqft: ['sqft', 'ft2', 'pies2', 'pies_cuadrados', 'square_feet', 'area_sqft'],
-  price: ['precio_final', 'precio', 'precio_venta', 'precio_de_lista', 'precio_lista', 'list_price', 'price_list', 'sale_price', 'price'],
+  price: ['precio_final', 'precio', 'precio_venta', 'precio_de_lista', 'precio_lista', 'list_price', 'price_list', 'sale_price', 'price', 'precio_venta_mxn', 'precio_venta_mn', 'precio_venta_final'],
   pricePerM2: ['price_per_m2', 'priceperm2', 'precio_por_m2', 'precio_m2', 'm2_rate', 'rate_m2', 'usd_m2'],
   status: ['estatus', 'estado', 'status', 'disponibilidad', 'availability', 'inventario']
 };
@@ -6243,26 +6243,7 @@ function parseViceroyInventoryFile(filePath) {
     );
     if (normalizedRows.length) return normalizedRows;
   } catch {}
-
-  // 2) Explicit Precios Proforma sheet, used only when the BD layout is not usable.
-  const preciosProformaSheetName = workbook.SheetNames.find((sheetName) => {
-    const key = normalizeHeaderKey(sheetName);
-    return key === normalizeHeaderKey('Precios Proforma') || key.includes(normalizeHeaderKey('Precios Proforma'));
-  });
-  if (preciosProformaSheetName && workbook.Sheets[preciosProformaSheetName]) {
-    const parsed = dedupeViceroyRows(parseViceroyRowsByPreciosProforma(workbook.Sheets[preciosProformaSheetName]));
-    if (parsed.length) return parsed;
-  }
-
-  // 3) Fallback: legacy fixed-column parser (Lista de Precios V0).
-  const targetSheetKey = normalizeHeaderKey('Lista de Precios V0');
-  const preferredSheetName = workbook.SheetNames.find((sheetName) => {
-    const key = normalizeHeaderKey(sheetName);
-    return key === targetSheetKey || key.includes(targetSheetKey) || targetSheetKey.includes(key);
-  });
-  const sheetName = preferredSheetName || workbook.SheetNames[0];
-  if (!sheetName || !workbook.Sheets[sheetName]) return [];
-  return dedupeViceroyRows(parseViceroyRowsByListaPreciosV0(workbook.Sheets[sheetName]));
+  return [];
 }
 
 function filterViceroyInventoryRows(rows) {

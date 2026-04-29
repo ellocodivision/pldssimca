@@ -1148,7 +1148,7 @@
 
       function formatPrice(value, isDemo) {
         if (!Number.isFinite(value)) return 'FROM: POR DEFINIR';
-        const text = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+        const text = 'MXN ' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
         return isDemo ? ('FROM: ' + text + ' *') : ('FROM: ' + text);
       }
 
