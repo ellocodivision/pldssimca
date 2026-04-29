@@ -227,7 +227,35 @@
           planLink: String(row && row.planLink || '').trim()
         });
       });
+      out.sort((a, b) => compareUnitLabels(a.unidad, b.unidad));
       return out;
+    }
+
+    function compareUnitLabels(a, b) {
+      const left = normalizeUnitSortKey(a);
+      const right = normalizeUnitSortKey(b);
+      if (left.group !== right.group) return left.group - right.group;
+      if (left.group === 0 || left.group === 1) {
+        if (left.num !== right.num) return left.num - right.num;
+      }
+      return left.raw.localeCompare(right.raw, 'es', { numeric: true, sensitivity: 'base' });
+    }
+
+    function normalizeUnitSortKey(value) {
+      const raw = String(value == null ? '' : value).trim().toUpperCase();
+      if (!raw) return { group: 3, num: Number.POSITIVE_INFINITY, raw: '' };
+      if (/^\d+$/.test(raw)) {
+        return { group: 0, num: Number(raw), raw };
+      }
+      const phMatch = raw.match(/^PH\s*([0-9]+)(?:\s*\+\s*DEN)?$/i);
+      if (phMatch) {
+        return { group: 1, num: Number(phMatch[1]), raw };
+      }
+      const leadingNumber = raw.match(/^([0-9]+)/);
+      if (leadingNumber) {
+        return { group: 2, num: Number(leadingNumber[1]), raw };
+      }
+      return { group: 3, num: Number.POSITIVE_INFINITY, raw };
     }
 
     function renderRows(rows) {
