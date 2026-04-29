@@ -11124,7 +11124,7 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
   });
 });
 
-app.get('/api/viceroy-piloto/tipo-cambio', requireViceroyPresentAccess, async (req, res) => {
+app.get('/api/viceroy-piloto/tipo-cambio', async (req, res) => {
   try {
     const forceFresh = String(req.query && req.query.refresh || '').trim() === '1';
     const data = await fetchBanxicoTipoCambioParaPagos({ forceFresh });
