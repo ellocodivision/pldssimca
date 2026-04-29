@@ -762,7 +762,7 @@
           <div class="capture-grid" id="captureGrid">
             <div class="field">
               <label for="unitName" id="labelUnit">Unidad</label>
-              <input id="unitName" type="text" value="402" list="unitOptions">
+              <input id="unitName" type="text" value="" placeholder="Escribe o selecciona una unidad" list="unitOptions">
               <datalist id="unitOptions"></datalist>
               <p class="field-help" id="unitHint">Escribe o selecciona una unidad; el precio se llena automáticamente.</p>
             </div>
@@ -817,7 +817,7 @@
             </thead>
             <tbody>
               <tr>
-                <td id="snapshotUnit">402</td>
+                <td id="snapshotUnit">-</td>
                 <td id="snapshotPlan">30/10/10/10/40</td>
                 <td class="amount" id="snapshotListPrice">$0</td>
                 <td class="amount discount-col" id="snapshotDiscount">$0</td>
@@ -1139,9 +1139,19 @@
 
       async function loadViceroyInventory() {
         try {
-          const res = await fetch('/api/viceroy-piloto/inventory', { credentials: 'same-origin' });
+          const res = await fetch('/api/viceroy/inicio/reservation-options', { credentials: 'same-origin' });
           const data = await res.json().catch(function () { return {}; });
-          const rows = Array.isArray(data.rows) ? data.rows : [];
+          const rows = Array.isArray(data.units) ? data.units.map(function (unitRow) {
+            return {
+              unidad: unitRow && unitRow.unit ? String(unitRow.unit).trim() : '',
+              price: Number(unitRow && unitRow.price) || 0,
+              plan: String(unitRow && unitRow.plan || '').trim(),
+              bed: String(unitRow && unitRow.bed || '').trim(),
+              status: String(unitRow && unitRow.status || '').trim(),
+              m2: String(unitRow && unitRow.m2 || '').trim(),
+              sqft: String(unitRow && unitRow.sqft || '').trim()
+            };
+          }).filter(function (row) { return Boolean(row.unidad); }) : [];
           viceroyInventoryRows = rows;
           viceroyInventoryByUnit = new Map();
           rows.forEach(function (row) {
@@ -1154,7 +1164,7 @@
           viceroyInventoryByUnit = new Map();
         }
         renderUnitOptions();
-        syncListPriceFromInventory({ clearOnMissing: true });
+        syncListPriceFromInventory({ clearOnMissing: true, clearWhenEmpty: true });
         update();
       }
 
