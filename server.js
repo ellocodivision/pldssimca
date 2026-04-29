@@ -7482,6 +7482,9 @@ app.use('/viceroy/inicio', requireBackendModule('viceroy'));
 app.use('/viceroy-piloto/', requireBackendFeature('viceroy', 'pilotoInventario'));
 app.use('/api/viceroy-piloto', (req, res, next) => {
   const reqPath = String(req.path || '');
+  if (reqPath.startsWith('/tipo-cambio')) {
+    return next();
+  }
   if (reqPath.startsWith('/public-data') || reqPath.startsWith('/tipologia-image')) {
     return requireViceroyPresentAccess(req, res, next);
   }
