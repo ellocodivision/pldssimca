@@ -1824,11 +1824,15 @@
           }
           const status = normalizeExcelRowStatusValue(row) || (row ? "disponible" : "vendida");
           return {
+            LINK: row ? row.LINK || row.PLANO || "" : "",
             PLANO: row ? row.PLANO || row.LINK || "" : "",
             UNIDAD: String(zone.label || ""),
+            REC: row ? row.REC || row.BED || "" : "",
             TOTAL_M2: row ? row.TOTAL_M2 : "",
             TOTAL_SQFT: row ? row.TOTAL_SQFT : "",
             PRECIO: row ? row.PRECIO : "",
+            DESCUENTO: row ? row.DESCUENTO || "" : "",
+            PRECIO_FINAL: row ? row.PRECIO_FINAL || row.PRECIO || "" : "",
             BED: row ? row.BED || row.REC || "" : "",
             ESTADO: status
           };
@@ -3441,24 +3445,25 @@
       };
 
       const matrix = lines.map((line) => parseLine(line));
-      const rows = matrix.slice(1).map((values) => {
-        const development = String(values[COL.DEVELOPMENT] || "").trim();
-        const precio = formatCurrencyValue(values[COL.PRECIO] || "");
-        const precioFinalValue = DEV === "related"
-          ? precio
-          : formatCurrencyValue(values[CEIBA_COL.K] || "");
-        return {
-          DEV: development,
-          LINK: DEV === "related" ? "" : (values[CEIBA_COL.LINK] || ""),
-          UNIDAD: String(values[COL.UNIT] || "").trim(),
-          REC: normalizeBedrooms(values[COL.REC] || ""),
-          TOTAL_M2: values[COL.TOTAL_M2] || "",
-          TOTAL_SQFT: values[COL.TOTAL_SQFT] || "",
-          PRECIO: precio,
-          DESCUENTO: "",
-          PRECIO_FINAL: precioFinalValue
-        };
-      }).filter((row) => row && row.UNIDAD);
+        const rows = matrix.slice(1).map((values) => {
+          const development = String(values[COL.DEVELOPMENT] || "").trim();
+          const precio = formatCurrencyValue(values[COL.PRECIO] || "");
+          const descuento = String(values[COL.K] || "").trim();
+          const precioFinalValue = DEV === "related"
+            ? precio
+            : formatCurrencyValue(values[CEIBA_COL.K] || "");
+          return {
+            DEV: development,
+            LINK: DEV === "related" ? "" : (values[CEIBA_COL.LINK] || ""),
+            UNIDAD: String(values[COL.UNIT] || "").trim(),
+            REC: normalizeBedrooms(values[COL.REC] || ""),
+            TOTAL_M2: values[COL.TOTAL_M2] || "",
+            TOTAL_SQFT: values[COL.TOTAL_SQFT] || "",
+            PRECIO: precio,
+            DESCUENTO: descuento,
+            PRECIO_FINAL: precioFinalValue
+          };
+        }).filter((row) => row && row.UNIDAD);
 
       return {
         headers: REPORT_COLUMNS.map((c) => c.label),
@@ -3550,7 +3555,7 @@
             TOTAL_M2: getValue(COL.TOTAL_M2),
             TOTAL_SQFT: getValue(COL.TOTAL_SQFT),
             PRECIO: precio,
-            DESCUENTO: "",
+            DESCUENTO: getValue(CEIBA_COL.I),
             PRECIO_FINAL: precioFinalValue
           };
           if (!row.UNIDAD) continue;
