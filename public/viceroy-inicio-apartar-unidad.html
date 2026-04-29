@@ -182,6 +182,44 @@
       border-radius:18px;
       padding:14px;
     }
+    .draft-list{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+    .draft-item{
+      width:100%;
+      text-align:left;
+      border:1px solid #d5cfbe;
+      background:#fff;
+      border-radius:14px;
+      padding:10px 12px;
+      cursor:pointer;
+      display:grid;
+      gap:4px;
+    }
+    .draft-item.active{
+      border-color:#9ea58b;
+      box-shadow:inset 0 0 0 1px #9ea58b;
+      background:#f8f7f2;
+    }
+    .draft-item strong{
+      display:block;
+      font-size:13px;
+      color:#262a33;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .draft-item small{
+      color:var(--muted);
+      font-size:11px;
+    }
+    .draft-empty{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
     .summary-title{
       font-size:12px;
       text-transform:uppercase;
@@ -370,6 +408,11 @@
             <div class="status" id="statusText" style="margin-top:10px;">Carga una unidad de Viceroy para autollenar el PDF.</div>
           </div>
           <div class="summary-card">
+            <div class="summary-title">Borradores</div>
+            <div class="draft-list" id="draftList"></div>
+            <div class="note" style="margin-top:10px;">Se guardan hasta 10 borradores por usuario. Haz clic en uno para cargarlo.</div>
+          </div>
+          <div class="summary-card">
             <div class="summary-title">Resumen</div>
             <div class="summary-list">
               <div><span>Unidad</span><strong id="summaryUnit">-</strong></div>
@@ -389,7 +432,11 @@
 
   <script>
     (function () {
-      const DRAFT_KEY = 'viceroy-hoja-reserva-draft-v1';
+      const DRAFT_LIST_KEY_PREFIX = 'viceroy-hoja-reserva-drafts-v2';
+      const DRAFT_ACTIVE_KEY_PREFIX = 'viceroy-hoja-reserva-active-v2';
+      const DRAFT_WORKING_KEY_PREFIX = 'viceroy-hoja-reserva-working-v2';
+      const DRAFT_LEGACY_KEY = 'viceroy-hoja-reserva-draft-v1';
+      const DRAFT_LIMIT = 10;
       const els = {
         fullName: document.getElementById('fullName'),
         email: document.getElementById('email'),
@@ -433,6 +480,7 @@
         statusText: document.getElementById('statusText'),
         unitChip: document.getElementById('unitChip'),
         unitChipText: document.getElementById('unitChipText'),
+        draftList: document.getElementById('draftList'),
         summaryUnit: document.getElementById('summaryUnit'),
         summaryPrice: document.getElementById('summaryPrice'),
         summaryCurrency: document.getElementById('summaryCurrency'),
@@ -446,6 +494,7 @@
         development: 'VICEROY RESIDENCES / PLAYA DEL CARMEN',
         unitOptions: [],
         selectedUnitPrice: 0,
+        currentUserKey: 'guest',
         payments: [
           { label: 'Reservation Fee / Reserva', percent: '', amount: '', date: '' },
           { label: '', percent: '', amount: '', date: '' },
@@ -455,6 +504,131 @@
         ]
       };
 
+      function normalizeUserKey(value) {
+        return String(value == null ? '' : value)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'guest';
+      }
+
+      function draftListKey() {
+        return `${DRAFT_LIST_KEY_PREFIX}:${state.currentUserKey || 'guest'}`;
+      }
+
+      function draftActiveKey() {
+        return `${DRAFT_ACTIVE_KEY_PREFIX}:${state.currentUserKey || 'guest'}`;
+      }
+
+      function draftWorkingKey() {
+        return `${DRAFT_WORKING_KEY_PREFIX}:${state.currentUserKey || 'guest'}`;
+      }
+
+      function safeParseLocalStorage(key) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function readDraftList() {
+        const stored = safeParseLocalStorage(draftListKey());
+        if (Array.isArray(stored)) return stored;
+        if (stored && typeof stored === 'object' && stored.payload) return [stored];
+        const legacy = safeParseLocalStorage(DRAFT_LEGACY_KEY);
+        if (legacy && typeof legacy === 'object') {
+          return [{
+            id: 'legacy',
+            label: String(legacy.fullName || '').trim() || 'Borrador guardado',
+            fullName: String(legacy.fullName || '').trim(),
+            unitNumber: String(legacy.unitNumber || '').trim(),
+            updatedAt: new Date().toISOString(),
+            payload: legacy
+          }];
+        }
+        return [];
+      }
+
+      function writeDraftList(list) {
+        try {
+          localStorage.setItem(draftListKey(), JSON.stringify((Array.isArray(list) ? list : []).slice(0, DRAFT_LIMIT)));
+        } catch (_) {}
+      }
+
+      function readActiveDraftId() {
+        try {
+          return localStorage.getItem(draftActiveKey()) || '';
+        } catch (_) {
+          return '';
+        }
+      }
+
+      function writeActiveDraftId(id) {
+        try {
+          if (id) localStorage.setItem(draftActiveKey(), String(id));
+          else localStorage.removeItem(draftActiveKey());
+        } catch (_) {}
+      }
+
+      function readWorkingDraft() {
+        return safeParseLocalStorage(draftWorkingKey());
+      }
+
+      function writeWorkingDraft(payload) {
+        try {
+          localStorage.setItem(draftWorkingKey(), JSON.stringify(payload && typeof payload === 'object' ? payload : {}));
+        } catch (_) {}
+      }
+
+      function getDraftLabel(payload) {
+        const name = String(payload && payload.fullName || '').trim();
+        if (name) return name;
+        const unit = String(payload && payload.unitNumber || '').trim();
+        return unit ? `Borrador ${unit}` : 'Borrador guardado';
+      }
+
+      function makeDraftId(payload) {
+        const label = getDraftLabel(payload);
+        const unit = String(payload && payload.unitNumber || '').trim();
+        const base = normalizeUserKey(label);
+        const suffix = unit ? `-${normalizeUserKey(unit)}` : '';
+        return `${base}${suffix}` || `draft-${Date.now()}`;
+      }
+
+      function getDraftListForCurrentUser() {
+        return readDraftList();
+      }
+
+      function renderDraftList() {
+        if (!els.draftList) return;
+        const list = getDraftListForCurrentUser();
+        const activeId = readActiveDraftId();
+        if (!list.length) {
+          els.draftList.innerHTML = '<div class="draft-empty">No hay borradores guardados todavía.</div>';
+          return;
+        }
+        els.draftList.innerHTML = list.map((item) => {
+          const date = item && item.updatedAt ? new Date(item.updatedAt) : null;
+          const stamp = date && !Number.isNaN(date.getTime())
+            ? date.toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
+            : '';
+          const active = String(item.id || '') === String(activeId || '') ? ' active' : '';
+          return `
+            <button class="draft-item${active}" type="button" data-draft-id="${escapeHtml(item.id || '')}">
+              <strong>${escapeHtml(item.label || 'Borrador guardado')}</strong>
+              <small>${escapeHtml(item.unitNumber ? `Unidad ${item.unitNumber}` : 'Sin unidad')}${stamp ? ` · ${escapeHtml(stamp)}` : ''}</small>
+            </button>
+          `;
+        }).join('');
+        els.draftList.querySelectorAll('[data-draft-id]').forEach((btn) => {
+          btn.addEventListener('click', function () {
+            loadDraftById(btn.getAttribute('data-draft-id'));
+          });
+        });
+      }
+
       function money(value) {
         const n = Number(value);
         if (!Number.isFinite(n)) return '';
@@ -462,25 +636,59 @@
       }
 
       function readDraft() {
-        try {
-          const raw = localStorage.getItem(DRAFT_KEY);
-          return raw ? JSON.parse(raw) : null;
-        } catch (_) {
-          return null;
+        const activeId = readActiveDraftId();
+        const list = getDraftListForCurrentUser();
+        if (activeId) {
+          const active = list.find((item) => String(item && item.id || '') === String(activeId || ''));
+          if (active && active.payload) return active.payload;
         }
+        return list.length && list[0] && list[0].payload ? list[0].payload : null;
       }
 
       function refreshDraftButton() {
         if (!els.restoreBtn) return;
+        const list = getDraftListForCurrentUser();
         const draft = readDraft();
-        els.restoreBtn.disabled = !draft;
+        els.restoreBtn.disabled = !list.length;
         els.restoreBtn.textContent = draft
-          ? `Cargar borrador${draft.unitNumber ? ` (${draft.unitNumber})` : ''}`
+          ? `Cargar último${draft.unitNumber ? ` (${draft.unitNumber})` : ''}`
           : 'Sin borrador';
       }
 
-      function writeDraft(payload) {
-        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(payload)); } catch (_) {}
+      function saveDraft(payload) {
+        const draftPayload = payload && typeof payload === 'object' ? payload : {};
+        const list = getDraftListForCurrentUser();
+        const id = makeDraftId(draftPayload);
+        const entry = {
+          id,
+          label: getDraftLabel(draftPayload),
+          fullName: String(draftPayload.fullName || '').trim(),
+          unitNumber: String(draftPayload.unitNumber || '').trim(),
+          updatedAt: new Date().toISOString(),
+          payload: draftPayload
+        };
+        const nextList = [entry].concat(list.filter((item) => String(item && item.id || '') !== id));
+        writeDraftList(nextList.slice(0, DRAFT_LIMIT));
+        writeActiveDraftId(id);
+        renderDraftList();
+      }
+
+      function loadDraftById(id) {
+        const list = getDraftListForCurrentUser();
+        const draft = list.find((item) => String(item && item.id || '') === String(id || '')) || null;
+        if (!draft) return false;
+        applyDraft(draft.payload || {});
+        if (draft.payload && draft.payload.unitNumber) {
+          els.unitNumber.value = draft.payload.unitNumber;
+          const selected = state.unitOptions.find((row) => String(row.unit || '') === String(draft.payload.unitNumber || '')) || null;
+          els.priceListed.value = selected ? selected.priceLabel : (draft.payload.priceListed || '');
+          els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
+          syncSummary();
+        }
+        writeActiveDraftId(draft.id);
+        renderDraftList();
+        els.statusText.textContent = `Borrador cargado: ${draft.label || 'sin nombre'}.`;
+        return true;
       }
 
       function collectState() {
@@ -729,7 +937,9 @@
         ];
         renderPayments();
         syncSummary();
-        try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
+        writeActiveDraftId('');
+        try { localStorage.removeItem(draftWorkingKey()); } catch (_) {}
+        renderDraftList();
         refreshDraftButton();
         els.statusText.textContent = 'Formulario limpio.';
       }
@@ -764,7 +974,8 @@
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
-          writeDraft(payload);
+          saveDraft(payload);
+          writeWorkingDraft(payload);
           els.statusText.textContent = 'PDF generado correctamente.';
         } catch (err) {
           els.statusText.textContent = err && err.message ? err.message : 'No se pudo generar el PDF.';
@@ -772,6 +983,44 @@
           els.downloadBtn.disabled = false;
           els.downloadBtn.textContent = old;
         }
+      }
+
+      async function loadCurrentUserKey() {
+        const previousKey = state.currentUserKey || 'guest';
+        try {
+          const res = await fetch('/api/viceroy/session', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          if (!res.ok) throw new Error('No se pudo leer la sesión actual.');
+          const data = await res.json().catch(() => ({}));
+          state.currentUserKey = normalizeUserKey(data && data.email ? data.email : 'guest');
+        } catch (_) {
+          state.currentUserKey = 'guest';
+        }
+        if (previousKey !== state.currentUserKey) {
+          const guestListKey = `${DRAFT_LIST_KEY_PREFIX}:guest`;
+          const guestActiveKey = `${DRAFT_ACTIVE_KEY_PREFIX}:guest`;
+          const guestList = safeParseLocalStorage(guestListKey);
+          if (state.currentUserKey !== 'guest' && Array.isArray(guestList) && guestList.length) {
+            const currentList = readDraftList();
+            if (!currentList.length) {
+              writeDraftList(guestList);
+              const guestActive = safeParseLocalStorage(guestActiveKey);
+              if (guestActive) writeActiveDraftId(String(guestActive));
+            }
+            try { localStorage.removeItem(guestListKey); } catch (_) {}
+            try { localStorage.removeItem(guestActiveKey); } catch (_) {}
+          }
+          const guestWorkingKey = `${DRAFT_WORKING_KEY_PREFIX}:guest`;
+          const guestWorking = safeParseLocalStorage(guestWorkingKey);
+          if (state.currentUserKey !== 'guest' && guestWorking && typeof guestWorking === 'object' && !readWorkingDraft()) {
+            writeWorkingDraft(guestWorking);
+            try { localStorage.removeItem(guestWorkingKey); } catch (_) {}
+          }
+        }
+        renderDraftList();
+        refreshDraftButton();
       }
 
       function bindSimpleAutosave() {
@@ -786,7 +1035,7 @@
               els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
               syncSummary();
             }
-            writeDraft(collectState());
+            writeWorkingDraft(collectState());
           });
           input.addEventListener('change', function () {
             if (input === els.unitNumber) {
@@ -795,13 +1044,14 @@
               els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
               syncSummary();
             }
-            writeDraft(collectState());
+            writeWorkingDraft(collectState());
           });
         });
       }
 
       els.saveBtn.addEventListener('click', function () {
-        writeDraft(collectState());
+        saveDraft(collectState());
+        writeWorkingDraft(collectState());
         refreshDraftButton();
         els.statusText.textContent = 'Borrador guardado.';
       });
@@ -812,15 +1062,16 @@
           refreshDraftButton();
           return;
         }
-        applyDraft(draft);
-        if (draft.unitNumber) {
-          els.unitNumber.value = draft.unitNumber;
-          const selected = state.unitOptions.find((row) => String(row.unit || '') === String(draft.unitNumber || '')) || null;
-          els.priceListed.value = selected ? selected.priceLabel : (draft.priceListed || '');
-          els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
-          syncSummary();
+        const activeId = readActiveDraftId();
+        const list = getDraftListForCurrentUser();
+        const current = activeId
+          ? list.find((item) => String(item && item.id || '') === String(activeId || ''))
+          : list[0];
+        if (!current) {
+          els.statusText.textContent = 'No hay borrador activo.';
+          return;
         }
-        els.statusText.textContent = 'Borrador cargado.';
+        loadDraftById(current.id);
       });
       els.resetBtn.addEventListener('click', resetForm);
       els.downloadBtn.addEventListener('click', downloadPdf);
@@ -829,17 +1080,20 @@
         els.priceListed.value = selected ? selected.priceLabel : '';
         els.priceListed.dataset.raw = selected ? String(selected.price || '') : '';
         syncSummary();
-        writeDraft(collectState());
+        writeWorkingDraft(collectState());
       });
 
       renderPayments();
       bindSimpleAutosave();
 
-      const draft = readDraft();
-      if (draft) applyDraft(draft);
-      refreshDraftButton();
       els.development.value = state.development;
+      loadCurrentUserKey().then(() => {
+        const draft = readWorkingDraft() || readDraft();
+        if (draft) applyDraft(draft);
+        refreshDraftButton();
+      });
       loadOptions().then(() => {
+        const draft = readWorkingDraft() || readDraft();
         if (draft && draft.unitNumber) {
           els.unitNumber.value = draft.unitNumber;
           const selected = state.unitOptions.find((row) => String(row.unit || '') === String(draft.unitNumber || '')) || null;
