@@ -49,6 +49,7 @@ const VICEROY_PILOTO_MIN_PRICE_PER_M2 = Number(process.env.VICEROY_PILOTO_MIN_PR
 const VICEROY_PILOTO_PRICE_MULTIPLIER = Number(process.env.VICEROY_PILOTO_PRICE_MULTIPLIER || 18.5);
 const VICEROY_RESERVATION_DEVELOPMENT = 'VICEROY RESIDENCES / PLAYA DEL CARMEN';
 const BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL = 'https://www.banxico.org.mx/tipcamb/tipCamMIAction.do?idioma=sp';
+const VICEROY_RESERVATION_UNIT_FALLBACK_RECT = { x: 329.64, y: 570.48, width: 268.32, height: 17.4 };
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || '').trim().toLowerCase() === 'true' || SMTP_PORT === 465;
@@ -6597,7 +6598,15 @@ async function buildViceroyReservationPdfBuffer(payload) {
   drawField('E-mail', email, { fontSize: 9.2 });
   drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
   drawField('Development / Desarrollo', development, { fontSize: 9.2 });
-  drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
+  const unitWidgets = widgetsByField.get('Unit /  No. Unidad') || [];
+  if (unitWidgets.length) {
+    drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
+  } else if (unitNumber) {
+    const unitPage = pages[0] || pages[pages.length - 1];
+    if (unitPage) {
+      drawTextInRect(unitPage, font, VICEROY_RESERVATION_UNIT_FALLBACK_RECT, unitNumber, { fontSize: 9.2, verticalAlign: 'top' });
+    }
+  }
   drawField('Price Listed / Precio de Lista', stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
   drawField('Card Number / Número de tarjeta', cardNumber, { fontSize: 8.9 });
   drawField('Name in the Card / Nombre en la tarjeta', cardName, { fontSize: 8.9 });
