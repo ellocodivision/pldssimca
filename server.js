@@ -6533,7 +6533,10 @@ function drawTextInRect(page, font, rect, text, options = {}) {
   const minSize = Number.isFinite(options.minFontSize) ? options.minFontSize : 6.2;
   const fontSize = fitTextToWidth(font, value, maxWidth, maxSize, minSize);
   const textHeight = font.heightAtSize(fontSize);
-  const x = rect.x + marginX;
+  const textWidth = font.widthOfTextAtSize(value, fontSize);
+  const x = options.align === 'center'
+    ? rect.x + Math.max(marginX, (rect.width - textWidth) / 2)
+    : rect.x + marginX;
   const y = options.verticalAlign === 'top'
     ? rect.y + Math.max(1, rect.height - marginY - textHeight)
     : rect.y + Math.max(1, (rect.height - textHeight) / 2 - 1);
@@ -6570,6 +6573,10 @@ function fillRect(page, rect, color = rgb(1, 1, 1)) {
     borderColor: color,
     borderWidth: 0
   });
+}
+
+function reservationBackdropColor() {
+  return rgb(0.98, 0.97, 0.95);
 }
 
 function clearPdfAnnotations(pdfDoc) {
@@ -6749,6 +6756,8 @@ async function buildViceroyReservationPdfBuffer(payload) {
     const layout1 = VICEROY_RESERVATION_STATIC_LAYOUT.page1;
     const layout2 = VICEROY_RESERVATION_STATIC_LAYOUT.page2;
     const page1TextOpts = { verticalAlign: 'top', marginY: 1.2 };
+    const backgroundColor = reservationBackdropColor();
+    const hideDollar = (rect) => fillRect(page1, { x: rect.x + 1, y: rect.y + 1, width: 10, height: Math.max(1, rect.height - 2) }, backgroundColor);
 
     drawManualReservationField(page1, font, layout1.fullName, fullName, { fontSize: 9.4, ...page1TextOpts });
     drawManualReservationField(page1, font, layout1.email, email, { fontSize: 9.2, ...page1TextOpts });
@@ -6759,15 +6768,17 @@ async function buildViceroyReservationPdfBuffer(payload) {
     drawManualReservationField(page1, font, layout1.observations, observations, { fontSize: 8.0, ...page1TextOpts });
 
     normalizedPayments.slice(1).forEach((row, idx) => {
-      drawManualReservationField(page1, font, layout1.paymentLabelRows[idx], row.label, { fontSize: 7.8, ...page1TextOpts });
+      drawManualReservationField(page1, font, layout1.paymentLabelRows[idx], row.label, { fontSize: 7.8, align: 'center', ...page1TextOpts });
     });
     normalizedPayments.forEach((row, idx) => {
-      drawManualReservationField(page1, font, layout1.paymentPercentRows[idx], row.percent, { fontSize: 8.1, ...page1TextOpts });
-      drawManualReservationField(page1, font, layout1.paymentAmountRows[idx], row.amount, { fontSize: 7.8, ...page1TextOpts });
-      drawManualReservationField(page1, font, layout1.paymentDateRows[idx], row.date, { fontSize: 7.8, ...page1TextOpts });
+      drawManualReservationField(page1, font, layout1.paymentPercentRows[idx], row.percent, { fontSize: 8.1, align: 'center', ...page1TextOpts });
+      hideDollar(layout1.paymentAmountRows[idx]);
+      drawManualReservationField(page1, font, layout1.paymentAmountRows[idx], row.amount, { fontSize: 7.8, marginX: 12, ...page1TextOpts });
+      drawManualReservationField(page1, font, layout1.paymentDateRows[idx], row.date, { fontSize: 7.8, align: 'center', ...page1TextOpts });
     });
 
-    drawManualReservationField(page1, font, layout1.amountCurrency, amountCurrency, { fontSize: 8.8, ...page1TextOpts });
+    hideDollar(layout1.amountCurrency);
+    drawManualReservationField(page1, font, layout1.amountCurrency, amountCurrency, { fontSize: 8.8, marginX: 12, ...page1TextOpts });
     drawManualReservationField(page1, font, layout1.cardNumber, cardNumber, { fontSize: 8.9, ...page1TextOpts });
     drawManualReservationField(page1, font, layout1.cardName, cardName, { fontSize: 8.9, ...page1TextOpts });
     drawManualReservationField(page1, font, layout1.cardType, cardType, { fontSize: 8.8, ...page1TextOpts });
@@ -6775,7 +6786,7 @@ async function buildViceroyReservationPdfBuffer(payload) {
     drawManualReservationField(page1, font, layout1.cardCityStateZip, cardCityStateZip, { fontSize: 8.2, ...page1TextOpts });
     drawManualReservationField(page1, font, layout1.expirationDate, expirationDate, { fontSize: 8.8, ...page1TextOpts });
     drawManualReservationField(page1, font, layout1.securityCode, securityCode, { fontSize: 8.8, ...page1TextOpts });
-    drawManualReservationField(page1, font, layout1.signature, signature, { fontSize: 8.8, ...page1TextOpts });
+    drawManualReservationField(page1, font, layout1.signature, signature, { fontSize: 8.8, marginY: 4.0, ...page1TextOpts });
 
     drawManualReservationField(page2, font, layout2.holderName, getReservationFieldValue(payload, 'holderName'), { fontSize: 8.3 });
     drawManualReservationField(page2, font, layout2.holderBirth, getReservationFieldValue(payload, 'holderBirth'), { fontSize: 8.0 });
