@@ -690,6 +690,19 @@
                   const wrapper = document.createElement("div");
                   wrapper.className = "slot-actions";
                   if (state.canBlock) {
+                    const actionsRow = document.createElement("div");
+                    actionsRow.className = "slot-inline-row";
+                    const reserveBtn = document.createElement("button");
+                    reserveBtn.className = "btn";
+                    reserveBtn.type = "button";
+                    reserveBtn.textContent = "Reservar";
+                    reserveBtn.addEventListener("click", () => {
+                      state.inlineDraftKey = inlineKey;
+                      state.inlineDraftBroker = "";
+                      state.inlineDraftClient = "";
+                      state.inlineDraftPax = "";
+                      renderSchedule();
+                    });
                     const blockBtn = document.createElement("button");
                     blockBtn.className = "btn primary";
                     blockBtn.type = "button";
@@ -702,7 +715,9 @@
                         kind: "blocked"
                       }, { closeInline: true });
                     });
-                    wrapper.appendChild(blockBtn);
+                    actionsRow.appendChild(reserveBtn);
+                    actionsRow.appendChild(blockBtn);
+                    wrapper.appendChild(actionsRow);
                   } else if (state.inlineDraftKey === inlineKey) {
                     const label = document.createElement("div");
                     label.className = "slot-inline-label";
