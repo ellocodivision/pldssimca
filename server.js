@@ -6452,19 +6452,21 @@ function fitTextToWidth(font, text, maxWidth, maxSize, minSize = 6.5) {
 function drawTextInRect(page, font, rect, text, options = {}) {
   const value = String(text == null ? '' : text).trim();
   if (!value) return;
-  const marginX = Number.isFinite(options.marginX) ? options.marginX : 1.6;
+  const marginX = Number.isFinite(options.marginX) ? options.marginX : 1.0;
   const marginY = Number.isFinite(options.marginY) ? options.marginY : 2.0;
+  const shiftX = Number.isFinite(options.shiftX) ? options.shiftX : VICEROY_RESERVATION_TEXT_SHIFT_X;
   const maxWidth = Math.max(1, rect.width - (marginX * 2));
   const maxSize = Number.isFinite(options.fontSize) ? options.fontSize : 8.8;
   const minSize = Number.isFinite(options.minFontSize) ? options.minFontSize : 6.2;
   const fontSize = fitTextToWidth(font, value, maxWidth, maxSize, minSize);
   const textHeight = font.heightAtSize(fontSize);
   const x = rect.x + marginX;
+  const xShifted = x + shiftX;
   const y = options.verticalAlign === 'top'
     ? rect.y + Math.max(1, rect.height - marginY - textHeight)
     : rect.y + Math.max(1, (rect.height - textHeight) / 2 - 1);
   page.drawText(value, {
-    x,
+    x: xShifted,
     y,
     size: fontSize,
     font,
@@ -6485,7 +6487,7 @@ function fillRect(page, rect, color = rgb(1, 1, 1)) {
   });
 }
 
-const VICEROY_RESERVATION_SHEET_BG = rgb(0.957, 0.945, 0.91);
+const VICEROY_RESERVATION_TEXT_SHIFT_X = -6.5;
 
 function clearPdfAnnotations(pdfDoc) {
   (pdfDoc.getPages() || []).forEach((page) => {
@@ -6648,10 +6650,6 @@ async function buildViceroyReservationPdfBuffer(payload) {
     getReservationFieldValue(payload, 'coOwnerNotes')
   ], { fontSize: 7.6 });
 
-  (widgetsByField.get('Observations / Observaciones') || []).forEach((widget) => {
-    const page = pages[widget.pageIndex] || pages[0];
-    fillRect(page, widget.rect, VICEROY_RESERVATION_SHEET_BG);
-  });
   drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
 
   return Buffer.from(await pdfDoc.save({ updateFieldAppearances: false }));
