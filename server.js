@@ -5475,14 +5475,18 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
     const bedRaw = values[17];
     const denRaw = values[18];
     const pricePerM2Raw = values[31];
+    const directPriceRaw = values[21];
     const total = parseCurrencyLike(totalRaw);
     const pricePerM2 = parseCurrencyLike(pricePerM2Raw);
+    const directPrice = parseCurrencyLike(directPriceRaw);
     const effectivePricePerM2 = Number.isFinite(pricePerM2)
       ? Math.max(pricePerM2, Number.isFinite(VICEROY_PILOTO_MIN_PRICE_PER_M2) ? VICEROY_PILOTO_MIN_PRICE_PER_M2 : 7100)
       : NaN;
-    const price = (Number.isFinite(total) && Number.isFinite(effectivePricePerM2))
-      ? (total * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
-      : '';
+    const price = Number.isFinite(directPrice)
+      ? directPrice
+      : ((Number.isFinite(total) && Number.isFinite(effectivePricePerM2))
+        ? (total * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
+        : '');
     const den = hasViceroyDen(denRaw) ? '1' : '';
     const forcePh = normalizeHeaderKey(level) === 'n6' || normalizeHeaderKey(level).includes('penthouse') || normalizeHeaderKey(groupRaw).includes('ph');
     const bedroomHint = [groupRaw, rawType, level].filter(Boolean).join(' ');
@@ -5742,15 +5746,19 @@ function parseViceroyRowsByListaPreciosV0(sheet) {
     const vista = String(rowDataByIndex(row, 12) || '').trim(); // M
     const m2Raw = rowDataByIndex(row, 13); // N
     const pricePerM2Raw = rowDataByIndex(row, 15); // P
+    const directPriceRaw = rowDataByIndex(row, 21); // V
     const m2Value = parseCurrencyLike(m2Raw);
     const pricePerM2 = parseCurrencyLike(pricePerM2Raw);
+    const directPrice = parseCurrencyLike(directPriceRaw);
     // Política comercial de Viceroy Piloto Presentación: piso mínimo de $/m2.
     const effectivePricePerM2 = Number.isFinite(pricePerM2)
       ? Math.max(pricePerM2, Number.isFinite(VICEROY_PILOTO_MIN_PRICE_PER_M2) ? VICEROY_PILOTO_MIN_PRICE_PER_M2 : 7100)
       : NaN;
-    const price = (Number.isFinite(m2Value) && Number.isFinite(effectivePricePerM2))
-      ? (m2Value * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
-      : '';
+    const price = Number.isFinite(directPrice)
+      ? directPrice
+      : ((Number.isFinite(m2Value) && Number.isFinite(effectivePricePerM2))
+        ? (m2Value * effectivePricePerM2 * VICEROY_PILOTO_PRICE_MULTIPLIER)
+        : '');
     const baseRecamaras = normalizeViceroyRawBedroom(recRaw, { phHint: tipologia });
     const den = hasViceroyDen(denRaw) ? '1' : '';
     const recamaras = den && baseRecamaras ? `${baseRecamaras}+DEN` : baseRecamaras;
@@ -6377,7 +6385,7 @@ function parseViceroyRelatedInventoryRows(filePath) {
     const m2Value = parseCurrencyLike(m2Raw);
     const recRaw = getValue(17);
     const denRaw = getValue(18);
-    const priceRaw = getValue(32);
+    const priceRaw = getValue(21) || getValue(32);
     const priceValue = parseCurrencyLike(priceRaw);
     const statusSource = statusByUnit.get(unitKey) || {};
     const estado = String(statusSource.status || statusSource.ESTADO || 'disponible').trim().toLowerCase() || 'disponible';
@@ -6389,7 +6397,7 @@ function parseViceroyRelatedInventoryRows(filePath) {
       BED: formatRelatedViceroyBedValue(recRaw, denRaw),
       TOTAL_M2: m2Raw === '' ? '' : m2Raw,
       TOTAL_SQFT: Number.isFinite(m2Value) ? String(Math.round(m2Value * 10.7639)) : '',
-      PRECIO: Number.isFinite(priceValue) ? (priceValue * VICEROY_PILOTO_PRICE_MULTIPLIER) : '',
+      PRECIO: Number.isFinite(priceValue) ? priceValue : '',
       ESTADO: estado,
       sourceRowIndex: r + 1
     });
