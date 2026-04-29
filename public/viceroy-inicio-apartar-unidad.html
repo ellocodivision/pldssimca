@@ -632,7 +632,7 @@
       function money(value) {
         const n = Number(value);
         if (!Number.isFinite(n)) return '';
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+        return `MXN ${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)}`;
       }
 
       function readDraft() {

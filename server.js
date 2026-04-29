@@ -48,6 +48,8 @@ const VICEROY_RESERVAS_CORPORATE_EMAIL = String(process.env.VICEROY_RESERVAS_COR
 const VICEROY_PILOTO_MIN_PRICE_PER_M2 = Number(process.env.VICEROY_PILOTO_MIN_PRICE_PER_M2 || 7100);
 const VICEROY_PILOTO_PRICE_MULTIPLIER = Number(process.env.VICEROY_PILOTO_PRICE_MULTIPLIER || 18.5);
 const VICEROY_RESERVATION_DEVELOPMENT = 'VICEROY RESIDENCES / PLAYA DEL CARMEN';
+const VICEROY_RESERVATION_TEXT_SHIFT_X = -14;
+const VICEROY_RESERVATION_SHEET_BG = rgb(0.968, 0.958, 0.928);
 const BANXICO_TIPO_CAMBIO_PARA_PAGOS_URL = 'https://www.banxico.org.mx/tipcamb/tipCamMIAction.do?idioma=sp';
 const SMTP_HOST = String(process.env.SMTP_HOST || '').trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -6400,11 +6402,9 @@ function parseViceroyRelatedInventoryRows(filePath) {
 function formatViceroyReservationCurrency(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'MXN',
+  return `MXN ${new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 0
-  }).format(n);
+  }).format(n)}`;
 }
 
 function getViceroyReservationInventoryRows() {
@@ -6487,7 +6487,14 @@ function fillRect(page, rect, color = rgb(1, 1, 1)) {
   });
 }
 
-const VICEROY_RESERVATION_TEXT_SHIFT_X = -6.5;
+function coverPdfFieldLeft(page, rect, width = 16) {
+  fillRect(page, {
+    x: rect.x,
+    y: rect.y,
+    width: Math.max(0, Math.min(width, rect.width)),
+    height: rect.height
+  }, VICEROY_RESERVATION_SHEET_BG);
+}
 
 function clearPdfAnnotations(pdfDoc) {
   (pdfDoc.getPages() || []).forEach((page) => {
@@ -6577,6 +6584,17 @@ async function buildViceroyReservationPdfBuffer(payload) {
   const signature = getReservationFieldValue(payload, 'signature') || fullName;
   const amountCurrency = getReservationFieldValue(payload, 'amountCurrency', 'MXN');
 
+  [
+    'Price Listed / Precio de Lista',
+    'Amount / Monto',
+    'Amount & Currency / Monto y Moneda'
+  ].forEach((fieldName) => {
+    (widgetsByField.get(fieldName) || []).forEach((widget) => {
+      const page = pages[widget.pageIndex] || pages[0];
+      coverPdfFieldLeft(page, widget.rect, 18);
+    });
+  });
+
   drawField('Full Name / Nombre Completo:', fullName, { fontSize: 9.4 });
   drawField('E-mail', email, { fontSize: 9.2 });
   drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
@@ -6650,6 +6668,10 @@ async function buildViceroyReservationPdfBuffer(payload) {
     getReservationFieldValue(payload, 'coOwnerNotes')
   ], { fontSize: 7.6 });
 
+  (widgetsByField.get('Observations / Observaciones') || []).forEach((widget) => {
+    const page = pages[widget.pageIndex] || pages[0];
+    fillRect(page, widget.rect, VICEROY_RESERVATION_SHEET_BG);
+  });
   drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
 
   return Buffer.from(await pdfDoc.save({ updateFieldAppearances: false }));
