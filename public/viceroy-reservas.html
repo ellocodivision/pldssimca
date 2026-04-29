@@ -54,6 +54,7 @@
     .slot.available{background:#e9f6df}
     .slot.continues{background:#fff6bf}
     .slot.reserved{background:#fff16e}
+    .slot.blocked{background:#e9e5df}
     .reservation{height:100%;min-height:88px;border:0;border-radius:0;padding:8px 10px;background:transparent;display:flex;flex-direction:column}
     .reservation-room{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
     .reservation-title{font-size:13px;font-weight:700;margin-top:3px}
@@ -199,6 +200,7 @@
         currentEmail: "",
         currentName: "",
         isGerente: false,
+        canBlock: false,
         weekStart: null,
         inlineDraftKey: "",
         inlineDraftBroker: "",
@@ -318,12 +320,14 @@
       }
 
       function buildReservationMessage(payload) {
+        const kind = String((payload && (payload.kind || payload.status)) || "").trim().toLowerCase();
+        const isBlocked = kind === "blocked";
         return [
           `Dia: ${payload.date || "-"}`,
           `Hora: ${payload.hour ? `${payload.hour} - ${addMinutesToHour(payload.hour, 60)}` : "-"}`,
-          `Broker: ${payload.broker || "-"}`,
-          `Cliente: ${payload.client || "-"}`,
-          `Pax: ${payload.pax || "-"}`,
+          isBlocked ? "Estado: Bloqueado" : `Broker: ${payload.broker || "-"}`,
+          isBlocked ? "Bloqueo directo sin datos" : `Cliente: ${payload.client || "-"}`,
+          isBlocked ? "-" : `Pax: ${payload.pax || "-"}`,
           `Sala: ${ROOM_LABELS[payload.room] || payload.room || "-"}`
         ].join("\n");
       }
@@ -416,7 +420,7 @@
 
       function buildCorporateDailyText(dateStr, rows) {
         const safeDate = String(dateStr || "").trim() || "-";
-        const ordered = sortReservations(rows);
+        const ordered = sortReservations(rows).filter((row) => String(row.kind || row.status || "").trim().toLowerCase() !== "blocked");
         if (!ordered.length) {
           return [
             `Registro de reservas Viceroy del ${safeDate}`,
@@ -486,6 +490,8 @@
       async function submitReservation(payload, options) {
         const clearForm = Boolean(options && options.clearForm);
         const closeInline = Boolean(options && options.closeInline);
+        const kind = String((payload && (payload.kind || payload.status)) || "").trim().toLowerCase();
+        const isBlocked = kind === "blocked";
         const res = await fetch("/api/viceroy/reservas", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -502,8 +508,8 @@
           setStatus(data && data.error ? data.error : `No se pudo guardar (${res.status})`, "error");
           return false;
         }
-        setStatus("Reserva guardada.", "ok");
-        setNotificationMessage(buildReservationMessage(data && data.row ? data.row : payload));
+        setStatus(isBlocked ? "Horario bloqueado." : "Reserva guardada.", "ok");
+        setNotificationMessage(isBlocked ? "" : buildReservationMessage(data && data.row ? data.row : payload));
         if (clearForm) {
           bookingBroker.value = "";
           bookingClient.value = "";
@@ -625,32 +631,35 @@
               const todayColClass = isTodayCol ? " today-col" : "";
               const reservation = state.rows.find((row) => row.date === dateStr && row.room === roomId && row.hour === hour);
               if (reservation) {
+                const isBlocked = String(reservation.kind || reservation.status || '').trim().toLowerCase() === "blocked" || reservation.blocked === true;
                 const rowSpan = index < HOURS.length - 1 ? 2 : 1;
                 const td = document.createElement("td");
-                td.className = `slot reserved${todayColClass}${dayEndClass}`;
+                td.className = `slot ${isBlocked ? "blocked" : "reserved"}${todayColClass}${dayEndClass}`;
                 td.rowSpan = rowSpan;
                 const card = document.createElement("div");
                 card.className = "reservation";
                 const title = document.createElement("div");
                 title.className = "reservation-title";
-                title.textContent = reservation.broker || reservation.title;
+                title.textContent = isBlocked ? "Bloqueado" : (reservation.broker || reservation.title);
                 const client = document.createElement("div");
                 client.className = "reservation-meta";
-                client.textContent = `Cliente: ${reservation.client || "-"}`;
+                client.textContent = isBlocked ? "Bloqueo directo" : `Cliente: ${reservation.client || "-"}`;
                 const pax = document.createElement("div");
                 pax.className = "reservation-meta";
-                pax.textContent = `Pax: ${reservation.pax || "-"}`;
+                pax.textContent = isBlocked ? "Sin datos" : `Pax: ${reservation.pax || "-"}`;
                 const author = document.createElement("div");
                 author.className = "reservation-author";
                 author.textContent = reservation.createdByName
-                  ? `Asesor: ${reservation.createdByName}`
-                  : `Asesor: ${reservation.createdByEmail || "-"}`;
+                  ? (isBlocked ? `Bloqueado por: ${reservation.createdByName}` : `Asesor: ${reservation.createdByName}`)
+                  : (isBlocked ? `Bloqueado por: ${reservation.createdByEmail || "-"}` : `Asesor: ${reservation.createdByEmail || "-"}`);
                 const meta = document.createElement("div");
                 meta.className = "reservation-meta";
                 meta.textContent = `${reservation.hour} - ${addMinutesToHour(reservation.hour, 60)}`;
                 card.appendChild(title);
-                card.appendChild(client);
-                card.appendChild(pax);
+                if (!isBlocked) {
+                  card.appendChild(client);
+                  card.appendChild(pax);
+                }
                 card.appendChild(author);
                 card.appendChild(meta);
                 if (canDelete(reservation)) {
@@ -680,7 +689,21 @@
                   const inlineKey = makeInlineKey(dateStr, roomId, hour);
                   const wrapper = document.createElement("div");
                   wrapper.className = "slot-actions";
-                  if (state.inlineDraftKey === inlineKey) {
+                  if (state.canBlock) {
+                    const blockBtn = document.createElement("button");
+                    blockBtn.className = "btn primary";
+                    blockBtn.type = "button";
+                    blockBtn.textContent = "Bloquear";
+                    blockBtn.addEventListener("click", async () => {
+                      await submitReservation({
+                        date: dateStr,
+                        room: roomId,
+                        hour,
+                        kind: "blocked"
+                      }, { closeInline: true });
+                    });
+                    wrapper.appendChild(blockBtn);
+                  } else if (state.inlineDraftKey === inlineKey) {
                     const label = document.createElement("div");
                     label.className = "slot-inline-label";
                     label.textContent = `${ROOM_LABELS[roomId]} · ${hour} - ${addMinutesToHour(hour, 60)}`;
@@ -800,6 +823,7 @@
         state.currentEmail = data.currentEmail || "";
         state.currentName = data.currentName || "";
         state.isGerente = Boolean(data.isGerente);
+        state.canBlock = Boolean(data.canBlock != null ? data.canBlock : data.isGerente);
         sendCorporateBtn.style.display = state.isGerente ? "inline-block" : "none";
         updateMeta(data.updatedAt);
         renderSchedule();

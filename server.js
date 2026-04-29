@@ -579,6 +579,12 @@ function canManageViceroyReservations(email) {
   );
 }
 
+function normalizeReservationKind(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'blocked' || normalized === 'block' || normalized === 'bloqueado') return 'blocked';
+  return 'reservation';
+}
+
 function requireViceroyPresentAccess(req, res, next) {
   if (LOCAL_NO_AUTH) return next();
   if (req.isAuthenticated && req.isAuthenticated()) {
@@ -4474,6 +4480,11 @@ function normalizeReservationPax(value) {
 }
 
 function normalizeRoomReservationRow(row) {
+  const rawKind = normalizeReservationKind(row && (row.kind || row.status || row.type));
+  const rawBlocked = String(row && row.blocked == null ? '' : row.blocked).trim().toLowerCase();
+  const explicitBlocked = ['1', 'true', 'yes', 'si', 'sí', 'blocked', 'bloqueado'].includes(rawBlocked);
+  const inferredBlocked = normalizeReservationKind(row && (row.title || row.broker)) === 'blocked';
+  const isBlocked = rawKind === 'blocked' || explicitBlocked || inferredBlocked;
   const broker = normalizeReservationTitle(row && (row.broker || row.title));
   const client = normalizeReservationTitle(row && row.client);
   const pax = normalizeReservationPax(row && row.pax);
@@ -4482,10 +4493,12 @@ function normalizeRoomReservationRow(row) {
     date: normalizeReservationDate(row && row.date),
     room: normalizeReservationRoom(row && row.room),
     hour: normalizeReservationHour(row && row.hour),
-    title: broker,
-    broker,
-    client,
-    pax,
+    kind: isBlocked ? 'blocked' : 'reservation',
+    title: isBlocked ? 'Bloqueado' : broker,
+    broker: isBlocked ? 'Bloqueado' : broker,
+    client: isBlocked ? '' : client,
+    pax: isBlocked ? '' : pax,
+    blocked: isBlocked,
     createdByEmail: String(row && row.createdByEmail || '').trim().toLowerCase(),
     createdByName: String(row && row.createdByName || '').trim(),
     updatedAt: String(row && row.updatedAt || '').trim() || new Date().toISOString()
@@ -4611,7 +4624,8 @@ function getViceroyDailyMailerTransport() {
 }
 
 function buildViceroyDailyReservationsEmail(todayKey, rows) {
-  const sorted = sortRoomReservationRows(Array.isArray(rows) ? rows : []);
+  const sorted = sortRoomReservationRows(Array.isArray(rows) ? rows : [])
+    .filter((row) => String(row && row.kind || '').trim().toLowerCase() !== 'blocked');
   const count = sorted.length;
   const titleDate = new Date(`${todayKey}T00:00:00`);
   const dateLabel = Number.isNaN(titleDate.getTime())
@@ -6531,6 +6545,10 @@ function drawTextInRect(page, font, rect, text, options = {}) {
     color: options.color || rgb(0.16, 0.16, 0.16),
     maxWidth
   });
+}
+
+function drawManualReservationField(page, font, rect, text, options = {}) {
+  drawTextInRect(page, font, rect, text, options);
 }
 
 function rectFromTop(pageHeight, x, top, width, height = 16) {
@@ -9976,6 +9994,7 @@ app.get('/api/viceroy/reservas', (req, res) => {
     currentEmail,
     currentName,
     isGerente,
+    canBlock: isGerente,
     updatedAt: data.updatedAt,
     rows
   });
@@ -9988,12 +10007,20 @@ app.post('/api/viceroy/reservas', (req, res) => {
   const date = normalizeReservationDate(body.date);
   const room = normalizeReservationRoom(body.room);
   const hour = normalizeReservationHour(body.hour);
-  const broker = normalizeReservationTitle(body.broker || body.title);
+  const kind = normalizeReservationKind(body.kind || body.status || body.type);
+  const blockedFlag = String(body.blocked == null ? '' : body.blocked).trim().toLowerCase();
+  const isBlocked = kind === 'blocked' || ['true', '1'].includes(blockedFlag);
+  const broker = isBlocked
+    ? 'Bloqueado'
+    : normalizeReservationTitle(body.broker || body.title);
   const client = normalizeReservationTitle(body.client);
   const pax = normalizeReservationPax(body.pax);
 
-  if (!date || !room || !hour || !broker) {
+  if (!date || !room || !hour || (!isBlocked && !broker)) {
     return res.status(400).json({ error: 'Faltan datos obligatorios de la reserva.' });
+  }
+  if (isBlocked && !canManageViceroyReservations(currentEmail)) {
+    return res.status(403).json({ error: 'No autorizado para bloquear horarios.' });
   }
 
   const data = readViceroyRoomReservations();
@@ -10015,8 +10042,9 @@ app.post('/api/viceroy/reservas', (req, res) => {
     room,
     hour,
     broker,
-    client,
-    pax,
+    client: isBlocked ? '' : client,
+    pax: isBlocked ? '' : pax,
+    kind: isBlocked ? 'blocked' : 'reservation',
     createdByEmail: currentEmail,
     createdByName: currentName,
     updatedAt: new Date().toISOString()
