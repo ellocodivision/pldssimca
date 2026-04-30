@@ -546,6 +546,26 @@
       flex: 0 0 auto;
       min-width: 72px;
     }
+    .whisper-badges {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .whisper-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      padding: 2px 5px;
+      border-radius: 999px;
+      background: #ecece4;
+      color: #2d323a;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 700;
+    }
     .assign-similar {
       margin-top: 10px;
       padding-top: 10px;
@@ -738,9 +758,9 @@
                 <select id="filterVistaSelect">
                   <option value="">Todas</option>
                 </select>
-                <label for="filterAsignacionSelect">Asignación</label>
-                <select id="filterAsignacionSelect">
-                  <option value="">Todas</option>
+                <label for="clientFilterSelect">Cliente Whisperlist</label>
+                <select id="clientFilterSelect">
+                  <option value="">Todos los clientes</option>
                 </select>
                 <button id="clearFloorFiltersBtn" class="btn" type="button">Borrar filtros</button>
               </div>
@@ -852,7 +872,6 @@
         selectedAdvisorEmail: '',
         selectedRecamarasFilter: '',
         selectedVistaFilter: '',
-        selectedAsignacionFilter: '',
         tipologiaCrops: {},
         selectedFloorRows: [],
         focusedUnitKey: '',
@@ -880,7 +899,7 @@
         activeFilterChips: document.getElementById('activeFilterChips'),
         filterRecamarasSelect: document.getElementById('filterRecamarasSelect'),
         filterVistaSelect: document.getElementById('filterVistaSelect'),
-        filterAsignacionSelect: document.getElementById('filterAsignacionSelect'),
+        clientFilterSelect: document.getElementById('clientFilterSelect'),
         clearFloorFiltersBtn: document.getElementById('clearFloorFiltersBtn'),
         refreshViewBtn: document.getElementById('refreshViewBtn'),
         unitsTableBody: document.getElementById('unitsTableBody'),
@@ -970,10 +989,9 @@
         state.showAllUnits = boolFromParam(route.get('all'));
         state.showAllOnMap = state.showAllUnits;
         state.selectedAdvisorEmail = String(route.get('advisor') || '').trim().toLowerCase();
-        state.selectedWhisperRowId = '';
+        state.selectedWhisperRowId = String(route.get('client') || '').trim();
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
-        state.selectedAsignacionFilter = String(route.get('zone_assignment') || '').trim();
       }
 
       function persistRouteState() {
@@ -989,11 +1007,10 @@
         setOrDelete('floor', state.activeFloorId);
         if (state.showAllUnits) route.set('all', '1'); else route.delete('all');
         setOrDelete('advisor', state.selectedAdvisorEmail);
-        route.delete('client');
+        setOrDelete('client', state.selectedWhisperRowId);
         setOrDelete('zone_rec', state.selectedRecamarasFilter);
         route.delete('zone_building');
         setOrDelete('zone_view', state.selectedVistaFilter);
-        setOrDelete('zone_assignment', state.selectedAsignacionFilter);
         const next = window.location.pathname + (route.toString() ? ('?' + route.toString()) : '');
         window.history.replaceState({}, '', next);
       }
@@ -1648,12 +1665,18 @@
           const next = Object.assign({
             recamaras: state.selectedRecamarasFilter,
             vista: state.selectedVistaFilter,
-            asignacion: state.selectedAsignacionFilter
+            whisperRowId: state.selectedWhisperRowId
           }, overrides || {});
           return infoRows.filter(function (row) {
             if (next.recamaras && String(row && row.recamaras || '').trim() !== String(next.recamaras || '').trim()) return false;
             if (next.vista && String(row && row.vista || '').trim() !== String(next.vista || '').trim()) return false;
-            if (next.asignacion && String(row && row.asignacion || '').trim() !== String(next.asignacion || '').trim()) return false;
+            if (next.whisperRowId) {
+              const selectedWhisperRow = getSelectedWhisperRow();
+              if (selectedWhisperRow) {
+                const allowedUnits = getWhisperRowOptionUnits(selectedWhisperRow);
+                if (!allowedUnits.has(unitKey(row && row.unidad))) return false;
+              }
+            }
             return true;
           });
         };
@@ -1681,7 +1704,6 @@
         };
         const recRows = filterRows({ recamaras: '' });
         const vistaRows = filterRows({ vista: '' });
-        const asignacionRows = filterRows({ asignacion: '' });
         if (els.filterRecamarasSelect) {
           els.filterRecamarasSelect.innerHTML = buildBedroomOptions(recRows.map(function (row) { return row.recamaras || ''; }), 'Todas');
           if (state.selectedRecamarasFilter && !recRows.some(function (row) {
@@ -1702,15 +1724,24 @@
           }
           els.filterVistaSelect.value = String(state.selectedVistaFilter || '');
         }
-        if (els.filterAsignacionSelect) {
-          els.filterAsignacionSelect.innerHTML = buildOptions(asignacionRows.map(function (row) { return row.asignacion || ''; }), 'Todas');
-          if (state.selectedAsignacionFilter && !asignacionRows.some(function (row) {
-            return String(row && row.asignacion || '').trim() === String(state.selectedAsignacionFilter || '').trim();
+        if (els.clientFilterSelect) {
+          const whisperRows = getAssignableWhisperlistRows();
+          els.clientFilterSelect.innerHTML = ['<option value="">Todos los clientes Whisperlist</option>'].concat(
+            whisperRows.map(function (row) {
+              const clientName = String(row.nombreCliente || '').trim() || 'Sin nombre';
+              const optionSuffix = row && row.kpi && row.kpi.__optionLabel ? (' · ' + String(row.kpi.__optionLabel)) : '';
+              const email = String(row.correo || '').trim().toLowerCase();
+              const selected = String(row.id || '') === String(state.selectedWhisperRowId || '') ? ' selected' : '';
+              return '<option value="' + esc(String(row.id || '')) + '"' + selected + '>' + esc(clientName + optionSuffix + (email ? (' · ' + email) : '')) + '</option>';
+            })
+          ).join('');
+          if (state.selectedWhisperRowId && !whisperRows.some(function (row) {
+            return String(row && row.id || '') === String(state.selectedWhisperRowId || '');
           })) {
-            state.selectedAsignacionFilter = '';
+            state.selectedWhisperRowId = '';
             didResetFilter = true;
           }
-          els.filterAsignacionSelect.value = String(state.selectedAsignacionFilter || '');
+          els.clientFilterSelect.value = String(state.selectedWhisperRowId || '');
         }
         if (didResetFilter) persistRouteState();
       }
@@ -1724,7 +1755,6 @@
         state.showAllUnits = false;
         state.selectedRecamarasFilter = '';
         state.selectedVistaFilter = '';
-        state.selectedAsignacionFilter = '';
         state.selectedUnitInfo = null;
         state.focusedUnitKey = '';
         persistRouteState();
@@ -2437,7 +2467,6 @@
         }
         if (state.selectedRecamarasFilter && String(info && info.recamaras || '').trim() !== String(state.selectedRecamarasFilter || '').trim()) return false;
         if (state.selectedVistaFilter && String(info && info.vista || '').trim() !== String(state.selectedVistaFilter || '').trim()) return false;
-        if (state.selectedAsignacionFilter && String(info && info.asignacion || '').trim() !== String(state.selectedAsignacionFilter || '').trim()) return false;
         if (!state.showAllUnits && !state.selectedAdvisorEmail && userHasAssignedUnits() && !isUnitAssignedToCurrentUser(info)) return false;
         if (state.showAllOnMap || state.showAllUnits) return true;
         if (!state.selectedTipologia) return true;
@@ -2446,6 +2475,10 @@
 
       function renderFilterChips(stats) {
         const bucket = getBucketMeta(state.selectedBedroom);
+        const selectedWhisperRow = getSelectedWhisperRow();
+        const whisperLabel = selectedWhisperRow
+          ? (String(selectedWhisperRow.nombreCliente || '').trim() || String(selectedWhisperRow.correo || '').trim() || String(selectedWhisperRow.id || '').trim() || 'SIN NOMBRE')
+          : 'TODOS';
         const chips = [
           '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
           '<span class="chip">Tipologia: ' + esc((state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
@@ -2453,7 +2486,7 @@
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Filtro recámaras: ' + esc(state.selectedRecamarasFilter || 'TODAS') + '</span>',
           '<span class="chip">Filtro vista: ' + esc(state.selectedVistaFilter || 'TODAS') + '</span>',
-          '<span class="chip">Filtro asignación: ' + esc(state.selectedAsignacionFilter || 'TODAS') + '</span>',
+          '<span class="chip">Cliente Whisperlist: ' + esc(whisperLabel) + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
           '<span class="chip">Disponibles: ' + stats.available + '</span>',
           '<span class="chip">Vendidas: ' + stats.sold + '</span>'
@@ -2463,6 +2496,7 @@
 
       function renderUnitsTable(rows) {
         const focusedUnitKey = unitKey(state.focusedUnitKey || '');
+        const selectedWhisperRow = getSelectedWhisperRow();
         const visibleRows = (focusedUnitKey
           ? rows.filter(function (row) { return unitKey(row && row.unidad) === focusedUnitKey; })
           : rows).slice().sort(function (a, b) {
@@ -2494,8 +2528,21 @@
           const price = Number.isFinite(priceNum)
             ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(priceNum)
             : (r.price == null || r.price === '' ? 'N/D' : String(r.price));
+          const unitKeyValue = unitKey(r.unidad || '');
+          const whisperBadges = selectedWhisperRow && selectedWhisperRow.kpi && typeof selectedWhisperRow.kpi === 'object'
+            ? [
+                { key: 'opcionA', label: 'A' },
+                { key: 'opcionB', label: 'B' },
+                { key: 'opcionC', label: 'C' },
+                { key: 'opcionD', label: 'D' }
+              ].filter(function (item) {
+                return unitKey(selectedWhisperRow.kpi[item.key]) === unitKeyValue;
+              }).map(function (item) {
+                return '<span class="whisper-badge" title="Whisperlist ' + esc(item.label) + '">' + esc(item.label) + '</span>';
+              }).join('')
+            : '';
           return '<tr>' +
-            '<td>' + esc(r.unidad || '') + '</td>' +
+            '<td>' + esc(r.unidad || '') + (whisperBadges ? ('<span class="whisper-badges">' + whisperBadges + '</span>') : '') + '</td>' +
             '<td>' + esc(rec || 'N/D') + '</td>' +
             '<td>' + esc(vista) + '</td>' +
             '<td>' + esc(m2) + '</td>' +
@@ -2936,7 +2983,6 @@
           state.selectedWhisperRowId = '';
           state.selectedRecamarasFilter = '';
           state.selectedVistaFilter = '';
-          state.selectedAsignacionFilter = '';
           persistRouteState();
           renderWhisperFilters();
           renderZoneAttributeFilters();
@@ -2948,7 +2994,7 @@
       [
         ['filterRecamarasSelect', 'selectedRecamarasFilter'],
         ['filterVistaSelect', 'selectedVistaFilter'],
-        ['filterAsignacionSelect', 'selectedAsignacionFilter']
+        ['clientFilterSelect', 'selectedWhisperRowId']
       ].forEach(function (pair) {
         const el = els[pair[0]];
         if (!el) return;
