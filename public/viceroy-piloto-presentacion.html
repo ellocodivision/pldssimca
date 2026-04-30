@@ -1413,10 +1413,26 @@
       function getUnitOptionColor(info) {
         const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
         if (!assignments.length) return '#41ac63';
-        if (assignments.length === 1) return '#ffd400';
+        if (assignments.length === 1) return '#2f8f47';
         if (assignments.length === 2) return '#ff8a00';
         if (assignments.length === 3) return '#d62828';
         return '#4a2c1d';
+      }
+
+      function getSelectedWhisperAssignmentForUnit(info) {
+        const selectedWhisperRow = getSelectedWhisperRow();
+        if (!selectedWhisperRow || !info) return null;
+        const kpi = selectedWhisperRow.kpi && typeof selectedWhisperRow.kpi === 'object' ? selectedWhisperRow.kpi : {};
+        const unit = unitKey(info.unidad || '');
+        const entries = [
+          { optionKey: 'opcionA', optionLabel: 'A', value: kpi.opcionA },
+          { optionKey: 'opcionB', optionLabel: 'B', value: kpi.opcionB },
+          { optionKey: 'opcionC', optionLabel: 'C', value: kpi.opcionC },
+          { optionKey: 'opcionD', optionLabel: 'D', value: kpi.opcionD }
+        ];
+        return entries.find(function (entry) {
+          return unit && unitKey(entry.value) === unit;
+        }) || null;
       }
 
       function loadImageElement(src) {
@@ -1495,6 +1511,22 @@
           ctx.lineWidth = 2;
           ctx.fill();
           ctx.stroke();
+
+          const whisperMatch = getSelectedWhisperAssignmentForUnit(info);
+          if (whisperMatch && whisperMatch.optionLabel) {
+            const cx = points.reduce(function (acc, point) { return acc + Number(point[0] || 0); }, 0) / points.length;
+            const cy = points.reduce(function (acc, point) { return acc + Number(point[1] || 0); }, 0) / points.length;
+            ctx.save();
+            ctx.font = '700 18px Akkurat, Segoe UI, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#1d1f22';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.strokeText(whisperMatch.optionLabel, cx, cy);
+            ctx.fillText(whisperMatch.optionLabel, cx, cy);
+            ctx.restore();
+          }
 
           if (state.selectedAdvisorEmail && info && Array.isArray(info.whisperAssignments) && info.whisperAssignments.length) {
             const filteredAssignments = info.whisperAssignments.filter(function (item) {
@@ -2655,10 +2687,14 @@
           const strokeColor = isFocused ? '#ffe600' : color;
           const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
           const cy = points.reduce(function (acc, p) { return acc + Number(p[1] || 0); }, 0) / points.length;
+          const whisperMatch = getSelectedWhisperAssignmentForUnit(info);
 
           return '<polygon data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" points="' + polygon + '" fill="' + fillColor + '" fill-opacity="' + (isFocused ? '0.62' : '0.38') + '" stroke="' + strokeColor + '" stroke-width="' + (isFocused ? '4' : '2') + '" style="cursor:pointer"></polygon>' +
             (state.showUnitLabels
               ? ('<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" x="' + Math.round(cx) + '" y="' + Math.round(cy) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#0f1014" style="cursor:pointer">' + esc(info.unidad || '') + '</text>')
+              : '') +
+            (whisperMatch && whisperMatch.optionLabel
+              ? ('<text data-tipologia="' + tipAttr + '" data-unidad="' + unitAttr + '" x="' + Math.round(cx) + '" y="' + Math.max(12, Math.round(cy - 2)) + '" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="800" fill="#15171b" stroke="#ffffff" stroke-width="2" style="pointer-events:none">' + esc(whisperMatch.optionLabel) + '</text>')
               : '');
         }).join('');
 
