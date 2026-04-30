@@ -1413,14 +1413,10 @@
       function getUnitOptionColor(info) {
         const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
         if (!assignments.length) return '#41ac63';
-        const selectedWhisperRow = getSelectedWhisperRow();
-        const selectedMatch = getSelectedWhisperAssignmentForUnit(info);
-        if (assignments.length === 1) {
-          return '#ffd400';
-        }
-        if (assignments.length === 2) return '#ff8a00';
-        if (assignments.length === 3) return '#d62828';
-        return '#4a2c1d';
+        const hasOptionA = assignments.some(function (item) {
+          return String(item && item.optionKey || '').trim() === 'opcionA';
+        });
+        return hasOptionA ? '#ffd400' : '#41ac63';
       }
 
       function getSelectedWhisperAssignmentForUnit(info) {
@@ -2515,13 +2511,6 @@
 
       function matchesFilter(info) {
         if (!matchesSelectedSeller(info)) return false;
-        if (state.showOnlyOptionA) {
-          const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
-          const hasOptionA = assignments.some(function (item) {
-            return String(item && item.optionKey || '').trim() === 'opcionA';
-          });
-          if (!hasOptionA) return false;
-        }
         const selectedWhisperRow = getSelectedWhisperRow();
         if (selectedWhisperRow) {
           const allowedUnits = getWhisperRowOptionUnits(selectedWhisperRow);
