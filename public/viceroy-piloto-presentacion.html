@@ -1416,7 +1416,11 @@
         const hasOptionA = assignments.some(function (item) {
           return String(item && item.optionKey || '').trim() === 'opcionA';
         });
-        return hasOptionA ? '#ffd400' : '#41ac63';
+        if (!hasOptionA) return '#41ac63';
+        if (assignments.length === 1) return '#ffd400';
+        if (assignments.length === 2) return '#ff8a00';
+        if (assignments.length === 3) return '#d62828';
+        return '#4a2c1d';
       }
 
       function getSelectedWhisperAssignmentForUnit(info) {
