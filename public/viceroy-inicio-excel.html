@@ -155,6 +155,53 @@
       font-size: 14px;
     }
     tbody tr:hover { background: #fcfbf4; }
+    thead tr.filters th {
+      top: 45px;
+      background: #faf8ef;
+      padding: 8px 8px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .filter-input,
+    .filter-select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid #cfcbb7;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 12px;
+      padding: 7px 8px;
+      outline: none;
+    }
+    .filter-input:focus,
+    .filter-select:focus {
+      border-color: #b5ab68;
+      box-shadow: 0 0 0 3px rgba(240, 196, 0, 0.18);
+    }
+    .sort-head {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .sort-arrow {
+      font-size: 11px;
+      color: #6c705f;
+      line-height: 1;
+      white-space: nowrap;
+    }
     .plan-link {
       display: inline-flex;
       align-items: center;
@@ -202,8 +249,10 @@
         <span id="fileBadge" class="badge">Archivo: cargando...</span>
         <span id="sheetBadge" class="badge">Hoja: cargando...</span>
         <span id="rateBadge" class="badge">TC Banxico: cargando...</span>
+        <span id="filterBadge" class="badge">Filtros: 0</span>
       </div>
       <div class="meta">
+        <button id="resetFiltersBtn" class="btn" type="button">Borrar filtros</button>
         <button id="toggleCurrencyBtn" class="btn primary" type="button">Cambiar a dólares</button>
       </div>
     </section>
@@ -213,14 +262,24 @@
         <table>
           <thead>
             <tr>
-              <th>Plano</th>
-              <th>Unidad</th>
-              <th class="right">Total m2</th>
-              <th class="center">Rec</th>
-              <th class="center">Den</th>
-              <th class="center">Baños</th>
-              <th class="right">$/m2</th>
-              <th class="right">Precio</th>
+              <th><button class="sort-head" type="button" data-sort-key="planLink">Plano <span class="sort-arrow" data-sort-indicator="planLink">↕</span></button></th>
+              <th><button class="sort-head" type="button" data-sort-key="unidad">Unidad <span class="sort-arrow" data-sort-indicator="unidad">↕</span></button></th>
+              <th class="right"><button class="sort-head" type="button" data-sort-key="totalM2">Total m2 <span class="sort-arrow" data-sort-indicator="totalM2">↕</span></button></th>
+              <th class="center"><button class="sort-head" type="button" data-sort-key="recamaras">Rec <span class="sort-arrow" data-sort-indicator="recamaras">↕</span></button></th>
+              <th class="center"><button class="sort-head" type="button" data-sort-key="den">Den <span class="sort-arrow" data-sort-indicator="den">↕</span></button></th>
+              <th class="center"><button class="sort-head" type="button" data-sort-key="banos">Baños <span class="sort-arrow" data-sort-indicator="banos">↕</span></button></th>
+              <th class="right"><button class="sort-head" type="button" data-sort-key="pricePerM2">$/m2 <span class="sort-arrow" data-sort-indicator="pricePerM2">↕</span></button></th>
+              <th class="right"><button class="sort-head" type="button" data-sort-key="price">Precio <span class="sort-arrow" data-sort-indicator="price">↕</span></button></th>
+            </tr>
+            <tr class="filters">
+              <th><select id="filterPlanLink" class="filter-select"><option value="">Todos</option><option value="with">Con plano</option><option value="without">Sin plano</option></select></th>
+              <th><input id="filterUnidad" class="filter-input" type="text" placeholder="Filtrar"></th>
+              <th><input id="filterTotalM2" class="filter-input" type="text" placeholder="Filtrar"></th>
+              <th><input id="filterRecamaras" class="filter-input" type="text" placeholder="Filtrar"></th>
+              <th><input id="filterDen" class="filter-input" type="text" placeholder="Filtrar"></th>
+              <th><input id="filterBanos" class="filter-input" type="text" placeholder="Filtrar"></th>
+              <th><input id="filterPricePerM2" class="filter-input" type="text" placeholder="Filtrar"></th>
+              <th><input id="filterPrice" class="filter-input" type="text" placeholder="Filtrar"></th>
             </tr>
           </thead>
           <tbody id="excelTbody">
@@ -236,14 +295,36 @@
       rows: [],
       rate: 0,
       rateLabel: '',
-      showUsd: false
+      showUsd: false,
+      filters: {
+        planLink: '',
+        unidad: '',
+        totalM2: '',
+        recamaras: '',
+        den: '',
+        banos: '',
+        pricePerM2: '',
+        price: ''
+      },
+      sortKey: 'unidad',
+      sortDir: 'desc'
     };
 
     const els = {
       fileBadge: document.getElementById('fileBadge'),
       sheetBadge: document.getElementById('sheetBadge'),
       rateBadge: document.getElementById('rateBadge'),
+      filterBadge: document.getElementById('filterBadge'),
+      resetFiltersBtn: document.getElementById('resetFiltersBtn'),
       toggleCurrencyBtn: document.getElementById('toggleCurrencyBtn'),
+      filterPlanLink: document.getElementById('filterPlanLink'),
+      filterUnidad: document.getElementById('filterUnidad'),
+      filterTotalM2: document.getElementById('filterTotalM2'),
+      filterRecamaras: document.getElementById('filterRecamaras'),
+      filterDen: document.getElementById('filterDen'),
+      filterBanos: document.getElementById('filterBanos'),
+      filterPricePerM2: document.getElementById('filterPricePerM2'),
+      filterPrice: document.getElementById('filterPrice'),
       excelTbody: document.getElementById('excelTbody')
     };
 
@@ -290,10 +371,67 @@
       return String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' });
     }
 
+    function normalizeText(value) {
+      return String(value == null ? '' : value).trim().toLowerCase();
+    }
+
+    function rowValue(row, key) {
+      if (!row) return '';
+      if (key === 'planLink') return String(row.planLink || '').trim();
+      if (key === 'unidad') return String(row.unidad || '').trim();
+      if (key === 'totalM2') return String(row.totalM2 == null ? '' : row.totalM2).trim();
+      if (key === 'recamaras') return String(row.recamaras || '').trim();
+      if (key === 'den') return String(row.den || '').trim();
+      if (key === 'banos') return String(row.banos || '').trim();
+      if (key === 'pricePerM2') return String(row.pricePerM2 == null ? '' : row.pricePerM2).trim();
+      if (key === 'price') return String(row.price == null ? '' : row.price).trim();
+      return '';
+    }
+
+    function rowComparable(row, key) {
+      const raw = rowValue(row, key);
+      if (key === 'planLink') return raw ? 1 : 0;
+      const numeric = parseMoney(raw);
+      if (Number.isFinite(numeric)) return numeric;
+      if (key === 'den') return raw ? 1 : 0;
+      return raw;
+    }
+
+    function applyFilters(rows) {
+      return rows.filter(function (row) {
+        const filters = state.filters || {};
+        if (filters.planLink === 'with' && !String(row.planLink || '').trim()) return false;
+        if (filters.planLink === 'without' && String(row.planLink || '').trim()) return false;
+        if (filters.unidad && !normalizeText(rowValue(row, 'unidad')).includes(normalizeText(filters.unidad))) return false;
+        if (filters.totalM2 && !normalizeText(rowValue(row, 'totalM2')).includes(normalizeText(filters.totalM2))) return false;
+        if (filters.recamaras && !normalizeText(rowValue(row, 'recamaras')).includes(normalizeText(filters.recamaras))) return false;
+        if (filters.den && !normalizeText(rowValue(row, 'den')).includes(normalizeText(filters.den))) return false;
+        if (filters.banos && !normalizeText(rowValue(row, 'banos')).includes(normalizeText(filters.banos))) return false;
+        if (filters.pricePerM2 && !normalizeText(rowValue(row, 'pricePerM2')).includes(normalizeText(filters.pricePerM2))) return false;
+        if (filters.price && !normalizeText(rowValue(row, 'price')).includes(normalizeText(filters.price))) return false;
+        return true;
+      });
+    }
+
+    function applySort(rows) {
+      const key = state.sortKey;
+      const dir = state.sortDir === 'asc' ? 1 : -1;
+      return rows.slice().sort(function (a, b) {
+        const valueA = rowComparable(a, key);
+        const valueB = rowComparable(b, key);
+        const bothNumeric = Number.isFinite(valueA) && Number.isFinite(valueB);
+        if (bothNumeric && valueA !== valueB) return (valueA - valueB) * dir;
+        if (bothNumeric && valueA === valueB) return unitSort(a.unidad, b.unidad) * dir;
+        const textA = valueA == null ? '' : String(valueA);
+        const textB = valueB == null ? '' : String(valueB);
+        return unitSort(textA, textB) * dir;
+      });
+    }
+
     function renderRows() {
-      const rows = Array.isArray(state.rows) ? state.rows.slice().sort(function (a, b) {
-        return unitSort(a && a.unidad, b && b.unidad);
-      }) : [];
+      updateFilterBadge();
+      updateSortIndicators();
+      const rows = applySort(applyFilters(Array.isArray(state.rows) ? state.rows.slice() : []));
       if (!rows.length) {
         els.excelTbody.innerHTML = '<tr><td class="empty" colspan="8">No hay filas para mostrar.</td></tr>';
         return;
@@ -332,6 +470,25 @@
       }).join('');
     }
 
+    function updateFilterBadge() {
+      const filters = state.filters || {};
+      const active = Object.keys(filters).filter(function (key) {
+        return String(filters[key] || '').trim() !== '';
+      }).length;
+      els.filterBadge.textContent = 'Filtros: ' + active;
+    }
+
+    function updateSortIndicators() {
+      Array.prototype.forEach.call(document.querySelectorAll('[data-sort-indicator]'), function (el) {
+        const key = el.getAttribute('data-sort-indicator');
+        if (key === state.sortKey) {
+          el.textContent = state.sortDir === 'asc' ? '▲' : '▼';
+        } else {
+          el.textContent = '↕';
+        }
+      });
+    }
+
     async function loadBanxicoRate() {
       try {
         const res = await fetch('/api/viceroy-piloto/tipo-cambio', { cache: 'no-store', credentials: 'same-origin' });
@@ -367,6 +524,63 @@
     els.toggleCurrencyBtn.addEventListener('click', function () {
       state.showUsd = !state.showUsd;
       renderRows();
+    });
+
+    els.resetFiltersBtn.addEventListener('click', function () {
+      state.filters = {
+        planLink: '',
+        unidad: '',
+        totalM2: '',
+        recamaras: '',
+        den: '',
+        banos: '',
+        pricePerM2: '',
+        price: ''
+      };
+      els.filterPlanLink.value = '';
+      els.filterUnidad.value = '';
+      els.filterTotalM2.value = '';
+      els.filterRecamaras.value = '';
+      els.filterDen.value = '';
+      els.filterBanos.value = '';
+      els.filterPricePerM2.value = '';
+      els.filterPrice.value = '';
+      renderRows();
+    });
+
+    [
+      ['filterPlanLink', 'planLink'],
+      ['filterUnidad', 'unidad'],
+      ['filterTotalM2', 'totalM2'],
+      ['filterRecamaras', 'recamaras'],
+      ['filterDen', 'den'],
+      ['filterBanos', 'banos'],
+      ['filterPricePerM2', 'pricePerM2'],
+      ['filterPrice', 'price']
+    ].forEach(function (pair) {
+      const el = els[pair[0]];
+      if (!el) return;
+      el.addEventListener('input', function () {
+        state.filters[pair[1]] = String(el.value || '').trim();
+        renderRows();
+      });
+      el.addEventListener('change', function () {
+        state.filters[pair[1]] = String(el.value || '').trim();
+        renderRows();
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sort-key]'), function (btn) {
+      btn.addEventListener('click', function () {
+        const key = btn.getAttribute('data-sort-key');
+        if (!key) return;
+        if (state.sortKey === key) state.sortDir = state.sortDir === 'desc' ? 'asc' : 'desc';
+        else {
+          state.sortKey = key;
+          state.sortDir = 'desc';
+        }
+        renderRows();
+      });
     });
 
     Promise.all([loadBanxicoRate(), loadExcelData()]);
