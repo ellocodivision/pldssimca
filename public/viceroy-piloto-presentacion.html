@@ -1413,7 +1413,11 @@
       function getUnitOptionColor(info) {
         const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
         if (!assignments.length) return '#41ac63';
-        if (assignments.length === 1) return '#2f8f47';
+        const selectedWhisperRow = getSelectedWhisperRow();
+        const selectedMatch = getSelectedWhisperAssignmentForUnit(info);
+        if (assignments.length === 1) {
+          return selectedWhisperRow && selectedMatch ? '#2f8f47' : '#ffd400';
+        }
         if (assignments.length === 2) return '#ff8a00';
         if (assignments.length === 3) return '#d62828';
         return '#4a2c1d';
