@@ -732,6 +732,7 @@
         <select id="advisorFilterSelect" class="mini-select">
           <option value="">Todos los usuarios</option>
         </select>
+        <button id="showOptionABtn" class="btn" type="button">Ver opciones A</button>
         <button id="backToTiposBtn" class="btn" type="button">Volver a tipologias</button>
         <button id="exportFloorsBtn" class="btn" type="button">Exportar 7 niveles</button>
         <button id="refreshViewBtn" class="btn" type="button">Refresh</button>
@@ -872,6 +873,7 @@
         selectedAdvisorEmail: '',
         selectedRecamarasFilter: '',
         selectedVistaFilter: '',
+        showOnlyOptionA: false,
         tipologiaCrops: {},
         selectedFloorRows: [],
         focusedUnitKey: '',
@@ -916,6 +918,7 @@
         editTipologiasBtn: document.getElementById('editTipologiasBtn'),
         backToTiposBtn: document.getElementById('backToTiposBtn'),
         showAllOnMapBtn: document.getElementById('showAllOnMapBtn'),
+        showOptionABtn: document.getElementById('showOptionABtn'),
         unitAssignmentBox: document.getElementById('unitAssignmentBox'),
         assignUnitLabel: document.getElementById('assignUnitLabel'),
         assignClientSelect: document.getElementById('assignClientSelect'),
@@ -993,6 +996,7 @@
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
         state.focusedUnitKey = String(route.get('unit') || '').trim();
+        state.showOnlyOptionA = boolFromParam(route.get('onlyA'));
       }
 
       function persistRouteState() {
@@ -1010,6 +1014,7 @@
         setOrDelete('advisor', state.selectedAdvisorEmail);
         setOrDelete('client', state.selectedWhisperRowId);
         setOrDelete('unit', state.focusedUnitKey);
+        if (state.showOnlyOptionA) route.set('onlyA', '1'); else route.delete('onlyA');
         setOrDelete('zone_rec', state.selectedRecamarasFilter);
         route.delete('zone_building');
         setOrDelete('zone_view', state.selectedVistaFilter);
@@ -2472,6 +2477,13 @@
 
       function matchesFilter(info) {
         if (!matchesSelectedSeller(info)) return false;
+        if (state.showOnlyOptionA) {
+          const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
+          const hasOptionA = assignments.some(function (item) {
+            return String(item && item.optionKey || '').trim() === 'opcionA';
+          });
+          if (!hasOptionA) return false;
+        }
         const selectedWhisperRow = getSelectedWhisperRow();
         if (selectedWhisperRow) {
           const allowedUnits = getWhisperRowOptionUnits(selectedWhisperRow);
@@ -2498,6 +2510,7 @@
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Filtro recámaras: ' + esc(state.selectedRecamarasFilter || 'TODAS') + '</span>',
           '<span class="chip">Filtro vista: ' + esc(state.selectedVistaFilter || 'TODAS') + '</span>',
+          '<span class="chip">Opciones A: ' + esc(state.showOnlyOptionA ? 'ACTIVAS' : 'TODAS') + '</span>',
           '<span class="chip">Cliente Whisperlist: ' + esc(whisperLabel) + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
           '<span class="chip">Disponibles: ' + stats.available + '</span>',
@@ -2561,10 +2574,16 @@
             '<td>' + esc(rec || 'N/D') + '</td>' +
             '<td>' + esc(vista) + '</td>' +
             '<td>' + esc(m2) + '</td>' +
-            '<td>' + esc(price) + '</td>' +
+          '<td>' + esc(price) + '</td>' +
           '</tr>';
         }).join('');
         els.unitsTableBody.innerHTML = html;
+      }
+
+      function updateOptionABtn() {
+        if (!els.showOptionABtn) return;
+        els.showOptionABtn.textContent = state.showOnlyOptionA ? 'Ver todas las opciones' : 'Ver opciones A';
+        els.showOptionABtn.classList.toggle('primary', state.showOnlyOptionA);
       }
 
       function drawFloor() {
@@ -2808,6 +2827,7 @@
         }
         renderWhisperFilters();
         renderZoneAttributeFilters();
+        updateOptionABtn();
         loadBanxicoRate().catch(function () {});
         if (state.view === 'home') {
           renderHome();
@@ -2958,6 +2978,16 @@
         hideAssignmentBox();
         drawFloor();
       });
+
+      if (els.showOptionABtn) {
+        els.showOptionABtn.addEventListener('click', function () {
+          state.showOnlyOptionA = !state.showOnlyOptionA;
+          persistRouteState();
+          updateOptionABtn();
+          hideAssignmentBox();
+          drawFloor();
+        });
+      }
 
       if (els.clearFloorFiltersBtn) {
         els.clearFloorFiltersBtn.addEventListener('click', function () {
