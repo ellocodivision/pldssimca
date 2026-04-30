@@ -313,7 +313,7 @@
               <th class="right"><button class="sort-head" type="button" data-sort-key="price">Precio <span class="sort-arrow" data-sort-indicator="price">↕</span></button></th>
             </tr>
             <tr class="filters">
-              <th><select id="filterPlanLink" class="filter-select"><option value="">Todos</option><option value="with">Con plano</option><option value="without">Sin plano</option></select></th>
+              <th><span class="filter-static">&nbsp;</span></th>
               <th><span class="filter-static">Ir a unidad</span></th>
               <th><select id="filterUnidad" class="filter-select"><option value="">Todos</option></select></th>
               <th><select id="filterTotalM2" class="filter-select"><option value="">Todos</option></select></th>
@@ -339,7 +339,6 @@
       rateLabel: '',
       showUsd: false,
       filters: {
-        planLink: '',
         unidad: '',
         totalM2: '',
         recamaras: '',
@@ -359,7 +358,6 @@
       filterBadge: document.getElementById('filterBadge'),
       resetFiltersBtn: document.getElementById('resetFiltersBtn'),
       toggleCurrencyBtn: document.getElementById('toggleCurrencyBtn'),
-      filterPlanLink: document.getElementById('filterPlanLink'),
       filterUnidad: document.getElementById('filterUnidad'),
       filterTotalM2: document.getElementById('filterTotalM2'),
       filterRecamaras: document.getElementById('filterRecamaras'),
@@ -410,6 +408,16 @@
     }
 
     function unitSort(a, b) {
+      const textA = String(a || '').trim().toUpperCase().replace(/\s+/g, '');
+      const textB = String(b || '').trim().toUpperCase().replace(/\s+/g, '');
+      const isPHA = /^PH/.test(textA);
+      const isPHB = /^PH/.test(textB);
+      if (isPHA !== isPHB) return isPHA ? 1 : -1;
+      if (isPHA && isPHB) {
+        const numA = Number((textA.match(/\d+/) || [0])[0] || 0);
+        const numB = Number((textB.match(/\d+/) || [0])[0] || 0);
+        if (numA !== numB) return numA - numB;
+      }
       return String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' });
     }
 
@@ -425,7 +433,6 @@
 
     function rowValue(row, key) {
       if (!row) return '';
-      if (key === 'planLink') return String(row.planLink || '').trim();
       if (key === 'unidad') return String(row.unidad || '').trim();
       if (key === 'totalM2') return String(row.totalM2 == null ? '' : row.totalM2).trim();
       if (key === 'recamaras') return String(row.recamaras || '').trim();
@@ -449,11 +456,6 @@
       const current = String(filterValue || '').trim();
       if (!current) return true;
       const rowValueText = String(rowValue(row, key) || '').trim();
-      if (key === 'planLink') {
-        if (current === 'with') return !!String(row.planLink || '').trim();
-        if (current === 'without') return !String(row.planLink || '').trim();
-        return true;
-      }
       return normalizeText(rowValueText) === normalizeText(current);
     }
 
@@ -474,6 +476,7 @@
         const aNum = parseMoney(a);
         const bNum = parseMoney(b);
         if (Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) return aNum - bNum;
+        if (key === 'unidad') return unitSort(a, b);
         return unitSort(a, b);
       });
     }
@@ -482,14 +485,12 @@
       if (!el) return;
       const current = String(el.value || '').trim();
       const options = [includeAllLabel ? '<option value="">' + esc(includeAllLabel) + '</option>' : ''];
-      if (key === 'planLink') {
-        options.push('<option value="with">Con plano</option>');
-        options.push('<option value="without">Sin plano</option>');
-      } else {
-        uniqueSortedValues(rows, key).forEach(function (value) {
-          options.push('<option value="' + esc(value) + '">' + esc(displayValue(key, value)) + '</option>');
-        });
-      }
+      uniqueSortedValues(rows, key).forEach(function (value) {
+        const label = (key === 'price' || key === 'pricePerM2')
+          ? formatMoney(parseMoney(value), 'MXN')
+          : displayValue(key, value);
+        options.push('<option value="' + esc(value) + '">' + esc(label) + '</option>');
+      });
       el.innerHTML = options.join('');
       if ([...el.options].some(function (opt) { return opt.value === current; })) {
         el.value = current;
@@ -501,7 +502,6 @@
     function applyFilters(rows) {
       return rows.filter(function (row) {
         const filters = state.filters || {};
-        if (!isFilterMatchValue('planLink', row, filters.planLink)) return false;
         if (!isFilterMatchValue('unidad', row, filters.unidad)) return false;
         if (!isFilterMatchValue('totalM2', row, filters.totalM2)) return false;
         if (!isFilterMatchValue('recamaras', row, filters.recamaras)) return false;
@@ -540,8 +540,8 @@
       const rate = Number(state.rate);
       const factor = Number.isFinite(rate) && rate > 0 ? rate : 0;
       els.toggleCurrencyBtn.textContent = state.showUsd ? 'Ver en pesos' : 'Cambiar a dólares';
-      els.excelTbody.innerHTML = rows.map(function (row) {
-        const planLink = String(row.planLink || '').trim();
+        els.excelTbody.innerHTML = rows.map(function (row) {
+          const planLink = String(row.planLink || '').trim();
         const totalM2 = parseMoney(row.totalM2);
         const pricePerM2 = parseMoney(row.pricePerM2);
         const price = parseMoney(row.price);
@@ -615,7 +615,6 @@
         state.rows = Array.isArray(data.rows) ? data.rows : [];
         els.fileBadge.innerHTML = '<strong>Archivo</strong> · ' + esc(data.fileName || 'N/D');
         els.sheetBadge.innerHTML = '<strong>Hoja</strong> · ' + esc(data.sheetName || 'N/D');
-        populateSelect(els.filterPlanLink, state.rows, 'planLink', 'Todos');
         populateSelect(els.filterUnidad, state.rows, 'unidad', 'Todos');
         populateSelect(els.filterTotalM2, state.rows, 'totalM2', 'Todos');
         populateSelect(els.filterRecamaras, state.rows, 'recamaras', 'Todos');
@@ -638,7 +637,6 @@
 
     els.resetFiltersBtn.addEventListener('click', function () {
       state.filters = {
-        planLink: '',
         unidad: '',
         totalM2: '',
         recamaras: '',
@@ -647,7 +645,6 @@
         pricePerM2: '',
         price: ''
       };
-      els.filterPlanLink.value = '';
       els.filterUnidad.value = '';
       els.filterTotalM2.value = '';
       els.filterRecamaras.value = '';
@@ -659,7 +656,6 @@
     });
 
     [
-      ['filterPlanLink', 'planLink'],
       ['filterUnidad', 'unidad'],
       ['filterTotalM2', 'totalM2'],
       ['filterRecamaras', 'recamaras'],
