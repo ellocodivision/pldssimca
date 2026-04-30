@@ -133,7 +133,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1080px;
+      min-width: 1180px;
     }
     thead th {
       position: sticky;
@@ -148,6 +148,8 @@
       padding: 12px 10px;
       text-align: left;
     }
+    thead tr.sort-row th { top: 0; }
+    thead tr.filters th { top: 46px; }
     tbody td {
       border-bottom: 1px solid #ecebe3;
       padding: 10px;
@@ -156,7 +158,6 @@
     }
     tbody tr:hover { background: #fcfbf4; }
     thead tr.filters th {
-      top: 45px;
       background: #faf8ef;
       padding: 8px 8px 10px;
       border-bottom: 1px solid var(--line);
@@ -196,6 +197,30 @@
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
+    .static-head {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+      font: inherit;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0;
+      line-height: 1.1;
+    }
+    .filter-static {
+      display: block;
+      width: 100%;
+      padding: 7px 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      text-align: center;
+    }
     .sort-arrow {
       font-size: 11px;
       color: #6c705f;
@@ -218,6 +243,21 @@
       width: 16px;
       height: 16px;
       display: block;
+    }
+    .goto-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid #c7c3ad;
+      background: #fff;
+      color: #3945b1;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 0 10px;
     }
     .muted { color: var(--muted); }
     .right { text-align: right; }
@@ -263,6 +303,7 @@
           <thead>
             <tr>
               <th><button class="sort-head" type="button" data-sort-key="planLink">Plano <span class="sort-arrow" data-sort-indicator="planLink">↕</span></button></th>
+              <th><span class="sort-head static-head">Ir</span></th>
               <th><button class="sort-head" type="button" data-sort-key="unidad">Unidad <span class="sort-arrow" data-sort-indicator="unidad">↕</span></button></th>
               <th class="right"><button class="sort-head" type="button" data-sort-key="totalM2">Total m2 <span class="sort-arrow" data-sort-indicator="totalM2">↕</span></button></th>
               <th class="center"><button class="sort-head" type="button" data-sort-key="recamaras">Rec <span class="sort-arrow" data-sort-indicator="recamaras">↕</span></button></th>
@@ -273,13 +314,14 @@
             </tr>
             <tr class="filters">
               <th><select id="filterPlanLink" class="filter-select"><option value="">Todos</option><option value="with">Con plano</option><option value="without">Sin plano</option></select></th>
-              <th><input id="filterUnidad" class="filter-input" type="text" placeholder="Filtrar"></th>
-              <th><input id="filterTotalM2" class="filter-input" type="text" placeholder="Filtrar"></th>
-              <th><input id="filterRecamaras" class="filter-input" type="text" placeholder="Filtrar"></th>
-              <th><input id="filterDen" class="filter-input" type="text" placeholder="Filtrar"></th>
-              <th><input id="filterBanos" class="filter-input" type="text" placeholder="Filtrar"></th>
-              <th><input id="filterPricePerM2" class="filter-input" type="text" placeholder="Filtrar"></th>
-              <th><input id="filterPrice" class="filter-input" type="text" placeholder="Filtrar"></th>
+              <th><span class="filter-static">Ir a unidad</span></th>
+              <th><select id="filterUnidad" class="filter-select"><option value="">Todos</option></select></th>
+              <th><select id="filterTotalM2" class="filter-select"><option value="">Todos</option></select></th>
+              <th><select id="filterRecamaras" class="filter-select"><option value="">Todos</option></select></th>
+              <th><select id="filterDen" class="filter-select"><option value="">Todos</option></select></th>
+              <th><select id="filterBanos" class="filter-select"><option value="">Todos</option></select></th>
+              <th><select id="filterPricePerM2" class="filter-select"><option value="">Todos</option></select></th>
+              <th><select id="filterPrice" class="filter-select"><option value="">Todos</option></select></th>
             </tr>
           </thead>
           <tbody id="excelTbody">
@@ -371,6 +413,12 @@
       return String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' });
     }
 
+    function displayValue(key, value) {
+      const raw = String(value == null ? '' : value).trim();
+      if (key === 'planLink') return raw ? 'Con plano' : 'Sin plano';
+      return raw || '';
+    }
+
     function normalizeText(value) {
       return String(value == null ? '' : value).trim().toLowerCase();
     }
@@ -397,18 +445,70 @@
       return raw;
     }
 
+    function isFilterMatchValue(key, row, filterValue) {
+      const current = String(filterValue || '').trim();
+      if (!current) return true;
+      const rowValueText = String(rowValue(row, key) || '').trim();
+      if (key === 'planLink') {
+        if (current === 'with') return !!String(row.planLink || '').trim();
+        if (current === 'without') return !String(row.planLink || '').trim();
+        return true;
+      }
+      return normalizeText(rowValueText) === normalizeText(current);
+    }
+
+    function uniqueSortedValues(rows, key) {
+      const values = [];
+      const seen = new Set();
+      rows.forEach(function (row) {
+        const raw = rowValue(row, key);
+        if (key === 'planLink') return;
+        const text = String(raw || '').trim();
+        if (!text) return;
+        const token = normalizeText(text);
+        if (seen.has(token)) return;
+        seen.add(token);
+        values.push(text);
+      });
+      return values.sort(function (a, b) {
+        const aNum = parseMoney(a);
+        const bNum = parseMoney(b);
+        if (Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) return aNum - bNum;
+        return unitSort(a, b);
+      });
+    }
+
+    function populateSelect(el, rows, key, includeAllLabel) {
+      if (!el) return;
+      const current = String(el.value || '').trim();
+      const options = [includeAllLabel ? '<option value="">' + esc(includeAllLabel) + '</option>' : ''];
+      if (key === 'planLink') {
+        options.push('<option value="with">Con plano</option>');
+        options.push('<option value="without">Sin plano</option>');
+      } else {
+        uniqueSortedValues(rows, key).forEach(function (value) {
+          options.push('<option value="' + esc(value) + '">' + esc(displayValue(key, value)) + '</option>');
+        });
+      }
+      el.innerHTML = options.join('');
+      if ([...el.options].some(function (opt) { return opt.value === current; })) {
+        el.value = current;
+      } else {
+        el.value = '';
+      }
+    }
+
     function applyFilters(rows) {
       return rows.filter(function (row) {
         const filters = state.filters || {};
-        if (filters.planLink === 'with' && !String(row.planLink || '').trim()) return false;
-        if (filters.planLink === 'without' && String(row.planLink || '').trim()) return false;
-        if (filters.unidad && !normalizeText(rowValue(row, 'unidad')).includes(normalizeText(filters.unidad))) return false;
-        if (filters.totalM2 && !normalizeText(rowValue(row, 'totalM2')).includes(normalizeText(filters.totalM2))) return false;
-        if (filters.recamaras && !normalizeText(rowValue(row, 'recamaras')).includes(normalizeText(filters.recamaras))) return false;
-        if (filters.den && !normalizeText(rowValue(row, 'den')).includes(normalizeText(filters.den))) return false;
-        if (filters.banos && !normalizeText(rowValue(row, 'banos')).includes(normalizeText(filters.banos))) return false;
-        if (filters.pricePerM2 && !normalizeText(rowValue(row, 'pricePerM2')).includes(normalizeText(filters.pricePerM2))) return false;
-        if (filters.price && !normalizeText(rowValue(row, 'price')).includes(normalizeText(filters.price))) return false;
+        if (!isFilterMatchValue('planLink', row, filters.planLink)) return false;
+        if (!isFilterMatchValue('unidad', row, filters.unidad)) return false;
+        if (!isFilterMatchValue('totalM2', row, filters.totalM2)) return false;
+        if (!isFilterMatchValue('recamaras', row, filters.recamaras)) return false;
+        if (!isFilterMatchValue('den', row, filters.den)) return false;
+        if (!isFilterMatchValue('banos', row, filters.banos)) return false;
+        if (!isFilterMatchValue('pricePerM2', row, filters.pricePerM2)) return false;
+        if (!isFilterMatchValue('price', row, filters.price)) return false;
         return true;
       });
     }
@@ -433,7 +533,7 @@
       updateSortIndicators();
       const rows = applySort(applyFilters(Array.isArray(state.rows) ? state.rows.slice() : []));
       if (!rows.length) {
-        els.excelTbody.innerHTML = '<tr><td class="empty" colspan="8">No hay filas para mostrar.</td></tr>';
+        els.excelTbody.innerHTML = '<tr><td class="empty" colspan="9">No hay filas para mostrar.</td></tr>';
         return;
       }
       const currency = state.showUsd ? 'USD' : 'MXN';
@@ -455,9 +555,11 @@
         const rec = String(row.recamaras || '').trim() || 'N/D';
         const den = String(row.den || '').trim() || '';
         const baths = String(row.banos || '').trim() || 'N/D';
+        const presentationLink = row.unidad ? '/viceroy-piloto-presentacion?view=floors&unit=' + encodeURIComponent(String(row.unidad || '').trim()) : '';
         return [
           '<tr>',
           '<td>' + (planLink ? '<a class="plan-link" href="' + esc(planLink) + '" target="_blank" rel="noopener" title="Abrir plano">' + planIcon() + '</a>' : '<span class="muted">N/D</span>') + '</td>',
+          '<td>' + (presentationLink ? '<a class="goto-link" href="' + esc(presentationLink) + '" title="Ir a unidad">Ir</a>' : '<span class="muted">N/D</span>') + '</td>',
           '<td>' + esc(row.unidad || 'N/D') + '</td>',
           '<td class="right">' + esc(displayM2) + '</td>',
           '<td class="center">' + esc(rec) + '</td>',
@@ -513,9 +615,17 @@
         state.rows = Array.isArray(data.rows) ? data.rows : [];
         els.fileBadge.innerHTML = '<strong>Archivo</strong> · ' + esc(data.fileName || 'N/D');
         els.sheetBadge.innerHTML = '<strong>Hoja</strong> · ' + esc(data.sheetName || 'N/D');
+        populateSelect(els.filterPlanLink, state.rows, 'planLink', 'Todos');
+        populateSelect(els.filterUnidad, state.rows, 'unidad', 'Todos');
+        populateSelect(els.filterTotalM2, state.rows, 'totalM2', 'Todos');
+        populateSelect(els.filterRecamaras, state.rows, 'recamaras', 'Todos');
+        populateSelect(els.filterDen, state.rows, 'den', 'Todos');
+        populateSelect(els.filterBanos, state.rows, 'banos', 'Todos');
+        populateSelect(els.filterPricePerM2, state.rows, 'pricePerM2', 'Todos');
+        populateSelect(els.filterPrice, state.rows, 'price', 'Todos');
         renderRows();
       } catch (err) {
-        els.excelTbody.innerHTML = '<tr><td class="empty" colspan="8">' + esc(err && err.message ? err.message : 'No se pudo cargar el Excel') + '</td></tr>';
+        els.excelTbody.innerHTML = '<tr><td class="empty" colspan="9">' + esc(err && err.message ? err.message : 'No se pudo cargar el Excel') + '</td></tr>';
         els.fileBadge.textContent = 'Archivo: N/D';
         els.sheetBadge.textContent = 'Hoja: N/D';
       }

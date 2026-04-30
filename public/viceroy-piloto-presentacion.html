@@ -992,6 +992,7 @@
         state.selectedWhisperRowId = String(route.get('client') || '').trim();
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
+        state.focusedUnitKey = String(route.get('unit') || '').trim();
       }
 
       function persistRouteState() {
@@ -1008,6 +1009,7 @@
         if (state.showAllUnits) route.set('all', '1'); else route.delete('all');
         setOrDelete('advisor', state.selectedAdvisorEmail);
         setOrDelete('client', state.selectedWhisperRowId);
+        setOrDelete('unit', state.focusedUnitKey);
         setOrDelete('zone_rec', state.selectedRecamarasFilter);
         route.delete('zone_building');
         setOrDelete('zone_view', state.selectedVistaFilter);
@@ -1282,6 +1284,16 @@
 
       function activeFloor() {
         return state.floors.find(function (f) { return f.id === state.activeFloorId; }) || null;
+      }
+
+      function findFloorContainingUnitKey(unitValue) {
+        const target = unitKey(unitValue);
+        if (!target) return null;
+        return state.floors.find(function (floor) {
+          return Array.isArray(floor && floor.zones) && floor.zones.some(function (zone) {
+            return unitKey(zone && zone.label) === target;
+          });
+        }) || null;
       }
 
       function inferTipologiaFromUnit(unit) {
@@ -2660,6 +2672,7 @@
       function focusUnitInfo(info) {
         if (!info) return;
         state.focusedUnitKey = unitKey(info.unidad || '');
+        persistRouteState();
         renderUnitsTable(state.selectedFloorRows);
         if (!getAssignableWhisperlistRows().length) {
           showAssignmentBox(info);
@@ -2746,6 +2759,12 @@
         );
         orderFloors();
         buildUnitIndex();
+        if (state.focusedUnitKey) {
+          const targetFloor = findFloorContainingUnitKey(state.focusedUnitKey);
+          if (targetFloor && targetFloor.id) {
+            state.activeFloorId = targetFloor.id;
+          }
+        }
         applyPresentationLayout();
         refreshInventoryUploadMeta();
         restoreCurrentView();
