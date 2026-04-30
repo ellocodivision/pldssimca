@@ -1412,14 +1412,13 @@
 
       function getUnitOptionColor(info) {
         const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
-        if (!assignments.length) return '#41ac63';
-        const hasOptionA = assignments.some(function (item) {
+        const aAssignments = assignments.filter(function (item) {
           return String(item && item.optionKey || '').trim() === 'opcionA';
         });
-        if (!hasOptionA) return '#41ac63';
-        if (assignments.length === 1) return '#ffd400';
-        if (assignments.length === 2) return '#ff8a00';
-        if (assignments.length === 3) return '#d62828';
+        if (!aAssignments.length) return '#41ac63';
+        if (aAssignments.length === 1) return '#ffd400';
+        if (aAssignments.length === 2) return '#ff8a00';
+        if (aAssignments.length === 3) return '#d62828';
         return '#4a2c1d';
       }
 
