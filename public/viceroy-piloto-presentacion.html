@@ -996,7 +996,7 @@
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
         state.focusedUnitKey = String(route.get('unit') || '').trim();
-        state.showOnlyOptionA = boolFromParam(route.get('onlyA'));
+        state.showOnlyOptionA = state.selectedWhisperRowId ? boolFromParam(route.get('onlyA')) : true;
       }
 
       function persistRouteState() {
@@ -1792,6 +1792,7 @@
             return String(row && row.id || '') === String(state.selectedWhisperRowId || '');
           })) {
             state.selectedWhisperRowId = '';
+            state.showOnlyOptionA = true;
             didResetFilter = true;
           }
           els.clientFilterSelect.value = String(state.selectedWhisperRowId || '');
@@ -1802,6 +1803,7 @@
       function resetFloorFilters() {
         state.selectedAdvisorEmail = '';
         state.selectedWhisperRowId = '';
+        state.showOnlyOptionA = true;
         state.selectedBedroom = '';
         state.selectedTipologia = '';
         state.showAllOnMap = false;
@@ -3049,6 +3051,7 @@
       if (els.clientFilterSelect) {
         els.clientFilterSelect.addEventListener('change', function () {
           state.selectedWhisperRowId = String(els.clientFilterSelect.value || '').trim();
+          state.showOnlyOptionA = !state.selectedWhisperRowId;
           persistRouteState();
           hideAssignmentBox();
           drawFloor();

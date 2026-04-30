@@ -109,7 +109,7 @@
   <main class="wrap">
     <div class="top">
       <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
-      <a class="quick-link" href="/gerente-ventas/related/plano-ventas?quick_export=1&dev=related">Imprimir inventario</a>
+      <a class="quick-link" id="printInventoryBtn" href="#">Imprimir inventario</a>
     </div>
 
     <section class="hero">
@@ -153,5 +153,23 @@
       </a>
     </section>
   </main>
+  <script>
+    (function () {
+      const btn = document.getElementById('printInventoryBtn');
+      if (!btn) return;
+      let frame = null;
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        const url = '/gerente-ventas/related/plano-ventas?quick_export=1&dev=related&t=' + Date.now();
+        if (!frame) {
+          frame = document.createElement('iframe');
+          frame.setAttribute('aria-hidden', 'true');
+          frame.style.display = 'none';
+          document.body.appendChild(frame);
+        }
+        frame.src = url;
+      });
+    })();
+  </script>
 </body>
 </html>
