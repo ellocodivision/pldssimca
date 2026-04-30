@@ -2529,6 +2529,9 @@
             ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(priceNum)
             : (r.price == null || r.price === '' ? 'N/D' : String(r.price));
           const unitKeyValue = unitKey(r.unidad || '');
+          const whisperTitle = Array.isArray(r.whisperAssignments) && r.whisperAssignments.length
+            ? formatWhisperAssignments(r.whisperAssignments)
+            : '';
           const whisperBadges = selectedWhisperRow && selectedWhisperRow.kpi && typeof selectedWhisperRow.kpi === 'object'
             ? [
                 { key: 'opcionA', label: 'A' },
@@ -2542,7 +2545,7 @@
               }).join('')
             : '';
           return '<tr>' +
-            '<td>' + esc(r.unidad || '') + (whisperBadges ? ('<span class="whisper-badges">' + whisperBadges + '</span>') : '') + '</td>' +
+            '<td>' + esc(r.unidad || '') + (whisperBadges ? ('<span class="whisper-badges"' + (whisperTitle ? (' title="' + esc(whisperTitle) + '"') : '') + '>' + whisperBadges + '</span>') : '') + '</td>' +
             '<td>' + esc(rec || 'N/D') + '</td>' +
             '<td>' + esc(vista) + '</td>' +
             '<td>' + esc(m2) + '</td>' +

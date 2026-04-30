@@ -10194,6 +10194,10 @@ app.get('/viceroy/inicio/presentacion', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-presentacion.html'));
 });
 
+app.get('/viceroy/inicio/excel', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-excel.html'));
+});
+
 app.get('/viceroy/inicio/acabados', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-acabados.html'));
 });
@@ -11059,6 +11063,84 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     tipologiaCrops: readViceroyTipologiaCropMap(),
     tipologias
   });
+});
+
+function buildViceroyExcelViewData() {
+  const candidates = resolvePreferredViceroyInventoryCandidates();
+  const hasRawValue = (row, index) => Array.isArray(row) && index >= 0 && index < row.length && row[index] !== '' && row[index] != null;
+  for (const candidate of candidates) {
+    try {
+      const fullPath = String(candidate && candidate.fullPath || '').trim();
+      if (!fullPath || !fs.existsSync(fullPath)) continue;
+      const ext = path.extname(fullPath).toLowerCase();
+      const workbook = ext === '.csv'
+        ? XLSX.read(fs.readFileSync(fullPath, 'utf-8'), { type: 'string' })
+        : XLSX.readFile(fullPath);
+      const pickedSheet = pickViceroyInventorySheet(workbook);
+      if (!pickedSheet || !pickedSheet.sheet) continue;
+      const matrix = XLSX.utils.sheet_to_json(pickedSheet.sheet, { header: 1, raw: true, defval: '' });
+      const parsedRows = filterViceroyInventoryRows(parseViceroyInventoryFile(fullPath));
+      const rows = parsedRows.map((parsed) => {
+        const sourceRowIndex = Number(parsed && parsed.sourceRowIndex);
+        const rawRow = Number.isFinite(sourceRowIndex) && sourceRowIndex > 0 && Array.isArray(matrix[sourceRowIndex - 1])
+          ? matrix[sourceRowIndex - 1]
+          : [];
+        const planLink = normalizeViceroyPlanLink(rawRow[0] || parsed.planLink || '');
+        const unit = extractUnitCode(rawRow[4] || parsed.unidad || '');
+        if (!unit) return null;
+        return {
+          sourceRowIndex: Number.isFinite(sourceRowIndex) ? sourceRowIndex : null,
+          planLink,
+          unidad: unit,
+          totalM2: hasRawValue(rawRow, 16) ? rawRow[16] : parsed.m2,
+          recamaras: hasRawValue(rawRow, 17) ? rawRow[17] : parsed.recamaras,
+          den: hasRawValue(rawRow, 18) ? rawRow[18] : (/\+DEN/.test(String(parsed.recamaras || '')) ? '1' : ''),
+          banos: hasRawValue(rawRow, 19) ? rawRow[19] : '',
+          pricePerM2: hasRawValue(rawRow, 20) ? rawRow[20] : (parsed.pricePerM2 || ''),
+          price: hasRawValue(rawRow, 21) ? rawRow[21] : (parsed.price || ''),
+          status: String(parsed.status || 'disponible').trim(),
+          vista: String(parsed.vista || '').trim()
+        };
+      }).filter(Boolean);
+      if (rows.length) {
+        rows.sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
+        return {
+          rows,
+          fileName: candidate.name || '',
+          sheetName: pickedSheet.sheetName || ''
+        };
+      }
+    } catch {}
+  }
+  const cached = readViceroyInventoryCache();
+  const rows = filterViceroyInventoryRows(Array.isArray(cached.rows) ? cached.rows : []).map((row) => ({
+    sourceRowIndex: Number.isFinite(Number(row && row.sourceRowIndex)) ? Number(row.sourceRowIndex) : null,
+    planLink: String(row && row.planLink || '').trim(),
+    unidad: String(row && row.unidad || '').trim(),
+    totalM2: row && row.m2 != null ? row.m2 : '',
+    recamaras: String(row && row.recamaras || '').trim(),
+    den: /\+DEN/.test(String(row && row.recamaras || '')) ? '1' : '',
+    banos: '',
+    pricePerM2: row && row.pricePerM2 != null ? row.pricePerM2 : '',
+    price: row && row.price != null ? row.price : '',
+    status: String(row && row.status || 'disponible').trim(),
+    vista: String(row && row.vista || '').trim()
+  })).sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
+  return {
+    rows,
+    fileName: cached.fileName || '',
+    sheetName: ''
+  };
+}
+
+app.get('/api/viceroy/inicio/excel-data', requireViceroyPresentAccess, (req, res) => {
+  try {
+    const data = buildViceroyExcelViewData();
+    return res.json({ ok: true, ...data });
+  } catch (err) {
+    const msg = err && err.message ? err.message : 'No se pudo cargar el Excel de Viceroy';
+    return res.status(500).json({ ok: false, error: msg });
+  }
 });
 
 app.get('/api/viceroy-piloto/related-inventory', requireViceroyPresentAccess, (req, res) => {

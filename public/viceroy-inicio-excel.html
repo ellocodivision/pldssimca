@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viceroy Excel</title>
+  <style>
+    :root {
+      --bg: #fffdf7;
+      --panel: #ffffff;
+      --ink: #36363f;
+      --muted: #676a74;
+      --line: #d7d7cf;
+      --accent: #f0c400;
+      --accent-ink: #2b2d33;
+      --green: #3f9d58;
+      --shadow: 0 12px 32px rgba(36, 40, 48, 0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1400px, 94vw);
+      margin: 0 auto;
+      padding: 22px 0 40px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .back {
+      display: inline-block;
+      padding: 10px 14px;
+      border: 1px solid #c6cabd;
+      border-radius: 10px;
+      background: #fff;
+      color: #242830;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+    }
+    .hero {
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.92));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 20px 22px;
+      margin-bottom: 18px;
+    }
+    .title {
+      text-align: center;
+      font-size: clamp(44px, 8vw, 92px);
+      letter-spacing: 0.08em;
+      line-height: 0.95;
+      font-weight: 500;
+      margin: 10px 0 12px;
+      color: #3d3d45;
+    }
+    .subtitle {
+      text-align: center;
+      margin: 0;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 0 0 16px;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .badge strong { font-weight: 700; }
+    .btn {
+      appearance: none;
+      border: 1px solid #c4c8bc;
+      background: #fff;
+      color: var(--accent-ink);
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+    }
+    .btn.primary {
+      background: var(--accent);
+      border-color: #caa900;
+    }
+    .btn:disabled { opacity: 0.66; cursor: progress; }
+    .table-shell {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .table-scroll {
+      overflow: auto;
+      max-height: calc(100vh - 300px);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1080px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f4f1e2;
+      border-bottom: 1px solid var(--line);
+      color: #40424a;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 12px 10px;
+      text-align: left;
+    }
+    tbody td {
+      border-bottom: 1px solid #ecebe3;
+      padding: 10px;
+      vertical-align: middle;
+      font-size: 14px;
+    }
+    tbody tr:hover { background: #fcfbf4; }
+    .plan-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid #c7c3ad;
+      color: #3945b1;
+      text-decoration: none;
+      background: #fff;
+    }
+    .plan-link svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+    .muted { color: var(--muted); }
+    .right { text-align: right; }
+    .center { text-align: center; }
+    .empty {
+      padding: 20px;
+      color: var(--muted);
+    }
+    @media (max-width: 860px) {
+      .title { font-size: 42px; }
+      .table-scroll { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
+    </div>
+
+    <section class="hero">
+      <div class="title">VICEROY</div>
+      <div class="title" style="font-size: clamp(24px, 4vw, 42px); letter-spacing: 0.1em; margin-top: 2px;">EXCEL</div>
+      <p class="subtitle">Inventario de tipologías con columnas del Excel cargado</p>
+    </section>
+
+    <section class="controls">
+      <div class="meta">
+        <span id="fileBadge" class="badge">Archivo: cargando...</span>
+        <span id="sheetBadge" class="badge">Hoja: cargando...</span>
+        <span id="rateBadge" class="badge">TC Banxico: cargando...</span>
+      </div>
+      <div class="meta">
+        <button id="toggleCurrencyBtn" class="btn primary" type="button">Cambiar a dólares</button>
+      </div>
+    </section>
+
+    <section class="table-shell">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Plano</th>
+              <th>Unidad</th>
+              <th class="right">Total m2</th>
+              <th class="center">Rec</th>
+              <th class="center">Den</th>
+              <th class="center">Baños</th>
+              <th class="right">$/m2</th>
+              <th class="right">Precio</th>
+            </tr>
+          </thead>
+          <tbody id="excelTbody">
+            <tr><td class="empty" colspan="8">Cargando inventario...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      rows: [],
+      rate: 0,
+      rateLabel: '',
+      showUsd: false
+    };
+
+    const els = {
+      fileBadge: document.getElementById('fileBadge'),
+      sheetBadge: document.getElementById('sheetBadge'),
+      rateBadge: document.getElementById('rateBadge'),
+      toggleCurrencyBtn: document.getElementById('toggleCurrencyBtn'),
+      excelTbody: document.getElementById('excelTbody')
+    };
+
+    const esc = (value) => String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    function parseMoney(value) {
+      const num = Number(String(value == null ? '' : value).replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(num) ? num : NaN;
+    }
+
+    function formatMoney(value, currency) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return 'N/D';
+      const fractionDigits = currency === 'USD' ? 2 : 0;
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: fractionDigits,
+        minimumFractionDigits: fractionDigits
+      }).format(num);
+    }
+
+    function formatNumber(value, digits) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return 'N/D';
+      return new Intl.NumberFormat('es-MX', { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(num);
+    }
+
+    function planIcon() {
+      return [
+        '<svg viewBox="0 0 24 24" aria-hidden="true">',
+        '<path d="M4 5.5h16v13H4z" fill="none" stroke="currentColor" stroke-width="1.6" />',
+        '<path d="M8 5.5v13M16 5.5v13M4 10h16M4 15.5h16" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.72" />',
+        '</svg>'
+      ].join('');
+    }
+
+    function unitSort(a, b) {
+      return String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' });
+    }
+
+    function renderRows() {
+      const rows = Array.isArray(state.rows) ? state.rows.slice().sort(function (a, b) {
+        return unitSort(a && a.unidad, b && b.unidad);
+      }) : [];
+      if (!rows.length) {
+        els.excelTbody.innerHTML = '<tr><td class="empty" colspan="8">No hay filas para mostrar.</td></tr>';
+        return;
+      }
+      const currency = state.showUsd ? 'USD' : 'MXN';
+      const rate = Number(state.rate);
+      const factor = Number.isFinite(rate) && rate > 0 ? rate : 0;
+      els.toggleCurrencyBtn.textContent = state.showUsd ? 'Ver en pesos' : 'Cambiar a dólares';
+      els.excelTbody.innerHTML = rows.map(function (row) {
+        const planLink = String(row.planLink || '').trim();
+        const totalM2 = parseMoney(row.totalM2);
+        const pricePerM2 = parseMoney(row.pricePerM2);
+        const price = parseMoney(row.price);
+        const displayM2 = Number.isFinite(totalM2) ? formatNumber(totalM2, 2) : esc(row.totalM2 || 'N/D');
+        const displayPricePerM2 = Number.isFinite(pricePerM2)
+          ? formatMoney(state.showUsd && factor ? (pricePerM2 / factor) : pricePerM2, currency)
+          : esc(row.pricePerM2 || 'N/D');
+        const displayPrice = Number.isFinite(price)
+          ? formatMoney(state.showUsd && factor ? (price / factor) : price, currency)
+          : esc(row.price || 'N/D');
+        const rec = String(row.recamaras || '').trim() || 'N/D';
+        const den = String(row.den || '').trim() || '';
+        const baths = String(row.banos || '').trim() || 'N/D';
+        return [
+          '<tr>',
+          '<td>' + (planLink ? '<a class="plan-link" href="' + esc(planLink) + '" target="_blank" rel="noopener" title="Abrir plano">' + planIcon() + '</a>' : '<span class="muted">N/D</span>') + '</td>',
+          '<td>' + esc(row.unidad || 'N/D') + '</td>',
+          '<td class="right">' + esc(displayM2) + '</td>',
+          '<td class="center">' + esc(rec) + '</td>',
+          '<td class="center">' + esc(den) + '</td>',
+          '<td class="center">' + esc(baths) + '</td>',
+          '<td class="right">' + esc(displayPricePerM2) + '</td>',
+          '<td class="right">' + esc(displayPrice) + '</td>',
+          '</tr>'
+        ].join('');
+      }).join('');
+    }
+
+    async function loadBanxicoRate() {
+      try {
+        const res = await fetch('/api/viceroy-piloto/tipo-cambio', { cache: 'no-store', credentials: 'same-origin' });
+        const data = await res.json().catch(function () { return {}; });
+        const rate = Number(data && data.value);
+        state.rate = Number.isFinite(rate) && rate > 0 ? rate : 0;
+        state.rateLabel = String(data && data.formatted || '').trim();
+        const date = String(data && data.date || '').trim();
+        els.rateBadge.innerHTML = '<strong>TC Banxico</strong>' + (date ? ' · ' + esc(date) : '') + ' · ' + esc(state.rateLabel || 'N/D');
+      } catch (err) {
+        els.rateBadge.textContent = 'TC Banxico: N/D';
+        state.rate = 0;
+        state.rateLabel = '';
+      }
+    }
+
+    async function loadExcelData() {
+      try {
+        const res = await fetch('/api/viceroy/inicio/excel-data', { cache: 'no-store', credentials: 'same-origin' });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo cargar el Excel');
+        state.rows = Array.isArray(data.rows) ? data.rows : [];
+        els.fileBadge.innerHTML = '<strong>Archivo</strong> · ' + esc(data.fileName || 'N/D');
+        els.sheetBadge.innerHTML = '<strong>Hoja</strong> · ' + esc(data.sheetName || 'N/D');
+        renderRows();
+      } catch (err) {
+        els.excelTbody.innerHTML = '<tr><td class="empty" colspan="8">' + esc(err && err.message ? err.message : 'No se pudo cargar el Excel') + '</td></tr>';
+        els.fileBadge.textContent = 'Archivo: N/D';
+        els.sheetBadge.textContent = 'Hoja: N/D';
+      }
+    }
+
+    els.toggleCurrencyBtn.addEventListener('click', function () {
+      state.showUsd = !state.showUsd;
+      renderRows();
+    });
+
+    Promise.all([loadBanxicoRate(), loadExcelData()]);
+  </script>
+</body>
+</html>
