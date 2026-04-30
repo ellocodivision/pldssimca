@@ -996,7 +996,7 @@
         state.selectedRecamarasFilter = String(route.get('zone_rec') || '').trim();
         state.selectedVistaFilter = String(route.get('zone_view') || '').trim();
         state.focusedUnitKey = String(route.get('unit') || '').trim();
-        state.showOnlyOptionA = state.selectedWhisperRowId ? boolFromParam(route.get('onlyA')) : true;
+        state.showOnlyOptionA = state.selectedWhisperRowId ? boolFromParam(route.get('onlyA')) : false;
       }
 
       function persistRouteState() {
@@ -1416,7 +1416,7 @@
         const selectedWhisperRow = getSelectedWhisperRow();
         const selectedMatch = getSelectedWhisperAssignmentForUnit(info);
         if (assignments.length === 1) {
-          return selectedWhisperRow && selectedMatch ? '#2f8f47' : '#ffd400';
+          return '#ffd400';
         }
         if (assignments.length === 2) return '#ff8a00';
         if (assignments.length === 3) return '#d62828';
@@ -1792,7 +1792,7 @@
             return String(row && row.id || '') === String(state.selectedWhisperRowId || '');
           })) {
             state.selectedWhisperRowId = '';
-            state.showOnlyOptionA = true;
+            state.showOnlyOptionA = false;
             didResetFilter = true;
           }
           els.clientFilterSelect.value = String(state.selectedWhisperRowId || '');
@@ -1803,7 +1803,7 @@
       function resetFloorFilters() {
         state.selectedAdvisorEmail = '';
         state.selectedWhisperRowId = '';
-        state.showOnlyOptionA = true;
+        state.showOnlyOptionA = false;
         state.selectedBedroom = '';
         state.selectedTipologia = '';
         state.showAllOnMap = false;
@@ -3051,7 +3051,7 @@
       if (els.clientFilterSelect) {
         els.clientFilterSelect.addEventListener('change', function () {
           state.selectedWhisperRowId = String(els.clientFilterSelect.value || '').trim();
-          state.showOnlyOptionA = !state.selectedWhisperRowId;
+          state.showOnlyOptionA = false;
           persistRouteState();
           hideAssignmentBox();
           drawFloor();
