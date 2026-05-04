@@ -11153,14 +11153,17 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:${BG}; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
-  h2{ font-size:20px; margin-bottom:5px; }
-  h3{ font-size:14px; font-weight:700; margin:28px 0 8px; color:#333; }
-  .sub{ font-size:12px; color:#555; margin-bottom:22px; }
+  .logo-wrap{ text-align:center; padding:10px 0 32px; border-bottom:1px solid #d8d3c6; margin-bottom:28px; }
+  .logo-main{ font-family:'Arial Black','Helvetica Neue',Helvetica,sans-serif; font-size:68px; font-weight:900; letter-spacing:0.06em; color:#1a1a1a; line-height:1; }
+  .logo-res{ font-family:Arial,Helvetica,sans-serif; font-size:20px; font-weight:400; letter-spacing:0.55em; color:#1a1a1a; margin:6px 0; }
+  .logo-city{ font-family:Georgia,'Times New Roman',serif; font-size:40px; font-weight:400; letter-spacing:0.04em; color:#1a1a1a; margin-top:4px; }
+  h2{ font-size:17px; margin-bottom:4px; }
+  h3{ font-size:13px; font-weight:700; margin:24px 0 7px; color:#333; }
+  .sub{ font-size:11px; color:#555; margin-bottom:20px; }
   table{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:4px; }
   th,td{ border:1px solid #ccc; padding:7px 9px; font-size:12px; text-align:left; word-break:break-word; vertical-align:middle; }
   th{ background:#e8e4d8; font-weight:700; }
   .note{ font-size:10px; font-weight:400; color:#666; display:block; margin-top:2px; }
-  /* tabla 1: opciones */
   .t1 colgroup col:nth-child(1){ width:5%; }
   .t1 colgroup col:nth-child(2){ width:8%; }
   .t1 colgroup col:nth-child(3){ width:11%; }
@@ -11169,7 +11172,6 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
   .t1 colgroup col:nth-child(6){ width:12%; }
   .t1 colgroup col:nth-child(7){ width:12%; }
   .t1 colgroup col:nth-child(8){ width:40%; }
-  /* tabla 2: forma de pago */
   .t2 colgroup col:nth-child(1){ width:5%; }
   .t2 colgroup col:nth-child(2){ width:8%; }
   .t2 colgroup col:nth-child(3){ width:17%; }
@@ -11180,6 +11182,11 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
   .t2 colgroup col:nth-child(8){ width:14%; }
 </style>
 </head><body>
+<div class="logo-wrap">
+  <div class="logo-main">VICEROY</div>
+  <div class="logo-res">RESIDENCES</div>
+  <div class="logo-city">PLAYA DEL CARMEN</div>
+</div>
 <h2>Opciones de unidades / Unit Options &ndash; ${String(row.nombreCliente || '').replace(/</g,'&lt;')}</h2>
 <p class="sub">Asesor / Advisor: ${String(row.asesor || '').replace(/</g,'&lt;')}</p>
 
@@ -11238,7 +11245,12 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
   canvas{ display:block; width:${dispW}px; height:${dispH}px; }
 </style>
 </head><body>
-<div class="ftitle">Plano / Floor Plan &nbsp;&mdash;&nbsp; Nivel: ${String(fp.floor.name || ('Piso ' + (idx + 1))).replace('.jpg','').replace('.png','').trim()}</div>
+<div class="ftitle">Plano / Floor Plan &nbsp;&mdash;&nbsp; Nivel: ${(()=>{
+        const raw = String(fp.floor.name || '').replace(/\.(jpe?g|png|gif|webp)$/i,'').trim();
+        if (!raw || /captura|screenshot/i.test(raw)) return String(idx + 1);
+        const m = raw.match(/^(\d[\d\.]*)/);
+        return m ? m[1] : (raw.length < 25 ? raw : String(idx + 1));
+      })()}</div>
 <div class="flegend">${legendItems}</div>
 <canvas id="c" width="${rawW}" height="${rawH}"></canvas>
 <script>
