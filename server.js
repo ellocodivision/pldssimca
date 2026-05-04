@@ -11069,25 +11069,35 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
       return { floor, selectedMap };
     }).filter((fp) => Object.keys(fp.selectedMap).length > 0);
 
-    const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-    const dateStr = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+    const fmt    = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+    const fmtUSD = new Intl.NumberFormat('en-US',  { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+    // Banxico TC (synchronous cache read)
+    const tcCache = readBanxicoTipoCambioCache();
+    const tc = tcCache && Number.isFinite(Number(tcCache.value)) && Number(tcCache.value) > 0
+      ? Number(tcCache.value) : null;
+    const tcNote = tc ? `TC: $${tc.toFixed(4)} MXN/USD (Banxico)` : '';
 
     const tableRows = matched.map((o) => {
-      const inv   = o.inv;
-      const m2    = inv ? (Number(inv.totalM2 || inv.m2) || '') : '';
-      const sqft  = m2 ? Math.round(Number(m2) * 10.7639) : '';
-      const precio = inv && inv.price ? fmt.format(Number(inv.price)) : '—';
-      const rec   = inv ? String(inv.recamaras || '').replace('B', '') : '—';
-      const den   = inv ? String(inv.den   || '—') : '—';
-      const ban   = inv ? String(inv.banos || '—') : '—';
-      const badge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:12px">${o.label}</span>`;
+      const inv    = o.inv;
+      const m2     = inv ? (Number(inv.totalM2 || inv.m2) || '') : '';
+      const sqft   = m2 ? Math.round(Number(m2) * 10.7639) : '';
+      const priceMXN = inv && inv.price ? Number(inv.price) : null;
+      const priceUSD = priceMXN && tc ? priceMXN / tc : null;
+      const rec    = inv ? String(inv.recamaras || '').replace('B', '') : '—';
+      const den    = inv ? String(inv.den   || '—') : '—';
+      const ban    = inv ? String(inv.banos || '—') : '—';
+      const badge  = `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:12px">${o.label}</span>`;
+      const precioCell = priceMXN
+        ? `${fmt.format(priceMXN)}<br><span style="font-size:10px;color:#888">${priceUSD ? fmtUSD.format(priceUSD) + ' USD' : ''}</span>`
+        : '—';
       return `<tr>
         <td style="text-align:center">${badge}</td>
         <td><strong>${o.unidad}</strong></td>
         <td>${rec}</td><td>${den}</td><td>${ban}</td>
         <td>${m2 ? Number(m2).toLocaleString('es-MX', { maximumFractionDigits: 2 }) + ' m²' : '—'}</td>
         <td>${sqft ? Number(sqft).toLocaleString('es-MX') + ' ft²' : '—'}</td>
-        <td>${precio}</td>
+        <td>${precioCell}</td>
       </tr>`;
     }).join('');
 
@@ -11137,13 +11147,16 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
     const paymentTableRows = matched.map((o) => {
       const price = o.inv && o.inv.price ? Number(o.inv.price) : 0;
       const badge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:11px">${o.label}</span>`;
-      const cells = PLAN.map((p) =>
-        `<td style="text-align:right">${price ? fmt.format(Math.round(price * p.pct)) : '—'}</td>`
-      ).join('');
+      const cells = PLAN.map((p) => {
+        const mxn = price ? fmt.format(Math.round(price * p.pct)) : '—';
+        const usd = price && tc ? `<br><span style="font-size:10px;color:#888">${fmtUSD.format(Math.round(price * p.pct / tc))} USD</span>` : '';
+        return `<td style="text-align:right">${mxn}${usd}</td>`;
+      }).join('');
+      const totalUsd = price && tc ? `<br><span style="font-size:10px;color:#888">${fmtUSD.format(Math.round(price / tc))} USD</span>` : '';
       return `<tr>
         <td style="text-align:center">${badge}</td>
         <td><strong>${o.unidad}</strong></td>
-        <td style="text-align:right"><strong>${price ? fmt.format(price) : '—'}</strong></td>
+        <td style="text-align:right"><strong>${price ? fmt.format(price) : '—'}</strong>${totalUsd}</td>
         ${cells}
       </tr>`;
     }).join('');
@@ -11151,20 +11164,26 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
     const firstName = String(row.nombreCliente || '').trim().split(/\s+/)[0];
     const clientFirst = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase() : 'there';
 
+    // Logo Viceroy embebido como base64
+    const LOGO_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png');
+    const logoBase64 = fs.existsSync(LOGO_PATH)
+      ? 'data:image/png;base64,' + fs.readFileSync(LOGO_PATH).toString('base64')
+      : null;
+
     const tableHtml = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:#fff; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
   .logo-wrap{ text-align:center; padding:16px 0 28px; border-bottom:1px solid #ddd; margin-bottom:36px; }
-  .logo-main{ font-family:'Arial Black','Helvetica Neue',Helvetica,sans-serif; font-size:68px; font-weight:900; letter-spacing:0.06em; color:#1a1a1a; line-height:1; }
-  .logo-res{ font-family:Arial,Helvetica,sans-serif; font-size:20px; font-weight:400; letter-spacing:0.55em; color:#1a1a1a; margin:8px 0; }
-  .logo-city{ font-family:Georgia,'Times New Roman',serif; font-size:40px; font-weight:400; letter-spacing:0.04em; color:#1a1a1a; margin-top:4px; }
+  .logo-wrap img{ height:120px; width:auto; display:inline-block; }
   .letter{ font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.75; color:#222; margin-bottom:36px; max-width:700px; }
   .letter p{ margin-bottom:8px; }
   .section-label{ font-size:11px; font-weight:700; letter-spacing:0.12em; color:#888; text-transform:uppercase; margin-bottom:10px; }
   h3{ font-size:13px; font-weight:700; margin:28px 0 8px; color:#333; }
-  .advisor{ font-size:11px; color:#777; margin-bottom:28px; }
+  .advisor{ font-size:11px; color:#777; margin-bottom:16px; }
+  .disclaimer{ margin-top:20px; padding-top:14px; border-top:1px solid #e0e0e0; font-size:10px; color:#999; line-height:1.6; }
+  .disclaimer p{ margin-bottom:4px; }
   table{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:4px; }
   th,td{ border:1px solid #ddd; padding:8px 10px; font-size:12px; text-align:left; word-break:break-word; vertical-align:middle; }
   th{ background:#f5f5f5; font-weight:700; color:#333; }
@@ -11190,19 +11209,17 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
 </head><body>
 
 <div class="logo-wrap">
-  <div class="logo-main">VICEROY</div>
-  <div class="logo-res">RESIDENCES</div>
-  <div class="logo-city">PLAYA DEL CARMEN</div>
+  ${logoBase64 ? `<img src="${logoBase64}" alt="Viceroy Residences Playa del Carmen">` : '<strong style="font-size:28px">VICEROY RESIDENCES PLAYA DEL CARMEN</strong>'}
 </div>
 
 <div class="letter">
   <p>Estimado/a ${clientFirst},</p>
-  <p>Esta es una selección de unidades basada en nuestras conversaciones previas.</p>
-  <p>Estoy seguro de que entre estas opciones encontrarás la perfecta para ti.</p>
+  <p>Te envío las unidades que seleccionamos juntos.</p>
+  <p>Confío en que podremos asegurar alguna de estas opciones para ti.</p>
   <br>
   <p>Dear ${clientFirst},</p>
-  <p>This is a selection of units based on our previous conversations.</p>
-  <p>I'm confident that among these options, you'll find the perfect one for you.</p>
+  <p>I'm sharing the units we selected together.</p>
+  <p>I'm confident we'll be able to secure one of these options for you.</p>
 </div>
 
 <div class="section-label">Opciones de unidades / Unit Options</div>
@@ -11226,6 +11243,11 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
 </table>
 
 <p class="advisor" style="margin-top:20px">Asesor / Advisor: ${String(row.asesor || '').replace(/</g,'&lt;')}</p>
+
+${tc ? `<div class="disclaimer">
+  <p>1. El precio oficial es en Pesos Mexicanos / Official pricing is in Mexican Pesos.</p>
+  <p>2. Los precios en USD se calculan utilizando el Tipo de Cambio para Pagos de Banxico del ${tcCache.asOfDate || dateStr} a $${tc.toFixed(4)} MXN/USD, únicamente con fines ilustrativos. / USD prices are calculated using the Banxico Exchange Rate for Payments of ${tcCache.asOfDate || dateStr} at $${tc.toFixed(4)} MXN/USD, for illustrative purposes only.</p>
+</div>` : ''}
 </body></html>`;
 
     // ── Floor HTML builder (one floor, one canvas) ─────────────────────────────
@@ -11246,11 +11268,13 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
       }).join('');
 
       const colorsJson = JSON.stringify(COLORS);
+      const invKeySet  = new Set(invRows.map((r) => unitKey(r.unidad)));
       const floorJson  = JSON.stringify({
         imageDataUrl: fp.floor.imageDataUrl || fp.floor.imageRawDataUrl || '',
         imageWidth: rawW, imageHeight: rawH,
         zones: (fp.floor.zones || []).map((z) => ({ label: z.label, points: z.points })),
         selectedMap: fp.selectedMap,
+        invKeys: Array.from(invKeySet),
       });
 
       return `<!DOCTYPE html>
@@ -11302,9 +11326,12 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
       }
     }
     ctx.putImageData(imgData, 0, 0);
+    const invSet = {};
+    (fp.invKeys || []).forEach(function(k){ invSet[k] = true; });
     fp.zones.forEach(function(z){
       const uk = unitKey(z.label);
       const sel = fp.selectedMap[uk];
+      const inInv = invSet[uk];
       const pts = Array.isArray(z.points) ? z.points : [];
       if(pts.length < 3) return;
       ctx.beginPath();
@@ -11324,6 +11351,8 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
         ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=fs*0.35;
         ctx.strokeText(sel.label,cx,cy);
         ctx.fillStyle='#111'; ctx.fillText(sel.label,cx,cy);
+      } else if(!inInv) {
+        ctx.fillStyle='rgba(20,20,20,0.82)'; ctx.fill();
       } else {
         ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fill();
       }
