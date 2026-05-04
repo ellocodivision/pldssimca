@@ -11174,21 +11174,22 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
 <html lang="es"><head><meta charset="utf-8">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:#fff; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
-  .logo-wrap{ text-align:center; padding:16px 0 28px; border-bottom:1px solid #ddd; margin-bottom:36px; }
-  .logo-wrap img{ height:120px; width:auto; display:inline-block; }
-  .letter{ font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.75; color:#222; margin-bottom:36px; max-width:700px; }
-  .letter p{ margin-bottom:8px; }
-  .section-label{ font-size:11px; font-weight:700; letter-spacing:0.12em; color:#888; text-transform:uppercase; margin-bottom:10px; }
-  h3{ font-size:13px; font-weight:700; margin:28px 0 8px; color:#333; }
-  .advisor{ font-size:11px; color:#777; margin-bottom:16px; }
-  .disclaimer{ margin-top:20px; padding-top:14px; border-top:1px solid #e0e0e0; font-size:10px; color:#999; line-height:1.6; }
-  .disclaimer p{ margin-bottom:4px; }
+  body{ font-family:Arial,sans-serif; font-size:14px; color:#111; background:#fff; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
+  .logo-wrap{ text-align:center; padding:24px 0 40px; border-bottom:1px solid #ddd; margin-bottom:52px; }
+  .logo-wrap img{ height:170px; width:auto; display:inline-block; }
+  .letter{ font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:2.1; color:#222; margin-bottom:52px; max-width:800px; }
+  .letter p{ margin-bottom:4px; }
+  .letter br{ display:block; margin:14px 0; content:''; }
+  .section-label{ font-size:12px; font-weight:700; letter-spacing:0.14em; color:#888; text-transform:uppercase; margin-bottom:14px; }
+  h3{ font-size:15px; font-weight:700; margin:44px 0 12px; color:#333; }
+  .advisor{ font-size:12px; color:#777; margin-top:28px; margin-bottom:20px; }
+  .disclaimer{ margin-top:28px; padding-top:18px; border-top:1px solid #e0e0e0; font-size:11px; color:#999; line-height:1.7; }
+  .disclaimer p{ margin-bottom:6px; }
   table{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:4px; }
-  th,td{ border:1px solid #ddd; padding:8px 10px; font-size:12px; text-align:left; word-break:break-word; vertical-align:middle; }
+  th,td{ border:1px solid #ddd; padding:12px 13px; font-size:13px; text-align:left; word-break:break-word; vertical-align:middle; }
   th{ background:#f5f5f5; font-weight:700; color:#333; }
   tr:nth-child(even) td{ background:#fafafa; }
-  .note{ font-size:10px; font-weight:400; color:#888; display:block; margin-top:2px; }
+  .note{ font-size:11px; font-weight:400; color:#888; display:block; margin-top:3px; }
   .t1 colgroup col:nth-child(1){ width:5%; }
   .t1 colgroup col:nth-child(2){ width:8%; }
   .t1 colgroup col:nth-child(3){ width:11%; }
@@ -11263,7 +11264,7 @@ ${tc ? `<div class="disclaimer">
         const m = matched.find((o) => o.uk === uk);
         return `<span style="display:flex;align-items:center;gap:6px">
           <span style="width:14px;height:14px;border-radius:3px;border:1px solid #555;background:${HEX[sel.label]};flex-shrink:0"></span>
-          Opción ${sel.label} – Unidad ${m ? m.unidad : uk}
+          Opción / Option ${sel.label} – Unidad / Unit ${m ? m.unidad : uk}
         </span>`;
       }).join('');
 
@@ -11287,7 +11288,7 @@ ${tc ? `<div class="disclaimer">
   canvas{ display:block; width:${dispW}px; height:${dispH}px; }
 </style>
 </head><body>
-<div class="ftitle">Plano General / General Floor Plan &nbsp;&mdash;&nbsp; Nivel: ${(()=>{
+<div class="ftitle">Plano General / General Floor Plan &nbsp;&mdash;&nbsp; Nivel / Level: ${(()=>{
         // Derive level from the first selected unit's number (e.g. 540 → 5, 438 → 4)
         const unitKeys = Object.keys(fp.selectedMap);
         if (unitKeys.length) {
@@ -11377,7 +11378,7 @@ ${tc ? `<div class="disclaimer">
     // Page 1: table — sized to actual content height
     let tableH;
     try { tableH = await measureScrollHeight(browser, tableHtml, PAGE_W); } catch { tableH = 500; }
-    tableH = Math.max(tableH, 200) + PAD;
+    tableH = Math.max(tableH, 200) + 4;
     pdfParts.push(await buildExactPage(browser, tableHtml, PAGE_W, tableH));
 
     // Pages 2+: one per floor, sized to canvas + header
@@ -11459,7 +11460,7 @@ ${tc ? `<div class="disclaimer">
   img{ display:block; }
 </style>
 </head><body>
-<div class="hdr">${badge}<span>Plano / Floor Plan &nbsp;&mdash;&nbsp; Opción ${o.label} – Unidad ${o.unidad}</span></div>
+<div class="hdr">${badge}<span>Plano / Floor Plan &nbsp;&mdash;&nbsp; Opción / Option ${o.label} &ndash; Unidad / Unit ${o.unidad}</span></div>
 <img src="${dataUrl}" width="${dispW}" height="${dispH}" alt="Plano ${o.unidad}">
 </body></html>`;
         pdfParts.push(await buildExactPage(browser, unitHtml, PAGE_W, pageH));
