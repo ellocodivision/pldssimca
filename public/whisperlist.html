@@ -68,6 +68,58 @@
       .title{font-size:26px}
       .stats-grid{grid-template-columns:1fr}
     }
+    /* ── Print area ─────────────────────────────────────────── */
+    #printArea{display:none;font-family:Arial,sans-serif}
+    .print-header{margin-bottom:16px}
+    .print-header h2{margin:0 0 4px;font-size:18px}
+    .print-header p{margin:0;font-size:11px;color:#555}
+    .print-table-page{margin-bottom:0}
+    .print-opts-table{width:100%;border-collapse:collapse;table-layout:fixed}
+    .print-opts-table th,.print-opts-table td{border:1px solid #ccc;padding:5px 7px;font-size:11px;text-align:left;word-break:break-word}
+    .print-opts-table th{background:#f4f1e8;font-weight:700}
+    .print-opts-table col:nth-child(1){width:6%}
+    .print-opts-table col:nth-child(2){width:9%}
+    .print-opts-table col:nth-child(3){width:11%}
+    .print-opts-table col:nth-child(4){width:7%}
+    .print-opts-table col:nth-child(5){width:7%}
+    .print-opts-table col:nth-child(6){width:12%}
+    .print-opts-table col:nth-child(7){width:12%}
+    .print-opts-table col:nth-child(8){width:36%}
+    .opt-a{background:#f3df2b}.opt-b{background:#90caf9}.opt-c{background:#a5d6a7}.opt-d{background:#ffcc80}
+    .print-floor-section{display:flex;flex-direction:column}
+    .print-floor-section h3{font-size:13px;font-weight:700;margin:0 0 6px;flex-shrink:0}
+    .print-floor-section img{display:block;border:1px solid #eee;flex-shrink:1;min-height:0}
+    .print-legend{display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap;flex-shrink:0}
+    .print-legend-item{display:flex;align-items:center;gap:5px;font-size:11px}
+    .print-legend-swatch{width:14px;height:14px;border-radius:3px;border:1px solid #555;flex-shrink:0}
+    @media print{
+      @page{size:landscape;margin:1.2cm}
+      body > .wrap{display:none !important}
+      #printArea{display:block !important}
+      /* Table on its own page */
+      .print-table-page{
+        page-break-after:always;
+        break-after:page;
+      }
+      /* Each floor fills exactly one page */
+      .print-floor-section{
+        page-break-before:always;
+        break-before:page;
+        page-break-inside:avoid;
+        break-inside:avoid;
+        height:100vh;
+        box-sizing:border-box;
+        overflow:hidden;
+      }
+      /* Image constrained to never overflow its page */
+      .print-floor-section img{
+        max-width:100%;
+        max-height:calc(100vh - 2.4cm - 52px);
+        width:auto;
+        height:auto;
+        object-fit:contain;
+      }
+    }
   </style>
 </head>
 <body>
@@ -233,6 +285,35 @@
         <tbody></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- Print area – hidden normally, shown only when @media print fires -->
+  <div id="printArea">
+    <div class="print-table-page">
+      <div class="print-header">
+        <h2 id="printTitle"></h2>
+        <p id="printSubtitle"></p>
+      </div>
+      <table class="print-opts-table">
+        <colgroup>
+          <col/><col/><col/><col/><col/><col/><col/><col/>
+        </colgroup>
+        <thead>
+          <tr>
+            <th>OPCIÓN</th>
+            <th>UNIDAD</th>
+            <th>RECÁMARAS</th>
+            <th>DEN</th>
+            <th>BAÑOS</th>
+            <th>M² TOTAL</th>
+            <th>SQFT TOTAL</th>
+            <th>PRECIO</th>
+          </tr>
+        </thead>
+        <tbody id="printTableBody"></tbody>
+      </table>
+    </div>
+    <div id="printFloors"></div>
   </div>
 
   <div id="clientModal" class="modal" aria-hidden="true">
@@ -426,6 +507,7 @@
             <td>
               ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn send-reg-btn" type="button">Enviar a Registros</button> <button class="btn save-btn kpi-btn" type="button">KPI</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
+              ${canEdit ? '<button class="btn save-btn print-opciones-btn" type="button">Imprimir opciones</button>' : ''}
             </td>
           </tr>
         `;
@@ -942,10 +1024,46 @@
         const sendRegBtn = ev.target.closest('.send-reg-btn');
         const kpiBtn = ev.target.closest('.kpi-btn');
         const clientDataBtn = ev.target.closest('.client-data-btn');
-        if (!btn && !deleteBtn && !sendRegBtn && !kpiBtn && !clientDataBtn) return;
+        const printOpBtn = ev.target.closest('.print-opciones-btn');
+        if (!btn && !deleteBtn && !sendRegBtn && !kpiBtn && !clientDataBtn && !printOpBtn) return;
         if (clientDataBtn) {
           const trForData = clientDataBtn.closest('tr');
           if (trForData) showClientData(trForData);
+          return;
+        }
+        if (printOpBtn) {
+          const trForPrint = printOpBtn.closest('tr');
+          if (!trForPrint) return;
+          const id = trForPrint.getAttribute('data-id');
+          const rowData = state.rows.find(function (r) { return String(r.id) === String(id); });
+          const kpiCheck = rowData && rowData.kpi ? rowData.kpi : {};
+          if (!kpiCheck.opcionA && !kpiCheck.opcionB && !kpiCheck.opcionC && !kpiCheck.opcionD) {
+            alert('Este cliente no tiene opciones guardadas en KPI.\nAbre KPI → completa Opción A, B, C o D → Guardar KPI primero.');
+            return;
+          }
+          printOpBtn.disabled = true;
+          printOpBtn.textContent = 'Generando PDF...';
+          fetch('/api/whisperlist/rows/' + encodeURIComponent(id) + '/opciones-pdf', {
+            credentials: 'same-origin'
+          }).then(function (r) {
+            if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Error al generar PDF'); });
+            return r.blob();
+          }).then(function (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const row = state.rows.find(function (row) { return String(row.id) === String(id); });
+            a.href = url;
+            a.download = 'opciones-' + String((row && row.nombreCliente) || id).replace(/[^a-zA-Z0-9\s\-]/g, '').trim().replace(/\s+/g, '-') + '.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }).catch(function (err) {
+            alert('No se pudo generar el PDF: ' + (err && err.message ? err.message : 'Error desconocido'));
+          }).finally(function () {
+            printOpBtn.disabled = false;
+            printOpBtn.textContent = 'Imprimir opciones';
+          });
           return;
         }
         const sourceBtn = sendRegBtn || kpiBtn || deleteBtn || btn;
@@ -985,6 +1103,210 @@
       els.kpiModal.addEventListener('click', function (ev) {
         if (ev.target === els.kpiModal) closeKpiModal();
       });
+
+      function unitKey(s) {
+        var raw = String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (!raw) return '';
+        var normalizedChars = raw
+          .replace(/^[IL]$/g, '1')
+          .replace(/([0-9])[IL]([0-9]|$)/g, '$11$2')
+          .replace(/(^|0)[IL]([0-9])/g, '$11$2');
+        if (/^\d+$/.test(normalizedChars)) {
+          var num = String(Number(normalizedChars));
+          return num === 'NaN' ? normalizedChars : num;
+        }
+        var match = normalizedChars.match(/^0*(\d+)([A-Z]+)?$/);
+        if (match) {
+          var n = String(Number(match[1]));
+          return n === 'NaN' ? normalizedChars : (n + (match[2] || ''));
+        }
+        return normalizedChars;
+      }
+
+      var OPTION_FILL   = { A: 'rgba(243,223,43,0.65)',  B: 'rgba(66,133,244,0.65)',  C: 'rgba(52,168,83,0.65)',  D: 'rgba(251,140,0,0.65)' };
+      var OPTION_STROKE = { A: '#b8a000',                B: '#1a56b0',                C: '#1b6b35',               D: '#c65f00' };
+      var OPTION_HEX    = { A: '#f3df2b',                B: '#90caf9',                C: '#a5d6a7',               D: '#ffcc80' };
+
+      function renderFloorCanvas(floor, selectedMap) {
+        return new Promise(function (resolve, reject) {
+          var img = new Image();
+          img.onload = function () {
+            var canvas = document.createElement('canvas');
+            canvas.width  = floor.imageWidth  || img.naturalWidth;
+            canvas.height = floor.imageHeight || img.naturalHeight;
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            var zones = Array.isArray(floor.zones) ? floor.zones : [];
+
+            // dim non-selected zones lightly
+            zones.forEach(function (zone) {
+              var uk = unitKey(zone.label);
+              if (selectedMap[uk]) return;
+              var pts = Array.isArray(zone.points) ? zone.points : [];
+              if (pts.length < 3) return;
+              ctx.beginPath();
+              ctx.moveTo(pts[0][0], pts[0][1]);
+              for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+              ctx.closePath();
+              ctx.fillStyle = 'rgba(0,0,0,0.08)';
+              ctx.fill();
+            });
+
+            // draw selected zones on top
+            zones.forEach(function (zone) {
+              var uk = unitKey(zone.label);
+              var sel = selectedMap[uk];
+              if (!sel) return;
+              var pts = Array.isArray(zone.points) ? zone.points : [];
+              if (pts.length < 3) return;
+
+              ctx.beginPath();
+              ctx.moveTo(pts[0][0], pts[0][1]);
+              for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+              ctx.closePath();
+              ctx.fillStyle   = OPTION_FILL[sel.label]   || 'rgba(243,223,43,0.65)';
+              ctx.fill();
+              ctx.strokeStyle = OPTION_STROKE[sel.label] || '#888';
+              ctx.lineWidth   = Math.max(2, canvas.width / 400);
+              ctx.stroke();
+
+              // letter label at centroid
+              var cx = 0, cy = 0;
+              pts.forEach(function (p) { cx += p[0]; cy += p[1]; });
+              cx /= pts.length; cy /= pts.length;
+              var fs = Math.max(14, Math.min(36, Math.round(canvas.width / 35)));
+              ctx.font         = 'bold ' + fs + 'px Arial';
+              ctx.textAlign    = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.strokeStyle  = 'rgba(255,255,255,0.9)';
+              ctx.lineWidth    = fs * 0.35;
+              ctx.strokeText(sel.label, cx, cy);
+              ctx.fillStyle    = '#111';
+              ctx.fillText(sel.label, cx, cy);
+            });
+
+            resolve(canvas.toDataURL('image/png'));
+          };
+          img.onerror = function () { reject(new Error('No se pudo cargar imagen de piso')); };
+          img.src = floor.imageDataUrl || floor.imageRawDataUrl || '';
+        });
+      }
+
+      async function printOpciones(rowId) {
+        var row = state.rows.find(function (r) { return String(r.id) === String(rowId); });
+        if (!row) return;
+        var kpi = row.kpi || {};
+        var LABELS = ['A', 'B', 'C', 'D'];
+        var KEYS   = ['opcionA', 'opcionB', 'opcionC', 'opcionD'];
+        var opciones = LABELS.map(function (label, i) {
+          return { label: label, unidad: String(kpi[KEYS[i]] || '').trim() };
+        }).filter(function (o) { return o.unidad; });
+
+        if (!opciones.length) {
+          alert('Este cliente no tiene opciones guardadas en el KPI.');
+          return;
+        }
+
+        setStatus(els.globalStatus, 'Preparando impresión...', null);
+
+        var [excelRes, floorsRes] = await Promise.all([
+          fetch('/api/viceroy/inicio/excel-data', { credentials: 'same-origin', cache: 'no-store' }),
+          fetch('/api/viceroy-piloto/floors',      { credentials: 'same-origin', cache: 'no-store' })
+        ]);
+
+        var excelData  = await excelRes.json().catch(function () { return {}; });
+        var floorsData = await floorsRes.json().catch(function () { return {}; });
+
+        var invRows = Array.isArray(excelData.rows)   ? excelData.rows   : [];
+        var floors  = Array.isArray(floorsData.floors) ? floorsData.floors : [];
+
+        // match each option to its inventory row
+        var matched = opciones.map(function (o) {
+          var uk  = unitKey(o.unidad);
+          var inv = invRows.find(function (r) { return unitKey(r.unidad) === uk; }) || null;
+          return Object.assign({}, o, { inv: inv, uk: uk });
+        });
+
+        // build selectedMap per floor  { unitKey → { label } }
+        var floorPages = floors.map(function (floor) {
+          var selectedMap = {};
+          matched.forEach(function (o) {
+            var zones = Array.isArray(floor.zones) ? floor.zones : [];
+            var hit = zones.some(function (z) { return unitKey(z.label) === o.uk; });
+            if (hit) selectedMap[o.uk] = { label: o.label };
+          });
+          return { floor: floor, selectedMap: selectedMap };
+        }).filter(function (fp) { return Object.keys(fp.selectedMap).length > 0; });
+
+        // ── Build print header ──────────────────────────────────
+        document.getElementById('printTitle').textContent =
+          'Opciones de unidades – ' + escapeHtml(row.nombreCliente || '');
+        document.getElementById('printSubtitle').textContent =
+          'Asesor: ' + escapeHtml(row.asesor || '') +
+          '   |   Fecha: ' + new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' });
+
+        // ── Build options table ─────────────────────────────────
+        var fmt = new Intl.NumberFormat('es-MX', { style:'currency', currency:'MXN', maximumFractionDigits:0 });
+        var tbody = document.getElementById('printTableBody');
+        tbody.innerHTML = matched.map(function (o) {
+          var inv = o.inv;
+          var m2  = inv ? (Number(inv.totalM2 || inv.m2) || '') : '';
+          var sqft = m2 ? Math.round(Number(m2) * 10.7639) : '';
+          var precio = inv && (inv.price || inv.totalM2) ? fmt.format(Number(inv.price || 0)) : '—';
+          var rec  = inv ? String(inv.recamaras || '').replace('B','') : '';
+          var den  = inv ? String(inv.den || '') : '';
+          var ban  = inv ? String(inv.banos || '') : '';
+          return '<tr>' +
+            '<td><span class="print-opts-table .opt-badge opt-' + o.label.toLowerCase() + '" style="display:inline-block;width:22px;height:22px;border-radius:50%;font-weight:700;font-size:13px;text-align:center;line-height:22px;background:' + OPTION_HEX[o.label] + '">' + escapeHtml(o.label) + '</span></td>' +
+            '<td><strong>' + escapeHtml(o.unidad) + '</strong></td>' +
+            '<td>' + escapeHtml(rec)  + '</td>' +
+            '<td>' + escapeHtml(den)  + '</td>' +
+            '<td>' + escapeHtml(ban)  + '</td>' +
+            '<td>' + (m2   ? Number(m2).toLocaleString('es-MX', {maximumFractionDigits:2}) + ' m²' : '—') + '</td>' +
+            '<td>' + (sqft ? Number(sqft).toLocaleString('es-MX') + ' ft²' : '—') + '</td>' +
+            '<td>' + escapeHtml(precio) + '</td>' +
+          '</tr>';
+        }).join('');
+
+        // ── Build floor plan images ─────────────────────────────
+        var floorsDiv = document.getElementById('printFloors');
+        floorsDiv.innerHTML = '';
+
+        if (!floorPages.length) {
+          floorsDiv.innerHTML = '<p style="color:#888;font-size:12px">No se encontraron las unidades en el plano mapeado.</p>';
+        } else {
+          for (var fi = 0; fi < floorPages.length; fi++) {
+            var fp = floorPages[fi];
+            var dataUrl = await renderFloorCanvas(fp.floor, fp.selectedMap);
+
+            // legend for this floor
+            var legendHtml = Object.entries(fp.selectedMap).map(function (entry) {
+              var uk = entry[0];
+              var sel = entry[1];
+              var optionRow = matched.find(function (o) { return o.uk === uk; });
+              var unidadLabel = optionRow ? optionRow.unidad : uk;
+              return '<span class="print-legend-item">' +
+                '<span class="print-legend-swatch" style="background:' + OPTION_HEX[sel.label] + '"></span>' +
+                'Opción ' + sel.label + ' – Unidad ' + escapeHtml(unidadLabel) +
+              '</span>';
+            }).join('');
+
+            var section = document.createElement('div');
+            section.className = 'print-floor-section';
+            section.innerHTML =
+              '<h3>Nivel: ' + escapeHtml(fp.floor.name || ('Piso ' + (fi + 1))) + '</h3>' +
+              '<div class="print-legend">' + legendHtml + '</div>' +
+              '<img src="' + dataUrl + '" alt="Plano nivel" />';
+            floorsDiv.appendChild(section);
+          }
+        }
+
+        setStatus(els.globalStatus, '', null);
+        window.print();
+      }
 
       fetchData().catch(function (err) {
         setStatus(els.globalStatus, err.message || 'Error de carga', 'error');

@@ -11013,6 +11013,411 @@ app.post('/api/whisperlist/import-excel', requireGerente, async (req, res) => {
   });
 });
 
+app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, async (req, res) => {
+  const rowId = String(req.params.id || '').trim();
+  try {
+    const wData = await readWhisperlistData();
+    const row = wData.rows.find((r) => String(r.id) === rowId);
+    if (!row) return res.status(404).json({ error: 'Fila no encontrada en whisperlist' });
+
+    const kpi = row.kpi || {};
+    const LABELS = ['A', 'B', 'C', 'D'];
+    const KEYS   = ['opcionA', 'opcionB', 'opcionC', 'opcionD'];
+    const opciones = LABELS.map((label, i) => ({ label, unidad: String(kpi[KEYS[i]] || '').trim() }))
+                           .filter((o) => o.unidad);
+
+    const invData  = buildViceroyExcelViewData();
+    const invRows  = Array.isArray(invData.rows) ? invData.rows : [];
+
+    const config       = readViceroyPilotoConfig();
+    const selectedName = String(config.selectedFloorJsonName || '').trim();
+    const floorsData   = selectedName
+      ? readNamedFloorsByDevelopment('viceroy-piloto', selectedName)
+      : readMergedFloorsByDevelopment('viceroy-piloto');
+    const floors = Array.isArray(floorsData.floors) ? floorsData.floors : [];
+
+    function unitKey(s) {
+      const raw = String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+      if (!raw) return '';
+      const nc = raw.replace(/([0-9])[IL]([0-9]|$)/g, '$11$2').replace(/(^|0)[IL]([0-9])/g, '$11$2');
+      if (/^\d+$/.test(nc)) { const n = String(Number(nc)); return n === 'NaN' ? nc : n; }
+      const m = nc.match(/^0*(\d+)([A-Z]+)?$/);
+      if (m) { const n = String(Number(m[1])); return n === 'NaN' ? nc : (n + (m[2] || '')); }
+      return nc;
+    }
+
+    const matched = opciones.map((o) => {
+      const uk  = unitKey(o.unidad);
+      const inv = invRows.find((r) => unitKey(r.unidad) === uk) || null;
+      return { label: o.label, unidad: o.unidad, uk, inv };
+    });
+
+    const COLORS = {
+      A: { fill: 'rgba(243,223,43,0.7)',  stroke: '#998500' },
+      B: { fill: 'rgba(66,133,244,0.7)',  stroke: '#1a56b0' },
+      C: { fill: 'rgba(52,168,83,0.7)',   stroke: '#1b6b35' },
+      D: { fill: 'rgba(251,140,0,0.7)',   stroke: '#a85200' },
+    };
+    const HEX = { A: '#f3df2b', B: '#90caf9', C: '#a5d6a7', D: '#ffcc80' };
+
+    const floorPages = floors.map((floor) => {
+      const selectedMap = {};
+      matched.forEach((o) => {
+        const hit = (floor.zones || []).some((z) => unitKey(z.label) === o.uk);
+        if (hit) selectedMap[o.uk] = { label: o.label };
+      });
+      return { floor, selectedMap };
+    }).filter((fp) => Object.keys(fp.selectedMap).length > 0);
+
+    const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+    const dateStr = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const tableRows = matched.map((o) => {
+      const inv   = o.inv;
+      const m2    = inv ? (Number(inv.totalM2 || inv.m2) || '') : '';
+      const sqft  = m2 ? Math.round(Number(m2) * 10.7639) : '';
+      const precio = inv && inv.price ? fmt.format(Number(inv.price)) : '—';
+      const rec   = inv ? String(inv.recamaras || '').replace('B', '') : '—';
+      const den   = inv ? String(inv.den   || '—') : '—';
+      const ban   = inv ? String(inv.banos || '—') : '—';
+      const badge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:12px">${o.label}</span>`;
+      return `<tr>
+        <td style="text-align:center">${badge}</td>
+        <td><strong>${o.unidad}</strong></td>
+        <td>${rec}</td><td>${den}</td><td>${ban}</td>
+        <td>${m2 ? Number(m2).toLocaleString('es-MX', { maximumFractionDigits: 2 }) + ' m²' : '—'}</td>
+        <td>${sqft ? Number(sqft).toLocaleString('es-MX') + ' ft²' : '—'}</td>
+        <td>${precio}</td>
+      </tr>`;
+    }).join('');
+
+    // ── Constants ──────────────────────────────────────────────────────────────
+    const PAGE_W  = 1400;
+    const PAD     = 48;
+    const BG      = '#f4f1e8';
+    const { PDFDocument: PdfLib } = require('pdf-lib');
+
+    // ── Helper: one-page PDF at exact pixel dimensions ─────────────────────────
+    async function buildExactPage(browser, html, widthPx, heightPx) {
+      const pg = await browser.newPage();
+      try {
+        pg.setDefaultTimeout(120000);
+        await pg.setViewport({ width: Math.ceil(widthPx), height: Math.ceil(heightPx), deviceScaleFactor: 2 });
+        await pg.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
+        await pg.emulateMediaType('print');
+        try {
+          const hasReady = await pg.evaluate(() => Object.prototype.hasOwnProperty.call(window, '__pdfReady'));
+          if (hasReady) await pg.waitForFunction(() => window.__pdfReady === true, { timeout: 90000 });
+        } catch {}
+        return await pg.pdf({ printBackground: true, width: widthPx + 'px', height: heightPx + 'px' });
+      } finally { try { await pg.close(); } catch {} }
+    }
+
+    // ── Helper: measure rendered scroll height ─────────────────────────────────
+    async function measureScrollHeight(browser, html, widthPx) {
+      const pg = await browser.newPage();
+      try {
+        pg.setDefaultTimeout(45000);
+        await pg.setViewport({ width: widthPx, height: 2000, deviceScaleFactor: 1 });
+        await pg.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        return await pg.evaluate(() => document.documentElement.scrollHeight);
+      } finally { try { await pg.close(); } catch {} }
+    }
+
+    // ── Table HTML (no canvas, no __pdfReady) ──────────────────────────────────
+    // Payment plan rows: 30 / 10 / 10 / 10 / 40
+    const PLAN = [
+      { label: 'ENGANCHE / DOWN PAYMENT',       pct: 0.30, note: '30% — Firma / Signing' },
+      { label: 'PAGO 1 / PAYMENT 1',            pct: 0.10, note: '10% — Mes 8 / Month 8' },
+      { label: 'PAGO 2 / PAYMENT 2',            pct: 0.10, note: '10% — Mes 16 / Month 16' },
+      { label: 'PAGO 3 / PAYMENT 3',            pct: 0.10, note: '10% — Mes 24 / Month 24' },
+      { label: 'CONTRA ENTREGA / AT DELIVERY',  pct: 0.40, note: '40%' },
+    ];
+
+    const paymentTableRows = matched.map((o) => {
+      const price = o.inv && o.inv.price ? Number(o.inv.price) : 0;
+      const badge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:11px">${o.label}</span>`;
+      const cells = PLAN.map((p) =>
+        `<td style="text-align:right">${price ? fmt.format(Math.round(price * p.pct)) : '—'}</td>`
+      ).join('');
+      return `<tr>
+        <td style="text-align:center">${badge}</td>
+        <td><strong>${o.unidad}</strong></td>
+        <td style="text-align:right"><strong>${price ? fmt.format(price) : '—'}</strong></td>
+        ${cells}
+      </tr>`;
+    }).join('');
+
+    const tableHtml = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:${BG}; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
+  h2{ font-size:20px; margin-bottom:5px; }
+  h3{ font-size:14px; font-weight:700; margin:28px 0 8px; color:#333; }
+  .sub{ font-size:12px; color:#555; margin-bottom:22px; }
+  table{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:4px; }
+  th,td{ border:1px solid #ccc; padding:7px 9px; font-size:12px; text-align:left; word-break:break-word; vertical-align:middle; }
+  th{ background:#e8e4d8; font-weight:700; }
+  .note{ font-size:10px; font-weight:400; color:#666; display:block; margin-top:2px; }
+  /* tabla 1: opciones */
+  .t1 colgroup col:nth-child(1){ width:5%; }
+  .t1 colgroup col:nth-child(2){ width:8%; }
+  .t1 colgroup col:nth-child(3){ width:11%; }
+  .t1 colgroup col:nth-child(4){ width:6%; }
+  .t1 colgroup col:nth-child(5){ width:6%; }
+  .t1 colgroup col:nth-child(6){ width:12%; }
+  .t1 colgroup col:nth-child(7){ width:12%; }
+  .t1 colgroup col:nth-child(8){ width:40%; }
+  /* tabla 2: forma de pago */
+  .t2 colgroup col:nth-child(1){ width:5%; }
+  .t2 colgroup col:nth-child(2){ width:8%; }
+  .t2 colgroup col:nth-child(3){ width:17%; }
+  .t2 colgroup col:nth-child(4){ width:14%; }
+  .t2 colgroup col:nth-child(5){ width:14%; }
+  .t2 colgroup col:nth-child(6){ width:14%; }
+  .t2 colgroup col:nth-child(7){ width:14%; }
+  .t2 colgroup col:nth-child(8){ width:14%; }
+</style>
+</head><body>
+<h2>Opciones de unidades / Unit Options &ndash; ${String(row.nombreCliente || '').replace(/</g,'&lt;')}</h2>
+<p class="sub">Asesor / Advisor: ${String(row.asesor || '').replace(/</g,'&lt;')}</p>
+
+<table class="t1">
+  <colgroup><col/><col/><col/><col/><col/><col/><col/><col/></colgroup>
+  <thead><tr>
+    <th>OPC.</th><th>UNIDAD / UNIT</th><th>RECÁMARAS / BEDROOMS</th><th>DEN</th>
+    <th>BAÑOS / BATHS</th><th>M² TOTAL</th><th>SQFT TOTAL</th><th>PRECIO / PRICE</th>
+  </tr></thead>
+  <tbody>${tableRows}</tbody>
+</table>
+
+<h3>Forma de pago / Payment Plan &nbsp;<span style="font-size:12px;font-weight:400;color:#555">30 / 10 / 10 / 10 / 40</span></h3>
+<table class="t2">
+  <colgroup><col/><col/><col/><col/><col/><col/><col/><col/></colgroup>
+  <thead><tr>
+    <th>OPC.</th><th>UNIDAD / UNIT</th><th>PRECIO TOTAL / TOTAL PRICE</th>
+    ${PLAN.map(p => `<th>${p.label}<span class="note">${p.note}</span></th>`).join('')}
+  </tr></thead>
+  <tbody>${paymentTableRows}</tbody>
+</table>
+</body></html>`;
+
+    // ── Floor HTML builder (one floor, one canvas) ─────────────────────────────
+    function buildFloorHtml(fp, idx) {
+      const rawW  = fp.floor.imageWidth  || 1200;
+      const rawH  = fp.floor.imageHeight || 900;
+      const avail = PAGE_W - PAD * 2;
+      const dscale = Math.min(1, avail / rawW);
+      const dispW  = Math.round(rawW * dscale);
+      const dispH  = Math.round(rawH * dscale);
+
+      const legendItems = Object.entries(fp.selectedMap).map(([uk, sel]) => {
+        const m = matched.find((o) => o.uk === uk);
+        return `<span style="display:flex;align-items:center;gap:6px">
+          <span style="width:14px;height:14px;border-radius:3px;border:1px solid #555;background:${HEX[sel.label]};flex-shrink:0"></span>
+          Opción ${sel.label} – Unidad ${m ? m.unidad : uk}
+        </span>`;
+      }).join('');
+
+      const colorsJson = JSON.stringify(COLORS);
+      const floorJson  = JSON.stringify({
+        imageDataUrl: fp.floor.imageDataUrl || fp.floor.imageRawDataUrl || '',
+        imageWidth: rawW, imageHeight: rawH,
+        zones: (fp.floor.zones || []).map((z) => ({ label: z.label, points: z.points })),
+        selectedMap: fp.selectedMap,
+      });
+
+      return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:${BG}; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; overflow:hidden; }
+  .ftitle{ font-size:15px; font-weight:700; margin-bottom:7px; }
+  .flegend{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; margin-bottom:12px; }
+  canvas{ display:block; width:${dispW}px; height:${dispH}px; }
+</style>
+</head><body>
+<div class="ftitle">Plano / Floor Plan &nbsp;&mdash;&nbsp; Nivel: ${String(fp.floor.name || ('Piso ' + (idx + 1))).replace('.jpg','').replace('.png','').trim()}</div>
+<div class="flegend">${legendItems}</div>
+<canvas id="c" width="${rawW}" height="${rawH}"></canvas>
+<script>
+(function(){
+  window.__pdfReady = false;
+  const fp = ${floorJson};
+  const COLORS = ${colorsJson};
+  function unitKey(s){
+    const raw=String(s||'').trim().toUpperCase().replace(/\\s+/g,'');
+    if(!raw)return'';
+    const nc=raw.replace(/([0-9])[IL]([0-9]|$)/g,'$11$2').replace(/(^|0)[IL]([0-9])/g,'$11$2');
+    if(/^\\d+$/.test(nc)){const n=String(Number(nc));return n==='NaN'?nc:n;}
+    const m=nc.match(/^0*(\\d+)([A-Z]+)?$/);
+    if(m){const n=String(Number(m[1]));return n==='NaN'?nc:(n+(m[2]||''));}
+    return nc;
+  }
+  const img = new Image();
+  img.onload = function(){
+    const c = document.getElementById('c');
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '${BG}';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    fp.zones.forEach(function(z){
+      const uk = unitKey(z.label);
+      const sel = fp.selectedMap[uk];
+      const pts = Array.isArray(z.points) ? z.points : [];
+      if(pts.length < 3) return;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+      ctx.closePath();
+      if(sel){
+        const col = COLORS[sel.label] || COLORS.A;
+        ctx.fillStyle=col.fill; ctx.fill();
+        ctx.strokeStyle=col.stroke; ctx.lineWidth=Math.max(2,c.width/400);
+        ctx.stroke();
+        const cx=pts.reduce(function(s,p){return s+p[0];},0)/pts.length;
+        const cy=pts.reduce(function(s,p){return s+p[1];},0)/pts.length;
+        const fs=Math.max(14,Math.min(40,Math.round(c.width/30)));
+        ctx.font='bold '+fs+'px Arial';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=fs*0.35;
+        ctx.strokeText(sel.label,cx,cy);
+        ctx.fillStyle='#111'; ctx.fillText(sel.label,cx,cy);
+      } else {
+        ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fill();
+      }
+    });
+    window.__pdfReady = true;
+  };
+  img.onerror = function(){ window.__pdfReady = true; };
+  img.src = fp.imageDataUrl;
+})();
+<\/script>
+</body></html>`;
+    }
+
+    // ── Generate all pages, then merge with pdf-lib ────────────────────────────
+    const browser = await getSharedPdfBrowser();
+    const pdfParts = [];
+
+    // Page 1: table — sized to actual content height
+    let tableH;
+    try { tableH = await measureScrollHeight(browser, tableHtml, PAGE_W); } catch { tableH = 500; }
+    tableH = Math.max(tableH, 200) + PAD;
+    pdfParts.push(await buildExactPage(browser, tableHtml, PAGE_W, tableH));
+
+    // Pages 2+: one per floor, sized to canvas + header
+    for (let i = 0; i < floorPages.length; i++) {
+      const fp    = floorPages[i];
+      const rawW  = fp.floor.imageWidth  || 1200;
+      const rawH  = fp.floor.imageHeight || 900;
+      const avail = PAGE_W - PAD * 2;
+      const dscale = Math.min(1, avail / rawW);
+      const dispH  = Math.round(rawH * dscale);
+      const pageH  = dispH + PAD * 2 + 80; // 80px: title + legend
+      pdfParts.push(await buildExactPage(browser, buildFloorHtml(fp, i), PAGE_W, pageH));
+    }
+
+    // Pages N+: individual unit floor plan per option (planLink from column 1 of Excel)
+    function fetchImageBuffer(url) {
+      return new Promise((resolve, reject) => {
+        const mod = url.startsWith('https') ? require('https') : require('http');
+        const req = mod.get(url, { timeout: 20000 }, (res) => {
+          if (res.statusCode === 301 || res.statusCode === 302) {
+            return fetchImageBuffer(res.headers.location).then(resolve).catch(reject);
+          }
+          if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+          const chunks = [];
+          res.on('data', (c) => chunks.push(c));
+          res.on('end', () => resolve(Buffer.concat(chunks)));
+          res.on('error', reject);
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+      });
+    }
+
+    function readImgDimensions(buf) {
+      if (!buf || buf.length < 24) return null;
+      // JPEG
+      if (buf[0] === 0xFF && buf[1] === 0xD8) {
+        let i = 2;
+        while (i < buf.length - 8) {
+          if (buf[i] !== 0xFF) break;
+          const m = buf[i + 1];
+          if (m === 0xC0 || m === 0xC1 || m === 0xC2) {
+            return { w: (buf[i + 7] << 8) | buf[i + 8], h: (buf[i + 5] << 8) | buf[i + 6] };
+          }
+          const segLen = (buf[i + 2] << 8) | buf[i + 3];
+          if (segLen < 2) break;
+          i += 2 + segLen;
+        }
+      }
+      // PNG
+      if (buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 && buf.length >= 24) {
+        return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+      }
+      return null;
+    }
+
+    for (const o of matched) {
+      const planLink = String(o.inv && o.inv.planLink || '').trim();
+      if (!planLink) continue;
+      try {
+        const imgBuf  = await fetchImageBuffer(planLink);
+        const dims    = readImgDimensions(imgBuf);
+        const imgW    = dims ? dims.w : 800;
+        const imgH    = dims ? dims.h : 1000;
+        const avail   = PAGE_W - PAD * 2;
+        const scale   = Math.min(1, avail / imgW);
+        const dispW   = Math.round(imgW * scale);
+        const dispH   = Math.round(imgH * scale);
+        const pageH   = dispH + PAD * 2 + 60;
+        const mime    = planLink.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+        const dataUrl = `data:${mime};base64,${imgBuf.toString('base64')}`;
+        const badge   = `<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:14px;flex-shrink:0">${o.label}</span>`;
+        const unitHtml = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:Arial,sans-serif; background:${BG}; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; overflow:hidden; }
+  .hdr{ display:flex; align-items:center; gap:10px; margin-bottom:14px; font-size:15px; font-weight:700; }
+  img{ display:block; }
+</style>
+</head><body>
+<div class="hdr">${badge}<span>Opción ${o.label} – Unidad ${o.unidad}</span></div>
+<img src="${dataUrl}" width="${dispW}" height="${dispH}" alt="Plano ${o.unidad}">
+</body></html>`;
+        pdfParts.push(await buildExactPage(browser, unitHtml, PAGE_W, pageH));
+      } catch (imgErr) {
+        log(`opciones-pdf: imagen tipología no disponible para unidad ${o.unidad}: ${imgErr && imgErr.message}`);
+      }
+    }
+
+    // Merge
+    const merged = await PdfLib.create();
+    for (const buf of pdfParts) {
+      const doc = await PdfLib.load(buf);
+      const pages = await merged.copyPages(doc, doc.getPageIndices());
+      pages.forEach((p) => merged.addPage(p));
+    }
+    const pdfBuffer = Buffer.from(await merged.save());
+
+    const safeName = String(row.nombreCliente || 'cliente').replace(/[^a-zA-Z0-9\s\-_áéíóúÁÉÍÓÚñÑ]/g, '')
+                      .trim().replace(/\s+/g, '-').slice(0, 50) || 'cliente';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="opciones-${safeName}.pdf"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    log(`Error en /api/whisperlist/rows/:id/opciones-pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF de opciones.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.get('/owner-services', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'owner-services.html'));
 });
