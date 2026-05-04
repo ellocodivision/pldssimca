@@ -11287,11 +11287,15 @@ ${tc ? `<div class="disclaimer">
   canvas{ display:block; width:${dispW}px; height:${dispH}px; }
 </style>
 </head><body>
-<div class="ftitle">Plano / Floor Plan &nbsp;&mdash;&nbsp; Nivel: ${(()=>{
-        const raw = String(fp.floor.name || '').replace(/\.(jpe?g|png|gif|webp)$/i,'').trim();
-        if (!raw || /captura|screenshot/i.test(raw)) return String(idx + 1);
-        const m = raw.match(/^(\d[\d\.]*)/);
-        return m ? m[1] : (raw.length < 25 ? raw : String(idx + 1));
+<div class="ftitle">Plano General / General Floor Plan &nbsp;&mdash;&nbsp; Nivel: ${(()=>{
+        // Derive level from the first selected unit's number (e.g. 540 → 5, 438 → 4)
+        const unitKeys = Object.keys(fp.selectedMap);
+        if (unitKeys.length) {
+          const num = parseInt(unitKeys[0], 10);
+          if (Number.isFinite(num) && num >= 100) return String(Math.floor(num / 100));
+          if (Number.isFinite(num)) return String(num);
+        }
+        return String(idx + 1);
       })()}</div>
 <div class="flegend">${legendItems}</div>
 <canvas id="c" width="${rawW}" height="${rawH}"></canvas>
@@ -11455,7 +11459,7 @@ ${tc ? `<div class="disclaimer">
   img{ display:block; }
 </style>
 </head><body>
-<div class="hdr">${badge}<span>Opción ${o.label} – Unidad ${o.unidad}</span></div>
+<div class="hdr">${badge}<span>Plano / Floor Plan &nbsp;&mdash;&nbsp; Opción ${o.label} – Unidad ${o.unidad}</span></div>
 <img src="${dataUrl}" width="${dispW}" height="${dispH}" alt="Plano ${o.unidad}">
 </body></html>`;
         pdfParts.push(await buildExactPage(browser, unitHtml, PAGE_W, pageH));
