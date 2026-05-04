@@ -11094,7 +11094,7 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
     // ── Constants ──────────────────────────────────────────────────────────────
     const PAGE_W  = 1400;
     const PAD     = 48;
-    const BG      = '#f4f1e8';
+    const BG      = '#ffffff';
     const { PDFDocument: PdfLib } = require('pdf-lib');
 
     // ── Helper: one-page PDF at exact pixel dimensions ─────────────────────────
@@ -11148,22 +11148,28 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
       </tr>`;
     }).join('');
 
+    const firstName = String(row.nombreCliente || '').trim().split(/\s+/)[0];
+    const clientFirst = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase() : 'there';
+
     const tableHtml = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:${BG}; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
-  .logo-wrap{ text-align:center; padding:10px 0 32px; border-bottom:1px solid #d8d3c6; margin-bottom:28px; }
+  body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:#fff; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
+  .logo-wrap{ text-align:center; padding:16px 0 28px; border-bottom:1px solid #ddd; margin-bottom:36px; }
   .logo-main{ font-family:'Arial Black','Helvetica Neue',Helvetica,sans-serif; font-size:68px; font-weight:900; letter-spacing:0.06em; color:#1a1a1a; line-height:1; }
-  .logo-res{ font-family:Arial,Helvetica,sans-serif; font-size:20px; font-weight:400; letter-spacing:0.55em; color:#1a1a1a; margin:6px 0; }
+  .logo-res{ font-family:Arial,Helvetica,sans-serif; font-size:20px; font-weight:400; letter-spacing:0.55em; color:#1a1a1a; margin:8px 0; }
   .logo-city{ font-family:Georgia,'Times New Roman',serif; font-size:40px; font-weight:400; letter-spacing:0.04em; color:#1a1a1a; margin-top:4px; }
-  h2{ font-size:17px; margin-bottom:4px; }
-  h3{ font-size:13px; font-weight:700; margin:24px 0 7px; color:#333; }
-  .sub{ font-size:11px; color:#555; margin-bottom:20px; }
+  .letter{ font-family:Georgia,'Times New Roman',serif; font-size:15px; line-height:1.75; color:#222; margin-bottom:36px; max-width:700px; }
+  .letter p{ margin-bottom:8px; }
+  .section-label{ font-size:11px; font-weight:700; letter-spacing:0.12em; color:#888; text-transform:uppercase; margin-bottom:10px; }
+  h3{ font-size:13px; font-weight:700; margin:28px 0 8px; color:#333; }
+  .advisor{ font-size:11px; color:#777; margin-bottom:28px; }
   table{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:4px; }
-  th,td{ border:1px solid #ccc; padding:7px 9px; font-size:12px; text-align:left; word-break:break-word; vertical-align:middle; }
-  th{ background:#e8e4d8; font-weight:700; }
-  .note{ font-size:10px; font-weight:400; color:#666; display:block; margin-top:2px; }
+  th,td{ border:1px solid #ddd; padding:8px 10px; font-size:12px; text-align:left; word-break:break-word; vertical-align:middle; }
+  th{ background:#f5f5f5; font-weight:700; color:#333; }
+  tr:nth-child(even) td{ background:#fafafa; }
+  .note{ font-size:10px; font-weight:400; color:#888; display:block; margin-top:2px; }
   .t1 colgroup col:nth-child(1){ width:5%; }
   .t1 colgroup col:nth-child(2){ width:8%; }
   .t1 colgroup col:nth-child(3){ width:11%; }
@@ -11182,14 +11188,24 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
   .t2 colgroup col:nth-child(8){ width:14%; }
 </style>
 </head><body>
+
 <div class="logo-wrap">
   <div class="logo-main">VICEROY</div>
   <div class="logo-res">RESIDENCES</div>
   <div class="logo-city">PLAYA DEL CARMEN</div>
 </div>
-<h2>Opciones de unidades / Unit Options &ndash; ${String(row.nombreCliente || '').replace(/</g,'&lt;')}</h2>
-<p class="sub">Asesor / Advisor: ${String(row.asesor || '').replace(/</g,'&lt;')}</p>
 
+<div class="letter">
+  <p>Estimado/a ${clientFirst},</p>
+  <p>Esta es una selección de unidades basada en nuestras conversaciones previas.</p>
+  <p>Estoy seguro de que entre estas opciones encontrarás la perfecta para ti.</p>
+  <br>
+  <p>Dear ${clientFirst},</p>
+  <p>This is a selection of units based on our previous conversations.</p>
+  <p>I'm confident that among these options, you'll find the perfect one for you.</p>
+</div>
+
+<div class="section-label">Opciones de unidades / Unit Options</div>
 <table class="t1">
   <colgroup><col/><col/><col/><col/><col/><col/><col/><col/></colgroup>
   <thead><tr>
@@ -11199,7 +11215,7 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
   <tbody>${tableRows}</tbody>
 </table>
 
-<h3>Forma de pago / Payment Plan &nbsp;<span style="font-size:12px;font-weight:400;color:#555">30 / 10 / 10 / 10 / 40</span></h3>
+<h3>Forma de pago / Payment Plan &nbsp;<span style="font-size:12px;font-weight:400;color:#888">30 / 10 / 10 / 10 / 40</span></h3>
 <table class="t2">
   <colgroup><col/><col/><col/><col/><col/><col/><col/><col/></colgroup>
   <thead><tr>
@@ -11208,6 +11224,8 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
   </tr></thead>
   <tbody>${paymentTableRows}</tbody>
 </table>
+
+<p class="advisor" style="margin-top:20px">Asesor / Advisor: ${String(row.asesor || '').replace(/</g,'&lt;')}</p>
 </body></html>`;
 
     // ── Floor HTML builder (one floor, one canvas) ─────────────────────────────
@@ -11274,6 +11292,16 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
     ctx.fillStyle = '${BG}';
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.drawImage(img, 0, 0, c.width, c.height);
+    // Replace warm beige/cream background pixels with pure white
+    const imgData = ctx.getImageData(0, 0, c.width, c.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i+1], b = d[i+2];
+      if (r >= 195 && g >= 188 && b >= 170 && (r - b) <= 30 && r >= g - 5) {
+        d[i] = d[i+1] = d[i+2] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
     fp.zones.forEach(function(z){
       const uk = unitKey(z.label);
       const sel = fp.selectedMap[uk];
