@@ -1770,7 +1770,7 @@
       const raw = String((row && (row.ESTADO || row.status || row.estado)) || "").trim().toLowerCase();
       if (!raw) return "";
       if (raw.includes("vend") || raw.includes("sold") || raw.includes("no_dispon") || raw.includes("no disponible")) return "vendida";
-      if (raw.includes("reserv")) return "reservada";
+      if (raw.includes("apart") || raw.includes("reserv")) return "reservada";
       if (raw.includes("disp") || raw.includes("avail")) return "disponible";
       return raw;
     }
