@@ -2131,9 +2131,7 @@
         state.selectedUnitInfo = info || null;
         fillClientOptions();
         els.assignUnitLabel.textContent = info && info.unidad ? info.unidad : 'Unidad -';
-        els.assignStatus.textContent = info && Array.isArray(info.whisperAssignments) && info.whisperAssignments.length
-          ? formatWhisperAssignments(info.whisperAssignments)
-          : '';
+        if (els.assignStatus) els.assignStatus.textContent = '';
         if (els.assignClientSelect) els.assignClientSelect.value = '';
         if (els.assignOptionSelect) els.assignOptionSelect.value = 'opcionA';
         renderExistingAssignments(info);
