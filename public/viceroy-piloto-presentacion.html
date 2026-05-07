@@ -760,6 +760,14 @@
                 </select>
                 <button id="clearFloorFiltersBtn" class="btn" type="button">Borrar filtros</button>
               </div>
+              <div id="unitAssignmentBox" class="unit-assignment hidden">
+                <h3 class="assign-title">Unidad seleccionada</h3>
+                <p id="assignUnitLabel" class="assign-unit">Unidad -</p>
+                <div class="assign-actions">
+                  <button id="assignPlanBtn" class="btn hidden" type="button">Ver plano</button>
+                </div>
+                <p id="assignStatus" class="assign-status"></p>
+              </div>
               <div class="table-wrap">
                 <table>
                   <thead>
@@ -2126,8 +2134,8 @@
         els.assignStatus.textContent = info && Array.isArray(info.whisperAssignments) && info.whisperAssignments.length
           ? formatWhisperAssignments(info.whisperAssignments)
           : '';
-        els.assignClientSelect.value = '';
-        els.assignOptionSelect.value = 'opcionA';
+        if (els.assignClientSelect) els.assignClientSelect.value = '';
+        if (els.assignOptionSelect) els.assignOptionSelect.value = 'opcionA';
         renderExistingAssignments(info);
         if (els.assignPlanBtn) {
           if (info && info.planLink) els.assignPlanBtn.classList.remove('hidden');
