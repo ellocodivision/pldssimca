@@ -1410,7 +1410,17 @@
         }).join('\n');
       }
 
+      const SPECIAL_YELLOW_UNIT_KEYS = new Set([
+        '003', '004', '039', '035', '040', '042', '045', '054', '056',
+        '251', '257', '208', '204', '269', '308', '302', '307', '348',
+        '406', '504', 'PH4', 'PH23'
+      ].map(unitKey));
+
       function getUnitOptionColor(info) {
+        const unit = unitKey(info && info.unidad || '');
+        if (unit && SPECIAL_YELLOW_UNIT_KEYS.has(unit)) {
+          return '#d2a400';
+        }
         const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
         const aAssignments = assignments.filter(function (item) {
           return String(item && item.optionKey || '').trim() === 'opcionA';
@@ -2414,7 +2424,7 @@
         if (!els.banxicoRateBadge) return;
         els.banxicoRateBadge.textContent = 'TC Banxico: cargando...';
         try {
-          const res = await fetch('/api/viceroy-piloto/tipo-cambio', {
+          const res = await fetch('/api/viceroy-piloto/tipo-cambio?refresh=1', {
             cache: 'no-store',
             credentials: 'same-origin'
           });
