@@ -2877,6 +2877,7 @@
             <div class="notes" style="text-align:center;">
               <p>Los precios están expresados en pesos mexicanos (MXN). Precios sujetos a cambios sin previo aviso.</p>
               <p>*Prices are expressed in Mexican pesos (MXN). Prices are subject to change without prior notice.</p>
+              <p>Para conocer la disponibilidad más actualizada del inventario, consulta con tu asesor in-house / To obtain the most up-to-date inventory availability, please consult your in-house advisor.</p>
             </div>
         `
           : `
@@ -2911,7 +2912,7 @@
         if (layout.pageContentMode === "split") {
         return `
           <div class="page page-plan" data-page-index="${index}-plan" data-plan-base-mm="${Number.parseFloat(pagePlanHeight) || 185}" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
-            ${downloadStamp ? `<div class="download-stamp">${escapeHtml(downloadStamp)}</div>` : ""}
+            ${downloadStamp ? `<div class="download-stamp"><span>FECHA DE ACTUALIZACION</span><span>${escapeHtml(downloadStamp)}</span></div>` : ""}
             <div class="head">
               ${logoHtml}
               ${brandTextHtml}
@@ -2920,7 +2921,7 @@
             <div class="plan-wrap" style="height:${pagePlanHeight}; margin-top:${pagePlanOffset};">${buildFloorSvgMarkup(floor, layout.pageBackgroundColor || PDF_LAYOUT.pageBackgroundColor || "#ffffff")}</div>
           </div>
           <div class="page page-table" data-page-index="${index}-table" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
-            ${downloadStamp ? `<div class="download-stamp">${escapeHtml(downloadStamp)}</div>` : ""}
+            ${downloadStamp ? `<div class="download-stamp"><span>FECHA DE ACTUALIZACION</span><span>${escapeHtml(downloadStamp)}</span></div>` : ""}
             <div class="head">
               ${logoHtml}
               ${brandTextHtml}
@@ -2940,7 +2941,7 @@
 
         return `
           <div class="page page-single" data-page-index="${index}" data-plan-base-mm="${Number.parseFloat(pagePlanHeight) || 185}" data-lock-font-scale="${floor && floor.lockFontScale ? "1" : "0"}" data-manual-font-size="${hasManualFontSize ? "1" : "0"}">
-            ${downloadStamp ? `<div class="download-stamp">${escapeHtml(downloadStamp)}</div>` : ""}
+            ${downloadStamp ? `<div class="download-stamp"><span>FECHA DE ACTUALIZACION</span><span>${escapeHtml(downloadStamp)}</span></div>` : ""}
             <div class="head">
               ${logoHtml}
               ${brandTextHtml}
@@ -2995,6 +2996,10 @@
       position: absolute;
       top: 4.2mm;
       right: 6mm;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.8mm;
       font-size: 7px;
       line-height: 1;
       color: #5f665f;
@@ -3003,6 +3008,9 @@
       z-index: 3;
       pointer-events: none;
       white-space: nowrap;
+    }
+    .download-stamp span:last-child {
+      font-weight: 700;
     }
     .head {
       text-align: center;
