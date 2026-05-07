@@ -732,7 +732,6 @@
         <select id="advisorFilterSelect" class="mini-select">
           <option value="">Todos los usuarios</option>
         </select>
-        <button id="showOptionABtn" class="btn" type="button">Ver opciones A</button>
         <button id="backToTiposBtn" class="btn" type="button">Volver a tipologias</button>
         <button id="exportFloorsBtn" class="btn" type="button">Exportar 7 niveles</button>
         <button id="refreshViewBtn" class="btn" type="button">Refresh</button>
@@ -758,10 +757,6 @@
                 <label for="filterVistaSelect">Vista</label>
                 <select id="filterVistaSelect">
                   <option value="">Todas</option>
-                </select>
-                <label for="clientFilterSelect">Cliente Whisperlist</label>
-                <select id="clientFilterSelect">
-                  <option value="">Todos los clientes</option>
                 </select>
                 <button id="clearFloorFiltersBtn" class="btn" type="button">Borrar filtros</button>
               </div>
@@ -901,7 +896,6 @@
         activeFilterChips: document.getElementById('activeFilterChips'),
         filterRecamarasSelect: document.getElementById('filterRecamarasSelect'),
         filterVistaSelect: document.getElementById('filterVistaSelect'),
-        clientFilterSelect: document.getElementById('clientFilterSelect'),
         clearFloorFiltersBtn: document.getElementById('clearFloorFiltersBtn'),
         refreshViewBtn: document.getElementById('refreshViewBtn'),
         unitsTableBody: document.getElementById('unitsTableBody'),
@@ -918,7 +912,6 @@
         editTipologiasBtn: document.getElementById('editTipologiasBtn'),
         backToTiposBtn: document.getElementById('backToTiposBtn'),
         showAllOnMapBtn: document.getElementById('showAllOnMapBtn'),
-        showOptionABtn: document.getElementById('showOptionABtn'),
         unitAssignmentBox: document.getElementById('unitAssignmentBox'),
         assignUnitLabel: document.getElementById('assignUnitLabel'),
         assignClientSelect: document.getElementById('assignClientSelect'),
@@ -1785,26 +1778,6 @@
           }
           els.filterVistaSelect.value = String(state.selectedVistaFilter || '');
         }
-        if (els.clientFilterSelect) {
-          const whisperRows = getAssignableWhisperlistRows();
-          els.clientFilterSelect.innerHTML = ['<option value="">Todos los clientes Whisperlist</option>'].concat(
-            whisperRows.map(function (row) {
-              const clientName = String(row.nombreCliente || '').trim() || 'Sin nombre';
-              const optionSuffix = row && row.kpi && row.kpi.__optionLabel ? (' · ' + String(row.kpi.__optionLabel)) : '';
-              const email = String(row.correo || '').trim().toLowerCase();
-              const selected = String(row.id || '') === String(state.selectedWhisperRowId || '') ? ' selected' : '';
-              return '<option value="' + esc(String(row.id || '')) + '"' + selected + '>' + esc(clientName + optionSuffix + (email ? (' · ' + email) : '')) + '</option>';
-            })
-          ).join('');
-          if (state.selectedWhisperRowId && !whisperRows.some(function (row) {
-            return String(row && row.id || '') === String(state.selectedWhisperRowId || '');
-          })) {
-            state.selectedWhisperRowId = '';
-            state.showOnlyOptionA = false;
-            didResetFilter = true;
-          }
-          els.clientFilterSelect.value = String(state.selectedWhisperRowId || '');
-        }
         if (didResetFilter) persistRouteState();
       }
 
@@ -2539,10 +2512,6 @@
 
       function renderFilterChips(stats) {
         const bucket = getBucketMeta(state.selectedBedroom);
-        const selectedWhisperRow = getSelectedWhisperRow();
-        const whisperLabel = selectedWhisperRow
-          ? (String(selectedWhisperRow.nombreCliente || '').trim() || String(selectedWhisperRow.correo || '').trim() || String(selectedWhisperRow.id || '').trim() || 'SIN NOMBRE')
-          : 'TODOS';
         const chips = [
           '<span class="chip">Recamaras: ' + esc(bucket.id || 'N/D') + '</span>',
           '<span class="chip">Tipologia: ' + esc((state.showAllOnMap || state.showAllUnits) ? 'TODAS' : (state.selectedTipologia || 'N/D')) + '</span>',
@@ -2550,8 +2519,6 @@
           '<span class="chip">Vista: ' + esc(state.showAllUnits || !userHasAssignedUnits() ? 'TODAS' : 'MIS UNIDADES') + '</span>',
           '<span class="chip">Filtro recámaras: ' + esc(state.selectedRecamarasFilter || 'TODAS') + '</span>',
           '<span class="chip">Filtro vista: ' + esc(state.selectedVistaFilter || 'TODAS') + '</span>',
-          '<span class="chip">Opciones A: ' + esc(state.showOnlyOptionA ? 'ACTIVAS' : 'TODAS') + '</span>',
-          '<span class="chip">Cliente Whisperlist: ' + esc(whisperLabel) + '</span>',
           '<span class="chip">Mostradas: ' + stats.shown + '</span>',
           '<span class="chip">Disponibles: ' + stats.available + '</span>',
           '<span class="chip">Vendidas: ' + stats.sold + '</span>'
@@ -2618,12 +2585,6 @@
           '</tr>';
         }).join('');
         els.unitsTableBody.innerHTML = html;
-      }
-
-      function updateOptionABtn() {
-        if (!els.showOptionABtn) return;
-        els.showOptionABtn.textContent = state.showOnlyOptionA ? 'Ver todas las opciones' : 'Ver opciones A';
-        els.showOptionABtn.classList.toggle('primary', state.showOnlyOptionA);
       }
 
       function drawFloor() {
@@ -2869,7 +2830,6 @@
         }
         renderWhisperFilters();
         renderZoneAttributeFilters();
-        updateOptionABtn();
         loadBanxicoRate().catch(function () {});
         if (state.view === 'home') {
           renderHome();
@@ -3004,16 +2964,6 @@
         drawFloor();
       });
 
-      if (els.showOptionABtn) {
-        els.showOptionABtn.addEventListener('click', function () {
-          state.showOnlyOptionA = !state.showOnlyOptionA;
-          persistRouteState();
-          updateOptionABtn();
-          hideAssignmentBox();
-          drawFloor();
-        });
-      }
-
       if (els.clearFloorFiltersBtn) {
         els.clearFloorFiltersBtn.addEventListener('click', function () {
           resetFloorFilters();
@@ -3026,16 +2976,6 @@
           state.selectedWhisperRowId = '';
           persistRouteState();
           renderWhisperFilters();
-          hideAssignmentBox();
-          drawFloor();
-        });
-      }
-
-      if (els.clientFilterSelect) {
-        els.clientFilterSelect.addEventListener('change', function () {
-          state.selectedWhisperRowId = String(els.clientFilterSelect.value || '').trim();
-          state.showOnlyOptionA = false;
-          persistRouteState();
           hideAssignmentBox();
           drawFloor();
         });
@@ -3071,8 +3011,7 @@
 
       [
         ['filterRecamarasSelect', 'selectedRecamarasFilter'],
-        ['filterVistaSelect', 'selectedVistaFilter'],
-        ['clientFilterSelect', 'selectedWhisperRowId']
+        ['filterVistaSelect', 'selectedVistaFilter']
       ].forEach(function (pair) {
         const el = els[pair[0]];
         if (!el) return;
