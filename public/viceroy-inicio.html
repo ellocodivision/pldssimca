@@ -169,13 +169,18 @@
       const btn = document.getElementById('printInventoryBtn');
       const status = document.getElementById('printInventoryStatus');
       if (!btn) return;
+      let frame = null;
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
         if (status) status.textContent = 'Descargando inventario...';
-        const url = '/gerente-ventas/related/plano-ventas?quick_export=1&dev=related&t=' + Date.now();
-        window.setTimeout(function () {
-          window.location.href = url;
-        }, 80);
+        const url = '/gerente-ventas/related/plano-descargar?dev=related&auto=1&t=' + Date.now();
+        if (!frame) {
+          frame = document.createElement('iframe');
+          frame.setAttribute('aria-hidden', 'true');
+          frame.style.display = 'none';
+          document.body.appendChild(frame);
+        }
+        frame.src = url;
         window.setTimeout(function () {
           if (status && status.textContent === 'Descargando inventario...') {
             status.textContent = 'Solicitud enviada. Si tu navegador lo bloquea, habilita descargas automáticas.';
