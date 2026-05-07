@@ -3624,34 +3624,40 @@
 
     async function loadRelatedInventoryOnOpen() {
       if (!autoExcelStatus) return false;
-      autoExcelStatus.textContent = "Buscando inventario activo de Viceroy...";
+      autoExcelStatus.textContent = `Buscando Excel automatico de ${DEV_LABEL}...`;
       try {
-        const response = await fetch("/api/viceroy-piloto/related-inventory", {
-          cache: "no-store",
-          credentials: "same-origin"
+        const response = await fetch(`/api/plano-ventas/default-excel?dev=${encodeURIComponent(DEV)}`, {
+          cache: "no-store"
         });
         if (!response.ok) {
+          let details = "";
+          try {
+            const json = await response.json();
+            details = json && json.expectedPath ? ` (${json.expectedPath})` : "";
+          } catch {}
           const loaded = loadExcelFromCache();
           if (!loaded) {
-            autoExcelStatus.textContent = `No se pudo cargar el inventario de Viceroy (HTTP ${response.status}).`;
+            autoExcelStatus.textContent = `No se pudo cargar automatico (HTTP ${response.status})${details}. Cargalo manual una vez para guardarlo en este desarrollo.`;
           }
           return loaded;
         }
-        const data = await response.json().catch(() => ({}));
-        const rows = Array.isArray(data.rows) ? data.rows : [];
-        if (!rows.length) {
-          autoExcelStatus.textContent = "Viceroy respondió sin filas válidas.";
-          return false;
-        }
-        applyParsedExcel({
-          headers: Array.isArray(data.headers) && data.headers.length ? data.headers : RELATED_REPORT_COLUMNS.map((c) => c.label),
-          rows
-        }, data.fileName || "Inventario activo Viceroy");
+        const buffer = await response.arrayBuffer();
+        const parsed = parseExcelArrayBuffer(buffer);
+        const sourceLabel = (() => {
+          const disposition = response.headers.get("content-disposition") || "";
+          const fileMatch = disposition.match(/filename\\*?=(?:UTF-8''|")?([^\";]+)/i);
+          if (fileMatch && fileMatch[1]) {
+            try { return decodeURIComponent(fileMatch[1].replace(/^\"|\"$/g, "")); } catch {}
+            return String(fileMatch[1]).replace(/^\"|\"$/g, "");
+          }
+          return "INVENTARIOMAESTROWIX.xls";
+        })();
+        applyParsedExcel(parsed, sourceLabel);
         return true;
       } catch (error) {
         const loaded = loadExcelFromCache();
         if (!loaded) {
-          autoExcelStatus.textContent = `No se pudo cargar el inventario de Viceroy: ${error && error.message ? error.message : "error desconocido"}.`;
+          autoExcelStatus.textContent = `No se pudo cargar el Excel automatico: ${error && error.message ? error.message : "error desconocido"}. Cargalo manual una vez para este desarrollo.`;
         }
         return loaded;
       }
