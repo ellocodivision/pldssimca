@@ -211,6 +211,16 @@ const VICEROY_TIPOLOGIA_CROPS_PATH = path.join(VICEROY_PILOTO_DATA_DIR, 'viceroy
 const VICEROY_TIPOLOGIA_CROPS_ROOT_PATH = path.join(DATA_DIR, 'viceroy-tipologias-crops.json');
 const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto', 'viceroy-tipologias-crops.json');
 const VICEROY_TIPOLOGIA_THUMBS_DIR = path.join(VICEROY_PILOTO_DATA_DIR, 'tipologia-thumbs');
+const VICEROY_SPECIAL_YELLOW_UNITS_PATH = path.join(DATA_DIR, 'viceroy-special-yellow-units.json');
+const DEFAULT_VICEROY_SPECIAL_YELLOW_UNITS = [
+  '003', '004', '039', '035', '040', '042', '045', '054', '056',
+  '251', '257', '208', '204', '269', '308', '302', '307', '348',
+  '406', '504', 'PH4', 'PH23',
+  '007', '033', '034', '036', '051', '053', '055', '108', '109', '107',
+  '119', '172', '170', '168', '169', '145', '147', '151', '247', '245',
+  '255', '260', '270', '268', '276', '271', '345', '443', '444', '446',
+  '545', '547', '544', '546'
+];
 const SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE = clampNumber(Number(process.env.SOLAR_MIDTOWN_APPENDIX_CHUNK_SIZE), 20, 5, 60);
 const SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY = clampNumber(Number(process.env.SOLAR_MIDTOWN_PLAN_FETCH_CONCURRENCY), 6, 1, 16);
 const SOLAR_MIDTOWN_EDITOR_EMAIL = String(process.env.SOLAR_MIDTOWN_EDITOR_EMAIL || 'martin@simca.mx').toLowerCase();
@@ -2471,6 +2481,50 @@ function writeJson(filePath, data) {
   const tmpPath = `${filePath}.tmp`;
   fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
   fs.renameSync(tmpPath, filePath);
+}
+
+function normalizeViceroySpecialYellowUnits(rawValue) {
+  const list = Array.isArray(rawValue)
+    ? rawValue
+    : (typeof rawValue === 'string' ? rawValue.split(/[\n,;]+/) : []);
+  const normalized = [];
+  const seen = new Set();
+  list.forEach((item) => {
+    const unit = extractUnitCode(item);
+    if (!unit || seen.has(unit)) return;
+    seen.add(unit);
+    normalized.push(unit);
+  });
+  return normalized;
+}
+
+function readViceroySpecialYellowUnits() {
+  const fileExists = fs.existsSync(VICEROY_SPECIAL_YELLOW_UNITS_PATH);
+  const raw = readJson(VICEROY_SPECIAL_YELLOW_UNITS_PATH, null);
+  const list = raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? normalizeViceroySpecialYellowUnits(raw.units || raw.list || raw.values || [])
+    : normalizeViceroySpecialYellowUnits(raw);
+  if (list.length || fileExists) return list;
+  return normalizeViceroySpecialYellowUnits(DEFAULT_VICEROY_SPECIAL_YELLOW_UNITS);
+}
+
+function getDefaultViceroySpecialYellowUnits() {
+  return normalizeViceroySpecialYellowUnits(DEFAULT_VICEROY_SPECIAL_YELLOW_UNITS);
+}
+
+function saveViceroySpecialYellowUnits(units) {
+  const normalized = normalizeViceroySpecialYellowUnits(units);
+  const payload = {
+    updatedAt: new Date().toISOString(),
+    units: normalized
+  };
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  writeJson(VICEROY_SPECIAL_YELLOW_UNITS_PATH, payload);
+  return payload;
+}
+
+function getViceroySpecialYellowUnitSet() {
+  return new Set(readViceroySpecialYellowUnits().map((value) => extractUnitCode(value)).filter(Boolean));
 }
 
 function defaultBackendUserAccessData() {
@@ -10741,6 +10795,10 @@ app.get('/viceroy/inicio/hoja-reserva', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
 });
 
+app.get('/viceroy/inicio/unidades-especiales', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-unidades-especiales.html'));
+});
+
 app.get('/viceroy/inicio/apartar-unidad', (req, res) => {
   res.redirect(302, '/viceroy/inicio/hoja-reserva');
 });
@@ -10758,6 +10816,38 @@ app.get('/api/viceroy/inicio/reservation-options', (req, res) => {
       error: 'No se pudieron cargar las unidades para la hoja de reserva',
       details: err && err.message ? err.message : 'error desconocido'
     });
+  }
+});
+
+app.get('/api/viceroy/inicio/special-yellow-units', requireViceroyPresentAccess, (req, res) => {
+  try {
+    const units = readViceroySpecialYellowUnits();
+    return res.json({
+      ok: true,
+      updatedAt: readJson(VICEROY_SPECIAL_YELLOW_UNITS_PATH, {}).updatedAt || null,
+      units,
+      defaultUnits: getDefaultViceroySpecialYellowUnits()
+    });
+  } catch (err) {
+    const msg = err && err.message ? err.message : 'No se pudieron cargar las unidades especiales';
+    return res.status(500).json({ ok: false, error: msg });
+  }
+});
+
+app.post('/api/viceroy/inicio/special-yellow-units', requireViceroyPresentAccess, (req, res) => {
+  try {
+    const rawUnits = Array.isArray(req.body?.units)
+      ? req.body.units
+      : String(req.body?.text || req.body?.units || '').split(/[\n,;]+/);
+    const payload = saveViceroySpecialYellowUnits(rawUnits);
+    return res.json({
+      ok: true,
+      updatedAt: payload.updatedAt,
+      units: payload.units
+    });
+  } catch (err) {
+    const msg = err && err.message ? err.message : 'No se pudieron guardar las unidades especiales';
+    return res.status(500).json({ ok: false, error: msg });
   }
 });
 
@@ -12107,6 +12197,7 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     config,
     inventoryFileName,
     inventoryRows,
+    specialYellowUnits: readViceroySpecialYellowUnits(),
     tipologiaCrops: readViceroyTipologiaCropMap(),
     tipologias
   });
@@ -12115,15 +12206,7 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
 function buildViceroyExcelViewData() {
   const candidates = resolvePreferredViceroyInventoryCandidates();
   const hasRawValue = (row, index) => Array.isArray(row) && index >= 0 && index < row.length && row[index] !== '' && row[index] != null;
-  const hiddenExcelUnits = new Set([
-    '003', '004', '039', '035', '040', '042', '045', '054', '056',
-    '251', '257', '208', '204', '269', '308', '302', '307', '348',
-    '406', '504', 'PH4', 'PH23',
-    '007', '033', '034', '036', '051', '053', '055', '108', '109', '107',
-    '119', '172', '170', '168', '169', '145', '147', '151', '247', '245',
-    '255', '260', '270', '268', '276', '271', '345', '443', '444', '446',
-    '545', '547', '544', '546'
-  ].map((value) => extractUnitCode(value)));
+  const hiddenExcelUnits = getViceroySpecialYellowUnitSet();
   const shouldHideExcelRow = (row) => {
     const unit = extractUnitCode(row && row.unidad || '');
     if (unit && hiddenExcelUnits.has(unit)) return true;

@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viceroy Unidades Especiales</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #36363f;
+      --ink-soft: #5f5f69;
+      --line: #d4d6cc;
+      --panel: #ffffff;
+      --accent: #d2a400;
+      --green: #41ac63;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Akkurat", "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1120px, 92vw);
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+    .back {
+      display: inline-block;
+      padding: 8px 12px;
+      border: 1px solid #b9beb1;
+      border-radius: 10px;
+      background: #fff;
+      color: #242830;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 400;
+    }
+    .hero {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.1;
+      letter-spacing: .02em;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(43, 47, 58, 0.05);
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1.4fr .8fr;
+      gap: 14px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 320px;
+      border: 1px solid #cfd2c8;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font: inherit;
+      color: var(--ink);
+      resize: vertical;
+      background: #fff;
+      line-height: 1.5;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn {
+      border: 1px solid #b9beb1;
+      background: #fff;
+      color: #242830;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .btn.primary {
+      background: #c7cfb8;
+      border-color: #aeb59f;
+      font-weight: 700;
+    }
+    .btn.warn {
+      background: #fff4c6;
+      border-color: #cbbd77;
+    }
+    .status {
+      margin-top: 10px;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fff;
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .meta {
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f7f5ee;
+      border: 1px solid #e0dccf;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .note {
+      color: var(--ink-soft);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    @media (max-width: 900px) {
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
+    </div>
+
+    <section class="hero">
+      <h1>Unidades especiales / Special Units</h1>
+      <p>Esta lista controla las unidades que se pintan con el amarillo oscuro especial en la presentación de Viceroy y que se excluyen del Excel visible.</p>
+    </section>
+
+    <section class="panel">
+      <div class="row">
+        <div>
+          <textarea id="unitsInput" spellcheck="false" placeholder="Escribe una unidad por línea o separadas por coma"></textarea>
+          <div class="actions">
+            <button class="btn primary" id="saveBtn" type="button">Guardar lista</button>
+            <button class="btn" id="reloadBtn" type="button">Recargar</button>
+            <button class="btn warn" id="defaultsBtn" type="button">Restaurar predeterminadas</button>
+          </div>
+          <div class="status" id="status">Cargando unidades especiales...</div>
+        </div>
+        <aside class="side">
+          <div class="card">
+            <h2>Resumen</h2>
+            <div class="meta" id="summaryMeta">-</div>
+            <div class="chips" id="chips"></div>
+          </div>
+          <div class="card">
+            <h2>Cómo funciona</h2>
+            <div class="note">
+              Si agregas o quitas unidades aquí, la presentación y el submódulo Excel tomarán la lista nueva al recargar.
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <script>
+    (function () {
+      const els = {
+        unitsInput: document.getElementById('unitsInput'),
+        saveBtn: document.getElementById('saveBtn'),
+        reloadBtn: document.getElementById('reloadBtn'),
+        defaultsBtn: document.getElementById('defaultsBtn'),
+        status: document.getElementById('status'),
+        summaryMeta: document.getElementById('summaryMeta'),
+        chips: document.getElementById('chips')
+      };
+
+      let defaultUnits = [];
+      let savedUnits = [];
+
+      function esc(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function parseUnits(text) {
+        return String(text || '')
+          .split(/[\n,;]+/)
+          .map((item) => String(item || '').trim().toUpperCase())
+          .filter(Boolean);
+      }
+
+      function normalizePayload(units) {
+        const seen = new Set();
+        const out = [];
+        units.forEach((unit) => {
+          const clean = String(unit || '').trim().toUpperCase();
+          if (!clean || seen.has(clean)) return;
+          seen.add(clean);
+          out.push(clean);
+        });
+        return out;
+      }
+
+      function render(units, updatedAt) {
+        const list = normalizePayload(Array.isArray(units) ? units : []);
+        els.unitsInput.value = list.join('\n');
+        els.summaryMeta.textContent = `${list.length} unidades${updatedAt ? ' · actualizado ' + updatedAt : ''}`;
+        els.chips.innerHTML = list.length
+          ? list.map((unit) => `<span class="chip">${esc(unit)}</span>`).join('')
+          : '<span class="chip">Sin unidades</span>';
+      }
+
+      async function loadUnits() {
+        els.status.textContent = 'Cargando unidades especiales...';
+        const res = await fetch('/api/viceroy/inicio/special-yellow-units', { cache: 'no-store', credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'No se pudieron cargar las unidades especiales');
+        savedUnits = Array.isArray(data.units) ? data.units.slice() : [];
+        defaultUnits = Array.isArray(data.defaultUnits) ? data.defaultUnits.slice() : [];
+        render(savedUnits, data.updatedAt || '');
+        els.status.textContent = 'Lista cargada.';
+      }
+
+      async function saveUnits(units) {
+        els.status.textContent = 'Guardando lista...';
+        const res = await fetch('/api/viceroy/inicio/special-yellow-units', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ units })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'No se pudo guardar la lista');
+        savedUnits = Array.isArray(data.units) ? data.units.slice() : [];
+        render(savedUnits, data.updatedAt || '');
+        els.status.textContent = 'Lista guardada.';
+      }
+
+      els.saveBtn.addEventListener('click', async function () {
+        try {
+          await saveUnits(parseUnits(els.unitsInput.value));
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'No se pudo guardar la lista';
+        }
+      });
+
+      els.reloadBtn.addEventListener('click', async function () {
+        try {
+          await loadUnits();
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'No se pudo recargar';
+        }
+      });
+
+      els.defaultsBtn.addEventListener('click', function () {
+        render(defaultUnits, '');
+        els.status.textContent = 'Lista predeterminada cargada. Guarda para aplicarla.';
+      });
+
+      loadUnits().catch((err) => {
+        els.status.textContent = err && err.message ? err.message : 'No se pudieron cargar las unidades especiales';
+      });
+    })();
+  </script>
+</body>
+</html>
