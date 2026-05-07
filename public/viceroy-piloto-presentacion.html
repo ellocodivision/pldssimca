@@ -2522,10 +2522,14 @@
             : (r.m2 == null || r.m2 === '' ? 'N/D' : String(r.m2));
           const rec = getBedroomCompactLabel(r.recamaras || '');
           const vista = r.vista || 'N/D';
+          const status = String(r && r.status || '').trim().toLowerCase();
+          const hidePrice = status === 'apartado' || status === 'reservada';
           const priceNum = parseMoneyLike(r.price);
-          const price = Number.isFinite(priceNum)
+          const price = hidePrice
+            ? ''
+            : (Number.isFinite(priceNum)
             ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(priceNum)
-            : (r.price == null || r.price === '' ? 'N/D' : String(r.price));
+            : (r.price == null || r.price === '' ? 'N/D' : String(r.price)));
           const unitKeyValue = unitKey(r.unidad || '');
           const whisperTitle = Array.isArray(r.whisperAssignments) && r.whisperAssignments.length
             ? formatWhisperAssignments(r.whisperAssignments)
