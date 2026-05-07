@@ -774,42 +774,6 @@
                   <tbody id="unitsTableBody"></tbody>
                 </table>
               </div>
-              <div id="unitAssignmentBox" class="unit-assignment hidden">
-                <p class="assign-title">Assign Unit to Founders List</p>
-                <p id="assignUnitLabel" class="assign-unit">Unidad -</p>
-                <div class="assign-field">
-                  <label for="assignClientSelect">Cliente</label>
-                  <select id="assignClientSelect">
-                    <option value="">Selecciona un cliente</option>
-                  </select>
-                </div>
-                <div class="assign-field">
-                  <label for="assignOptionSelect">Guardar en KPI</label>
-                  <select id="assignOptionSelect">
-                    <option value="opcionA">Opción A</option>
-                    <option value="opcionB">Opción B</option>
-                    <option value="opcionC">Opción C</option>
-                    <option value="opcionD">Opción D</option>
-                  </select>
-                </div>
-                <div class="assign-actions">
-                  <button id="assignPlanBtn" class="btn hidden" type="button">Ver plano</button>
-                  <button id="assignSimilarBtn" class="btn" type="button">Ver unidades similares</button>
-                  <button id="assignSaveBtn" class="btn primary" type="button">Guardar</button>
-                  <button id="assignDeleteBtn" class="btn" type="button">Borrar</button>
-                  <button id="assignCloseBtn" class="btn" type="button">Cerrar</button>
-                </div>
-                <p id="assignStatus" class="assign-status"></p>
-                <div id="assignExistingBox" class="assign-existing hidden">
-                  <p class="assign-existing-title">Ya seleccionaron esta unidad</p>
-                  <div id="assignExistingList" class="assign-existing-list"></div>
-                </div>
-                <div id="assignSimilarBox" class="assign-similar hidden">
-                  <p class="assign-similar-title">Unidades similares disponibles</p>
-                  <div id="assignSimilarList" class="assign-similar-list"></div>
-                </div>
-                <p class="assign-help">Solo verás tus clientes y tus unidades asignadas. Puedes cambiar a “ver todas” cuando necesites revisar el plano completo.</p>
-              </div>
             </div>
             <div class="map-canvas">
               <img id="baseImage" alt="Plano">
@@ -1874,6 +1838,7 @@
       }
 
       function fillClientOptions() {
+        if (!els.assignClientSelect) return;
         const rows = getAssignableWhisperlistRows();
         const options = ['<option value="">Selecciona un cliente</option>'].concat(rows.map(function (row) {
           const clientName = String(row.nombreCliente || '').trim() || 'Sin nombre';
@@ -2154,6 +2119,7 @@
       }
 
       function showAssignmentBox(info) {
+        if (!els.unitAssignmentBox) return;
         state.selectedUnitInfo = info || null;
         fillClientOptions();
         els.assignUnitLabel.textContent = info && info.unidad ? info.unidad : 'Unidad -';
