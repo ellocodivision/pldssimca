@@ -7043,6 +7043,7 @@ function parseViceroyRelatedInventoryRows(filePath) {
       TOTAL_SQFT: Number.isFinite(m2Value) ? String(Math.round(m2Value * 10.7639)) : '',
       PRECIO: Number.isFinite(priceValue) ? priceValue : '',
       ESTADO: estado,
+      status: estado,
       sourceRowIndex: r + 1
     });
   }
