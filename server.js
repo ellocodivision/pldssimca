@@ -2054,6 +2054,19 @@ function sanitizeExcelFileName(rawName) {
   return base;
 }
 
+function slugifyFilePart(raw, fallback) {
+  const safe = String(raw || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\- ]+/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+  return safe || fallback;
+}
+
 function csvCellToString(raw) {
   if (raw == null) return '';
   if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw);
@@ -4866,6 +4879,515 @@ function whisperlistExportRows(rows) {
   }));
 }
 
+function normalizeWhisperlistSelectionUnitKey(raw) {
+  const text = String(raw == null ? '' : raw).trim().toUpperCase().replace(/\s+/g, '');
+  if (!text) return '';
+  const normalizedChars = text
+    .replace(/^[IL]$/g, '1')
+    .replace(/(?<=\d)[IL](?=\d|$)/g, '1')
+    .replace(/(?<=^|0)[IL](?=\d)/g, '1');
+  if (/^\d+$/.test(normalizedChars)) {
+    const num = String(Number(normalizedChars));
+    return num === 'NaN' ? normalizedChars : num;
+  }
+  const match = normalizedChars.match(/^0*(\d+)([A-Z]+)?$/);
+  if (match) {
+    const num = String(Number(match[1]));
+    return (num === 'NaN' ? match[1] : num) + (match[2] || '');
+  }
+  return normalizedChars;
+}
+
+function normalizeWhisperlistSelectionPlanKey(raw) {
+  return String(raw == null ? '' : raw).trim().toUpperCase().replace(/\s+/g, '');
+}
+
+function formatWhisperlistMxnCurrency(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  return `MXN ${new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0
+  }).format(num)}`;
+}
+
+function formatWhisperlistDecimal(value, digits = 2) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  }).format(num);
+}
+
+function resolveWhisperlistSelectionPlanImageUrl(rawPlan) {
+  const value = String(rawPlan || '').trim();
+  if (!value) return '';
+  if (/^data:image\//i.test(value)) return value;
+  if (/^\/api\/presentaciones\/solar-midtown\/plan-image\?url=/i.test(value)) {
+    return `${APP_BASE_URL_NORMALIZED}${value}`;
+  }
+  if (/^\/api\//i.test(value)) {
+    return `${APP_BASE_URL_NORMALIZED}${value}`;
+  }
+  if (/^https?:\/\//i.test(value)) {
+    return `${APP_BASE_URL_NORMALIZED}/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(value)}`;
+  }
+  return value;
+}
+
+const WHISPERLIST_SELECTION_PLANS = [
+  { key: '0|30|10|10|10|40', discount: 0, schedule: [30, 10, 10, 10, 40], shortLabel: '30/10/10/10/40', references: ['Down payment', 'Month 8', 'Month 16', 'Month 24', 'Month 30'] },
+  { key: '3|50|10|10|10|20', discount: 3, schedule: [50, 10, 10, 10, 20], shortLabel: '50/10/10/10/20', references: ['Down payment', 'Month 8', 'Month 16', 'Month 24', 'Month 30'] },
+  { key: '5|70|10|5|5|10', discount: 5, schedule: [70, 10, 5, 5, 10], shortLabel: '70/10/5/5/10', references: ['Down payment', 'Month 8', 'Month 16', 'Month 24', 'Month 30'] },
+  { key: '7|90|0|5|0|5', discount: 7, schedule: [90, 0, 5, 0, 5], shortLabel: '90/0/5/0/5', references: ['Down payment', 'Month 8', 'Month 16', 'Month 24', 'Month 30'] }
+];
+
+function getWhisperlistSelectionPlan(rawPlan) {
+  const raw = normalizeWhisperlistSelectionPlanKey(rawPlan);
+  const hit = WHISPERLIST_SELECTION_PLANS.find((plan) => {
+    return normalizeWhisperlistSelectionPlanKey(plan.key) === raw || normalizeWhisperlistSelectionPlanKey(plan.shortLabel) === raw;
+  });
+  return hit || WHISPERLIST_SELECTION_PLANS[0];
+}
+
+function buildWhisperlistSelectionPaymentRows(plan, price) {
+  const currentPlan = plan && typeof plan === 'object' ? plan : WHISPERLIST_SELECTION_PLANS[0];
+  const amountBase = Number(price) || 0;
+  const schedule = Array.isArray(currentPlan.schedule) ? currentPlan.schedule : [];
+  const references = Array.isArray(currentPlan.references) ? currentPlan.references : [];
+  return schedule.map((part, index) => {
+    const percentage = Number(part) || 0;
+    const amount = amountBase * (percentage / 100);
+    return {
+      stage: index + 1,
+      reference: references[index] || `Month ${index + 1}`,
+      percent: percentage,
+      amount,
+      percentLabel: `${percentage.toFixed(0)}%`,
+      amountLabel: formatWhisperlistMxnCurrency(amount)
+    };
+  });
+}
+
+function buildWhisperlistSelectionPdfContext(row, requester = {}) {
+  const kpi = row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
+  const options = [
+    { optionKey: 'opcionA', optionLabel: 'A', rawUnit: kpi.opcionA },
+    { optionKey: 'opcionB', optionLabel: 'B', rawUnit: kpi.opcionB },
+    { optionKey: 'opcionC', optionLabel: 'C', rawUnit: kpi.opcionC },
+    { optionKey: 'opcionD', optionLabel: 'D', rawUnit: kpi.opcionD }
+  ];
+  const selectedByUnit = new Map();
+  options.forEach((option, index) => {
+    const unit = normalizeWhisperlistSelectionUnitKey(option.rawUnit);
+    if (!unit) return;
+    const current = selectedByUnit.get(unit) || {
+      unit,
+      optionLabels: [],
+      optionKeys: [],
+      optionOrder: index
+    };
+    if (!current.optionLabels.includes(option.optionLabel)) current.optionLabels.push(option.optionLabel);
+    if (!current.optionKeys.includes(option.optionKey)) current.optionKeys.push(option.optionKey);
+    current.optionOrder = Math.min(current.optionOrder, index);
+    selectedByUnit.set(unit, current);
+  });
+  const selectedEntries = Array.from(selectedByUnit.values()).sort((a, b) => {
+    if (a.optionOrder !== b.optionOrder) return a.optionOrder - b.optionOrder;
+    return String(a.unit || '').localeCompare(String(b.unit || ''), 'es', { numeric: true, sensitivity: 'base' });
+  });
+
+  const inventoryRows = getViceroyReservationInventoryRows().map((item) => ({
+    unit: String(item && item.UNIDAD || '').trim(),
+    price: Number(item && item.PRECIO) || 0,
+    plan: String(item && item.PLANO || '').trim(),
+    bed: String(item && item.BED || '').trim(),
+    status: String(item && item.ESTADO || '').trim().toLowerCase() || 'disponible',
+    m2: String(item && item.TOTAL_M2 || '').trim(),
+    sqft: String(item && item.TOTAL_SQFT || '').trim()
+  }));
+  const inventoryByUnit = new Map(
+    inventoryRows.map((item) => [normalizeWhisperlistSelectionUnitKey(item.unit), item]).filter((entry) => Boolean(entry[0]))
+  );
+  const floorsData = readMergedFloorsByDevelopment('viceroy-piloto');
+  const floors = Array.isArray(floorsData && floorsData.floors) ? floorsData.floors : [];
+  const floorSelections = new Map();
+
+  const selectionUnits = selectedEntries.map((entry) => {
+    const inventory = inventoryByUnit.get(entry.unit) || null;
+    const plan = getWhisperlistSelectionPlan(inventory && inventory.plan);
+    const floorHit = floors.find((floor) => Array.isArray(floor && floor.zones) && floor.zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === entry.unit)) || null;
+    const zone = floorHit && Array.isArray(floorHit.zones)
+      ? floorHit.zones.find((item) => normalizeWhisperlistSelectionUnitKey(item && item.label) === entry.unit)
+      : null;
+    const unit = {
+      ...entry,
+      inventory,
+      plan,
+      planImageUrl: inventory && inventory.plan
+        ? `${APP_BASE_URL_NORMALIZED}/api/presentaciones/solar-midtown/plan-image?url=${encodeURIComponent(String(inventory.plan).trim())}`
+        : '',
+      floorId: floorHit ? String(floorHit.id || '') : '',
+      floorName: floorHit ? String(floorHit.floorDisplay || floorHit.name || floorHit.id || '') : '',
+      floorImageDataUrl: floorHit ? String(floorHit.imageDataUrl || '') : '',
+      floorImageWidth: floorHit ? Number(floorHit.imageWidth) || 0 : 0,
+      floorImageHeight: floorHit ? Number(floorHit.imageHeight) || 0 : 0,
+      zone: zone || null,
+      recamaras: String(inventory && inventory.bed || '').trim(),
+      m2: String(inventory && inventory.m2 || '').trim(),
+      sqft: String(inventory && inventory.sqft || '').trim(),
+      price: Number(inventory && inventory.price) || 0,
+      priceLabel: formatWhisperlistMxnCurrency(Number(inventory && inventory.price) || 0)
+    };
+    unit.planImageUrl = resolveWhisperlistSelectionPlanImageUrl(inventory && inventory.plan);
+    if (unit.floorId) {
+      const current = floorSelections.get(unit.floorId) || {
+        id: unit.floorId,
+        name: unit.floorName,
+        floor: floorHit,
+        units: []
+      };
+      current.units.push(unit);
+      floorSelections.set(unit.floorId, current);
+    }
+    return unit;
+  });
+
+  const selectedFloors = Array.from(floorSelections.values()).sort((a, b) => {
+    const byName = String(a.name || '').localeCompare(String(b.name || ''), 'es', { numeric: true, sensitivity: 'base' });
+    if (byName !== 0) return byName;
+    return String(a.id || '').localeCompare(String(b.id || ''), 'es', { numeric: true, sensitivity: 'base' });
+  }).map((entry) => ({
+    id: entry.id,
+    name: entry.name,
+    floor: entry.floor,
+    units: entry.units.sort((a, b) => String(a.unit || '').localeCompare(String(b.unit || ''), 'es', { numeric: true, sensitivity: 'base' }))
+  }));
+
+  return {
+    row,
+    requester,
+    selectedUnits: selectionUnits,
+    selectedFloors,
+    rowKpi: kpi,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function buildWhisperlistSelectionPdfHtml(context) {
+  const row = context && context.row ? context.row : {};
+  const selectedUnits = Array.isArray(context && context.selectedUnits) ? context.selectedUnits : [];
+  const selectedFloors = Array.isArray(context && context.selectedFloors) ? context.selectedFloors : [];
+  const title = selectedUnits.length ? `Impresión de opciones · ${escapeHtml(String(row.nombreCliente || 'Whisperlist'))}` : 'Impresión de opciones';
+  const adviserLine = [String(row.asesor || '').trim(), String(row.correo || '').trim()].filter(Boolean).join(' · ');
+  const clientLine = [String(row.nombreCliente || '').trim(), String(row.clientEmail || '').trim(), String(row.clientPhone || '').trim()].filter(Boolean).join(' · ');
+  const selectedOptionsLine = selectedUnits.map((item) => `Opción ${item.optionLabels.join('/')}: ${item.unit}`).join(' · ');
+  const summaryRows = selectedUnits.map((item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.optionLabels.join('/'))}</strong></td>
+      <td>${escapeHtml(item.unit)}</td>
+      <td>${escapeHtml(item.floorName || '-')}</td>
+      <td>${escapeHtml(item.recamaras || '-')}</td>
+      <td>${escapeHtml(item.m2 || '-')}</td>
+      <td>${escapeHtml(item.sqft || '-')}</td>
+      <td>${escapeHtml(item.priceLabel || '-')}</td>
+    </tr>
+  `).join('');
+
+  const floorBlocks = selectedFloors.map((entry) => {
+    const floor = entry.floor || {};
+    const floorName = String(entry.name || floor.floorDisplay || floor.name || floor.id || '').trim();
+    const width = Number(floor.imageWidth) || 1200;
+    const height = Number(floor.imageHeight) || 800;
+    const imageDataUrl = String(floor.imageDataUrl || '').trim();
+    const zoneSet = new Set((entry.units || []).map((u) => normalizeWhisperlistSelectionUnitKey(u.unit)));
+    const zoneBadges = entry.units.map((unit) => `<span class="badge badge-option">${escapeHtml(unit.optionLabels.join('/'))} · ${escapeHtml(unit.unit)}</span>`).join('');
+    const svgZones = Array.isArray(floor.zones) ? floor.zones.map((zone) => {
+      const zoneUnit = normalizeWhisperlistSelectionUnitKey(zone && zone.label);
+      const isSelected = zoneSet.has(zoneUnit);
+      const selectedUnit = (entry.units || []).find((u) => normalizeWhisperlistSelectionUnitKey(u.unit) === zoneUnit) || null;
+      const labels = selectedUnit ? selectedUnit.optionLabels.join('/') : '';
+      const points = Array.isArray(zone && zone.points) ? zone.points.map((point) => `${Number(point && point[0] || 0)},${Number(point && point[1] || 0)}`).join(' ') : '';
+      if (!points) return '';
+      const fill = isSelected ? 'rgba(59,130,246,0.28)' : 'rgba(255,255,255,0.05)';
+      const stroke = isSelected ? '#60a5fa' : 'rgba(255,255,255,0.18)';
+      const labelPoint = Array.isArray(zone.points) && zone.points.length
+        ? zone.points.reduce((acc, point) => {
+            acc.x += Number(point && point[0] || 0);
+            acc.y += Number(point && point[1] || 0);
+            return acc;
+          }, { x: 0, y: 0 })
+        : { x: 0, y: 0 };
+      const centerX = Array.isArray(zone.points) && zone.points.length ? labelPoint.x / zone.points.length : 0;
+      const centerY = Array.isArray(zone.points) && zone.points.length ? labelPoint.y / zone.points.length : 0;
+      return `
+        <polygon points="${points}" fill="${fill}" stroke="${stroke}" stroke-width="${isSelected ? 3 : 1.4}"></polygon>
+        ${isSelected ? `<text x="${centerX}" y="${centerY}" fill="#fff" font-size="28" font-weight="700" text-anchor="middle" dominant-baseline="middle" stroke="#0f172a" stroke-width="4">${escapeHtml(labels)}</text>` : ''}
+      `;
+    }).join('') : '';
+    return `
+      <section class="page floor-page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Pisos seleccionados</div>
+            <h2>${escapeHtml(floorName)}</h2>
+          </div>
+          <div class="badge-row">${zoneBadges}</div>
+        </div>
+        <div class="floor-frame">
+          ${imageDataUrl ? `<img class="floor-image" src="${escapeHtml(imageDataUrl)}" alt="${escapeHtml(floorName)}">` : '<div class="empty-box">Sin imagen de piso</div>'}
+          <svg class="floor-overlay" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+            ${svgZones}
+          </svg>
+        </div>
+        <div class="floor-summary">
+          ${(entry.units || []).map((unit) => `
+            <div class="floor-summary-chip">
+              <strong>${escapeHtml(unit.optionLabels.join('/'))}</strong>
+              <span>${escapeHtml(unit.unit)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  }).join('');
+
+  const unitBlocks = selectedUnits.map((unit) => {
+    const planRows = buildWhisperlistSelectionPaymentRows(unit.plan, unit.price);
+    const paymentRows = planRows.map((item) => `
+      <tr>
+        <td>${escapeHtml(String(item.stage))}</td>
+        <td>${escapeHtml(item.reference)}</td>
+        <td>${escapeHtml(item.percentLabel)}</td>
+        <td>${escapeHtml(item.amountLabel)}</td>
+      </tr>
+    `).join('');
+    const planImage = unit.planImageDataUrl || unit.planImageUrl
+      ? `<img class="plan-image" src="${escapeHtml(unit.planImageDataUrl || unit.planImageUrl)}" alt="Plano ${escapeHtml(unit.unit)}">`
+      : '<div class="empty-box">Sin plano disponible</div>';
+    return `
+      <section class="page unit-page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Detalle por unidad</div>
+            <h2>Unidad ${escapeHtml(unit.unit)}</h2>
+            <p class="muted">Opción ${escapeHtml(unit.optionLabels.join('/'))}${unit.floorName ? ` · ${escapeHtml(unit.floorName)}` : ''}</p>
+          </div>
+          <div class="badge-row">
+            ${unit.optionLabels.map((label) => `<span class="badge badge-option">${escapeHtml(label)}</span>`).join('')}
+          </div>
+        </div>
+        <div class="unit-grid">
+          <div class="plan-panel">
+            ${planImage}
+          </div>
+          <div class="info-panel">
+            <table class="unit-table">
+              <tbody>
+                <tr><th>Unidad</th><td>${escapeHtml(unit.unit)}</td></tr>
+                <tr><th>Nivel</th><td>${escapeHtml(unit.floorName || '-')}</td></tr>
+                <tr><th>Recámaras</th><td>${escapeHtml(unit.recamaras || '-')}</td></tr>
+                <tr><th>m²</th><td>${escapeHtml(unit.m2 || '-')}</td></tr>
+                <tr><th>Square ft</th><td>${escapeHtml(unit.sqft || '-')}</td></tr>
+                <tr><th>Precio MXN</th><td>${escapeHtml(unit.priceLabel || '-')}</td></tr>
+                <tr><th>Plan</th><td>${escapeHtml(unit.plan.shortLabel || '-')}</td></tr>
+              </tbody>
+            </table>
+            <div class="payment-panel">
+              <h3>Forma de pago</h3>
+              <table class="payment-table">
+                <thead>
+                  <tr><th>Etapa</th><th>Concepto</th><th>%</th><th>Monto</th></tr>
+                </thead>
+                <tbody>${paymentRows}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }).join('');
+
+  const coverPage = `
+    <section class="page cover-page">
+      <div class="cover-top">
+        <div>
+          <div class="eyebrow">Whisperlist · Imprimir opciones</div>
+          <h1>Selección de unidades</h1>
+          <p class="muted">${escapeHtml(adviserLine || 'Sin asesor')}<br>${escapeHtml(clientLine || 'Sin cliente')}</p>
+        </div>
+        <div class="cover-tags">
+          ${selectedUnits.map((unit) => `<span class="badge badge-option">Opción ${escapeHtml(unit.optionLabels.join('/'))}: ${escapeHtml(unit.unit)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="summary-card">
+        <h2>Resumen de unidades</h2>
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Opción</th>
+              <th>Unidad</th>
+              <th>Nivel</th>
+              <th>Recámaras</th>
+              <th>m²</th>
+              <th>Square ft</th>
+              <th>Precio MXN</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${summaryRows || '<tr><td colspan="7">No hay unidades seleccionadas.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div class="summary-note">
+        <p>${escapeHtml(selectedOptionsLine || 'Sin opciones seleccionadas en KPI.')}</p>
+        <p>Generado el ${escapeHtml(new Date(context.generatedAt || Date.now()).toLocaleString('es-MX'))}</p>
+      </div>
+    </section>
+  `;
+
+  return `<!doctype html>
+  <html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${title}</title>
+    <style>
+      @page { size: Letter landscape; margin: 0.32in; }
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --ink: #0f172a;
+        --muted: #556070;
+        --line: #d7dee9;
+        --card: #ffffff;
+        --accent: #1d4ed8;
+        --accent-2: #0f766e;
+        --badge: #e8f1ff;
+        --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page {
+        page-break-after: always;
+        min-height: calc(8.5in - 0.64in);
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .page:last-child { page-break-after: auto; }
+      .cover-page { display: flex; flex-direction: column; gap: 16px; justify-content: space-between; }
+      .cover-top { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+      .eyebrow { text-transform: uppercase; letter-spacing: .18em; font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 34px; line-height: 1.05; margin-bottom: 10px; }
+      h2 { font-size: 24px; line-height: 1.15; }
+      h3 { font-size: 16px; margin-bottom: 10px; }
+      .muted { color: var(--muted); line-height: 1.4; }
+      .badge-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+      .badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        border-radius: 999px; padding: 7px 12px; border: 1px solid var(--line);
+        background: #fff; color: var(--ink); font-size: 12px; font-weight: 600;
+      }
+      .badge-option { background: var(--badge); border-color: #c9d9ff; color: #123; }
+      .summary-card {
+        border: 1px solid var(--line); border-radius: 20px; background: #fff; padding: 16px;
+      }
+      .summary-card h2 { margin-bottom: 12px; }
+      .summary-table, .unit-table, .payment-table {
+        width: 100%; border-collapse: collapse; font-size: 12px;
+      }
+      .summary-table th, .summary-table td, .unit-table th, .unit-table td, .payment-table th, .payment-table td {
+        border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left;
+      }
+      .summary-table thead th, .payment-table thead th {
+        background: #f8fafc; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+      }
+      .summary-note {
+        display: flex; justify-content: space-between; gap: 18px; color: var(--muted); font-size: 12px;
+        padding-top: 2px;
+      }
+      .floor-page { display: flex; flex-direction: column; gap: 12px; }
+      .floor-frame {
+        position: relative; width: 100%; overflow: hidden; border-radius: 18px; border: 1px solid var(--line);
+        background: #0b1020;
+      }
+      .floor-image { display: block; width: 100%; height: auto; }
+      .floor-overlay {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+      }
+      .floor-summary {
+        display: flex; flex-wrap: wrap; gap: 10px;
+      }
+      .floor-summary-chip {
+        display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px;
+        background: #eff6ff; border: 1px solid #bfdbfe; font-size: 12px;
+      }
+      .floor-summary-chip span { color: var(--muted); }
+      .unit-page { display: flex; flex-direction: column; gap: 12px; }
+      .unit-grid {
+        display: grid; grid-template-columns: 1.15fr .95fr; gap: 14px; align-items: stretch;
+      }
+      .plan-panel, .info-panel {
+        border: 1px solid var(--line); border-radius: 18px; background: #fff; overflow: hidden;
+      }
+      .plan-panel {
+        display: grid; place-items: center; min-height: 520px; background: #f8fafc;
+      }
+      .plan-panel img { max-width: 100%; max-height: 100%; display: block; object-fit: contain; }
+      .empty-box {
+        width: 100%; min-height: 260px; display: grid; place-items: center; text-align: center;
+        color: var(--muted); padding: 18px;
+      }
+      .info-panel { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+      .unit-table th { width: 34%; color: var(--muted); font-weight: 700; background: #f8fafc; }
+      .payment-panel { margin-top: auto; }
+      .payment-table thead th { font-size: 11px; }
+      .payment-table td, .payment-table th { font-size: 12px; }
+      .page-head {
+        display: flex; justify-content: space-between; gap: 18px; align-items: flex-start;
+      }
+      .page-head p { margin-top: 4px; }
+      .cover-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; max-width: 55%; }
+      .page canvas { image-rendering: auto; }
+    </style>
+  </head>
+  <body>
+    ${coverPage}
+    ${floorBlocks}
+    ${unitBlocks}
+  </body>
+  </html>`;
+}
+
+async function buildWhisperlistSelectionPdfBuffer(row, requester = {}, browserInput = null) {
+  const context = buildWhisperlistSelectionPdfContext(row, requester);
+  if (!context.selectedUnits.length) {
+    const err = new Error('No hay opciones seleccionadas en KPI');
+    err.code = 'NO_SELECTIONS';
+    throw err;
+  }
+  await Promise.all(context.selectedUnits.map(async (unit) => {
+    if (!unit || unit.planImageDataUrl || !unit.planImageUrl) return;
+    try {
+      unit.planImageDataUrl = await fetchImageAsDataUrl(unit.planImageUrl);
+    } catch {}
+  }));
+  const html = buildWhisperlistSelectionPdfHtml(context);
+  const browser = browserInput || await getSharedPdfBrowser();
+  return buildPdfBufferWithBrowser(browser, html, {
+    format: 'Letter',
+    landscape: true,
+    margin: { top: '0.18in', right: '0.18in', bottom: '0.18in', left: '0.18in' },
+    printBackground: true
+  });
+}
+
 async function seedWhisperlistFromExcelIfNeeded() {
   if (!fs.existsSync(WHISPERLIST_EXCEL_PATH)) return;
   if (!whisperlistPool && fs.existsSync(WHISPERLIST_JSON_PATH)) return;
@@ -5651,7 +6173,7 @@ function normalizeViceroyRowStatus(rawValue) {
     return 'vendida';
   }
   if (value.includes('apartad') || value.includes('reservad')) {
-    return 'vendida';
+    return 'apartado';
   }
   return 'disponible';
 }
@@ -10727,6 +11249,51 @@ app.get('/api/whisperlist/export.xlsx', requireGerente, async (req, res) => {
     return res.send(buffer);
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo exportar whisperlist' });
+  }
+});
+
+app.post('/api/whisperlist/rows/:id/options-pdf', async (req, res) => {
+  try {
+    const id = String(req.params && req.params.id || '').trim();
+    if (!id) return res.status(400).json({ error: 'Falta el id de la fila' });
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readWhisperlistData();
+    const row = (Array.isArray(data.rows) ? data.rows : []).find((item) => String(item && item.id || '') === id);
+    if (!row) return res.status(404).json({ error: 'No se encontró la fila solicitada' });
+    if (!whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)) {
+      return res.status(403).json({ error: 'Solo puedes imprimir opciones de filas asignadas a tu correo' });
+    }
+
+    let pdfBuffer;
+    try {
+      pdfBuffer = await buildWhisperlistSelectionPdfBuffer(row, { currentEmail, currentName, isGerente, sourceFile: data.sourceFile || '' });
+    } catch (firstErr) {
+      if (firstErr && firstErr.code === 'NO_SELECTIONS') {
+        return res.status(400).json({ error: 'No hay opciones seleccionadas en KPI' });
+      }
+      if (!isRetryablePdfError(firstErr)) throw firstErr;
+      try {
+        if (sharedPdfBrowser) await sharedPdfBrowser.close();
+      } catch {}
+      sharedPdfBrowser = null;
+      const retryBrowser = await getSharedPdfBrowser();
+      pdfBuffer = await buildWhisperlistSelectionPdfBuffer(row, { currentEmail, currentName, isGerente, sourceFile: data.sourceFile || '' }, retryBrowser);
+    }
+
+    const sellerPart = slugifyFilePart(String(row.asesor || '').trim(), 'asesor');
+    const clientPart = slugifyFilePart(String(row.nombreCliente || '').trim(), 'cliente');
+    const fileName = `whisperlist-opciones-${sellerPart}-${clientPart || 'cliente'}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    log(`Error en /api/whisperlist/rows/:id/options-pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF de opciones.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
   }
 });
 

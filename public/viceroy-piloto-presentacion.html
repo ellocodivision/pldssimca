@@ -1347,7 +1347,12 @@
         const tipologia = String((row && row.tipologia) || '').trim();
         const recSource = String((row && row.recamaras) || state.config.unitRecamarasMap[u] || '').trim();
         const rec = getBedroomDisplayName(normalizeBedroomForRow(row) || recSource || normalizeBedroom((row && row.recamaras) || state.config.unitRecamarasMap[u] || ''));
-        const status = row && String(row.status || '').toLowerCase() === 'vendida' ? 'vendida' : 'disponible';
+        const rawStatus = String((row && row.status) || '').trim().toLowerCase();
+        const status = rawStatus === 'vendida'
+          ? 'vendida'
+          : (rawStatus === 'apartado'
+            ? 'apartado'
+            : 'disponible');
         const m2 = row && row.m2 != null ? row.m2 : (row && row.metros2 != null ? row.metros2 : null);
         const sqft = row && row.sqft != null ? row.sqft : (row && row.ft2 != null ? row.ft2 : null);
         const vista = String((row && (row.vista || row.view)) || zone.vista || zone.view || '').trim();
@@ -1421,15 +1426,10 @@
         if (unit && SPECIAL_YELLOW_UNIT_KEYS.has(unit)) {
           return '#d2a400';
         }
-        const assignments = Array.isArray(info && info.whisperAssignments) ? info.whisperAssignments : [];
-        const aAssignments = assignments.filter(function (item) {
-          return String(item && item.optionKey || '').trim() === 'opcionA';
-        });
-        if (!aAssignments.length) return '#41ac63';
-        if (aAssignments.length === 1) return '#ffd400';
-        if (aAssignments.length === 2) return '#ff8a00';
-        if (aAssignments.length === 3) return '#d62828';
-        return '#4a2c1d';
+        const status = String(info && info.status || '').trim().toLowerCase();
+        if (status === 'vendida') return '#d65353';
+        if (status === 'apartado') return '#ffe18a';
+        return '#41ac63';
       }
 
       function getSelectedWhisperAssignmentForUnit(info) {
@@ -1508,9 +1508,7 @@
           const info = resolveZoneInfo(zone);
           const points = Array.isArray(zone && zone.points) ? zone.points : [];
           if (!points.length) return;
-          const color = !info.hasInventoryMatch
-            ? '#000000'
-            : (info.status === 'vendida' ? '#d65353' : getUnitOptionColor(info));
+          const color = !info.hasInventoryMatch ? '#000000' : getUnitOptionColor(info);
           ctx.beginPath();
           points.forEach(function (point, index) {
             const px = Number(point[0] || 0);
@@ -2054,7 +2052,8 @@
           const unit = unitKey(info.unidad);
           if (!unit || unit === baseUnit) return false;
           if (!info.hasInventoryMatch) return false;
-          if (String(info.status || '').toLowerCase() === 'vendida') return false;
+          const status = String(info.status || '').toLowerCase();
+          if (status === 'vendida' || status === 'apartado') return false;
           if ((record.rawAssignments || []).length) return false;
           return true;
         }).map(function (record) {
@@ -2688,9 +2687,7 @@
           if (info.status === 'vendida') sold += 1; else available += 1;
           rows.push(info);
 
-          const color = info.status === 'vendida'
-            ? '#d65353'
-            : getUnitOptionColor(info);
+          const color = getUnitOptionColor(info);
           const fillColor = isFocused ? '#4dbd74' : color;
           const strokeColor = isFocused ? '#ffe600' : color;
           const cx = points.reduce(function (acc, p) { return acc + Number(p[0] || 0); }, 0) / points.length;
