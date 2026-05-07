@@ -7005,6 +7005,7 @@ function parseViceroyRelatedInventoryRows(filePath) {
     if (!unitKey) return;
     statusByUnit.set(unitKey, row);
   });
+  const specialYellowUnits = getViceroySpecialYellowUnitSet();
 
   const range = XLSX.utils.decode_range(sheet['!ref']);
   const startRow = Math.max(5, Math.min(range.e.r, 5));
@@ -7032,7 +7033,8 @@ function parseViceroyRelatedInventoryRows(filePath) {
     const priceRaw = getValue(21) || getValue(32);
     const priceValue = parseCurrencyLike(priceRaw);
     const statusSource = statusByUnit.get(unitKey) || {};
-    const estado = String(statusSource.status || statusSource.ESTADO || 'disponible').trim().toLowerCase() || 'disponible';
+    const estadoBase = String(statusSource.status || statusSource.ESTADO || 'disponible').trim().toLowerCase() || 'disponible';
+    const estado = specialYellowUnits.has(unitKey) ? 'reservada' : estadoBase;
 
     out.push({
       DEV: 'RELATED',
@@ -7044,6 +7046,7 @@ function parseViceroyRelatedInventoryRows(filePath) {
       PRECIO: Number.isFinite(priceValue) ? priceValue : '',
       ESTADO: estado,
       status: estado,
+      specialYellow: specialYellowUnits.has(unitKey),
       sourceRowIndex: r + 1
     });
   }
@@ -10796,7 +10799,7 @@ app.get('/viceroy/inicio/hoja-reserva', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-apartar-unidad.html'));
 });
 
-app.get('/viceroy/inicio/unidades-especiales', (req, res) => {
+app.get('/viceroy/inicio/unidades-especiales', requireGerente, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-unidades-especiales.html'));
 });
 
@@ -10820,7 +10823,7 @@ app.get('/api/viceroy/inicio/reservation-options', (req, res) => {
   }
 });
 
-app.get('/api/viceroy/inicio/special-yellow-units', requireViceroyPresentAccess, (req, res) => {
+app.get('/api/viceroy/inicio/special-yellow-units', requireGerente, (req, res) => {
   try {
     const units = readViceroySpecialYellowUnits();
     return res.json({
@@ -10835,7 +10838,7 @@ app.get('/api/viceroy/inicio/special-yellow-units', requireViceroyPresentAccess,
   }
 });
 
-app.post('/api/viceroy/inicio/special-yellow-units', requireViceroyPresentAccess, (req, res) => {
+app.post('/api/viceroy/inicio/special-yellow-units', requireGerente, (req, res) => {
   try {
     const rawUnits = Array.isArray(req.body?.units)
       ? req.body.units

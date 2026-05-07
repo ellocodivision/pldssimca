@@ -94,6 +94,7 @@
     const devMatch = window.location.pathname.match(/^\/gerente-ventas\/([^/]+)\/plano-descargar$/i);
     const DEV = (URL_PARAMS.get("dev") || (devMatch && devMatch[1]) || "ceiba").toLowerCase();
     const DEV_BASE = `/gerente-ventas/${encodeURIComponent(DEV)}`;
+    const AUTO = URL_PARAMS.get("auto") === "1";
     const backLink = document.getElementById("backLink");
     if (backLink) backLink.href = DEV_BASE;
     const editorUrl = `${DEV_BASE}/plano-ventas?dev=${encodeURIComponent(DEV)}`;
@@ -116,6 +117,13 @@
         status.textContent = "Solicitud enviada. Si todo está correcto, la descarga inicia en breve.";
       }, 900);
     });
+
+    if (AUTO) {
+      window.addEventListener("load", () => {
+        status.textContent = "Descargando PDF automático...";
+        downloadBtn.click();
+      }, { once: true });
+    }
   </script>
 </body>
 </html>
