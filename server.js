@@ -12115,6 +12115,21 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
 function buildViceroyExcelViewData() {
   const candidates = resolvePreferredViceroyInventoryCandidates();
   const hasRawValue = (row, index) => Array.isArray(row) && index >= 0 && index < row.length && row[index] !== '' && row[index] != null;
+  const hiddenExcelUnits = new Set([
+    '003', '004', '039', '035', '040', '042', '045', '054', '056',
+    '251', '257', '208', '204', '269', '308', '302', '307', '348',
+    '406', '504', 'PH4', 'PH23',
+    '007', '033', '034', '036', '051', '053', '055', '108', '109', '107',
+    '119', '172', '170', '168', '169', '145', '147', '151', '247', '245',
+    '255', '260', '270', '268', '276', '271', '345', '443', '444', '446',
+    '545', '547', '544', '546'
+  ].map((value) => extractUnitCode(value)));
+  const shouldHideExcelRow = (row) => {
+    const unit = extractUnitCode(row && row.unidad || '');
+    if (unit && hiddenExcelUnits.has(unit)) return true;
+    const status = String(row && row.status || '').trim().toLowerCase();
+    return status === 'vendida' || status === 'apartado';
+  };
   for (const candidate of candidates) {
     try {
       const fullPath = String(candidate && candidate.fullPath || '').trim();
@@ -12148,7 +12163,9 @@ function buildViceroyExcelViewData() {
           status: String(parsed.status || 'disponible').trim(),
           vista: String(parsed.vista || '').trim()
         };
-      }).filter(Boolean);
+      }).filter(Boolean).filter(function (row) {
+        return !shouldHideExcelRow(row);
+      });
       if (rows.length) {
         rows.sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
         return {
@@ -12172,7 +12189,9 @@ function buildViceroyExcelViewData() {
     price: row && row.price != null ? row.price : '',
     status: String(row && row.status || 'disponible').trim(),
     vista: String(row && row.vista || '').trim()
-  })).sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
+  })).filter(function (row) {
+    return !shouldHideExcelRow(row);
+  }).sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
   return {
     rows,
     fileName: cached.fileName || '',
