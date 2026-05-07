@@ -11688,7 +11688,7 @@ app.get('/api/whisperlist/rows/:id/opciones-pdf', requireViceroyPresentAccess, a
     const opciones = LABELS.map((label, i) => ({ label, unidad: String(kpi[KEYS[i]] || '').trim() }))
                            .filter((o) => o.unidad);
 
-    const invData  = buildViceroyExcelViewData();
+    const invData  = buildViceroyExcelViewData({ includeHidden: true });
     const invRows  = Array.isArray(invData.rows) ? invData.rows : [];
 
     const config       = readViceroyPilotoConfig();
@@ -12207,11 +12207,13 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
   });
 });
 
-function buildViceroyExcelViewData() {
+function buildViceroyExcelViewData(options = {}) {
+  const includeHidden = Boolean(options && options.includeHidden);
   const candidates = resolvePreferredViceroyInventoryCandidates();
   const hasRawValue = (row, index) => Array.isArray(row) && index >= 0 && index < row.length && row[index] !== '' && row[index] != null;
   const hiddenExcelUnits = getViceroySpecialYellowUnitSet();
   const shouldHideExcelRow = (row) => {
+    if (includeHidden) return false;
     const unit = extractUnitCode(row && row.unidad || '');
     if (unit && hiddenExcelUnits.has(unit)) return true;
     const status = String(row && row.status || '').trim().toLowerCase();
