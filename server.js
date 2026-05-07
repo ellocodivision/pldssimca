@@ -6082,6 +6082,7 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
     const totalRaw = values[16];
     const bedRaw = values[17];
     const denRaw = values[18];
+    const statusRaw = values[10];
     const pricePerM2Raw = values[31];
     const directPriceRaw = values[21];
     const total = parseCurrencyLike(totalRaw);
@@ -6126,7 +6127,7 @@ function parseViceroyInventoryNewLayout(sheet, headerRowNumber) {
       sqft: '',
       price,
       pricePerM2: Number.isFinite(pricePerM2) ? pricePerM2 : '',
-      status: 'disponible',
+      status: normalizeViceroyRowStatus(statusRaw),
       listPricePerM2: Number.isFinite(pricePerM2) ? { 0: pricePerM2 } : {}
     });
   }
