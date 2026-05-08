@@ -72,7 +72,6 @@
     <div class="top">
       <div>
         <h1 class="title">KPI Reservas</h1>
-        <p class="sub">Clientes de Viceroy con <strong>Reserva Pagada = SI</strong>. Cada usuario ve solo lo suyo, salvo el gerente.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
@@ -85,10 +84,9 @@
       <div class="meta">
         <span id="rowsBadge" class="badge">0 filas</span>
         <span id="updatedBadge" class="badge">Actualizado: -</span>
-        <span id="sourceBadge" class="badge">Origen: -</span>
       </div>
       <div class="row" style="margin-top:10px">
-        <input id="searchInput" class="field" placeholder="Buscar cliente, correo, teléfono, país o ciudad" />
+        <input id="searchInput" class="field" placeholder="Buscar unidad reservada, cliente, país o ciudad" />
       </div>
       <p id="status" class="status"></p>
     </section>
@@ -100,7 +98,6 @@
           <tbody id="rowsTbody"></tbody>
         </table>
       </div>
-      <p class="hint">Esta vista no muestra presupuesto, vista, prioridades, opciones A/B/C/D ni unidad asignada. Solo las columnas operativas de reserva.</p>
     </section>
   </main>
 
@@ -120,16 +117,12 @@
             <input id="advisorInput" class="modal-input" placeholder="Asesor" />
           </label>
           <label class="modal-field">
+            <span class="modal-label">Unidad reservada</span>
+            <input id="unitInput" class="modal-input" placeholder="Unidad reservada" required />
+          </label>
+          <label class="modal-field">
             <span class="modal-label">Nombre cliente</span>
             <input id="nameInput" class="modal-input" placeholder="Nombre del cliente" required />
-          </label>
-          <label class="modal-field">
-            <span class="modal-label">Correo</span>
-            <input id="emailInput" class="modal-input" placeholder="correo@ejemplo.com" />
-          </label>
-          <label class="modal-field">
-            <span class="modal-label">Teléfono</span>
-            <input id="phoneInput" class="modal-input" placeholder="Teléfono" />
           </label>
           <label class="modal-field">
             <span class="modal-label">País</span>
@@ -201,7 +194,6 @@
         status: document.getElementById('status'),
         rowsBadge: document.getElementById('rowsBadge'),
         updatedBadge: document.getElementById('updatedBadge'),
-        sourceBadge: document.getElementById('sourceBadge'),
         searchInput: document.getElementById('searchInput'),
         rowsTbody: document.getElementById('rowsTbody'),
         tableHead: document.getElementById('tableHead'),
@@ -215,9 +207,8 @@
         cancelBtn: document.getElementById('cancelBtn'),
         advisorWrap: document.getElementById('advisorWrap'),
         advisorInput: document.getElementById('advisorInput'),
+        unitInput: document.getElementById('unitInput'),
         nameInput: document.getElementById('nameInput'),
-        emailInput: document.getElementById('emailInput'),
-        phoneInput: document.getElementById('phoneInput'),
         countryInput: document.getElementById('countryInput'),
         cityInput: document.getElementById('cityInput'),
         hojaReservaInput: document.getElementById('hojaReservaInput'),
@@ -253,8 +244,7 @@
         const haystack = [
           row.asesor,
           row.nombreCliente,
-          row.clientEmail,
-          row.clientPhone,
+          row.unidadReservada,
           row.pais,
           row.ciudad,
           row.kpi && row.kpi.hojaReserva,
@@ -270,9 +260,8 @@
         const cols = [];
         if (state.isGerente) cols.push('<th>Asesor</th>');
         cols.push(
+          '<th>Unidad reservada</th>',
           '<th>Cliente</th>',
-          '<th>Correo</th>',
-          '<th>Teléfono</th>',
           '<th>País</th>',
           '<th>Ciudad</th>',
           '<th>Hoja reserva</th>',
@@ -289,15 +278,13 @@
         state.filtered = state.rows.filter(rowMatches);
         els.rowsBadge.textContent = `${state.filtered.length} fila${state.filtered.length === 1 ? '' : 's'}`;
         els.updatedBadge.textContent = `Actualizado: ${state.updatedAt ? new Date(state.updatedAt).toLocaleString('es-MX') : '-'}`;
-        els.sourceBadge.textContent = `Origen: ${state.sourceFile || '-'}`;
         renderTableHead();
         els.rowsTbody.innerHTML = state.filtered.map((row) => {
           const cells = [];
           if (state.isGerente) cells.push(`<td>${escapeText(row.asesor || '—')}</td>`);
           cells.push(
+            `<td><strong>${escapeText(row.unidadReservada || '—')}</strong></td>`,
             `<td><strong>${escapeText(row.nombreCliente || '—')}</strong></td>`,
-            `<td>${escapeText(row.clientEmail || '—')}</td>`,
-            `<td>${escapeText(row.clientPhone || '—')}</td>`,
             `<td>${escapeText(row.pais || '—')}</td>`,
             `<td>${escapeText(row.ciudad || '—')}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.hojaReserva)}</td>`,
@@ -308,7 +295,7 @@
             `<td><div class="cell-actions"><button class="btn" type="button" data-edit="${escapeText(row.id)}">Editar</button></div></td>`
           );
           return `<tr>${cells.join('')}</tr>`;
-        }).join('') || `<tr><td colspan="${state.isGerente ? 12 : 11}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
+        }).join('') || `<tr><td colspan="${state.isGerente ? 11 : 10}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
       }
 
       function openModal(mode, row) {
@@ -327,9 +314,8 @@
         } else {
           els.advisorInput.value = '';
         }
+        els.unitInput.value = row ? String(row.unidadReservada || '') : '';
         els.nameInput.value = row ? String(row.nombreCliente || '') : '';
-        els.emailInput.value = row ? String(row.clientEmail || '') : '';
-        els.phoneInput.value = row ? String(row.clientPhone || '') : '';
         els.countryInput.value = row ? String(row.pais || '') : '';
         els.cityInput.value = row ? String(row.ciudad || '') : '';
         els.hojaReservaInput.value = row && row.kpi ? String(row.kpi.hojaReserva || 'NO').toUpperCase() : 'NO';
@@ -348,9 +334,8 @@
       function readFormValues() {
         return {
           asesor: state.isGerente ? els.advisorInput.value : state.currentName,
+          unidadReservada: els.unitInput.value,
           nombreCliente: els.nameInput.value,
-          clientEmail: els.emailInput.value,
-          clientPhone: els.phoneInput.value,
           pais: els.countryInput.value,
           ciudad: els.cityInput.value,
           hojaReserva: els.hojaReservaInput.value,
@@ -366,6 +351,11 @@
         const payload = readFormValues();
         if (!String(payload.nombreCliente || '').trim()) {
           els.status.textContent = 'El nombre del cliente es obligatorio.';
+          els.status.className = 'status error';
+          return;
+        }
+        if (!String(payload.unidadReservada || '').trim()) {
+          els.status.textContent = 'La unidad reservada es obligatoria.';
           els.status.className = 'status error';
           return;
         }
