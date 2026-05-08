@@ -147,6 +147,13 @@
             </select>
           </label>
           <label class="modal-field">
+            <span class="modal-label">Documentos completos</span>
+            <select id="documentosCompletosInput" class="modal-select">
+              <option value="NO">NO</option>
+              <option value="SI">SI</option>
+            </select>
+          </label>
+          <label class="modal-field">
             <span class="modal-label">Contrato enviado</span>
             <select id="contratoEnviadoInput" class="modal-select">
               <option value="NO">NO</option>
@@ -214,6 +221,7 @@
         cityInput: document.getElementById('cityInput'),
         hojaReservaInput: document.getElementById('hojaReservaInput'),
         reservaPagadaInput: document.getElementById('reservaPagadaInput'),
+        documentosCompletosInput: document.getElementById('documentosCompletosInput'),
         contratoEnviadoInput: document.getElementById('contratoEnviadoInput'),
         contratoFirmadoInput: document.getElementById('contratoFirmadoInput'),
         enganchePagadoInput: document.getElementById('enganchePagadoInput')
@@ -273,6 +281,7 @@
           row.ciudad,
           row.kpi && row.kpi.hojaReserva,
           row.kpi && row.kpi.reservaPagada,
+          row.documentosCompletos,
           row.kpi && row.kpi.contratoEnviado,
           row.kpi && row.kpi.contratoFirmado,
           row.kpi && row.kpi.enganchePagado
@@ -290,6 +299,7 @@
           '<th>Ciudad</th>',
           '<th>Hoja reserva</th>',
           '<th>Reserva pagada</th>',
+          '<th>Documentos completos</th>',
           '<th>Contrato enviado</th>',
           '<th>Contrato firmado</th>',
           '<th>Enganche pagado</th>',
@@ -315,13 +325,14 @@
             `<td>${escapeText(row.ciudad || '—')}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.hojaReserva)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.reservaPagada)}</td>`,
+            `<td>${yesNoChip(row.documentosCompletos)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.contratoEnviado)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.contratoFirmado)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.enganchePagado)}</td>`,
             `<td><div class="cell-actions"><button class="btn" type="button" data-edit="${escapeText(row.id)}">Editar</button></div></td>`
           );
           return `<tr>${cells.join('')}</tr>`;
-        }).join('') || `<tr><td colspan="${state.isGerente ? 11 : 10}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
+        }).join('') || `<tr><td colspan="${state.isGerente ? 12 : 11}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
       }
 
       function openModal(mode, row) {
@@ -346,6 +357,7 @@
         els.cityInput.value = row ? String(row.ciudad || '') : '';
         els.hojaReservaInput.value = row && row.kpi ? String(row.kpi.hojaReserva || 'NO').toUpperCase() : 'NO';
         els.reservaPagadaInput.value = row && row.kpi ? String(row.kpi.reservaPagada || 'SI').toUpperCase() : 'SI';
+        els.documentosCompletosInput.value = row ? String(row.documentosCompletos || 'NO').toUpperCase() : 'NO';
         els.contratoEnviadoInput.value = row && row.kpi ? String(row.kpi.contratoEnviado || 'NO').toUpperCase() : 'NO';
         els.contratoFirmadoInput.value = row && row.kpi ? String(row.kpi.contratoFirmado || 'NO').toUpperCase() : 'NO';
         els.enganchePagadoInput.value = row && row.kpi ? String(row.kpi.enganchePagado || 'NO').toUpperCase() : 'NO';
@@ -366,6 +378,7 @@
           ciudad: els.cityInput.value,
           hojaReserva: els.hojaReservaInput.value,
           reservaPagada: els.reservaPagadaInput.value,
+          documentosCompletos: els.documentosCompletosInput.value,
           contratoEnviado: els.contratoEnviadoInput.value,
           contratoFirmado: els.contratoFirmadoInput.value,
           enganchePagado: els.enganchePagadoInput.value
