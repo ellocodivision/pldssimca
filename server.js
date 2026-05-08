@@ -228,6 +228,7 @@ const CEIBA_EDITOR_EMAIL = String(process.env.CEIBA_EDITOR_EMAIL || SOLAR_MIDTOW
 const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
+const VICEROY_KPI_RESERVAS_JSON_PATH = path.join(DATA_DIR, 'viceroy-kpi-reservas.json');
 const WHISPERLIST_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY WHISPERLIST.xlsx');
 const VICEROY_REGISTROS_JSON_PATH = path.join(DATA_DIR, 'viceroy-registros.json');
 const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx');
@@ -4475,6 +4476,39 @@ async function saveWhisperlistRows(rows, sourceFile) {
   } finally {
     client.release();
   }
+}
+
+function readViceroyKpiReservasData() {
+  const raw = readJson(VICEROY_KPI_RESERVAS_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
+  return {
+    rows: Array.isArray(raw.rows) ? raw.rows : [],
+    updatedAt: raw.updatedAt || null,
+    sourceFile: String(raw.sourceFile || '')
+  };
+}
+
+function saveViceroyKpiReservasData(rows, sourceFile) {
+  const updatedAt = new Date().toISOString();
+  const normalizedRows = Array.isArray(rows) ? rows.map((row) => ({
+    ...row,
+    asesor: normalizeWhisperlistAsesor(row.asesor),
+    nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+    clientEmail: normalizeClientEmail(row.clientEmail),
+    clientPhone: normalizeClientPhone(row.clientPhone),
+    pais: normalizeWhisperlistCountry(row.pais),
+    ciudad: normalizeWhisperlistCity(row.ciudad),
+    kpi: normalizeWhisperlistKpi(row.kpi)
+  })) : [];
+  writeJson(VICEROY_KPI_RESERVAS_JSON_PATH, {
+    rows: normalizedRows,
+    updatedAt,
+    sourceFile: String(sourceFile || '')
+  });
+  return {
+    rows: normalizedRows,
+    updatedAt,
+    sourceFile: String(sourceFile || '')
+  };
 }
 
 async function whisperlistAllowedEmails() {
@@ -10453,29 +10487,21 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = currentEmail === GERENTE_EMAIL;
-    const data = await readWhisperlistData();
-    const rows = (Array.isArray(data.rows) ? data.rows : [])
-      .map((row) => ({
-        ...row,
-        asesor: normalizeWhisperlistAsesor(row.asesor),
-        nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
-        recamaras: normalizeWhisperlistRecamaras(row.recamaras),
-        pais: normalizeWhisperlistCountry(row.pais),
-        ciudad: normalizeWhisperlistCity(row.ciudad),
-        canal: normalizeWhisperlistCanal(row.canal),
-        tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta),
-        clientEmail: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
-          ? normalizeClientEmail(row.clientEmail)
-          : '',
-        clientPhone: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
-          ? normalizeClientPhone(row.clientPhone)
-          : '',
-        kpi: normalizeWhisperlistKpi(row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
-      }))
-      .filter((row) => normalizeYesNo(row && row.kpi && row.kpi.reservaPagada) === 'SI')
+    const whisperData = await readWhisperlistData();
+    const overrides = readViceroyKpiReservasData();
+    const rows = buildViceroyKpiReservasRows(
+      mergeViceroyKpiReservasRows(Array.isArray(whisperData.rows) ? whisperData.rows : [], Array.isArray(overrides.rows) ? overrides.rows : []),
+      currentEmail,
+      currentName,
+      isGerente
+    )
+      .map((row) => normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, isGerente))
+      .filter(Boolean)
       .sort((a, b) => {
-        const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
-        if (asesorA !== 0) return asesorA;
+        if (isGerente) {
+          const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
+          if (asesorA !== 0) return asesorA;
+        }
         return String(a.nombreCliente || '').localeCompare(String(b.nombreCliente || ''), 'es', { sensitivity: 'base' });
       });
     return res.json({
@@ -10483,14 +10509,133 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
       currentEmail,
       currentName,
       isGerente,
-      updatedAt: data.updatedAt,
-      sourceFile: data.sourceFile,
+      updatedAt: overrides.updatedAt || whisperData.updatedAt,
+      sourceFile: overrides.sourceFile || whisperData.sourceFile,
       totalRows: rows.length,
       rows
     });
   } catch (err) {
     log(`Error en /api/viceroy/kpi-reservas: ${err && err.stack ? err.stack : err}`);
     return res.status(500).json({ error: 'No se pudo leer KPI Reservas' });
+  }
+});
+
+app.post('/api/viceroy/kpi-reservas/rows', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const body = req.body || {};
+    const nombreCliente = normalizeWhisperlistPersonText(body.nombreCliente);
+    if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
+
+    const asesor = normalizeWhisperlistAsesor(
+      isGerente && body.asesor !== undefined
+        ? body.asesor
+        : (currentName || currentEmail.split('@')[0] || '')
+    );
+    const newRow = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor,
+      correo: currentEmail,
+      canal: 'RELATED',
+      tipoVenta: 'INTERNO',
+      nombreCliente,
+      recamaras: '',
+      pais: normalizeWhisperlistCountry(body.pais),
+      ciudad: normalizeWhisperlistCity(body.ciudad),
+      clientEmail: normalizeClientEmail(body.clientEmail),
+      clientPhone: normalizeClientPhone(body.clientPhone),
+      kpi: normalizeWhisperlistKpi({
+        hojaReserva: body.hojaReserva,
+        reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : 'SI',
+        contratoEnviado: body.contratoEnviado,
+        contratoFirmado: body.contratoFirmado,
+        enganchePagado: body.enganchePagado
+      }),
+      updatedAt: new Date().toISOString()
+    };
+    const store = readViceroyKpiReservasData();
+    store.rows.push(newRow);
+    saveViceroyKpiReservasData(store.rows, 'viceroy-kpi-reservas.json');
+    const visibleRow = normalizeViceroyKpiReservasVisibleRow(newRow, currentEmail, currentName, isGerente);
+    return res.status(201).json({ ok: true, row: visibleRow });
+  } catch (err) {
+    log(`Error en POST /api/viceroy/kpi-reservas/rows: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo crear el cliente KPI' });
+  }
+});
+
+app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const body = req.body || {};
+    const store = readViceroyKpiReservasData();
+    const index = store.rows.findIndex((row) => String(row.id || '') === rowId);
+    let nextRow = null;
+    if (index >= 0) {
+      const target = store.rows[index];
+      if (!whisperlistRowMatchesUser(target, currentEmail, currentName, isGerente)) {
+        return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+      }
+      nextRow = {
+        ...target,
+        asesor: isGerente && body.asesor !== undefined ? normalizeWhisperlistAsesor(body.asesor) : normalizeWhisperlistAsesor(target.asesor),
+        nombreCliente: body.nombreCliente !== undefined ? normalizeWhisperlistPersonText(body.nombreCliente) : normalizeWhisperlistPersonText(target.nombreCliente),
+        clientEmail: body.clientEmail !== undefined ? normalizeClientEmail(body.clientEmail) : normalizeClientEmail(target.clientEmail),
+        clientPhone: body.clientPhone !== undefined ? normalizeClientPhone(body.clientPhone) : normalizeClientPhone(target.clientPhone),
+        pais: body.pais !== undefined ? normalizeWhisperlistCountry(body.pais) : normalizeWhisperlistCountry(target.pais),
+        ciudad: body.ciudad !== undefined ? normalizeWhisperlistCity(body.ciudad) : normalizeWhisperlistCity(target.ciudad),
+        kpi: normalizeWhisperlistKpi({
+          ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
+          hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : target.kpi && target.kpi.hojaReserva,
+          reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : target.kpi && target.kpi.reservaPagada,
+          contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : target.kpi && target.kpi.contratoEnviado,
+          contratoFirmado: body.contratoFirmado !== undefined ? body.contratoFirmado : target.kpi && target.kpi.contratoFirmado,
+          enganchePagado: body.enganchePagado !== undefined ? body.enganchePagado : target.kpi && target.kpi.enganchePagado
+        }),
+        updatedAt: new Date().toISOString()
+      };
+      store.rows[index] = nextRow;
+    } else {
+      const whisperData = await readWhisperlistData();
+      const whisperRow = (Array.isArray(whisperData.rows) ? whisperData.rows : []).find((item) => String(item && item.id || '') === rowId);
+      if (!whisperRow) return res.status(404).json({ error: 'Fila no encontrada' });
+      if (!whisperlistRowMatchesUser(whisperRow, currentEmail, currentName, isGerente)) {
+        return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+      }
+      nextRow = {
+        id: String(whisperRow.id || rowId),
+        asesor: isGerente && body.asesor !== undefined ? normalizeWhisperlistAsesor(body.asesor) : normalizeWhisperlistAsesor(whisperRow.asesor),
+        correo: String(whisperRow.correo || '').trim().toLowerCase(),
+        nombreCliente: body.nombreCliente !== undefined ? normalizeWhisperlistPersonText(body.nombreCliente) : normalizeWhisperlistPersonText(whisperRow.nombreCliente),
+        clientEmail: body.clientEmail !== undefined ? normalizeClientEmail(body.clientEmail) : normalizeClientEmail(whisperRow.clientEmail),
+        clientPhone: body.clientPhone !== undefined ? normalizeClientPhone(body.clientPhone) : normalizeClientPhone(whisperRow.clientPhone),
+        pais: body.pais !== undefined ? normalizeWhisperlistCountry(body.pais) : normalizeWhisperlistCountry(whisperRow.pais),
+        ciudad: body.ciudad !== undefined ? normalizeWhisperlistCity(body.ciudad) : normalizeWhisperlistCity(whisperRow.ciudad),
+        kpi: normalizeWhisperlistKpi({
+          ...(whisperRow.kpi && typeof whisperRow.kpi === 'object' ? whisperRow.kpi : {}),
+          hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : whisperRow.kpi && whisperRow.kpi.hojaReserva,
+          reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : whisperRow.kpi && whisperRow.kpi.reservaPagada,
+          contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : whisperRow.kpi && whisperRow.kpi.contratoEnviado,
+          contratoFirmado: body.contratoFirmado !== undefined ? body.contratoFirmado : whisperRow.kpi && whisperRow.kpi.contratoFirmado,
+          enganchePagado: body.enganchePagado !== undefined ? body.enganchePagado : whisperRow.kpi && whisperRow.kpi.enganchePagado
+        }),
+        updatedAt: new Date().toISOString()
+      };
+      store.rows.push(nextRow);
+    }
+    saveViceroyKpiReservasData(store.rows, 'viceroy-kpi-reservas.json');
+    const visibleRow = normalizeViceroyKpiReservasVisibleRow(nextRow, currentEmail, currentName, isGerente);
+    return res.json({ ok: true, row: visibleRow });
+  } catch (err) {
+    log(`Error en PATCH /api/viceroy/kpi-reservas/rows/:id: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo guardar el cliente KPI' });
   }
 });
 
@@ -12344,6 +12489,115 @@ function buildViceroyExcelViewData(options = {}) {
     fileName: cached.fileName || '',
     sheetName: ''
   };
+}
+
+function buildViceroyKpiReservasRows(rows, currentEmail, currentName, isGerente) {
+  const ownerEmail = String(currentEmail || '').trim().toLowerCase();
+  const ownerName = String(currentName || '').trim();
+  const admin = Boolean(isGerente);
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => {
+      const normalized = {
+        ...row,
+        asesor: normalizeWhisperlistAsesor(row.asesor),
+        nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+        recamaras: normalizeWhisperlistRecamaras(row.recamaras),
+        pais: normalizeWhisperlistCountry(row.pais),
+        ciudad: normalizeWhisperlistCity(row.ciudad),
+        canal: normalizeWhisperlistCanal(row.canal),
+        tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta),
+        clientEmail: normalizeClientEmail(row.clientEmail),
+        clientPhone: normalizeClientPhone(row.clientPhone),
+        kpi: normalizeWhisperlistKpi(row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
+      };
+      if (!admin && !whisperlistRowMatchesUser(normalized, ownerEmail, ownerName, false)) return null;
+      return normalized;
+    })
+    .filter(Boolean)
+    .filter((row) => normalizeYesNo(row && row.kpi && row.kpi.reservaPagada) === 'SI')
+    .sort((a, b) => {
+      if (admin) {
+        const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
+        if (asesorA !== 0) return asesorA;
+      }
+      return String(a.nombreCliente || '').localeCompare(String(b.nombreCliente || ''), 'es', { sensitivity: 'base' });
+    });
+}
+
+function sanitizeViceroyKpiReservasRowForUser(row, currentEmail, currentName, isGerente) {
+  const normalized = {
+    ...row,
+    asesor: normalizeWhisperlistAsesor(row.asesor),
+    nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+    recamaras: normalizeWhisperlistRecamaras(row.recamaras),
+    pais: normalizeWhisperlistCountry(row.pais),
+    ciudad: normalizeWhisperlistCity(row.ciudad),
+    canal: normalizeWhisperlistCanal(row.canal),
+    tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta),
+    clientEmail: normalizeClientEmail(row.clientEmail),
+    clientPhone: normalizeClientPhone(row.clientPhone),
+    kpi: normalizeWhisperlistKpi(row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
+  };
+  if (!isGerente && !whisperlistRowMatchesUser(normalized, currentEmail, currentName, false)) return null;
+  return normalized;
+}
+
+function normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, isGerente) {
+  if (!row) return null;
+  const visibleKpi = normalizeWhisperlistKpi(row.kpi && typeof row.kpi === 'object' ? row.kpi : {});
+  const visibleRow = {
+    id: String(row.id || ''),
+    asesor: normalizeWhisperlistAsesor(row.asesor),
+    nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+    clientEmail: normalizeClientEmail(row.clientEmail),
+    clientPhone: normalizeClientPhone(row.clientPhone),
+    pais: normalizeWhisperlistCountry(row.pais),
+    ciudad: normalizeWhisperlistCity(row.ciudad),
+    kpi: {
+      hojaReserva: normalizeYesNo(visibleKpi.hojaReserva) || 'NO',
+      reservaPagada: normalizeYesNo(visibleKpi.reservaPagada) || 'NO',
+      contratoEnviado: normalizeYesNo(visibleKpi.contratoEnviado) || 'NO',
+      contratoFirmado: normalizeYesNo(visibleKpi.contratoFirmado) || 'NO',
+      enganchePagado: normalizeYesNo(visibleKpi.enganchePagado) || 'NO'
+    },
+    updatedAt: row.updatedAt || '',
+    canEdit: Boolean(isGerente) || whisperlistRowMatchesUser(row, currentEmail, currentName, false)
+  };
+  return visibleRow;
+}
+
+function mergeViceroyKpiReservasRows(baseRows, overrideRows) {
+  const overridesById = new Map();
+  (Array.isArray(overrideRows) ? overrideRows : []).forEach((row) => {
+    const id = String(row && row.id || '').trim();
+    if (!id) return;
+    overridesById.set(id, row);
+  });
+
+  const merged = [];
+  (Array.isArray(baseRows) ? baseRows : []).forEach((baseRow) => {
+    const id = String(baseRow && baseRow.id || '').trim();
+    const override = id ? overridesById.get(id) : null;
+    if (id && overridesById.has(id)) overridesById.delete(id);
+    const combined = override ? {
+      ...baseRow,
+      ...override,
+      kpi: normalizeWhisperlistKpi({
+        ...(baseRow && baseRow.kpi && typeof baseRow.kpi === 'object' ? baseRow.kpi : {}),
+        ...(override && override.kpi && typeof override.kpi === 'object' ? override.kpi : {})
+      })
+    } : baseRow;
+    merged.push(combined);
+  });
+
+  overridesById.forEach((row) => {
+    merged.push({
+      ...row,
+      kpi: normalizeWhisperlistKpi(row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
+    });
+  });
+
+  return merged;
 }
 
 app.get('/api/viceroy/inicio/excel-data', requireViceroyPresentAccess, (req, res) => {
