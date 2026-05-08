@@ -1786,7 +1786,8 @@
         TOTAL_SQFT: row.TOTAL_SQFT || "",
         BED: row.REC || row.BED || "",
         PRECIO: row.PRECIO || "",
-        ESTADO: row.ESTADO || row.status || "disponible"
+        ESTADO: row.ESTADO || row.status || "disponible",
+        specialYellow: Boolean(row.specialYellow)
       };
     }
 
@@ -1810,6 +1811,7 @@
     function getRowsForFloorTable(floor, options = {}) {
       if (!floor) return [];
       const availableOnly = Boolean(options.availableOnly);
+      const includeSpecialReserved = Boolean(options.includeSpecialReserved);
       const unitMap = getExcelRowByUnitMap();
       const rows = [...floor.zones]
         .sort((a, b) => String(a.label).localeCompare(String(b.label), "es", { numeric: true }))
@@ -1834,10 +1836,13 @@
             DESCUENTO: row ? row.DESCUENTO || "" : "",
             PRECIO_FINAL: row ? row.PRECIO_FINAL || row.PRECIO || "" : "",
             BED: row ? row.BED || row.REC || "" : "",
-            ESTADO: status
+            ESTADO: status,
+            specialYellow: Boolean(row && row.specialYellow)
           };
         });
-      return availableOnly ? rows.filter((r) => r.ESTADO === "disponible") : rows;
+      return availableOnly
+        ? rows.filter((r) => r.ESTADO === "disponible" || (includeSpecialReserved && r.specialYellow))
+        : rows;
     }
 
     function renderDataTable() {
@@ -2576,7 +2581,10 @@
     }
 
     function buildExportRowsForFloor(floor) {
-      const rows = getRowsForFloorTable(floor, { availableOnly: true });
+      const rows = getRowsForFloorTable(floor, {
+        availableOnly: true,
+        includeSpecialReserved: DEV === "related"
+      });
       return rows.map((row) => ({ row }));
     }
 
