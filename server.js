@@ -309,6 +309,7 @@ const BACKEND_SUBMODULES = {
   viceroy: [
     { key: 'inicio', label: 'Inicio' },
     { key: 'whisperlist', label: 'Whisperlist' },
+    { key: 'kpiReservas', label: 'KPI Reservas' },
     { key: 'registros', label: 'Registros' },
     { key: 'tablaPagos', label: 'Tabla de Pago' },
     { key: 'reservas', label: 'Reservas' },
@@ -329,7 +330,7 @@ const VISIBLE_BACKEND_SUBMODULES = Object.fromEntries(
   Object.entries(BACKEND_SUBMODULES).filter(([moduleKey]) => moduleKey !== 'viceroyPilot')
 );
 const SIMCA_BACKEND_SUBMODULE_KEYS = ['faes', 'forms', 'roi', 'hojaReserva', 'horarios', 'financiamiento', 'tablaPagos'];
-const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'reservas', 'horarios', 'registros', 'tablaPagos'];
+const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'kpiReservas', 'reservas', 'horarios', 'registros', 'tablaPagos'];
 
 function getBackendAccessScope(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -10312,6 +10313,12 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Viceroy Whisperlist</h2>
           <p class="desc">Módulo original de Whisperlist.</p>
         </a>` : '';
+  const kpiReservasCard = canAccessBackendFeature(currentEmail, 'viceroy', 'kpiReservas') ? `
+        <a class="card" href="/viceroy/kpi-reservas">
+          <span class="tag">Módulo</span>
+          <h2 class="name">KPI Reservas</h2>
+          <p class="desc">Clientes de Whisperlist con reserva pagada.</p>
+        </a>` : '';
   const demandaCard = canAccessBackendFeature(currentEmail, 'viceroy', 'demanda') ? `
         <a class="card" href="/viceroy/tipologias-demanda">
           <span class="tag">Módulo</span>
@@ -10374,6 +10381,7 @@ app.get('/viceroy', (req, res) => {
       <div class="grid">
         ${inicioCard}
         ${whisperlistCard}
+        ${kpiReservasCard}
         ${demandaCard}
         ${reservasCard}
         ${horariosCard}
@@ -10387,6 +10395,10 @@ app.get('/viceroy', (req, res) => {
 
 app.get('/viceroy/reservas', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-reservas.html'));
+});
+
+app.get('/viceroy/kpi-reservas', requireViceroyPresentAccess, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-kpi-reservas.html'));
 });
 
 app.get('/viceroy/tipologias-demanda', (req, res) => {
@@ -10433,6 +10445,52 @@ app.get('/api/viceroy/tipologias-demanda/floors', (req, res) => {
       error: 'No se pudieron cargar los niveles del plano.',
       details: err && err.message ? err.message : 'error desconocido'
     });
+  }
+});
+
+app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = await readWhisperlistData();
+    const rows = (Array.isArray(data.rows) ? data.rows : [])
+      .map((row) => ({
+        ...row,
+        asesor: normalizeWhisperlistAsesor(row.asesor),
+        nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+        recamaras: normalizeWhisperlistRecamaras(row.recamaras),
+        pais: normalizeWhisperlistCountry(row.pais),
+        ciudad: normalizeWhisperlistCity(row.ciudad),
+        canal: normalizeWhisperlistCanal(row.canal),
+        tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta),
+        clientEmail: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
+          ? normalizeClientEmail(row.clientEmail)
+          : '',
+        clientPhone: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
+          ? normalizeClientPhone(row.clientPhone)
+          : '',
+        kpi: normalizeWhisperlistKpi(row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
+      }))
+      .filter((row) => normalizeYesNo(row && row.kpi && row.kpi.reservaPagada) === 'SI')
+      .sort((a, b) => {
+        const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
+        if (asesorA !== 0) return asesorA;
+        return String(a.nombreCliente || '').localeCompare(String(b.nombreCliente || ''), 'es', { sensitivity: 'base' });
+      });
+    return res.json({
+      ok: true,
+      currentEmail,
+      currentName,
+      isGerente,
+      updatedAt: data.updatedAt,
+      sourceFile: data.sourceFile,
+      totalRows: rows.length,
+      rows
+    });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-reservas: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo leer KPI Reservas' });
   }
 });
 

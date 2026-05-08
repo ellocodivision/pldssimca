@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viceroy KPI Reservas</title>
+  <style>
+    :root{
+      --bg:#f4f1e8;
+      --card:#ffffff;
+      --ink:#1c1d22;
+      --muted:#6a6f78;
+      --line:#d9d4c6;
+      --accent:#efe47a;
+      --ok:#1f8d3c;
+      --pill:#ece8d8;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1280px;margin:0 auto;padding:24px 16px 40px}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .title{margin:0;font-size:32px;line-height:1.05}
+    .sub{margin:8px 0 0;color:var(--muted)}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{border:1px solid #bfb8a5;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer;color:#202225;text-decoration:none}
+    .btn.primary{background:var(--accent);border-color:#111}
+    .card{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .status{margin-top:8px;color:var(--muted);font-size:13px;min-height:18px}
+    .status.ok{color:var(--ok)}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--pill);font-size:12px;font-weight:700}
+    .hint{margin-top:8px;color:var(--muted);font-size:12px}
+    .field{min-width:220px;padding:8px 10px;border:1px solid #cfc8b8;border-radius:10px;background:#fff}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:1260px}
+    th,td{padding:10px;border-bottom:1px solid #ebe4d6;text-align:left;font-size:13px;vertical-align:top}
+    th{background:#faf7f0;position:sticky;top:0;z-index:1}
+    .table-wrap tbody tr:hover{background:#fbf8ee}
+    .small{font-size:12px;color:var(--muted)}
+    .kpi-line{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .kpi-chip{display:inline-block;padding:3px 7px;border-radius:999px;background:#f3f0e4;font-size:11px;font-weight:700}
+    .paid{background:#e6f4ea;color:#1f6f34}
+    @media (max-width: 760px){
+      .title{font-size:26px}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">KPI Reservas</h1>
+        <p class="sub">Clientes de Whisperlist con <strong>Reserva Pagada = SI</strong>.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy">Volver a Viceroy</a>
+        <button id="refreshBtn" class="btn primary" type="button">Actualizar</button>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="meta">
+        <span id="rowsBadge" class="badge">0 filas</span>
+        <span id="updatedBadge" class="badge">Actualizado: -</span>
+        <span id="sourceBadge" class="badge">Origen: -</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input id="searchInput" class="field" placeholder="Buscar cliente, asesor, correo o unidad" />
+        <select id="sellerFilter" class="field">
+          <option value="">Todos los asesores</option>
+        </select>
+        <select id="paidFilter" class="field">
+          <option value="SI">Reserva pagada: SI</option>
+        </select>
+      </div>
+      <p id="status" class="status"></p>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Asesor</th>
+              <th>Cliente</th>
+              <th>Correo</th>
+              <th>Teléfono</th>
+              <th>Canal</th>
+              <th>Tipo</th>
+              <th>Rec</th>
+              <th>País</th>
+              <th>Ciudad</th>
+              <th>Opc. A</th>
+              <th>Opc. B</th>
+              <th>Opc. C</th>
+              <th>Opc. D</th>
+              <th>Estado KPI</th>
+              <th>Actualizado</th>
+            </tr>
+          </thead>
+          <tbody id="rowsTbody"></tbody>
+        </table>
+      </div>
+      <p class="hint">Esta vista solo muestra contactos con reserva pagada. No incluye enviar a registros ni búsqueda de duplicados.</p>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const state = {
+        rows: [],
+        filtered: [],
+        updatedAt: '',
+        sourceFile: ''
+      };
+
+      const els = {
+        status: document.getElementById('status'),
+        rowsBadge: document.getElementById('rowsBadge'),
+        updatedBadge: document.getElementById('updatedBadge'),
+        sourceBadge: document.getElementById('sourceBadge'),
+        searchInput: document.getElementById('searchInput'),
+        sellerFilter: document.getElementById('sellerFilter'),
+        paidFilter: document.getElementById('paidFilter'),
+        rowsTbody: document.getElementById('rowsTbody'),
+        refreshBtn: document.getElementById('refreshBtn')
+      };
+
+      function escapeText(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function normalize(value) {
+        return String(value == null ? '' : value).trim().toLowerCase();
+      }
+
+      function yesNoLabel(value) {
+        return String(value || '').trim().toUpperCase() === 'SI' ? '<span class="kpi-chip paid">SI</span>' : '<span class="kpi-chip">NO</span>';
+      }
+
+      function rowMatches(row) {
+        const search = normalize(els.searchInput.value);
+        const seller = normalize(els.sellerFilter.value);
+        const paid = normalize(els.paidFilter.value || 'SI');
+        const rowPaid = normalize((row.kpi && row.kpi.reservaPagada) || '');
+        if (paid && rowPaid !== paid) return false;
+        if (seller && normalize(row.asesor) !== seller) return false;
+        if (!search) return true;
+        const haystack = [
+          row.asesor,
+          row.nombreCliente,
+          row.correo,
+          row.clientEmail,
+          row.clientPhone,
+          row.canal,
+          row.tipoVenta,
+          row.recamaras,
+          row.pais,
+          row.ciudad,
+          row.kpi && row.kpi.opcionA,
+          row.kpi && row.kpi.opcionB,
+          row.kpi && row.kpi.opcionC,
+          row.kpi && row.kpi.opcionD
+        ].map(normalize).join(' | ');
+        return haystack.includes(search);
+      }
+
+      function renderSellerFilter() {
+        const current = els.sellerFilter.value;
+        const sellers = Array.from(new Set(state.rows.map((row) => String(row.asesor || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+        els.sellerFilter.innerHTML = '<option value="">Todos los asesores</option>' + sellers.map((seller) => `<option value="${escapeText(seller)}">${escapeText(seller)}</option>`).join('');
+        if (sellers.includes(current)) els.sellerFilter.value = current;
+      }
+
+      function renderTable() {
+        state.filtered = state.rows.filter(rowMatches);
+        els.rowsBadge.textContent = `${state.filtered.length} fila${state.filtered.length === 1 ? '' : 's'}`;
+        els.updatedBadge.textContent = `Actualizado: ${state.updatedAt ? new Date(state.updatedAt).toLocaleString('es-MX') : '-'}`;
+        els.sourceBadge.textContent = `Origen: ${state.sourceFile || '-'}`;
+        els.rowsTbody.innerHTML = state.filtered.map((row) => `
+          <tr>
+            <td>${escapeText(row.asesor || '—')}</td>
+            <td><strong>${escapeText(row.nombreCliente || '—')}</strong></td>
+            <td>${escapeText(row.clientEmail || '—')}</td>
+            <td>${escapeText(row.clientPhone || '—')}</td>
+            <td>${escapeText(row.canal || '—')}</td>
+            <td>${escapeText(row.tipoVenta || '—')}</td>
+            <td>${escapeText(row.recamaras || '—')}</td>
+            <td>${escapeText(row.pais || '—')}</td>
+            <td>${escapeText(row.ciudad || '—')}</td>
+            <td>${escapeText(row.kpi && row.kpi.opcionA || '—')}</td>
+            <td>${escapeText(row.kpi && row.kpi.opcionB || '—')}</td>
+            <td>${escapeText(row.kpi && row.kpi.opcionC || '—')}</td>
+            <td>${escapeText(row.kpi && row.kpi.opcionD || '—')}</td>
+            <td>${yesNoLabel(row.kpi && row.kpi.reservaPagada)}</td>
+            <td>${escapeText(row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('es-MX') : '—')}</td>
+          </tr>
+        `).join('') || `<tr><td colspan="15" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
+      }
+
+      async function loadData() {
+        els.status.textContent = 'Cargando KPI Reservas...';
+        els.refreshBtn.disabled = true;
+        try {
+          const res = await fetch('/api/viceroy/kpi-reservas', { credentials: 'same-origin' });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'No se pudo cargar KPI Reservas');
+          state.rows = Array.isArray(data.rows) ? data.rows : [];
+          state.updatedAt = data.updatedAt || '';
+          state.sourceFile = data.sourceFile || '';
+          renderSellerFilter();
+          renderTable();
+          els.status.textContent = `Se cargaron ${state.rows.length} contactos con reserva pagada.`;
+          els.status.className = 'status ok';
+        } catch (err) {
+          els.status.textContent = err.message || 'Error al cargar KPI Reservas';
+          els.status.className = 'status error';
+        } finally {
+          els.refreshBtn.disabled = false;
+        }
+      }
+
+      els.searchInput.addEventListener('input', renderTable);
+      els.sellerFilter.addEventListener('change', renderTable);
+      els.paidFilter.addEventListener('change', renderTable);
+      els.refreshBtn.addEventListener('click', loadData);
+
+      loadData();
+    })();
+  </script>
+</body>
+</html>
