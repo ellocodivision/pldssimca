@@ -2605,8 +2605,7 @@
 
     function buildExportRowsForFloor(floor) {
       const rows = getRowsForFloorTable(floor, {
-        availableOnly: true,
-        includeSpecialReserved: DEV === "related"
+        availableOnly: true
       });
       return rows.map((row) => ({ row }));
     }
