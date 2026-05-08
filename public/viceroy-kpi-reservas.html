@@ -113,8 +113,8 @@
       <form id="form">
         <div class="modal-grid">
           <label id="advisorWrap" class="modal-field" hidden>
-            <span class="modal-label">Asesor</span>
-            <input id="advisorInput" class="modal-input" placeholder="Asesor" />
+            <span class="modal-label">Asignar a</span>
+            <select id="advisorInput" class="modal-select"></select>
           </label>
           <label class="modal-field">
             <span class="modal-label">Unidad reservada</span>
@@ -181,6 +181,7 @@
       const state = {
         rows: [],
         filtered: [],
+        advisors: [],
         updatedAt: '',
         sourceFile: '',
         currentEmail: '',
@@ -238,6 +239,29 @@
         return '<span class="kpi-chip na">—</span>';
       }
 
+      function renderAdvisorOptions(selectedValue = '') {
+        if (!els.advisorInput) return;
+        const values = Array.from(new Set(
+          (Array.isArray(state.advisors) ? state.advisors : [])
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+        ));
+        if (state.currentName && !values.some((value) => normalize(value) === normalize(state.currentName))) {
+          values.unshift(state.currentName);
+        }
+        const current = String(selectedValue || '').trim();
+        els.advisorInput.innerHTML = values.length
+          ? values.map((value) => `<option value="${escapeText(value)}">${escapeText(value)}</option>`).join('')
+          : '<option value="">Sin usuarios</option>';
+        if (current && values.some((value) => normalize(value) === normalize(current))) {
+          els.advisorInput.value = values.find((value) => normalize(value) === normalize(current)) || current;
+        } else if (values.length) {
+          els.advisorInput.value = values[0];
+        } else {
+          els.advisorInput.value = '';
+        }
+      }
+
       function rowMatches(row) {
         const search = normalize(els.searchInput.value);
         if (!search) return true;
@@ -278,6 +302,8 @@
         state.filtered = state.rows.filter(rowMatches);
         els.rowsBadge.textContent = `${state.filtered.length} fila${state.filtered.length === 1 ? '' : 's'}`;
         els.updatedBadge.textContent = `Actualizado: ${state.updatedAt ? new Date(state.updatedAt).toLocaleString('es-MX') : '-'}`;
+        state.advisors = Array.from(new Set(state.rows.map((row) => String(row.asesor || '').trim()).filter(Boolean)))
+          .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
         renderTableHead();
         els.rowsTbody.innerHTML = state.filtered.map((row) => {
           const cells = [];
@@ -307,12 +333,12 @@
         els.modalSub.textContent = mode === 'edit'
           ? 'Edita solo las columnas permitidas de KPI Reservas.'
           : 'Crea un cliente nuevo dentro de KPI Reservas.';
-        els.modalOwnerBadge.textContent = state.isGerente ? 'Gerente ve todo' : `Solo: ${state.currentEmail || 'mi usuario'}`;
+        els.modalOwnerBadge.textContent = state.isGerente ? 'Gerente asigna usuarios' : `Solo: ${state.currentEmail || 'mi usuario'}`;
         els.advisorWrap.hidden = !state.isGerente;
         if (state.isGerente) {
-          els.advisorInput.value = row ? String(row.asesor || '') : '';
+          renderAdvisorOptions(row ? String(row.asesor || '') : state.currentName);
         } else {
-          els.advisorInput.value = '';
+          els.advisorInput.innerHTML = '';
         }
         els.unitInput.value = row ? String(row.unidadReservada || '') : '';
         els.nameInput.value = row ? String(row.nombreCliente || '') : '';
@@ -400,6 +426,8 @@
           state.currentEmail = data.currentEmail || '';
           state.currentName = data.currentName || '';
           state.isGerente = Boolean(data.isGerente);
+          state.advisors = Array.from(new Set((state.rows || []).map((row) => String(row.asesor || '').trim()).filter(Boolean)))
+            .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
           renderTable();
           if (!silent) {
             els.status.textContent = `Se cargaron ${state.rows.length} clientes con reserva pagada.`;
