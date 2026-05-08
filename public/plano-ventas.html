@@ -762,6 +762,7 @@
         headers: [],
         rows: []
       },
+      specialYellowUnits: [],
       pdfLayout: {},
       statusColors: { ...DEFAULT_STATUS_COLORS },
       unitNumberSizePx: 20,
@@ -1791,9 +1792,20 @@
       };
     }
 
+    function getSpecialYellowUnitSet() {
+      const set = new Set();
+      const source = Array.isArray(state.specialYellowUnits) ? state.specialYellowUnits : [];
+      source.forEach((value) => {
+        const unit = normalizeUnitKey(value);
+        if (unit) set.add(unit);
+      });
+      return set;
+    }
+
     function syncZoneStatusesFromExcel() {
       if (!state.excel.rows.length) return;
       const unitMap = getExcelRowByUnitMap();
+      const specialYellowUnits = getSpecialYellowUnitSet();
       state.floors.forEach((floor) => {
         floor.zones.forEach((zone) => {
           let matchedRow = null;
@@ -1803,7 +1815,13 @@
               break;
             }
           }
-          zone.status = normalizeExcelRowStatusValue(matchedRow) || (matchedRow ? "disponible" : "vendida");
+          const zoneKey = normalizeUnitKey(zone.label);
+          const isSpecialYellow = Boolean(
+            (matchedRow && matchedRow.specialYellow) || (zoneKey && specialYellowUnits.has(zoneKey))
+          );
+          zone.status = isSpecialYellow
+            ? "reservada"
+            : (normalizeExcelRowStatusValue(matchedRow) || (matchedRow ? "disponible" : "vendida"));
         });
       });
     }
@@ -1812,6 +1830,7 @@
       if (!floor) return [];
       const availableOnly = Boolean(options.availableOnly);
       const includeSpecialReserved = Boolean(options.includeSpecialReserved);
+      const specialYellowUnits = getSpecialYellowUnitSet();
       const unitMap = getExcelRowByUnitMap();
       const rows = [...floor.zones]
         .sort((a, b) => String(a.label).localeCompare(String(b.label), "es", { numeric: true }))
@@ -1825,6 +1844,10 @@
             }
           }
           const status = normalizeExcelRowStatusValue(row) || (row ? "disponible" : "vendida");
+          const zoneKey = normalizeUnitKey(zone.label);
+          const isSpecialYellow = Boolean(
+            (row && row.specialYellow) || (zoneKey && specialYellowUnits.has(zoneKey))
+          );
           return {
             LINK: row ? row.LINK || row.PLANO || "" : "",
             PLANO: row ? row.PLANO || row.LINK || "" : "",
@@ -1836,8 +1859,8 @@
             DESCUENTO: row ? row.DESCUENTO || "" : "",
             PRECIO_FINAL: row ? row.PRECIO_FINAL || row.PRECIO || "" : "",
             BED: row ? row.BED || row.REC || "" : "",
-            ESTADO: status,
-            specialYellow: Boolean(row && row.specialYellow)
+            ESTADO: isSpecialYellow ? "reservada" : status,
+            specialYellow: isSpecialYellow
           };
         });
       return availableOnly
@@ -3630,6 +3653,7 @@
         localStorage.setItem(EXCEL_CACHE_KEY, JSON.stringify({
           headers: state.excel.headers,
           rows: state.excel.rows,
+          specialYellowUnits: state.specialYellowUnits,
           sourceLabel,
           savedAt: new Date().toISOString()
         }));
@@ -3654,6 +3678,7 @@
         state.excel.rows = DEV === "related"
           ? cached.rows.map((row) => normalizeRelatedCachedRow(row)).filter(Boolean)
           : cached.rows;
+        state.specialYellowUnits = Array.isArray(cached.specialYellowUnits) ? cached.specialYellowUnits : state.specialYellowUnits;
         syncZoneStatusesFromExcel();
         if (autoExcelStatus) {
           const stamp = cached.savedAt ? `, cache ${cached.savedAt}` : "";
@@ -3687,6 +3712,7 @@
           autoExcelStatus.textContent = "Viceroy respondió sin filas válidas.";
           return false;
         }
+        state.specialYellowUnits = Array.isArray(data.specialYellowUnits) ? data.specialYellowUnits : state.specialYellowUnits;
         applyParsedExcel({
           headers: Array.isArray(data.headers) && data.headers.length ? data.headers : RELATED_REPORT_COLUMNS.map((c) => c.label),
           rows

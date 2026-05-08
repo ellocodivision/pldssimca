@@ -12643,7 +12643,8 @@ app.get('/api/viceroy-piloto/related-inventory', requireViceroyPresentAccess, (r
       ok: true,
       fileName: file.name || path.basename(file.fullPath),
       headers: ['PLANO', 'UNIDAD', 'TOTAL_M2', 'TOTAL_SQFT', 'BED', 'PRECIO'],
-      rows
+      rows,
+      specialYellowUnits: readViceroySpecialYellowUnits()
     });
   } catch (err) {
     return res.status(500).json({
