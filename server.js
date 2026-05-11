@@ -10541,6 +10541,23 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
   }
 });
 
+app.get('/api/viceroy/kpi-reservas/users', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const data = readBackendUserAccessData();
+    const users = Array.isArray(data.users)
+      ? data.users.map((user) => ({
+          email: String(user.email || '').trim().toLowerCase(),
+          name: String(user.name || '').trim(),
+          role: String(user.role || 'viewer').trim().toLowerCase()
+        })).filter((user) => user.email || user.name)
+      : [];
+    return res.json({ ok: true, users });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-reservas/users: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo leer el listado de usuarios' });
+  }
+});
+
 app.post('/api/viceroy/kpi-reservas/rows', requireViceroyPresentAccess, async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
@@ -10663,6 +10680,32 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
   } catch (err) {
     log(`Error en PATCH /api/viceroy/kpi-reservas/rows/:id: ${err && err.stack ? err.stack : err}`);
     return res.status(500).json({ error: 'No se pudo guardar el cliente KPI' });
+  }
+});
+
+app.delete('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const store = readViceroyKpiReservasData();
+    const index = store.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const target = store.rows[index];
+    if (!isGerente && !whisperlistRowMatchesUser(target, currentEmail, currentName, false)) {
+      return res.status(403).json({ error: 'Solo puedes eliminar filas asignadas a tu correo' });
+    }
+
+    const removed = store.rows.splice(index, 1)[0] || null;
+    saveViceroyKpiReservasData(store.rows, 'viceroy-kpi-reservas.json', true);
+    return res.json({ ok: true, removedId: rowId, row: removed });
+  } catch (err) {
+    log(`Error en DELETE /api/viceroy/kpi-reservas/rows/:id: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo eliminar el cliente KPI' });
   }
 });
 

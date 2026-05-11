@@ -189,6 +189,7 @@
         rows: [],
         filtered: [],
         advisors: [],
+        systemUsers: [],
         updatedAt: '',
         sourceFile: '',
         currentEmail: '',
@@ -249,22 +250,31 @@
 
       function renderAdvisorOptions(selectedValue = '') {
         if (!els.advisorInput) return;
-        const values = Array.from(new Set(
-          (Array.isArray(state.advisors) ? state.advisors : [])
-            .map((value) => String(value || '').trim())
+        const values = Array.from(new Map(
+          (Array.isArray(state.systemUsers) ? state.systemUsers : [])
+            .map((user) => {
+              const name = String(user && user.name || '').trim();
+              const email = String(user && user.email || '').trim();
+              const label = name || email;
+              return label ? [normalize(label), { label, value: label, email }] : null;
+            })
             .filter(Boolean)
-        ));
-        if (state.currentName && !values.some((value) => normalize(value) === normalize(state.currentName))) {
-          values.unshift(state.currentName);
+        ).values());
+        const fallbackLabel = state.currentName || state.currentEmail;
+        if (fallbackLabel && !values.some((item) => normalize(item.value) === normalize(fallbackLabel))) {
+          values.unshift({ label: fallbackLabel, value: fallbackLabel, email: state.currentEmail });
         }
         const current = String(selectedValue || '').trim();
         els.advisorInput.innerHTML = values.length
-          ? values.map((value) => `<option value="${escapeText(value)}">${escapeText(value)}</option>`).join('')
+          ? values.map((item) => {
+              const suffix = item.email && normalize(item.email) !== normalize(item.value) ? ` · ${item.email}` : '';
+              return `<option value="${escapeText(item.value)}">${escapeText(item.label)}${escapeText(suffix)}</option>`;
+            }).join('')
           : '<option value="">Sin usuarios</option>';
-        if (current && values.some((value) => normalize(value) === normalize(current))) {
-          els.advisorInput.value = values.find((value) => normalize(value) === normalize(current)) || current;
+        if (current && values.some((item) => normalize(item.value) === normalize(current))) {
+          els.advisorInput.value = values.find((item) => normalize(item.value) === normalize(current)).value || current;
         } else if (values.length) {
-          els.advisorInput.value = values[0];
+          els.advisorInput.value = values[0].value;
         } else {
           els.advisorInput.value = '';
         }
@@ -303,7 +313,8 @@
           '<th>Contrato enviado</th>',
           '<th>Contrato firmado</th>',
           '<th>Enganche pagado</th>',
-          '<th>Editar</th>'
+          '<th>Editar</th>',
+          '<th>Eliminar</th>'
         );
         els.tableHead.innerHTML = `<tr>${cols.join('')}</tr>`;
       }
@@ -312,8 +323,6 @@
         state.filtered = state.rows.filter(rowMatches);
         els.rowsBadge.textContent = `${state.filtered.length} fila${state.filtered.length === 1 ? '' : 's'}`;
         els.updatedBadge.textContent = `Actualizado: ${state.updatedAt ? new Date(state.updatedAt).toLocaleString('es-MX') : '-'}`;
-        state.advisors = Array.from(new Set(state.rows.map((row) => String(row.asesor || '').trim()).filter(Boolean)))
-          .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
         renderTableHead();
         els.rowsTbody.innerHTML = state.filtered.map((row) => {
           const cells = [];
@@ -329,10 +338,11 @@
             `<td>${yesNoChip(row.kpi && row.kpi.contratoEnviado)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.contratoFirmado)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.enganchePagado)}</td>`,
-            `<td><div class="cell-actions"><button class="btn" type="button" data-edit="${escapeText(row.id)}">Editar</button></div></td>`
+            `<td><div class="cell-actions"><button class="btn" type="button" data-edit="${escapeText(row.id)}">Editar</button></div></td>`,
+            `<td><div class="cell-actions"><button class="btn danger" type="button" data-delete="${escapeText(row.id)}">Eliminar</button></div></td>`
           );
           return `<tr>${cells.join('')}</tr>`;
-        }).join('') || `<tr><td colspan="${state.isGerente ? 12 : 11}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
+        }).join('') || `<tr><td colspan="${state.isGerente ? 13 : 12}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
       }
 
       function openModal(mode, row) {
@@ -430,8 +440,12 @@
         }
         els.refreshBtn.disabled = true;
         try {
-          const res = await fetch('/api/viceroy/kpi-reservas', { credentials: 'same-origin' });
+          const [res, usersRes] = await Promise.all([
+            fetch('/api/viceroy/kpi-reservas', { credentials: 'same-origin' }),
+            fetch('/api/viceroy/kpi-reservas/users', { credentials: 'same-origin', cache: 'no-store' })
+          ]);
           const data = await res.json().catch(() => ({}));
+          const usersData = await usersRes.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || 'No se pudo cargar KPI Reservas');
           state.rows = Array.isArray(data.rows) ? data.rows : [];
           state.updatedAt = data.updatedAt || '';
@@ -439,8 +453,7 @@
           state.currentEmail = data.currentEmail || '';
           state.currentName = data.currentName || '';
           state.isGerente = Boolean(data.isGerente);
-          state.advisors = Array.from(new Set((state.rows || []).map((row) => String(row.asesor || '').trim()).filter(Boolean)))
-            .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+          state.systemUsers = Array.isArray(usersData.users) ? usersData.users : [];
           renderTable();
           if (!silent) {
             els.status.textContent = `Se cargaron ${state.rows.length} clientes con reserva pagada.`;
@@ -469,6 +482,30 @@
         const row = state.rows.find((item) => String(item.id || '') === rowId);
         if (!row) return;
         openModal('edit', row);
+      });
+      els.rowsTbody.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-delete]');
+        if (!button) return;
+        const rowId = String(button.getAttribute('data-delete') || '');
+        const row = state.rows.find((item) => String(item.id || '') === rowId);
+        if (!row) return;
+        if (!confirm(`¿Eliminar este contacto de KPI Reservas?\n${row.unidadReservada || ''} · ${row.nombreCliente || ''}`)) return;
+        try {
+          els.status.textContent = 'Eliminando cliente...';
+          els.status.className = 'status';
+          const res = await fetch('/api/viceroy/kpi-reservas/rows/' + encodeURIComponent(rowId), {
+            method: 'DELETE',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'No se pudo eliminar el cliente');
+          await loadData(true);
+          els.status.textContent = 'Cliente eliminado.';
+          els.status.className = 'status ok';
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'No se pudo eliminar el cliente';
+          els.status.className = 'status error';
+        }
       });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && els.modal.classList.contains('open')) closeModal();
