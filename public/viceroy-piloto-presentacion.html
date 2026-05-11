@@ -2177,7 +2177,7 @@
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) {
-            els.assignStatus.textContent = data.error || 'No se pudo guardar en Whisperlist.';
+            els.assignStatus.textContent = data.error || 'No se pudo guardar en Hot Leads.';
             return;
           }
           const nextRow = data && data.row ? data.row : null;
@@ -2230,7 +2230,7 @@
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) {
-            els.assignStatus.textContent = data.error || 'No se pudo borrar en Whisperlist.';
+            els.assignStatus.textContent = data.error || 'No se pudo borrar en Hot Leads.';
             return;
           }
           const nextRow = data && data.row ? data.row : null;
@@ -2549,7 +2549,7 @@
               ].filter(function (item) {
                 return unitKey(selectedWhisperRow.kpi[item.key]) === unitKeyValue;
               }).map(function (item) {
-                return '<span class="whisper-badge" title="Whisperlist ' + esc(item.label) + '">' + esc(item.label) + '</span>';
+                return '<span class="whisper-badge" title="Hot Leads ' + esc(item.label) + '">' + esc(item.label) + '</span>';
               }).join('')
             : '';
           return '<tr>' +
@@ -2675,8 +2675,8 @@
         if (!getAssignableWhisperlistRows().length) {
           showAssignmentBox(info);
           els.assignStatus.textContent = state.isGerente
-            ? 'No hay clientes disponibles en Whisperlist para asignar.'
-            : 'No hay clientes disponibles en tu Whisperlist.';
+            ? 'No hay clientes disponibles en Hot Leads para asignar.'
+            : 'No hay clientes disponibles en tus Hot Leads.';
           return;
         }
         showAssignmentBox(info);

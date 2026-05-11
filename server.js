@@ -278,7 +278,7 @@ const BACKEND_MODULES = [
   {
     key: 'viceroy',
     label: 'VICEROY',
-    description: 'Whisperlist, Registros, reservas, demanda por tipología y tabla de pago Viceroy.'
+    description: 'Hot Leads, Registros, reservas, demanda por tipología y tabla de pago Viceroy.'
   },
   {
     key: 'viceroyPilot',
@@ -309,7 +309,7 @@ const BACKEND_SUBMODULES = {
   ],
   viceroy: [
     { key: 'inicio', label: 'Inicio' },
-    { key: 'whisperlist', label: 'Whisperlist' },
+    { key: 'whisperlist', label: 'Hot Leads' },
     { key: 'kpiReservas', label: 'KPI Reservas' },
     { key: 'registros', label: 'Registros' },
     { key: 'tablaPagos', label: 'Tabla de Pago' },
@@ -4521,6 +4521,11 @@ function saveViceroyKpiReservasData(rows, sourceFile, seededFromWhisperlist = tr
   };
 }
 
+function isViceroyKpiReservasManager(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return normalized === GERENTE_EMAIL || normalized === 'chris@simca.mx';
+}
+
 async function whisperlistAllowedEmails() {
   const data = await readWhisperlistData();
   const emails = new Set();
@@ -8007,7 +8012,7 @@ app.get('/', requireAuth, (req, res) => {
         <a class="card" href="/viceroy">
           <span class="tag">Módulo</span>
           <h2 class="name">VICEROY</h2>
-          <p class="desc">Acceso a Whisperlist, Registros, Tabla de Pago Viceroy, editor PDF y módulos internos de Viceroy.</p>
+          <p class="desc">Acceso a Hot Leads, Registros, Tabla de Pago Viceroy, editor PDF y módulos internos de Viceroy.</p>
         </a>`);
   }
   if (canUsersAdmin) {
@@ -10354,14 +10359,14 @@ app.get('/viceroy', (req, res) => {
   const whisperlistCard = canAccessBackendFeature(currentEmail, 'viceroy', 'whisperlist') ? `
         <a class="card" href="/whisperlist">
           <span class="tag">Módulo</span>
-          <h2 class="name">Viceroy Whisperlist</h2>
-          <p class="desc">Módulo original de Whisperlist.</p>
+          <h2 class="name">Viceroy Hot Leads</h2>
+          <p class="desc">Módulo original de Hot Leads.</p>
         </a>` : '';
   const kpiReservasCard = canAccessBackendFeature(currentEmail, 'viceroy', 'kpiReservas') ? `
         <a class="card" href="/viceroy/kpi-reservas">
           <span class="tag">Módulo</span>
           <h2 class="name">KPI Reservas</h2>
-          <p class="desc">Clientes de Whisperlist con reserva pagada.</p>
+          <p class="desc">Clientes de Hot Leads con reserva pagada.</p>
         </a>` : '';
   const demandaCard = canAccessBackendFeature(currentEmail, 'viceroy', 'demanda') ? `
         <a class="card" href="/viceroy/tipologias-demanda">
@@ -10385,7 +10390,7 @@ app.get('/viceroy', (req, res) => {
         <a class="card" href="/viceroy/registros">
           <span class="tag">Módulo</span>
           <h2 class="name">Viceroy Registros</h2>
-          <p class="desc">Duplicado de Whisperlist para operación separada.</p>
+          <p class="desc">Duplicado de Hot Leads para operación separada.</p>
         </a>` : '';
   const pilotoCard = canAccessBackendFeature(currentEmail, 'viceroyPilot', 'inventario') ? `
         <a class="card" href="/viceroy-piloto">
@@ -10496,7 +10501,7 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiReservasManager(currentEmail);
     const store = readViceroyKpiReservasData();
     if (!store.seededFromWhisperlist) {
       const whisperData = await readWhisperlistData();
@@ -10562,7 +10567,7 @@ app.post('/api/viceroy/kpi-reservas/rows', requireViceroyPresentAccess, async (r
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiReservasManager(currentEmail);
     const body = req.body || {};
     const nombreCliente = normalizeWhisperlistPersonText(body.nombreCliente);
     if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
@@ -10613,7 +10618,7 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiReservasManager(currentEmail);
     const body = req.body || {};
     const store = readViceroyKpiReservasData();
     const index = store.rows.findIndex((row) => String(row.id || '') === rowId);
@@ -10690,7 +10695,7 @@ app.delete('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, as
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiReservasManager(currentEmail);
     const store = readViceroyKpiReservasData();
     const index = store.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
