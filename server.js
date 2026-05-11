@@ -4479,15 +4479,21 @@ async function saveWhisperlistRows(rows, sourceFile) {
 }
 
 function readViceroyKpiReservasData() {
-  const raw = readJson(VICEROY_KPI_RESERVAS_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
+  const raw = readJson(VICEROY_KPI_RESERVAS_JSON_PATH, {
+    rows: [],
+    updatedAt: null,
+    sourceFile: '',
+    seededFromWhisperlist: false
+  });
   return {
     rows: Array.isArray(raw.rows) ? raw.rows : [],
     updatedAt: raw.updatedAt || null,
-    sourceFile: String(raw.sourceFile || '')
+    sourceFile: String(raw.sourceFile || ''),
+    seededFromWhisperlist: Boolean(raw.seededFromWhisperlist)
   };
 }
 
-function saveViceroyKpiReservasData(rows, sourceFile) {
+function saveViceroyKpiReservasData(rows, sourceFile, seededFromWhisperlist = true) {
   const updatedAt = new Date().toISOString();
   const normalizedRows = Array.isArray(rows) ? rows.map((row) => ({
     ...row,
@@ -4504,12 +4510,14 @@ function saveViceroyKpiReservasData(rows, sourceFile) {
   writeJson(VICEROY_KPI_RESERVAS_JSON_PATH, {
     rows: normalizedRows,
     updatedAt,
-    sourceFile: String(sourceFile || '')
+    sourceFile: String(sourceFile || ''),
+    seededFromWhisperlist: Boolean(seededFromWhisperlist)
   });
   return {
     rows: normalizedRows,
     updatedAt,
-    sourceFile: String(sourceFile || '')
+    sourceFile: String(sourceFile || ''),
+    seededFromWhisperlist: Boolean(seededFromWhisperlist)
   };
 }
 
@@ -10489,10 +10497,21 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = currentEmail === GERENTE_EMAIL;
-    const whisperData = await readWhisperlistData();
-    const overrides = readViceroyKpiReservasData();
+    const store = readViceroyKpiReservasData();
+    if (!store.seededFromWhisperlist) {
+      const whisperData = await readWhisperlistData();
+      const seededRows = mergeViceroyKpiReservasRows(
+        Array.isArray(whisperData.rows) ? whisperData.rows : [],
+        Array.isArray(store.rows) ? store.rows : []
+      );
+      saveViceroyKpiReservasData(seededRows, 'viceroy-kpi-reservas.json', true);
+      store.rows = seededRows;
+      store.updatedAt = new Date().toISOString();
+      store.sourceFile = 'viceroy-kpi-reservas.json';
+      store.seededFromWhisperlist = true;
+    }
     const rows = buildViceroyKpiReservasRows(
-      mergeViceroyKpiReservasRows(Array.isArray(whisperData.rows) ? whisperData.rows : [], Array.isArray(overrides.rows) ? overrides.rows : []),
+      Array.isArray(store.rows) ? store.rows : [],
       currentEmail,
       currentName,
       isGerente
@@ -10511,8 +10530,8 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
       currentEmail,
       currentName,
       isGerente,
-      updatedAt: overrides.updatedAt || whisperData.updatedAt,
-      sourceFile: overrides.sourceFile || whisperData.sourceFile,
+      updatedAt: store.updatedAt,
+      sourceFile: store.sourceFile,
       totalRows: rows.length,
       rows
     });
