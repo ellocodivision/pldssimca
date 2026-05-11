@@ -309,15 +309,14 @@ const BACKEND_SUBMODULES = {
   ],
   viceroy: [
     { key: 'inicio', label: 'Inicio' },
-    { key: 'whisperlist', label: 'Hot Leads' },
     { key: 'kpiReservas', label: 'KPI Reservas' },
-    { key: 'registros', label: 'Registros' },
-    { key: 'tablaPagos', label: 'Tabla de Pago' },
-    { key: 'reservas', label: 'Reservas' },
+    { key: 'whisperlist', label: 'Hot Leads' },
+    { key: 'registros', label: 'Viceroy Registros' },
+    { key: 'reservas', label: 'Reserva de Oficinas' },
     { key: 'horarios', label: 'Horarios Viceroy' },
-    { key: 'demanda', label: 'Demanda por Tipología' },
-    { key: 'pilotoInventario', label: 'Edición Viceroy Inventario' },
-    { key: 'pilotoPresentacion', label: 'Presentación Viceroy' }
+    { key: 'tablaPagos', label: 'Tabla de Pago Viceroy' },
+    { key: 'pilotoPresentacion', label: 'Presentación Viceroy' },
+    { key: 'pilotoInventario', label: 'Edición Viceroy Inventario' }
   ],
   viceroyPilot: [
     { key: 'inventario', label: 'Edición inventario' },
@@ -10343,13 +10342,13 @@ app.get('/viceroy', (req, res) => {
           <span class="tag">Módulo</span>
           <h2 class="name">Tabla de Pago Viceroy</h2>
           <p class="desc">Versión comercial Viceroy basada en acuerdos de RELATED.</p>
-        </a>
-        ${currentEmail === GERENTE_EMAIL ? `
+        </a>` : '';
+  const editorPdfViceroyCard = currentEmail === GERENTE_EMAIL ? `
         <a class="card" href="/viceroy/tabla-pagos/editor">
           <span class="tag">Editor</span>
           <h2 class="name">Editor PDF Viceroy</h2>
           <p class="desc">Ajusta márgenes, escalas, líneas y orden visual de la hoja final.</p>
-        </a>` : ''}` : '';
+        </a>` : '';
   const inicioCard = canAccessBackendFeature(currentEmail, 'viceroy', 'inicio') ? `
         <a class="card" href="/viceroy/inicio">
           <span class="tag">Módulo</span>
@@ -10368,16 +10367,10 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">KPI Reservas</h2>
           <p class="desc">Clientes de Hot Leads con reserva pagada.</p>
         </a>` : '';
-  const demandaCard = canAccessBackendFeature(currentEmail, 'viceroy', 'demanda') ? `
-        <a class="card" href="/viceroy/tipologias-demanda">
-          <span class="tag">Módulo</span>
-          <h2 class="name">Demanda por Tipología</h2>
-          <p class="desc">Reporte comercial de absorción e interés por tipología con base en selecciones reales.</p>
-        </a>` : '';
   const reservasCard = canAccessBackendFeature(currentEmail, 'viceroy', 'reservas') ? `
         <a class="card" href="/viceroy/reservas">
           <span class="tag">Módulo</span>
-          <h2 class="name">Reserva de oficinas</h2>
+          <h2 class="name">Reserva de Oficinas</h2>
           <p class="desc">Reserva sala grande o sala chica por horario.</p>
         </a>` : '';
   const horariosCard = canAccessBackendFeature(currentEmail, 'viceroy', 'horarios') ? `
@@ -10429,13 +10422,13 @@ app.get('/viceroy', (req, res) => {
       </div>
       <div class="grid">
         ${inicioCard}
-        ${whisperlistCard}
         ${kpiReservasCard}
-        ${demandaCard}
+        ${whisperlistCard}
+        ${registrosCard}
         ${reservasCard}
         ${horariosCard}
-        ${registrosCard}
         ${tablaPagosViceroyCard}
+        ${editorPdfViceroyCard}
         ${pilotoCard}
       </div>
     </div>
