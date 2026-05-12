@@ -343,25 +343,128 @@
       background:linear-gradient(180deg,#fffdf7 0%, #f7f3ea 100%);
       border:1px dashed #d9d0bf;
       overflow:hidden;
+      color:#242424;
+    }
+    .layout-sheet{
+      position:absolute;
+      inset:0;
+      padding:24px 20px 18px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      pointer-events:none;
+    }
+    .layout-sheet-header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+      padding-bottom:14px;
+      border-bottom:2px solid rgba(123, 130, 105, .55);
+    }
+    .layout-sheet-header strong{
+      font-size:22px;
+      line-height:1.05;
+      color:#7d8971;
+      letter-spacing:.01em;
+    }
+    .layout-sheet-header span{
+      font-size:21px;
+      line-height:1.05;
+      color:#a0a794;
+      text-align:right;
+    }
+    .layout-sheet-fields{
+      display:grid;
+      gap:11px;
+      margin-top:2px;
+    }
+    .layout-sheet-row{
+      display:grid;
+      gap:4px;
+    }
+    .layout-sheet-row.two{
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+    }
+    .layout-sheet-label{
+      font-size:11px;
+      font-weight:700;
+      color:#222;
+      line-height:1.1;
+    }
+    .layout-sheet-line{
+      height:30px;
+      border-bottom:2px solid rgba(99, 107, 78, .78);
+    }
+    .layout-sheet-line.tall{height:44px}
+    .layout-sheet-payments{
+      margin-top:4px;
+      border-top:2px solid rgba(99, 107, 78, .78);
+      padding-top:10px;
+      display:grid;
+      gap:8px;
+    }
+    .layout-sheet-table-head{
+      display:grid;
+      grid-template-columns:1.4fr .45fr .95fr 1fr;
+      gap:8px;
+      font-size:12px;
+      font-weight:700;
+      text-align:center;
+      color:#232323;
+      padding:0 24px 0 88px;
+    }
+    .layout-sheet-table-row{
+      display:grid;
+      grid-template-columns:1.4fr .45fr .95fr 1fr;
+      gap:8px;
+      align-items:center;
+      padding:0 24px 0 88px;
+    }
+    .layout-sheet-table-row div{
+      height:34px;
+      border-bottom:2px solid rgba(99, 107, 78, .78);
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding-bottom:4px;
+      font-size:12px;
+    }
+    .layout-sheet-footer{
+      margin-top:auto;
+      padding-top:14px;
+      border-top:2px solid rgba(99, 107, 78, .78);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+      font-size:12px;
+      line-height:1.35;
+      color:#2a2a2a;
+    }
+    .layout-sheet-footer .note-block{
+      width:46%;
+      min-height:58px;
     }
     .layout-gridlines{
       position:absolute;
       inset:0;
       background-image:
-        linear-gradient(to right, rgba(112, 101, 76, .08) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(112, 101, 76, .08) 1px, transparent 1px);
+        linear-gradient(to right, rgba(112, 101, 76, .06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(112, 101, 76, .06) 1px, transparent 1px);
       background-size:24px 24px;
       pointer-events:none;
-      opacity:.75;
+      opacity:.9;
     }
     .layout-content-box{
       position:absolute;
       left:50%;
       top:50%;
-      width:min(82%, 500px);
-      height:72%;
+      width:min(84%, 560px);
+      height:68%;
       transform:translate(-50%, -50%);
-      border:2px solid #7c8460;
+      border:2px solid rgba(67, 84, 58, .86);
       border-radius:18px;
       background:rgba(146, 160, 122, .08);
       box-shadow:0 10px 24px rgba(0,0,0,.08);
@@ -572,7 +675,62 @@
       <div class="layout-modal-body">
         <div class="layout-preview">
           <div class="layout-page" id="layoutPreview">
-            <div class="layout-gridlines"></div>
+            <div class="layout-sheet">
+              <div class="layout-sheet-header">
+                <strong>Reservation Form / Formato de Reserva</strong>
+                <span>VICEROY<br>RESIDENCES</span>
+              </div>
+              <div class="layout-sheet-fields">
+                <div class="layout-sheet-row">
+                  <div class="layout-sheet-label">*Full Name / Nombre Completo:</div>
+                  <div class="layout-sheet-line"></div>
+                </div>
+                <div class="layout-sheet-row">
+                  <div class="layout-sheet-label">*E-mail:</div>
+                  <div class="layout-sheet-line"></div>
+                </div>
+                <div class="layout-sheet-row">
+                  <div class="layout-sheet-label">*Phone / Teléfono:</div>
+                  <div class="layout-sheet-line"></div>
+                </div>
+                <div class="layout-sheet-row two">
+                  <div>
+                    <div class="layout-sheet-label">Development / Desarrollo:</div>
+                    <div class="layout-sheet-line"></div>
+                  </div>
+                  <div>
+                    <div class="layout-sheet-label">Unit # / No. Unidad:</div>
+                    <div class="layout-sheet-line"></div>
+                  </div>
+                </div>
+                <div class="layout-sheet-row">
+                  <div class="layout-sheet-label">Price Listed / Precio de Lista:</div>
+                  <div class="layout-sheet-line"></div>
+                </div>
+                <div class="layout-sheet-row">
+                  <div class="layout-sheet-label">Observations / Observaciones:</div>
+                  <div class="layout-sheet-line tall"></div>
+                </div>
+              </div>
+              <div class="layout-sheet-payments">
+                <div class="layout-sheet-table-head">
+                  <div>Payment / Pago</div><div>%</div><div>Amount / Monto</div><div>Date / Fecha</div>
+                </div>
+                <div class="layout-sheet-table-row">
+                  <div>Reservation Fee / Reserva</div><div></div><div></div><div></div>
+                </div>
+                <div class="layout-sheet-table-row">
+                  <div></div><div></div><div></div><div></div>
+                </div>
+                <div class="layout-sheet-table-row">
+                  <div></div><div></div><div></div><div></div>
+                </div>
+              </div>
+              <div class="layout-sheet-footer">
+                <div class="note-block">Amount & currency / Monto & moneda:<br><br>Name in the Card / Nombre en la tarjeta:<br><br>Address / Dirección:</div>
+                <div class="note-block">Card Number / Número de tarjeta:<br><br>VISA / MASTER CARD:<br><br>Expiration Date / Fecha Expiración:</div>
+              </div>
+            </div>
             <div class="layout-content-box" id="layoutDragBox" title="Arrastra para mover">
               <strong>Contenido PDF</strong>
               <span id="layoutCoords">X 0 · Y 0</span>
