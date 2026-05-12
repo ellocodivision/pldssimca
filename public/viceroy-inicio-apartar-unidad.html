@@ -504,6 +504,21 @@
       font-size:12px;
       color:#404654;
     }
+    .layout-control-panel .field-name{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .layout-control-panel .field-name strong{
+      font-size:14px;
+      color:#232323;
+      line-height:1.2;
+    }
+    .layout-control-panel .field-name small{
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.35;
+    }
     .layout-control-panel input[type="range"]{
       width:100%;
       padding:0;
@@ -667,8 +682,8 @@
     <div class="layout-modal-card" role="dialog" aria-modal="true" aria-labelledby="layoutModalTitle">
       <div class="layout-modal-head">
         <div>
-          <h3 id="layoutModalTitle">Ajuste de impresión</h3>
-          <p>Arrastra el recuadro dentro de la hoja hasta que el contenido quede alineado con tu PDF. El ajuste se guarda una sola vez y se usa para todos al descargar.</p>
+          <h3 id="layoutModalTitle">Ajuste por campo</h3>
+          <p>Selecciona un input, arrastra el recuadro hasta alinearlo con tu PDF y guarda ese campo. Cada input tiene su propio ajuste compartido para todos.</p>
         </div>
         <button class="btn" type="button" id="layoutCloseBtn">Cerrar</button>
       </div>
@@ -732,21 +747,28 @@
               </div>
             </div>
             <div class="layout-content-box" id="layoutDragBox" title="Arrastra para mover">
-              <strong>Contenido PDF</strong>
+              <strong>Campo activo</strong>
               <span id="layoutCoords">X 0 · Y 0</span>
             </div>
           </div>
         </div>
         <div class="layout-control-panel">
+          <div class="field-name">
+            <strong id="layoutFieldName">Selecciona un campo</strong>
+            <small>Mueve un input a la vez y guarda ese ajuste para todos.</small>
+          </div>
+          <label>Campo a mover
+            <select id="layoutFieldKey"></select>
+          </label>
           <label>Desplazamiento X
             <input type="range" id="layoutOffsetX" min="-150" max="150" step="1" value="0">
           </label>
           <label>Desplazamiento Y
             <input type="range" id="layoutOffsetY" min="-220" max="220" step="1" value="0">
           </label>
-          <div class="note">X mueve el contenido a la izquierda/derecha. Y lo sube o baja. Si te pasas, solo vuelve a arrastrar o dale reiniciar.</div>
+          <div class="note">X mueve el campo a la izquierda/derecha. Y lo sube o baja. Cada input se guarda por separado.</div>
           <div class="actions">
-            <button class="btn" type="button" id="layoutResetBtn">Reiniciar</button>
+            <button class="btn" type="button" id="layoutResetBtn">Reiniciar campo</button>
             <button class="btn primary" type="button" id="layoutSaveBtn">Guardar ajuste</button>
           </div>
         </div>
@@ -817,6 +839,8 @@
         layoutPreview: document.getElementById('layoutPreview'),
         layoutDragBox: document.getElementById('layoutDragBox'),
         layoutCoords: document.getElementById('layoutCoords'),
+        layoutFieldKey: document.getElementById('layoutFieldKey'),
+        layoutFieldName: document.getElementById('layoutFieldName'),
         layoutOffsetX: document.getElementById('layoutOffsetX'),
         layoutOffsetY: document.getElementById('layoutOffsetY'),
         layoutCloseBtn: document.getElementById('layoutCloseBtn'),
@@ -831,7 +855,8 @@
         currentUserKey: 'guest',
         isGerente: false,
         amountCurrencyTouched: false,
-        layoutOffsets: { offsetX: 0, offsetY: 0 },
+        layoutConfig: { default: { offsetX: 0, offsetY: 0 }, fields: {} },
+        layoutFieldKey: 'fullName',
         payments: [
           { label: 'Reservation Fee / Reserva', percent: '', amount: '', date: '' },
           { label: '', percent: '', amount: '', date: '' },
@@ -840,6 +865,66 @@
           { label: '', percent: '', amount: '', date: '' }
         ]
       };
+
+      const LAYOUT_FIELD_DEFS = [
+        { key: 'fullName', label: 'Full Name / Nombre Completo', group: 'Página 1' },
+        { key: 'email', label: 'E-mail', group: 'Página 1' },
+        { key: 'phone', label: 'Phone / Teléfono', group: 'Página 1' },
+        { key: 'development', label: 'Development / Desarrollo', group: 'Página 1' },
+        { key: 'unitNumber', label: 'Unit # / No. Unidad', group: 'Página 1' },
+        { key: 'priceListed', label: 'Price Listed / Precio de Lista', group: 'Página 1' },
+        { key: 'observations', label: 'Observations / Observaciones', group: 'Página 1' },
+        { key: 'paymentLabel1', label: 'Payment 2 / Pago 2 - Label', group: 'Página 1' },
+        { key: 'paymentLabel2', label: 'Payment 3 / Pago 3 - Label', group: 'Página 1' },
+        { key: 'paymentLabel3', label: 'Payment 4 / Pago 4 - Label', group: 'Página 1' },
+        { key: 'paymentLabel4', label: 'Payment 5 / Pago 5 - Label', group: 'Página 1' },
+        { key: 'paymentPercent0', label: 'Payment 1 / Pago 1 - %', group: 'Página 1' },
+        { key: 'paymentPercent1', label: 'Payment 2 / Pago 2 - %', group: 'Página 1' },
+        { key: 'paymentPercent2', label: 'Payment 3 / Pago 3 - %', group: 'Página 1' },
+        { key: 'paymentPercent3', label: 'Payment 4 / Pago 4 - %', group: 'Página 1' },
+        { key: 'paymentPercent4', label: 'Payment 5 / Pago 5 - %', group: 'Página 1' },
+        { key: 'paymentAmount0', label: 'Payment 1 / Pago 1 - Amount', group: 'Página 1' },
+        { key: 'paymentAmount1', label: 'Payment 2 / Pago 2 - Amount', group: 'Página 1' },
+        { key: 'paymentAmount2', label: 'Payment 3 / Pago 3 - Amount', group: 'Página 1' },
+        { key: 'paymentAmount3', label: 'Payment 4 / Pago 4 - Amount', group: 'Página 1' },
+        { key: 'paymentAmount4', label: 'Payment 5 / Pago 5 - Amount', group: 'Página 1' },
+        { key: 'paymentDate0', label: 'Payment 1 / Pago 1 - Date', group: 'Página 1' },
+        { key: 'paymentDate1', label: 'Payment 2 / Pago 2 - Date', group: 'Página 1' },
+        { key: 'paymentDate2', label: 'Payment 3 / Pago 3 - Date', group: 'Página 1' },
+        { key: 'paymentDate3', label: 'Payment 4 / Pago 4 - Date', group: 'Página 1' },
+        { key: 'paymentDate4', label: 'Payment 5 / Pago 5 - Date', group: 'Página 1' },
+        { key: 'amountCurrency', label: 'Amount & currency / Monto & moneda', group: 'Página 1' },
+        { key: 'cardNumber', label: 'Card Number / Número de tarjeta', group: 'Página 1' },
+        { key: 'cardName', label: 'Name in the Card / Nombre en la tarjeta', group: 'Página 1' },
+        { key: 'cardType', label: 'VISA / MASTER CARD', group: 'Página 1' },
+        { key: 'cardAddress', label: 'Address / Dirección', group: 'Página 1' },
+        { key: 'cardCityStateZip', label: 'City, Estate & Zip Code / Ciudad, Edo y C.P.', group: 'Página 1' },
+        { key: 'expirationDate', label: 'Expiration Date / Fecha Expiración', group: 'Página 1' },
+        { key: 'securityCode', label: 'Security Code / Código de Seguridad', group: 'Página 1' },
+        { key: 'signature', label: 'Sign / Firma', group: 'Página 1' },
+        { key: 'holderName', label: 'Holder name / Titular', group: 'Página 2' },
+        { key: 'holderBirth', label: 'Day & Place of Birth / Día y Lugar de Nacimiento', group: 'Página 2' },
+        { key: 'holderOccupation', label: 'Occupation / Ocupación', group: 'Página 2' },
+        { key: 'holderNationality', label: 'Nationality / Nacionalidad', group: 'Página 2' },
+        { key: 'holderPassport', label: 'Passport / Pasaporte', group: 'Página 2' },
+        { key: 'holderMaritalStatus', label: 'Marital Status / Edo. Civil', group: 'Página 2' },
+        { key: 'holderAddress', label: 'Address / Dirección', group: 'Página 2' },
+        { key: 'holderCityStateZip', label: 'City, Estate & Zip Code / Ciudad, Estado y C.P.', group: 'Página 2' },
+        { key: 'holderPhone', label: 'Phone / Teléfono', group: 'Página 2' },
+        { key: 'holderEmail', label: 'Email', group: 'Página 2' },
+        { key: 'holderNotes', label: 'Notes / RFC y CURP', group: 'Página 2' },
+        { key: 'coOwnerName', label: 'Co-owner name / Copropietario', group: 'Página 2' },
+        { key: 'coOwnerBirth', label: 'Co-owner birth / Nacimiento', group: 'Página 2' },
+        { key: 'coOwnerOccupation', label: 'Co-owner occupation / Ocupación', group: 'Página 2' },
+        { key: 'coOwnerNationality', label: 'Co-owner nationality / Nacionalidad', group: 'Página 2' },
+        { key: 'coOwnerPassport', label: 'Co-owner passport / Pasaporte', group: 'Página 2' },
+        { key: 'coOwnerMaritalStatus', label: 'Co-owner marital status / Edo. Civil', group: 'Página 2' },
+        { key: 'coOwnerAddress', label: 'Co-owner address / Dirección', group: 'Página 2' },
+        { key: 'coOwnerCityStateZip', label: 'Co-owner city / Ciudad, Estado y C.P.', group: 'Página 2' },
+        { key: 'coOwnerPhone', label: 'Co-owner phone / Teléfono', group: 'Página 2' },
+        { key: 'coOwnerEmail', label: 'Co-owner email', group: 'Página 2' },
+        { key: 'coOwnerNotes', label: 'Co-owner notes / RFC y CURP', group: 'Página 2' }
+      ];
 
       function money(value) {
         const n = Number(value);
@@ -919,33 +1004,145 @@
         try { localStorage.setItem(draftWorkingKey(), JSON.stringify(payload && typeof payload === 'object' ? payload : {})); } catch (_) {}
       }
 
-      function normalizeLayoutOffsets(value) {
+      function clampLayoutValue(value, min, max) {
+        return Math.min(max, Math.max(min, Number.isFinite(Number(value)) ? Number(value) : 0));
+      }
+
+      function normalizeLayoutOffsetPair(value) {
         const incoming = value && typeof value === 'object' ? value : {};
-        const clamp = (n, min, max) => Math.min(max, Math.max(min, Number.isFinite(Number(n)) ? Number(n) : 0));
         return {
-          offsetX: clamp(incoming.offsetX, -150, 150),
-          offsetY: clamp(incoming.offsetY, -220, 220)
+          offsetX: clampLayoutValue(incoming.offsetX, -150, 150),
+          offsetY: clampLayoutValue(incoming.offsetY, -220, 220)
         };
       }
 
+      function normalizeLayoutConfig(value) {
+        const incoming = value && typeof value === 'object' ? value : {};
+        const legacy = normalizeLayoutOffsetPair(incoming);
+        const base = normalizeLayoutOffsetPair(
+          incoming.default && typeof incoming.default === 'object'
+            ? incoming.default
+            : incoming.base && typeof incoming.base === 'object'
+              ? incoming.base
+              : legacy
+        );
+        const fields = {};
+        const rawFields = incoming.fields && typeof incoming.fields === 'object' ? incoming.fields : {};
+        Object.entries(rawFields).forEach(([key, field]) => {
+          if (!key) return;
+          fields[key] = normalizeLayoutOffsetPair(field);
+        });
+        return {
+          default: base,
+          fields,
+          updatedAt: String(incoming.updatedAt || '').trim(),
+          updatedBy: String(incoming.updatedBy || '').trim()
+        };
+      }
+
+      function getFieldMeta(key) {
+        return LAYOUT_FIELD_DEFS.find((item) => String(item.key || '') === String(key || '')) || LAYOUT_FIELD_DEFS[0];
+      }
+
+      function getActiveLayoutFieldKey() {
+        const current = String(state.layoutFieldKey || '').trim();
+        return current && LAYOUT_FIELD_DEFS.some((item) => item.key === current)
+          ? current
+          : LAYOUT_FIELD_DEFS[0].key;
+      }
+
+      function getActiveFieldLayoutOffsets() {
+        const key = getActiveLayoutFieldKey();
+        const field = state.layoutConfig && state.layoutConfig.fields && state.layoutConfig.fields[key]
+          ? state.layoutConfig.fields[key]
+          : {};
+        const base = state.layoutConfig && state.layoutConfig.default ? state.layoutConfig.default : { offsetX: 0, offsetY: 0 };
+        return {
+          offsetX: clampLayoutValue((base.offsetX || 0) + (field.offsetX || 0), -150, 150),
+          offsetY: clampLayoutValue((base.offsetY || 0) + (field.offsetY || 0), -220, 220)
+        };
+      }
+
+      function getActiveLayoutBaseOffsets() {
+        return normalizeLayoutOffsetPair(
+          state.layoutConfig && state.layoutConfig.default ? state.layoutConfig.default : { offsetX: 0, offsetY: 0 }
+        );
+      }
+
+      function setLayoutFieldOffsets(nextOffsets) {
+        const key = getActiveLayoutFieldKey();
+        const normalized = normalizeLayoutOffsetPair(nextOffsets);
+        state.layoutConfig = normalizeLayoutConfig(state.layoutConfig);
+        state.layoutConfig.fields[key] = normalized;
+        syncLayoutPreview();
+      }
+
+      function setLayoutOffsets(nextOffsets) {
+        const base = getActiveLayoutBaseOffsets();
+        const absolute = normalizeLayoutOffsetPair(nextOffsets);
+        setLayoutFieldOffsets({
+          offsetX: absolute.offsetX - (base.offsetX || 0),
+          offsetY: absolute.offsetY - (base.offsetY || 0)
+        });
+      }
+
+      function buildLayoutFieldSelectOptions() {
+        if (!els.layoutFieldKey) return;
+        const current = getActiveLayoutFieldKey();
+        els.layoutFieldKey.innerHTML = [
+          '<optgroup label="Página 1">',
+          ...LAYOUT_FIELD_DEFS.filter((item) => item.group === 'Página 1').map((item) => {
+            const selected = item.key === current ? ' selected' : '';
+            return `<option value="${escapeHtml(item.key)}"${selected}>${escapeHtml(item.label)}</option>`;
+          }),
+          '</optgroup>',
+          '<optgroup label="Página 2">',
+          ...LAYOUT_FIELD_DEFS.filter((item) => item.group === 'Página 2').map((item) => {
+            const selected = item.key === current ? ' selected' : '';
+            return `<option value="${escapeHtml(item.key)}"${selected}>${escapeHtml(item.label)}</option>`;
+          }),
+          '</optgroup>'
+        ].join('');
+        els.layoutFieldKey.value = current;
+      }
+
+      function syncActiveLayoutFieldMeta() {
+        const activeKey = getActiveLayoutFieldKey();
+        state.layoutFieldKey = activeKey;
+        const meta = getFieldMeta(activeKey);
+        if (els.layoutFieldKey && els.layoutFieldKey.value !== activeKey) {
+          els.layoutFieldKey.value = activeKey;
+        }
+        if (els.layoutFieldName) {
+          els.layoutFieldName.textContent = meta.label || 'Campo';
+        }
+      }
+
       function formatLayoutCoords() {
-        const x = Math.round(Number(state.layoutOffsets.offsetX || 0));
-        const y = Math.round(Number(state.layoutOffsets.offsetY || 0));
-        return `X ${x} · Y ${y}`;
+        const x = Math.round(Number(getActiveFieldLayoutOffsets().offsetX || 0));
+        const y = Math.round(Number(getActiveFieldLayoutOffsets().offsetY || 0));
+        return `${getFieldMeta(getActiveLayoutFieldKey()).label || 'Campo'} · X ${x} · Y ${y}`;
       }
 
       function syncLayoutPreview() {
         if (!els.layoutDragBox) return;
-        const x = Number(state.layoutOffsets.offsetX || 0);
-        const y = Number(state.layoutOffsets.offsetY || 0);
+        const active = getActiveFieldLayoutOffsets();
+        const x = Number(active.offsetX || 0);
+        const y = Number(active.offsetY || 0);
         els.layoutDragBox.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+        const meta = getFieldMeta(getActiveLayoutFieldKey());
+        if (els.layoutDragBox.firstElementChild) {
+          els.layoutDragBox.firstElementChild.textContent = meta.label || 'Campo';
+        }
         if (els.layoutCoords) els.layoutCoords.textContent = formatLayoutCoords();
         if (els.layoutOffsetX) els.layoutOffsetX.value = String(Math.round(x));
         if (els.layoutOffsetY) els.layoutOffsetY.value = String(Math.round(y));
+        syncActiveLayoutFieldMeta();
       }
 
       function openLayoutModal() {
         if (!els.layoutModal) return;
+        buildLayoutFieldSelectOptions();
         syncLayoutPreview();
         els.layoutModal.classList.remove('hide');
         els.layoutModal.setAttribute('aria-hidden', 'false');
@@ -965,13 +1162,15 @@
           });
           if (!res.ok) throw new Error(`No se pudo cargar el ajuste de impresión (${res.status})`);
           const data = await res.json().catch(() => ({}));
-          state.layoutOffsets = normalizeLayoutOffsets(data && data.layout ? data.layout : data);
+          state.layoutConfig = normalizeLayoutConfig(data && data.layout ? data.layout : data);
           state.isGerente = Boolean(data && data.isGerente);
           if (els.layoutBtn) els.layoutBtn.classList.toggle('hide', !state.isGerente);
+          buildLayoutFieldSelectOptions();
           syncLayoutPreview();
         } catch (_) {
-          state.layoutOffsets = normalizeLayoutOffsets(state.layoutOffsets);
+          state.layoutConfig = normalizeLayoutConfig(state.layoutConfig);
           if (els.layoutBtn) els.layoutBtn.classList.add('hide');
+          buildLayoutFieldSelectOptions();
           syncLayoutPreview();
         }
       }
@@ -982,25 +1181,21 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ layout: state.layoutOffsets })
+            body: JSON.stringify({ layout: state.layoutConfig })
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             throw new Error(err && err.error ? err.error : `No se pudo guardar el ajuste (${res.status})`);
           }
           const data = await res.json().catch(() => ({}));
-          state.layoutOffsets = normalizeLayoutOffsets(data && data.layout ? data.layout : state.layoutOffsets);
+          state.layoutConfig = normalizeLayoutConfig(data && data.layout ? data.layout : state.layoutConfig);
+          buildLayoutFieldSelectOptions();
           syncLayoutPreview();
-          els.statusText.textContent = 'Ajuste de impresión guardado.';
+          els.statusText.textContent = 'Ajuste por campo guardado.';
           closeLayoutModal();
         } catch (err) {
           els.statusText.textContent = err && err.message ? err.message : 'No se pudo guardar el ajuste.';
         }
-      }
-
-      function setLayoutOffsets(nextOffsets) {
-        state.layoutOffsets = normalizeLayoutOffsets(nextOffsets);
-        syncLayoutPreview();
       }
 
       function bindLayoutControls() {
@@ -1012,25 +1207,34 @@
         }
         if (els.layoutResetBtn) {
           els.layoutResetBtn.addEventListener('click', function () {
-            setLayoutOffsets({ offsetX: 0, offsetY: 0 });
-            els.statusText.textContent = 'Ajuste reiniciado.';
+            const key = getActiveLayoutFieldKey();
+            state.layoutConfig = normalizeLayoutConfig(state.layoutConfig);
+            state.layoutConfig.fields[key] = { offsetX: 0, offsetY: 0 };
+            syncLayoutPreview();
+            els.statusText.textContent = `Campo reiniciado: ${getFieldMeta(key).label}.`;
           });
         }
         if (els.layoutSaveBtn) {
           els.layoutSaveBtn.addEventListener('click', saveReservationLayout);
         }
+        if (els.layoutFieldKey) {
+          els.layoutFieldKey.addEventListener('change', function () {
+            state.layoutFieldKey = String(els.layoutFieldKey.value || '').trim() || LAYOUT_FIELD_DEFS[0].key;
+            syncLayoutPreview();
+          });
+        }
         if (els.layoutOffsetX) {
           els.layoutOffsetX.addEventListener('input', function () {
             setLayoutOffsets({
               offsetX: els.layoutOffsetX.value,
-              offsetY: state.layoutOffsets.offsetY
+              offsetY: getActiveFieldLayoutOffsets().offsetY
             });
           });
         }
         if (els.layoutOffsetY) {
           els.layoutOffsetY.addEventListener('input', function () {
             setLayoutOffsets({
-              offsetX: state.layoutOffsets.offsetX,
+              offsetX: getActiveFieldLayoutOffsets().offsetX,
               offsetY: els.layoutOffsetY.value
             });
           });
@@ -1056,8 +1260,8 @@
             dragState = {
               startX: event.clientX,
               startY: event.clientY,
-              startOffsetX: Number(state.layoutOffsets.offsetX || 0),
-              startOffsetY: Number(state.layoutOffsets.offsetY || 0)
+              startOffsetX: Number(getActiveFieldLayoutOffsets().offsetX || 0),
+              startOffsetY: Number(getActiveFieldLayoutOffsets().offsetY || 0)
             };
             window.addEventListener('pointermove', onPointerMove);
             window.addEventListener('pointerup', onPointerUp);
@@ -1422,7 +1626,7 @@
       async function downloadPdf() {
         const payload = {
           ...collectState(),
-          layoutOffsets: state.layoutOffsets
+          layoutOffsets: state.layoutConfig
         };
         if (!payload.unitNumber) {
           els.statusText.textContent = 'Selecciona una unidad antes de descargar.';
@@ -1576,6 +1780,7 @@
       renderPayments();
       bindSimpleAutosave();
       bindLayoutControls();
+      buildLayoutFieldSelectOptions();
 
       els.development.value = state.development;
       loadReservationLayout();

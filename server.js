@@ -151,6 +151,19 @@ const VICEROY_RESERVATION_STATIC_LAYOUT = {
     coOwnerNotes: rectFromTop(VICEROY_RESERVATION_PAGE_HEIGHT, 52, 605, 540, 18)
   }
 };
+const VICEROY_RESERVATION_LAYOUT_FIELD_KEYS = [
+  'fullName', 'email', 'phone', 'development', 'unitNumber', 'priceListed', 'observations',
+  'paymentLabel0', 'paymentLabel1', 'paymentLabel2', 'paymentLabel3', 'paymentLabel4',
+  'paymentPercent0', 'paymentPercent1', 'paymentPercent2', 'paymentPercent3', 'paymentPercent4',
+  'paymentAmount0', 'paymentAmount1', 'paymentAmount2', 'paymentAmount3', 'paymentAmount4',
+  'paymentDate0', 'paymentDate1', 'paymentDate2', 'paymentDate3', 'paymentDate4',
+  'amountCurrency', 'cardNumber', 'cardName', 'cardType', 'cardAddress', 'cardCityStateZip',
+  'expirationDate', 'securityCode', 'signature',
+  'holderName', 'holderBirth', 'holderOccupation', 'holderNationality', 'holderPassport',
+  'holderMaritalStatus', 'holderAddress', 'holderCityStateZip', 'holderPhone', 'holderEmail', 'holderNotes',
+  'coOwnerName', 'coOwnerBirth', 'coOwnerOccupation', 'coOwnerNationality', 'coOwnerPassport',
+  'coOwnerMaritalStatus', 'coOwnerAddress', 'coOwnerCityStateZip', 'coOwnerPhone', 'coOwnerEmail', 'coOwnerNotes'
+];
 const REPO_DATA_DIR = path.join(__dirname, 'data');
 function isWritableDir(dirPath) {
   try {
@@ -7291,11 +7304,33 @@ function reservationBackdropColor() {
   return rgb(0.98, 0.97, 0.95);
 }
 
-function normalizeViceroyReservationLayout(layout) {
-  const incoming = layout && typeof layout === 'object' ? layout : {};
+function normalizeViceroyReservationLayoutOffset(value) {
+  const incoming = value && typeof value === 'object' ? value : {};
   return {
     offsetX: clampNumber(incoming.offsetX, 0, -150, 150),
-    offsetY: clampNumber(incoming.offsetY, 0, -220, 220),
+    offsetY: clampNumber(incoming.offsetY, 0, -220, 220)
+  };
+}
+
+function normalizeViceroyReservationLayout(layout) {
+  const incoming = layout && typeof layout === 'object' ? layout : {};
+  const legacyOffset = normalizeViceroyReservationLayoutOffset(incoming);
+  const defaultOffsets = normalizeViceroyReservationLayoutOffset(
+    incoming.default && typeof incoming.default === 'object'
+      ? incoming.default
+      : incoming.base && typeof incoming.base === 'object'
+        ? incoming.base
+        : legacyOffset
+  );
+  const fields = {};
+  const rawFields = incoming.fields && typeof incoming.fields === 'object' ? incoming.fields : {};
+  Object.entries(rawFields).forEach(([key, value]) => {
+    if (!key || !VICEROY_RESERVATION_LAYOUT_FIELD_KEYS.includes(key)) return;
+    fields[key] = normalizeViceroyReservationLayoutOffset(value);
+  });
+  return {
+    default: defaultOffsets,
+    fields,
     updatedAt: String(incoming.updatedAt || '').trim(),
     updatedBy: String(incoming.updatedBy || '').trim()
   };
@@ -7310,6 +7345,15 @@ function saveViceroyReservationLayout(layout) {
   normalized.updatedAt = new Date().toISOString();
   writeJson(VICEROY_RESERVATION_LAYOUT_PATH, normalized);
   return normalized;
+}
+
+function getViceroyReservationLayoutOffsets(layout, fieldKey) {
+  const normalized = normalizeViceroyReservationLayout(layout);
+  const field = normalized.fields && fieldKey && normalized.fields[fieldKey] ? normalized.fields[fieldKey] : {};
+  return {
+    offsetX: clampNumber((normalized.default && normalized.default.offsetX ? normalized.default.offsetX : 0) + (field.offsetX || 0), 0, -150, 150),
+    offsetY: clampNumber((normalized.default && normalized.default.offsetY ? normalized.default.offsetY : 0) + (field.offsetY || 0), 0, -220, 220)
+  };
 }
 
 function clearPdfAnnotations(pdfDoc) {
@@ -7371,20 +7415,21 @@ async function buildViceroyReservationPdfBuffer(payload) {
   const pages = pdfDoc.getPages();
   const form = pdfDoc.getForm();
   clearPdfAnnotations(pdfDoc);
-  const layoutOffsets = normalizeViceroyReservationLayout(
+  const reservationLayout = normalizeViceroyReservationLayout(
     payload && payload.layoutOffsets && typeof payload.layoutOffsets === 'object'
       ? payload.layoutOffsets
       : readViceroyReservationLayout()
   );
 
-  const drawField = (fieldName, values, options = {}) => {
+  const drawField = (fieldName, fieldKey, values, options = {}) => {
     const widgets = widgetsByField.get(fieldName) || [];
     const sourceValues = Array.isArray(values) ? values : [values];
+    const fieldOffsets = getViceroyReservationLayoutOffsets(reservationLayout, fieldKey);
     widgets.forEach((widget, idx) => {
       const value = sourceValues[idx] != null ? sourceValues[idx] : sourceValues[sourceValues.length - 1];
       if (!value) return;
       const page = pages[widget.pageIndex] || pages[0];
-      drawTextInRect(page, font, offsetReservationRect(widget.rect, layoutOffsets), value, options);
+      drawTextInRect(page, font, offsetReservationRect(widget.rect, fieldOffsets), value, options);
     });
   };
 
@@ -7417,77 +7462,81 @@ async function buildViceroyReservationPdfBuffer(payload) {
   });
 
   if (widgetsByField.size > 0) {
-    drawField('Full Name / Nombre Completo:', fullName, { fontSize: 9.4 });
-    drawField('E-mail', email, { fontSize: 9.2 });
-    drawField('Phone / Teléfono', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
-    drawField('Development / Desarrollo', development, { fontSize: 9.2 });
+    drawField('Full Name / Nombre Completo:', 'fullName', fullName, { fontSize: 9.4 });
+    drawField('E-mail', 'email', email, { fontSize: 9.2 });
+    drawField('Phone / Teléfono', 'phone', [phone, getReservationFieldValue(payload, 'holderPhone'), getReservationFieldValue(payload, 'coOwnerPhone')], { fontSize: 7.2, marginY: 4.4, verticalAlign: 'top' });
+    drawField('Development / Desarrollo', 'development', development, { fontSize: 9.2 });
     const unitWidgets = widgetsByField.get('Unit /  No. Unidad') || [];
     if (unitWidgets.length) {
-      drawField('Unit /  No. Unidad', unitNumber, { fontSize: 9.2 });
+      drawField('Unit /  No. Unidad', 'unitNumber', unitNumber, { fontSize: 9.2 });
     } else if (unitNumber) {
       const unitPage = pages[0] || pages[pages.length - 1];
       if (unitPage) {
         drawTextInRect(unitPage, font, VICEROY_RESERVATION_UNIT_FALLBACK_RECT, unitNumber, { fontSize: 9.2, verticalAlign: 'top' });
       }
     }
-    drawField('Price Listed / Precio de Lista', stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
-    drawField('Card Number / Número de tarjeta', cardNumber, { fontSize: 8.9 });
-    drawField('Name in the Card / Nombre en la tarjeta', cardName, { fontSize: 8.9 });
-    drawField('Amount & Currency / Monto y Moneda', amountCurrency, { fontSize: 8.9 });
-    drawField('VISA / MASTERCARD', cardType, { fontSize: 8.8 });
-    drawField('Address / Dirección', [
+    drawField('Price Listed / Precio de Lista', 'priceListed', stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2 });
+    drawField('Card Number / Número de tarjeta', 'cardNumber', cardNumber, { fontSize: 8.9 });
+    drawField('Name in the Card / Nombre en la tarjeta', 'cardName', cardName, { fontSize: 8.9 });
+    drawField('Amount & Currency / Monto y Moneda', 'amountCurrency', amountCurrency, { fontSize: 8.9 });
+    drawField('VISA / MASTERCARD', 'cardType', cardType, { fontSize: 8.8 });
+    drawField('Address / Dirección', 'cardAddress', [
       cardAddress,
       getReservationFieldValue(payload, 'holderAddress'),
       getReservationFieldValue(payload, 'coOwnerAddress')
     ], { fontSize: 8.2 });
-    drawField('City, Estate & Zip Code / Ciudad, Edo y C.P', cardCityStateZip, { fontSize: 8.2 });
-    drawField('Expiration Date / Fecha Expiración', expirationDate, { fontSize: 8.8 });
-    drawField('Security Code / Código de Seguridad', securityCode, { fontSize: 8.8 });
-    drawField('Sign / Firma', signature, { fontSize: 8.8 });
+    drawField('City, Estate & Zip Code / Ciudad, Edo y C.P', 'cardCityStateZip', cardCityStateZip, { fontSize: 8.2 });
+    drawField('Expiration Date / Fecha Expiración', 'expirationDate', expirationDate, { fontSize: 8.8 });
+    drawField('Security Code / Código de Seguridad', 'securityCode', securityCode, { fontSize: 8.8 });
+    drawField('Sign / Firma', 'signature', signature, { fontSize: 8.8 });
 
-    drawField('Reservation Fee / Reserva', normalizedPayments.slice(1).map((row) => row.label), { fontSize: 7.8 });
-    drawField('%', normalizedPayments.map((row) => row.percent), { fontSize: 8.1 });
-    drawField('Date / Fecha', normalizedPayments.map((row) => row.date), { fontSize: 7.8 });
-    drawField('Amount / Monto', normalizedPayments.map((row) => row.amount), { fontSize: 7.8 });
+    normalizedPayments.slice(1).forEach((row, idx) => {
+      drawField('Reservation Fee / Reserva', `paymentLabel${idx + 1}`, row.label, { fontSize: 7.8 });
+    });
+    normalizedPayments.forEach((row, idx) => {
+      drawField('%', `paymentPercent${idx}`, row.percent, { fontSize: 8.1 });
+      drawField('Date / Fecha', `paymentDate${idx}`, row.date, { fontSize: 7.8 });
+      drawField('Amount / Monto', `paymentAmount${idx}`, row.amount, { fontSize: 7.8 });
+    });
 
-    drawField('Name as in Passport / Nombre como el Pasaporte', [
+    drawField('Name as in Passport / Nombre como el Pasaporte', 'holderName', [
       getReservationFieldValue(payload, 'holderName'),
       getReservationFieldValue(payload, 'coOwnerName')
     ], { fontSize: 8.3 });
-    drawField('Day & Place of Birth / Día y Lugar de Nacimiento', [
+    drawField('Day & Place of Birth / Día y Lugar de Nacimiento', 'holderBirth', [
       getReservationFieldValue(payload, 'holderBirth'),
       getReservationFieldValue(payload, 'coOwnerBirth')
     ], { fontSize: 8.0 });
-    drawField('Occupation / Ocupación', [
+    drawField('Occupation / Ocupación', 'holderOccupation', [
       getReservationFieldValue(payload, 'holderOccupation'),
       getReservationFieldValue(payload, 'coOwnerOccupation')
     ], { fontSize: 8.2 });
-    drawField('Nationality / Nacionalidad', [
+    drawField('Nationality / Nacionalidad', 'holderNationality', [
       getReservationFieldValue(payload, 'holderNationality'),
       getReservationFieldValue(payload, 'coOwnerNationality')
     ], { fontSize: 8.2 });
-    drawField('Passport/ Pasaporte', [
+    drawField('Passport/ Pasaporte', 'holderPassport', [
       getReservationFieldValue(payload, 'holderPassport'),
       getReservationFieldValue(payload, 'coOwnerPassport')
     ], { fontSize: 8.2 });
-    drawField('Marital Status / Edo. Civil', [
+    drawField('Marital Status / Edo. Civil', 'holderMaritalStatus', [
       getReservationFieldValue(payload, 'holderMaritalStatus'),
       getReservationFieldValue(payload, 'coOwnerMaritalStatus')
     ], { fontSize: 8.2 });
-    drawField('City, Estate & Zip Code / Ciudad, Estado y C.P', [
+    drawField('City, Estate & Zip Code / Ciudad, Estado y C.P', 'holderCityStateZip', [
       getReservationFieldValue(payload, 'holderCityStateZip'),
       getReservationFieldValue(payload, 'coOwnerCityStateZip')
     ], { fontSize: 7.9 });
-    drawField('Email', [
+    drawField('Email', 'holderEmail', [
       getReservationFieldValue(payload, 'holderEmail'),
       getReservationFieldValue(payload, 'coOwnerEmail')
     ], { fontSize: 8.2 });
-    drawField('Notes / RFC y CURP (solo ciudadanos Mexicanos)', [
+    drawField('Notes / RFC y CURP (solo ciudadanos Mexicanos)', 'holderNotes', [
       getReservationFieldValue(payload, 'holderNotes'),
       getReservationFieldValue(payload, 'coOwnerNotes')
     ], { fontSize: 7.6 });
 
-    drawField('Observations / Observaciones', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
+    drawField('Observations / Observaciones', 'observations', observations, { fontSize: 8.0, verticalAlign: 'top', marginY: 4.0 });
   } else {
     const page1 = pages[0] || pages[pages.length - 1];
     const page2 = pages[1] || pages[0] || pages[pages.length - 1];
@@ -7497,60 +7546,60 @@ async function buildViceroyReservationPdfBuffer(payload) {
     const backgroundColor = reservationBackdropColor();
     const hideDollar = (rect) => fillRect(page1, { x: rect.x + 1, y: rect.y + 1, width: 10, height: Math.max(1, rect.height - 2) }, backgroundColor);
 
-    const offsetRect = (rect) => offsetReservationRect(rect, layoutOffsets);
+    const offsetRect = (rect, key) => offsetReservationRect(rect, getViceroyReservationLayoutOffsets(reservationLayout, key));
 
-    drawManualReservationField(page1, font, offsetRect(layout1.fullName), fullName, { fontSize: 9.4, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.email), email, { fontSize: 9.2, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.phone), phone, { fontSize: 7.2, marginY: 2.8, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.development), development, { fontSize: 9.2, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.unitNumber), unitNumber, { fontSize: 9.2, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.priceListed), stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.observations), observations, { fontSize: 8.0, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.fullName, 'fullName'), fullName, { fontSize: 9.4, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.email, 'email'), email, { fontSize: 9.2, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.phone, 'phone'), phone, { fontSize: 7.2, marginY: 2.8, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.development, 'development'), development, { fontSize: 9.2, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.unitNumber, 'unitNumber'), unitNumber, { fontSize: 9.2, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.priceListed, 'priceListed'), stripLeadingCurrencySymbol(priceListed), { fontSize: 9.2, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.observations, 'observations'), observations, { fontSize: 8.0, ...page1TextOpts });
 
     normalizedPayments.slice(1).forEach((row, idx) => {
-      drawManualReservationField(page1, font, offsetRect(layout1.paymentLabelRows[idx]), row.label, { fontSize: 7.8, align: 'center', ...page1TextOpts });
+      drawManualReservationField(page1, font, offsetRect(layout1.paymentLabelRows[idx], `paymentLabel${idx + 1}`), row.label, { fontSize: 7.8, align: 'center', ...page1TextOpts });
     });
     normalizedPayments.forEach((row, idx) => {
-      drawManualReservationField(page1, font, offsetRect(layout1.paymentPercentRows[idx]), row.percent, { fontSize: 8.1, align: 'center', ...page1TextOpts });
-      hideDollar(offsetRect(layout1.paymentAmountRows[idx]));
-      drawManualReservationField(page1, font, offsetRect(layout1.paymentAmountRows[idx]), row.amount, { fontSize: 7.8, marginX: 12, ...page1TextOpts });
-      drawManualReservationField(page1, font, offsetRect(layout1.paymentDateRows[idx]), row.date, { fontSize: 7.8, align: 'center', ...page1TextOpts });
+      drawManualReservationField(page1, font, offsetRect(layout1.paymentPercentRows[idx], `paymentPercent${idx}`), row.percent, { fontSize: 8.1, align: 'center', ...page1TextOpts });
+      hideDollar(offsetRect(layout1.paymentAmountRows[idx], `paymentAmount${idx}`));
+      drawManualReservationField(page1, font, offsetRect(layout1.paymentAmountRows[idx], `paymentAmount${idx}`), row.amount, { fontSize: 7.8, marginX: 12, ...page1TextOpts });
+      drawManualReservationField(page1, font, offsetRect(layout1.paymentDateRows[idx], `paymentDate${idx}`), row.date, { fontSize: 7.8, align: 'center', ...page1TextOpts });
     });
 
-    hideDollar(offsetRect(layout1.amountCurrency));
-    drawManualReservationField(page1, font, offsetRect(layout1.amountCurrency), amountCurrency, { fontSize: 8.8, marginX: 12, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.cardNumber), cardNumber, { fontSize: 8.9, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.cardName), cardName, { fontSize: 8.9, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.cardType), cardType, { fontSize: 8.8, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.cardAddress), cardAddress, { fontSize: 8.2, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.cardCityStateZip), cardCityStateZip, { fontSize: 8.2, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.expirationDate), expirationDate, { fontSize: 8.8, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.securityCode), securityCode, { fontSize: 8.8, ...page1TextOpts });
-    drawManualReservationField(page1, font, offsetRect(layout1.signature), signature, { fontSize: 8.8, marginY: 4.0, ...page1TextOpts });
+    hideDollar(offsetRect(layout1.amountCurrency, 'amountCurrency'));
+    drawManualReservationField(page1, font, offsetRect(layout1.amountCurrency, 'amountCurrency'), amountCurrency, { fontSize: 8.8, marginX: 12, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.cardNumber, 'cardNumber'), cardNumber, { fontSize: 8.9, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.cardName, 'cardName'), cardName, { fontSize: 8.9, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.cardType, 'cardType'), cardType, { fontSize: 8.8, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.cardAddress, 'cardAddress'), cardAddress, { fontSize: 8.2, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.cardCityStateZip, 'cardCityStateZip'), cardCityStateZip, { fontSize: 8.2, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.expirationDate, 'expirationDate'), expirationDate, { fontSize: 8.8, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.securityCode, 'securityCode'), securityCode, { fontSize: 8.8, ...page1TextOpts });
+    drawManualReservationField(page1, font, offsetRect(layout1.signature, 'signature'), signature, { fontSize: 8.8, marginY: 4.0, ...page1TextOpts });
 
-    drawManualReservationField(page2, font, offsetRect(layout2.holderName), getReservationFieldValue(payload, 'holderName'), { fontSize: 8.3 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderBirth), getReservationFieldValue(payload, 'holderBirth'), { fontSize: 8.0 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderOccupation), getReservationFieldValue(payload, 'holderOccupation'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderNationality), getReservationFieldValue(payload, 'holderNationality'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderPassport), getReservationFieldValue(payload, 'holderPassport'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderMaritalStatus), getReservationFieldValue(payload, 'holderMaritalStatus'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderAddress), getReservationFieldValue(payload, 'holderAddress'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderCityStateZip), getReservationFieldValue(payload, 'holderCityStateZip'), { fontSize: 7.9 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderPhone), getReservationFieldValue(payload, 'holderPhone'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderEmail), getReservationFieldValue(payload, 'holderEmail'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.holderNotes), getReservationFieldValue(payload, 'holderNotes'), { fontSize: 7.6 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderName, 'holderName'), getReservationFieldValue(payload, 'holderName'), { fontSize: 8.3 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderBirth, 'holderBirth'), getReservationFieldValue(payload, 'holderBirth'), { fontSize: 8.0 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderOccupation, 'holderOccupation'), getReservationFieldValue(payload, 'holderOccupation'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderNationality, 'holderNationality'), getReservationFieldValue(payload, 'holderNationality'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderPassport, 'holderPassport'), getReservationFieldValue(payload, 'holderPassport'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderMaritalStatus, 'holderMaritalStatus'), getReservationFieldValue(payload, 'holderMaritalStatus'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderAddress, 'holderAddress'), getReservationFieldValue(payload, 'holderAddress'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderCityStateZip, 'holderCityStateZip'), getReservationFieldValue(payload, 'holderCityStateZip'), { fontSize: 7.9 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderPhone, 'holderPhone'), getReservationFieldValue(payload, 'holderPhone'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderEmail, 'holderEmail'), getReservationFieldValue(payload, 'holderEmail'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.holderNotes, 'holderNotes'), getReservationFieldValue(payload, 'holderNotes'), { fontSize: 7.6 });
 
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerName), getReservationFieldValue(payload, 'coOwnerName'), { fontSize: 8.3 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerBirth), getReservationFieldValue(payload, 'coOwnerBirth'), { fontSize: 8.0 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerOccupation), getReservationFieldValue(payload, 'coOwnerOccupation'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerNationality), getReservationFieldValue(payload, 'coOwnerNationality'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerPassport), getReservationFieldValue(payload, 'coOwnerPassport'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerMaritalStatus), getReservationFieldValue(payload, 'coOwnerMaritalStatus'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerAddress), getReservationFieldValue(payload, 'coOwnerAddress'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerCityStateZip), getReservationFieldValue(payload, 'coOwnerCityStateZip'), { fontSize: 7.9 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerPhone), getReservationFieldValue(payload, 'coOwnerPhone'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerEmail), getReservationFieldValue(payload, 'coOwnerEmail'), { fontSize: 8.2 });
-    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerNotes), getReservationFieldValue(payload, 'coOwnerNotes'), { fontSize: 7.6 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerName, 'coOwnerName'), getReservationFieldValue(payload, 'coOwnerName'), { fontSize: 8.3 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerBirth, 'coOwnerBirth'), getReservationFieldValue(payload, 'coOwnerBirth'), { fontSize: 8.0 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerOccupation, 'coOwnerOccupation'), getReservationFieldValue(payload, 'coOwnerOccupation'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerNationality, 'coOwnerNationality'), getReservationFieldValue(payload, 'coOwnerNationality'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerPassport, 'coOwnerPassport'), getReservationFieldValue(payload, 'coOwnerPassport'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerMaritalStatus, 'coOwnerMaritalStatus'), getReservationFieldValue(payload, 'coOwnerMaritalStatus'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerAddress, 'coOwnerAddress'), getReservationFieldValue(payload, 'coOwnerAddress'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerCityStateZip, 'coOwnerCityStateZip'), getReservationFieldValue(payload, 'coOwnerCityStateZip'), { fontSize: 7.9 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerPhone, 'coOwnerPhone'), getReservationFieldValue(payload, 'coOwnerPhone'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerEmail, 'coOwnerEmail'), getReservationFieldValue(payload, 'coOwnerEmail'), { fontSize: 8.2 });
+    drawManualReservationField(page2, font, offsetRect(layout2.coOwnerNotes, 'coOwnerNotes'), getReservationFieldValue(payload, 'coOwnerNotes'), { fontSize: 7.6 });
   }
 
   return Buffer.from(await pdfDoc.save({ updateFieldAppearances: false }));
