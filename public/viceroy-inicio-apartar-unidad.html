@@ -60,6 +60,10 @@
       background:#f6f2e8;
       border-color:#d6cfbf;
     }
+    .btn.subtle{
+      background:#f2efe5;
+      border-color:#d7cfbc;
+    }
     .btn:disabled{
       opacity:.55;
       cursor:not-allowed;
@@ -280,10 +284,139 @@
     .pill.ok{background:#e8f6e9;border-color:#92c89b;color:#195727}
     .pill.warn{background:#fff4de;border-color:#e0b35b;color:#7d5212}
     .hide{display:none !important}
+    .layout-modal{
+      position:fixed;
+      inset:0;
+      z-index:50;
+      background:rgba(25, 22, 16, .45);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .layout-modal-card{
+      width:min(1100px, 96vw);
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .layout-modal-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      padding:18px 20px 0;
+    }
+    .layout-modal-head h3{
+      font-size:22px;
+      line-height:1.1;
+      margin-bottom:6px;
+    }
+    .layout-modal-head p{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+      max-width:640px;
+    }
+    .layout-modal-body{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) 320px;
+      gap:18px;
+      padding:18px 20px 20px;
+      align-items:start;
+    }
+    .layout-preview{
+      background:#f1ecdf;
+      border:1px solid #ded7c7;
+      border-radius:20px;
+      padding:18px;
+      min-height:520px;
+      overflow:hidden;
+    }
+    .layout-page{
+      position:relative;
+      width:100%;
+      height:760px;
+      border-radius:18px;
+      background:linear-gradient(180deg,#fffdf7 0%, #f7f3ea 100%);
+      border:1px dashed #d9d0bf;
+      overflow:hidden;
+    }
+    .layout-gridlines{
+      position:absolute;
+      inset:0;
+      background-image:
+        linear-gradient(to right, rgba(112, 101, 76, .08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(112, 101, 76, .08) 1px, transparent 1px);
+      background-size:24px 24px;
+      pointer-events:none;
+      opacity:.75;
+    }
+    .layout-content-box{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:min(82%, 500px);
+      height:72%;
+      transform:translate(-50%, -50%);
+      border:2px solid #7c8460;
+      border-radius:18px;
+      background:rgba(146, 160, 122, .08);
+      box-shadow:0 10px 24px rgba(0,0,0,.08);
+      cursor:grab;
+      touch-action:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:8px;
+      user-select:none;
+    }
+    .layout-content-box:active{cursor:grabbing}
+    .layout-content-box strong{
+      font-size:18px;
+      color:#4d5538;
+    }
+    .layout-content-box span{
+      font-size:13px;
+      color:#5e674b;
+      background:rgba(255,255,255,.72);
+      border:1px solid rgba(120,130,94,.35);
+      padding:4px 8px;
+      border-radius:999px;
+    }
+    .layout-control-panel{
+      background:#fff;
+      border:1px solid #e0d8c6;
+      border-radius:18px;
+      padding:16px;
+      display:grid;
+      gap:14px;
+    }
+    .layout-control-panel label{
+      display:grid;
+      gap:8px;
+      font-size:12px;
+      color:#404654;
+    }
+    .layout-control-panel input[type="range"]{
+      width:100%;
+      padding:0;
+      border:0;
+      background:transparent;
+    }
+    .layout-control-panel .actions{
+      margin-top:4px;
+      justify-content:flex-end;
+    }
     @media (max-width: 1180px){
       .layout{grid-template-columns:1fr}
       .panel.sticky{position:static}
       .payment-row{grid-template-columns:1fr 1fr}
+      .layout-modal-body{grid-template-columns:1fr}
+      .layout-page{height:540px}
     }
     @media (max-width: 760px){
       .grid,.grid.three{grid-template-columns:1fr}
@@ -297,6 +430,7 @@
     <div class="topbar">
       <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
       <div class="actions">
+        <button class="btn subtle hide" type="button" id="layoutBtn">Ajustar impresión</button>
         <button class="btn" type="button" id="saveBtn">Guardar borrador</button>
         <button class="btn pill-link" type="button" id="restoreBtn" disabled>Sin borrador</button>
         <button class="btn" type="button" id="resetBtn">Limpiar</button>
@@ -426,6 +560,42 @@
     </div>
   </div>
 
+  <div class="layout-modal hide" id="layoutModal" aria-hidden="true">
+    <div class="layout-modal-card" role="dialog" aria-modal="true" aria-labelledby="layoutModalTitle">
+      <div class="layout-modal-head">
+        <div>
+          <h3 id="layoutModalTitle">Ajuste de impresión</h3>
+          <p>Arrastra el recuadro dentro de la hoja hasta que el contenido quede alineado con tu PDF. El ajuste se guarda una sola vez y se usa para todos al descargar.</p>
+        </div>
+        <button class="btn" type="button" id="layoutCloseBtn">Cerrar</button>
+      </div>
+      <div class="layout-modal-body">
+        <div class="layout-preview">
+          <div class="layout-page" id="layoutPreview">
+            <div class="layout-gridlines"></div>
+            <div class="layout-content-box" id="layoutDragBox" title="Arrastra para mover">
+              <strong>Contenido PDF</strong>
+              <span id="layoutCoords">X 0 · Y 0</span>
+            </div>
+          </div>
+        </div>
+        <div class="layout-control-panel">
+          <label>Desplazamiento X
+            <input type="range" id="layoutOffsetX" min="-150" max="150" step="1" value="0">
+          </label>
+          <label>Desplazamiento Y
+            <input type="range" id="layoutOffsetY" min="-220" max="220" step="1" value="0">
+          </label>
+          <div class="note">X mueve el contenido a la izquierda/derecha. Y lo sube o baja. Si te pasas, solo vuelve a arrastrar o dale reiniciar.</div>
+          <div class="actions">
+            <button class="btn" type="button" id="layoutResetBtn">Reiniciar</button>
+            <button class="btn primary" type="button" id="layoutSaveBtn">Guardar ajuste</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       const DRAFT_LIST_KEY_PREFIX = 'viceroy-hoja-reserva-drafts-v2';
@@ -480,10 +650,20 @@
         summaryUnit: document.getElementById('summaryUnit'),
         summaryPrice: document.getElementById('summaryPrice'),
         summaryCurrency: document.getElementById('summaryCurrency'),
+        layoutBtn: document.getElementById('layoutBtn'),
         saveBtn: document.getElementById('saveBtn'),
         restoreBtn: document.getElementById('restoreBtn'),
         resetBtn: document.getElementById('resetBtn'),
-        downloadBtn: document.getElementById('downloadBtn')
+        downloadBtn: document.getElementById('downloadBtn'),
+        layoutModal: document.getElementById('layoutModal'),
+        layoutPreview: document.getElementById('layoutPreview'),
+        layoutDragBox: document.getElementById('layoutDragBox'),
+        layoutCoords: document.getElementById('layoutCoords'),
+        layoutOffsetX: document.getElementById('layoutOffsetX'),
+        layoutOffsetY: document.getElementById('layoutOffsetY'),
+        layoutCloseBtn: document.getElementById('layoutCloseBtn'),
+        layoutResetBtn: document.getElementById('layoutResetBtn'),
+        layoutSaveBtn: document.getElementById('layoutSaveBtn')
       };
 
       const state = {
@@ -491,7 +671,9 @@
         unitOptions: [],
         selectedUnitPrice: 0,
         currentUserKey: 'guest',
+        isGerente: false,
         amountCurrencyTouched: false,
+        layoutOffsets: { offsetX: 0, offsetY: 0 },
         payments: [
           { label: 'Reservation Fee / Reserva', percent: '', amount: '', date: '' },
           { label: '', percent: '', amount: '', date: '' },
@@ -577,6 +759,158 @@
 
       function writeWorkingDraft(payload) {
         try { localStorage.setItem(draftWorkingKey(), JSON.stringify(payload && typeof payload === 'object' ? payload : {})); } catch (_) {}
+      }
+
+      function normalizeLayoutOffsets(value) {
+        const incoming = value && typeof value === 'object' ? value : {};
+        const clamp = (n, min, max) => Math.min(max, Math.max(min, Number.isFinite(Number(n)) ? Number(n) : 0));
+        return {
+          offsetX: clamp(incoming.offsetX, -150, 150),
+          offsetY: clamp(incoming.offsetY, -220, 220)
+        };
+      }
+
+      function formatLayoutCoords() {
+        const x = Math.round(Number(state.layoutOffsets.offsetX || 0));
+        const y = Math.round(Number(state.layoutOffsets.offsetY || 0));
+        return `X ${x} · Y ${y}`;
+      }
+
+      function syncLayoutPreview() {
+        if (!els.layoutDragBox) return;
+        const x = Number(state.layoutOffsets.offsetX || 0);
+        const y = Number(state.layoutOffsets.offsetY || 0);
+        els.layoutDragBox.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+        if (els.layoutCoords) els.layoutCoords.textContent = formatLayoutCoords();
+        if (els.layoutOffsetX) els.layoutOffsetX.value = String(Math.round(x));
+        if (els.layoutOffsetY) els.layoutOffsetY.value = String(Math.round(y));
+      }
+
+      function openLayoutModal() {
+        if (!els.layoutModal) return;
+        syncLayoutPreview();
+        els.layoutModal.classList.remove('hide');
+        els.layoutModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeLayoutModal() {
+        if (!els.layoutModal) return;
+        els.layoutModal.classList.add('hide');
+        els.layoutModal.setAttribute('aria-hidden', 'true');
+      }
+
+      async function loadReservationLayout() {
+        try {
+          const res = await fetch('/api/viceroy/inicio/reservation-layout', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          if (!res.ok) throw new Error(`No se pudo cargar el ajuste de impresión (${res.status})`);
+          const data = await res.json().catch(() => ({}));
+          state.layoutOffsets = normalizeLayoutOffsets(data && data.layout ? data.layout : data);
+          state.isGerente = Boolean(data && data.isGerente);
+          if (els.layoutBtn) els.layoutBtn.classList.toggle('hide', !state.isGerente);
+          syncLayoutPreview();
+        } catch (_) {
+          state.layoutOffsets = normalizeLayoutOffsets(state.layoutOffsets);
+          if (els.layoutBtn) els.layoutBtn.classList.add('hide');
+          syncLayoutPreview();
+        }
+      }
+
+      async function saveReservationLayout() {
+        try {
+          const res = await fetch('/api/viceroy/inicio/reservation-layout', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ layout: state.layoutOffsets })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err && err.error ? err.error : `No se pudo guardar el ajuste (${res.status})`);
+          }
+          const data = await res.json().catch(() => ({}));
+          state.layoutOffsets = normalizeLayoutOffsets(data && data.layout ? data.layout : state.layoutOffsets);
+          syncLayoutPreview();
+          els.statusText.textContent = 'Ajuste de impresión guardado.';
+          closeLayoutModal();
+        } catch (err) {
+          els.statusText.textContent = err && err.message ? err.message : 'No se pudo guardar el ajuste.';
+        }
+      }
+
+      function setLayoutOffsets(nextOffsets) {
+        state.layoutOffsets = normalizeLayoutOffsets(nextOffsets);
+        syncLayoutPreview();
+      }
+
+      function bindLayoutControls() {
+        if (els.layoutBtn) {
+          els.layoutBtn.addEventListener('click', openLayoutModal);
+        }
+        if (els.layoutCloseBtn) {
+          els.layoutCloseBtn.addEventListener('click', closeLayoutModal);
+        }
+        if (els.layoutResetBtn) {
+          els.layoutResetBtn.addEventListener('click', function () {
+            setLayoutOffsets({ offsetX: 0, offsetY: 0 });
+            els.statusText.textContent = 'Ajuste reiniciado.';
+          });
+        }
+        if (els.layoutSaveBtn) {
+          els.layoutSaveBtn.addEventListener('click', saveReservationLayout);
+        }
+        if (els.layoutOffsetX) {
+          els.layoutOffsetX.addEventListener('input', function () {
+            setLayoutOffsets({
+              offsetX: els.layoutOffsetX.value,
+              offsetY: state.layoutOffsets.offsetY
+            });
+          });
+        }
+        if (els.layoutOffsetY) {
+          els.layoutOffsetY.addEventListener('input', function () {
+            setLayoutOffsets({
+              offsetX: state.layoutOffsets.offsetX,
+              offsetY: els.layoutOffsetY.value
+            });
+          });
+        }
+
+        if (els.layoutDragBox && els.layoutPreview) {
+          let dragState = null;
+          const onPointerMove = (event) => {
+            if (!dragState) return;
+            setLayoutOffsets({
+              offsetX: dragState.startOffsetX + (event.clientX - dragState.startX),
+              offsetY: dragState.startOffsetY + (event.clientY - dragState.startY)
+            });
+          };
+          const onPointerUp = () => {
+            dragState = null;
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+          };
+          els.layoutDragBox.addEventListener('pointerdown', function (event) {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            dragState = {
+              startX: event.clientX,
+              startY: event.clientY,
+              startOffsetX: Number(state.layoutOffsets.offsetX || 0),
+              startOffsetY: Number(state.layoutOffsets.offsetY || 0)
+            };
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+          });
+        }
+
+        if (els.layoutModal) {
+          els.layoutModal.addEventListener('click', function (event) {
+            if (event.target === els.layoutModal) closeLayoutModal();
+          });
+        }
       }
 
       function getDraftLabel(payload) {
@@ -928,7 +1262,10 @@
       }
 
       async function downloadPdf() {
-        const payload = collectState();
+        const payload = {
+          ...collectState(),
+          layoutOffsets: state.layoutOffsets
+        };
         if (!payload.unitNumber) {
           els.statusText.textContent = 'Selecciona una unidad antes de descargar.';
           return;
@@ -1080,8 +1417,10 @@
 
       renderPayments();
       bindSimpleAutosave();
+      bindLayoutControls();
 
       els.development.value = state.development;
+      loadReservationLayout();
       loadCurrentUserKey().then(() => {
         const draft = readWorkingDraft() || readDraft();
         if (draft) applyDraft(draft);
