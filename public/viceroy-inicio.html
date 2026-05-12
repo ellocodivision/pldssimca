@@ -45,6 +45,9 @@
       font-size: 13px;
       font-weight: 400;
     }
+    .quick-link.is-hidden {
+      display: none;
+    }
     .hero {
       background: #ffffff;
       border: 1px solid #ffffff;
@@ -117,7 +120,9 @@
     <div class="top">
       <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
       <a class="quick-link" id="printInventoryBtn" href="#">Imprimir inventario</a>
+      <a class="quick-link is-hidden" id="downloadBackupBtn" href="#">Descargar backup</a>
       <span id="printInventoryStatus" class="quick-status" aria-live="polite"></span>
+      <span id="downloadBackupStatus" class="quick-status" aria-live="polite"></span>
     </div>
 
     <section class="hero">
@@ -168,8 +173,16 @@
     (function () {
       const btn = document.getElementById('printInventoryBtn');
       const status = document.getElementById('printInventoryStatus');
+      const backupBtn = document.getElementById('downloadBackupBtn');
+      const backupStatus = document.getElementById('downloadBackupStatus');
       if (!btn) return;
       let frame = null;
+      function parseFilenameFromDisposition(headerValue) {
+        const raw = String(headerValue || '');
+        const match = raw.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"/i);
+        const value = match ? decodeURIComponent(match[1] || match[2] || '') : '';
+        return value || '';
+      }
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
         if (status) status.textContent = 'Descargando inventario...';
@@ -187,6 +200,47 @@
           }
         }, 1200);
       });
+      if (backupBtn) {
+        backupBtn.addEventListener('click', async function (ev) {
+          ev.preventDefault();
+          if (backupStatus) backupStatus.textContent = 'Preparando backup...';
+          try {
+            const res = await fetch('/api/viceroy/clone-backup.zip', {
+              credentials: 'same-origin',
+              cache: 'no-store'
+            });
+            if (!res.ok) {
+              let message = 'No se pudo descargar el backup.';
+              try {
+                const body = await res.json();
+                message = body && body.error ? body.error : message;
+              } catch {}
+              throw new Error(message);
+            }
+            const blob = await res.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objectUrl;
+            a.download = parseFilenameFromDisposition(res.headers.get('content-disposition')) || 'viceroy-clone-backup.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+            if (backupStatus) backupStatus.textContent = 'Backup descargado.';
+          } catch (err) {
+            if (backupStatus) backupStatus.textContent = err && err.message ? err.message : 'No se pudo descargar el backup.';
+          }
+        });
+      }
+      (async function revealBackupButton() {
+        if (!backupBtn) return;
+        try {
+          const res = await fetch('/api/session', { credentials: 'same-origin', cache: 'no-store' });
+          if (!res.ok) return;
+          const data = await res.json().catch(() => null);
+          if (data && data.isGerente) backupBtn.classList.remove('is-hidden');
+        } catch {}
+      })();
     })();
   </script>
 </body>

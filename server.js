@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
@@ -2526,6 +2526,77 @@ function saveViceroySpecialYellowUnits(units) {
 
 function getViceroySpecialYellowUnitSet() {
   return new Set(readViceroySpecialYellowUnits().map((value) => extractUnitCode(value)).filter(Boolean));
+}
+
+function safeCopyFileOrDir(sourcePath, targetPath) {
+  if (!sourcePath || !targetPath || !fs.existsSync(sourcePath)) return false;
+  const stat = fs.statSync(sourcePath);
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  if (stat.isDirectory()) {
+    fs.cpSync(sourcePath, targetPath, { recursive: true, force: true });
+  } else {
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+  return true;
+}
+
+function writeJsonSnapshotFile(targetPath, value) {
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function buildViceroyCloneBackupZip() {
+  const stamp = formatDateInTimezone(new Date(), APP_TIMEZONE).replace(/[^\dA-Za-z]+/g, '-');
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'viceroy-clone-backup-'));
+  const stagingDir = path.join(tmpRoot, 'viceroy-clone-backup');
+  fs.mkdirSync(stagingDir, { recursive: true });
+
+  const manifest = {
+    createdAt: new Date().toISOString(),
+    timezone: APP_TIMEZONE,
+    note: 'Data snapshot for Viceroy clone setup',
+    contents: []
+  };
+
+  const addJsonSnapshot = async (relPath, payload) => {
+    const targetPath = path.join(stagingDir, relPath);
+    writeJsonSnapshotFile(targetPath, payload);
+    manifest.contents.push(relPath);
+  };
+
+  await addJsonSnapshot('data/horarios-viceroy-overrides.json', readHorariosViceroyOverrides());
+  await addJsonSnapshot('data/viceroy-kpi-reservas.json', readViceroyKpiReservasData());
+  await addJsonSnapshot('data/viceroy-whisperlist.json', await readWhisperlistData());
+  await addJsonSnapshot('data/viceroy-registros.json', await readViceroyRegistrosData());
+  await addJsonSnapshot('data/viceroy-room-reservations.json', readViceroyRoomReservations());
+  await addJsonSnapshot('data/viceroy-special-yellow-units.json', {
+    updatedAt: new Date().toISOString(),
+    units: readViceroySpecialYellowUnits()
+  });
+
+  const inventorySource = resolveCurrentViceroyInventoryFile();
+  if (inventorySource && inventorySource.fullPath) {
+    const rel = path.join('data', 'developments', 'viceroy-piloto', path.basename(inventorySource.fullPath));
+    if (safeCopyFileOrDir(inventorySource.fullPath, path.join(stagingDir, rel))) {
+      manifest.contents.push(rel);
+    }
+  }
+
+  const tipologiasPath = path.join(DEVELOPMENTS_DIR, 'viceroy-piloto', 'viceroy-tipologias.json');
+  if (safeCopyFileOrDir(tipologiasPath, path.join(stagingDir, 'data', 'developments', 'viceroy-piloto', 'viceroy-tipologias.json'))) {
+    manifest.contents.push('data/developments/viceroy-piloto/viceroy-tipologias.json');
+  }
+
+  const floorsDir = path.join(DEVELOPMENTS_DIR, 'viceroy-piloto', 'plano-ventas-floors');
+  if (safeCopyFileOrDir(floorsDir, path.join(stagingDir, 'data', 'developments', 'viceroy-piloto', 'plano-ventas-floors'))) {
+    manifest.contents.push('data/developments/viceroy-piloto/plano-ventas-floors/');
+  }
+
+  writeJsonSnapshotFile(path.join(stagingDir, 'backup-manifest.json'), manifest);
+
+  const zipPath = path.join(tmpRoot, `viceroy-clone-backup-${stamp}.zip`);
+  execFileSync('zip', ['-qr', zipPath, '.'], { cwd: stagingDir });
+  return { zipPath, tmpRoot, fileName: `viceroy-clone-backup-${stamp}.zip` };
 }
 
 function defaultBackendUserAccessData() {
@@ -10433,6 +10504,42 @@ app.get('/viceroy', (req, res) => {
       </div>
     </div>
   </body></html>`);
+});
+
+app.get('/api/session', requireAuth, (req, res) => {
+  const email = String(req.user && req.user.email || '').trim().toLowerCase();
+  res.json({
+    ok: true,
+    email,
+    name: String(req.user && req.user.name || req.user && req.user.displayName || '').trim(),
+    isGerente: LOCAL_NO_AUTH ? true : email === GERENTE_EMAIL
+  });
+});
+
+app.get('/api/viceroy/clone-backup.zip', requireGerente, async (req, res) => {
+  let tmpRoot = '';
+  try {
+    const built = await buildViceroyCloneBackupZip();
+    tmpRoot = built.tmpRoot;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${built.fileName}"`);
+    return res.download(built.zipPath, built.fileName, (err) => {
+      try {
+        if (tmpRoot && fs.existsSync(tmpRoot)) fs.rmSync(tmpRoot, { recursive: true, force: true });
+      } catch {}
+      if (err) log(`Error en /api/viceroy/clone-backup.zip download: ${err && err.stack ? err.stack : err}`);
+    });
+  } catch (err) {
+    try {
+      if (tmpRoot && fs.existsSync(tmpRoot)) fs.rmSync(tmpRoot, { recursive: true, force: true });
+    } catch {}
+    log(`Error en /api/viceroy/clone-backup.zip: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo generar el backup de Viceroy.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/viceroy/reservas', (req, res) => {
