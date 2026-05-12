@@ -624,6 +624,7 @@
       related: ["RELATED"]
     };
     const QUICK_EXPORT_MODE = URL_PARAMS.get("quick_export") === "1";
+    const REQUESTED_PROJECT_ID = String(URL_PARAMS.get("projectId") || "").trim();
     const DEFAULT_SPLIT_PAGE_CONTENT = new Set(["solar-mt", "related"]);
 
     const DEFAULT_STATUS_COLORS = {
@@ -743,6 +744,7 @@
     }
     const PROJECT_INDEX_KEY = `plataformaUnidadesProjectsIndexV1:${DEV}`;
     const PROJECT_KEY_PREFIX = `plataformaUnidadesProjectV1:${DEV}:`;
+    const LAST_PROJECT_SELECTION_KEY = `plataformaUnidadesLastProjectSelectionV1:${DEV}`;
     const LEGACY_PROJECT_INDEX_KEY = "plataformaUnidadesProjectsIndexV1";
     const LEGACY_PROJECT_KEY_PREFIX = "plataformaUnidadesProjectV1:";
 
@@ -2139,6 +2141,25 @@
       return `${LEGACY_PROJECT_KEY_PREFIX}${id}`;
     }
 
+    function getLastProjectSelection() {
+      try {
+        return String(localStorage.getItem(LAST_PROJECT_SELECTION_KEY) || "").trim();
+      } catch {
+        return "";
+      }
+    }
+
+    function setLastProjectSelection(id) {
+      try {
+        const value = String(id || "").trim();
+        if (!value) {
+          localStorage.removeItem(LAST_PROJECT_SELECTION_KEY);
+          return;
+        }
+        localStorage.setItem(LAST_PROJECT_SELECTION_KEY, value);
+      } catch {}
+    }
+
     function getProjectIndex() {
       try {
         let raw = localStorage.getItem(PROJECT_INDEX_KEY);
@@ -2302,16 +2323,19 @@
       if (localSaved && serverSaved) {
         await loadServerProjectVersions();
         refreshProjectSelector(id);
+        setLastProjectSelection(id);
         if (projectStatus) projectStatus.textContent = `Version guardada: ${name}.`;
         alert(`Version guardada: ${name}`);
       } else if (localSaved) {
         await loadServerProjectVersions();
         refreshProjectSelector(id);
+        setLastProjectSelection(id);
         if (projectStatus) projectStatus.textContent = `Version guardada localmente: ${name}.`;
         alert(`Version guardada localmente: ${name}. (No se pudo guardar en carpeta del servidor)`);
       } else if (serverSaved) {
         await loadServerProjectVersions();
         refreshProjectSelector(`__srv__:${fileName}`);
+        setLastProjectSelection(`__srv__:${fileName}`);
         if (projectStatus) {
           const suffix = localSkipReason ? ` ${localSkipReason}` : "";
           projectStatus.textContent = `Version guardada en servidor: ${name}.${suffix}`;
@@ -2338,6 +2362,7 @@
           .then(async (payload) => {
             applyPersistedState(payload);
             await loadDefaultExcelOnOpen();
+            setLastProjectSelection(id);
             if (projectStatus) {
               projectStatus.textContent = `Version cargada desde servidor: ${fileName}`;
             }
@@ -2357,6 +2382,7 @@
       try {
         applyPersistedState(JSON.parse(payloadRaw));
         await loadDefaultExcelOnOpen();
+        setLastProjectSelection(id);
         const selected = getProjectIndex().find((p) => p.id === id);
         if (projectStatus) {
           projectStatus.textContent = `Version cargada: ${selected ? selected.name : id}.`;
@@ -2366,7 +2392,77 @@
       }
     }
 
-    async function loadLatestProjectVersionSilently() {
+    async function loadLatestProjectVersionSilently(requestedId = "") {
+      const requested = String(requestedId || "").trim();
+      if (requested) {
+        try {
+          if (requested.startsWith("__srv__:")) {
+            const fileName = requested.slice("__srv__:".length).trim();
+            if (fileName) {
+              const response = await fetch(`/api/plano-ventas/default-json?dev=${encodeURIComponent(DEV)}&name=${encodeURIComponent(fileName)}`, { cache: "no-store" });
+              if (response.ok) {
+                const payload = await response.json();
+                applyPersistedState(payload);
+                refreshProjectSelector(requested);
+                setLastProjectSelection(requested);
+                if (projectStatus) {
+                  projectStatus.textContent = `Version auto cargada: ${fileName}.`;
+                }
+                return true;
+              }
+            }
+          } else {
+            const raw = localStorage.getItem(projectStorageKey(requested));
+            const legacyRaw = DEV === "ceiba" ? localStorage.getItem(projectStorageLegacyKey(requested)) : "";
+            const payloadRaw = raw || legacyRaw;
+            if (payloadRaw) {
+              applyPersistedState(JSON.parse(payloadRaw));
+              refreshProjectSelector(requested);
+              setLastProjectSelection(requested);
+              if (projectStatus) {
+                const selected = getProjectIndex().find((p) => p.id === requested);
+                projectStatus.textContent = `Version auto cargada: ${selected ? selected.name : requested}.`;
+              }
+              return true;
+            }
+          }
+        } catch {}
+      }
+
+      const remembered = getLastProjectSelection();
+      if (remembered) {
+        try {
+          if (remembered.startsWith("__srv__:")) {
+            const fileName = remembered.slice("__srv__:".length).trim();
+            if (fileName) {
+              const response = await fetch(`/api/plano-ventas/default-json?dev=${encodeURIComponent(DEV)}&name=${encodeURIComponent(fileName)}`, { cache: "no-store" });
+              if (response.ok) {
+                const payload = await response.json();
+                applyPersistedState(payload);
+                refreshProjectSelector(remembered);
+                if (projectStatus) {
+                  projectStatus.textContent = `Version auto cargada: ${fileName}.`;
+                }
+                return true;
+              }
+            }
+          } else {
+            const raw = localStorage.getItem(projectStorageKey(remembered));
+            const legacyRaw = DEV === "ceiba" ? localStorage.getItem(projectStorageLegacyKey(remembered)) : "";
+            const payloadRaw = raw || legacyRaw;
+            if (payloadRaw) {
+              applyPersistedState(JSON.parse(payloadRaw));
+              refreshProjectSelector(remembered);
+              if (projectStatus) {
+                const selected = getProjectIndex().find((p) => p.id === remembered);
+                projectStatus.textContent = `Version auto cargada: ${selected ? selected.name : remembered}.`;
+              }
+              return true;
+            }
+          }
+        } catch {}
+      }
+
       const projects = getProjectIndex()
         .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
       if (projects.length) {
@@ -2378,6 +2474,7 @@
           if (!payloadRaw) return false;
           applyPersistedState(JSON.parse(payloadRaw));
           refreshProjectSelector(latest.id);
+          setLastProjectSelection(latest.id);
           if (projectStatus) {
             projectStatus.textContent = `Version auto cargada: ${latest.name}.`;
           }
@@ -2398,6 +2495,7 @@
         const payload = await response.json();
         applyPersistedState(payload);
         refreshProjectSelector(`__srv__:${latestServer}`);
+        setLastProjectSelection(`__srv__:${latestServer}`);
         if (projectStatus) {
           projectStatus.textContent = `Version auto cargada desde servidor: ${latestServer}.`;
         }
@@ -2436,6 +2534,8 @@
           .then(async () => {
             await loadServerProjectVersions();
             refreshProjectSelector();
+            const remembered = getLastProjectSelection();
+            if (remembered === id) setLastProjectSelection("");
             if (projectStatus) projectStatus.textContent = `Version de servidor borrada: ${fileName}.`;
           })
           .catch((err) => {
@@ -2450,6 +2550,9 @@
       localStorage.removeItem(projectStorageKey(id));
       if (DEV === "ceiba") {
         localStorage.removeItem(projectStorageLegacyKey(id));
+      }
+      if (getLastProjectSelection() === id) {
+        setLastProjectSelection("");
       }
       const projects = getProjectIndex().filter((p) => p.id !== id);
       saveProjectIndex(projects);
@@ -4148,7 +4251,7 @@
       setPdfLivePanelHeight(620);
       await loadServerProjectVersions();
       refreshProjectSelector();
-      const loadedLatestVersion = await loadLatestProjectVersionSilently();
+      const loadedLatestVersion = await loadLatestProjectVersionSilently(REQUESTED_PROJECT_ID);
       if (!loadedLatestVersion) {
         const loadedLocal = tryLoadLocalSilently();
         if (!loadedLocal) {

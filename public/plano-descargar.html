@@ -95,17 +95,29 @@
     const DEV = (URL_PARAMS.get("dev") || (devMatch && devMatch[1]) || "ceiba").toLowerCase();
     const DEV_BASE = `/gerente-ventas/${encodeURIComponent(DEV)}`;
     const AUTO = URL_PARAMS.get("auto") === "1";
+    const SELECTED_PROJECT = URL_PARAMS.get("projectId") || "";
     const backLink = document.getElementById("backLink");
     if (backLink) backLink.href = DEV_BASE;
     const editorUrl = `${DEV_BASE}/plano-ventas?dev=${encodeURIComponent(DEV)}`;
-    const quickExportUrl = `${DEV_BASE}/plano-ventas?quick_export=1&dev=${encodeURIComponent(DEV)}`;
+    const quickExportUrl = `${DEV_BASE}/plano-ventas?quick_export=1&dev=${encodeURIComponent(DEV)}${SELECTED_PROJECT ? `&projectId=${encodeURIComponent(SELECTED_PROJECT)}` : ""}`;
     openEditorLink.href = editorUrl;
+    if (SELECTED_PROJECT) openEditorLink.href = `${editorUrl}&projectId=${encodeURIComponent(SELECTED_PROJECT)}`;
+
+    function getLastProjectSelectionKey() {
+      return `plataformaUnidadesLastProjectSelectionV1:${DEV}`;
+    }
 
     let quickExportFrame = null;
     downloadBtn.addEventListener("click", () => {
       status.textContent = "Generando y descargando PDF...";
       const ts = Date.now();
-      const url = `${quickExportUrl}&t=${ts}`;
+      let selectedProject = SELECTED_PROJECT;
+      if (!selectedProject) {
+        try {
+          selectedProject = String(localStorage.getItem(getLastProjectSelectionKey()) || "").trim();
+        } catch {}
+      }
+      const url = `${quickExportUrl}${selectedProject && !quickExportUrl.includes("projectId=") ? `&projectId=${encodeURIComponent(selectedProject)}` : ""}&t=${ts}`;
       if (!quickExportFrame) {
         quickExportFrame = document.createElement("iframe");
         quickExportFrame.style.display = "none";
