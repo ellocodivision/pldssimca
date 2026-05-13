@@ -2697,41 +2697,69 @@ async function buildViceroyCloneBackupZip() {
     createdAt: new Date().toISOString(),
     timezone: APP_TIMEZONE,
     note: 'Data snapshot for Viceroy clone setup',
-    contents: []
+    contents: [],
+    warnings: []
   };
 
-  const addJsonSnapshot = async (relPath, payload) => {
-    const targetPath = path.join(stagingDir, relPath);
-    writeJsonSnapshotFile(targetPath, payload);
-    manifest.contents.push(relPath);
+  const addJsonSnapshot = async (relPath, payloadFactory) => {
+    try {
+      const payload = typeof payloadFactory === 'function' ? await payloadFactory() : payloadFactory;
+      const targetPath = path.join(stagingDir, relPath);
+      writeJsonSnapshotFile(targetPath, payload);
+      manifest.contents.push(relPath);
+      return true;
+    } catch (err) {
+      const message = `${relPath}: ${err && err.message ? err.message : 'error desconocido'}`;
+      manifest.warnings.push(message);
+      log(`Backup Viceroy omitió ${message}`);
+      return false;
+    }
   };
 
-  await addJsonSnapshot('data/horarios-viceroy-overrides.json', readHorariosViceroyOverrides());
-  await addJsonSnapshot('data/viceroy-kpi-reservas.json', readViceroyKpiReservasData());
-  await addJsonSnapshot('data/viceroy-whisperlist.json', await readWhisperlistData());
-  await addJsonSnapshot('data/viceroy-registros.json', await readViceroyRegistrosData());
-  await addJsonSnapshot('data/viceroy-room-reservations.json', readViceroyRoomReservations());
-  await addJsonSnapshot('data/viceroy-special-yellow-units.json', {
+  await addJsonSnapshot('data/horarios-viceroy-overrides.json', () => readHorariosViceroyOverrides());
+  await addJsonSnapshot('data/viceroy-kpi-reservas.json', () => readViceroyKpiReservasData());
+  await addJsonSnapshot('data/viceroy-whisperlist.json', () => readWhisperlistData());
+  await addJsonSnapshot('data/viceroy-registros.json', () => readViceroyRegistrosData());
+  await addJsonSnapshot('data/viceroy-room-reservations.json', () => readViceroyRoomReservations());
+  await addJsonSnapshot('data/viceroy-special-yellow-units.json', () => ({
     updatedAt: new Date().toISOString(),
     units: readViceroySpecialYellowUnits()
-  });
+  }));
 
   const inventorySource = resolveCurrentViceroyInventoryFile();
   if (inventorySource && inventorySource.fullPath) {
     const rel = path.join('data', 'developments', 'viceroy-piloto', path.basename(inventorySource.fullPath));
-    if (safeCopyFileOrDir(inventorySource.fullPath, path.join(stagingDir, rel))) {
-      manifest.contents.push(rel);
+    try {
+      if (safeCopyFileOrDir(inventorySource.fullPath, path.join(stagingDir, rel))) {
+        manifest.contents.push(rel);
+      }
+    } catch (err) {
+      const message = `${rel}: ${err && err.message ? err.message : 'error desconocido'}`;
+      manifest.warnings.push(message);
+      log(`Backup Viceroy omitió ${message}`);
     }
   }
 
   const tipologiasPath = path.join(DEVELOPMENTS_DIR, 'viceroy-piloto', 'viceroy-tipologias.json');
-  if (safeCopyFileOrDir(tipologiasPath, path.join(stagingDir, 'data', 'developments', 'viceroy-piloto', 'viceroy-tipologias.json'))) {
-    manifest.contents.push('data/developments/viceroy-piloto/viceroy-tipologias.json');
+  try {
+    if (safeCopyFileOrDir(tipologiasPath, path.join(stagingDir, 'data', 'developments', 'viceroy-piloto', 'viceroy-tipologias.json'))) {
+      manifest.contents.push('data/developments/viceroy-piloto/viceroy-tipologias.json');
+    }
+  } catch (err) {
+    const message = `data/developments/viceroy-piloto/viceroy-tipologias.json: ${err && err.message ? err.message : 'error desconocido'}`;
+    manifest.warnings.push(message);
+    log(`Backup Viceroy omitió ${message}`);
   }
 
   const floorsDir = path.join(DEVELOPMENTS_DIR, 'viceroy-piloto', 'plano-ventas-floors');
-  if (safeCopyFileOrDir(floorsDir, path.join(stagingDir, 'data', 'developments', 'viceroy-piloto', 'plano-ventas-floors'))) {
-    manifest.contents.push('data/developments/viceroy-piloto/plano-ventas-floors/');
+  try {
+    if (safeCopyFileOrDir(floorsDir, path.join(stagingDir, 'data', 'developments', 'viceroy-piloto', 'plano-ventas-floors'))) {
+      manifest.contents.push('data/developments/viceroy-piloto/plano-ventas-floors/');
+    }
+  } catch (err) {
+    const message = `data/developments/viceroy-piloto/plano-ventas-floors/: ${err && err.message ? err.message : 'error desconocido'}`;
+    manifest.warnings.push(message);
+    log(`Backup Viceroy omitió ${message}`);
   }
 
   writeJsonSnapshotFile(path.join(stagingDir, 'backup-manifest.json'), manifest);
