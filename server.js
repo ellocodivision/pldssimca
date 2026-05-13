@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
-const { execSync, execFileSync } = require('child_process');
+const { execSync } = require('child_process');
+const zlib = require('zlib');
 process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
@@ -2559,6 +2560,133 @@ function writeJsonSnapshotFile(targetPath, value) {
   fs.writeFileSync(targetPath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+let ZIP_CRC32_TABLE = null;
+
+function zipCrc32(buffer) {
+  if (!ZIP_CRC32_TABLE) {
+    ZIP_CRC32_TABLE = new Uint32Array(256);
+    for (let n = 0; n < 256; n += 1) {
+      let c = n;
+      for (let k = 0; k < 8; k += 1) {
+        c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      ZIP_CRC32_TABLE[n] = c >>> 0;
+    }
+  }
+  let crc = 0 ^ -1;
+  for (let i = 0; i < buffer.length; i += 1) {
+    crc = (crc >>> 8) ^ ZIP_CRC32_TABLE[(crc ^ buffer[i]) & 0xff];
+  }
+  return (crc ^ -1) >>> 0;
+}
+
+function zipDosDateTime(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  const year = Math.max(1980, d.getFullYear());
+  const dosDate = ((year - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
+  return { dosDate, dosTime };
+}
+
+function collectZipEntries(rootDir) {
+  const entries = [];
+  const visit = (absPath, relPath) => {
+    const stat = fs.statSync(absPath);
+    if (stat.isDirectory()) {
+      const normalized = relPath ? relPath.replace(/\\/g, '/').replace(/\/+$/, '') + '/' : '';
+      if (normalized) {
+        entries.push({
+          absPath,
+          relPath: normalized,
+          stat,
+          isDir: true
+        });
+      }
+      const children = fs.readdirSync(absPath).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base', numeric: true }));
+      children.forEach((child) => {
+        visit(path.join(absPath, child), relPath ? path.join(relPath, child) : child);
+      });
+      return;
+    }
+    if (stat.isFile()) {
+      entries.push({
+        absPath,
+        relPath: relPath.replace(/\\/g, '/'),
+        stat,
+        isDir: false
+      });
+    }
+  };
+  visit(rootDir, '');
+  return entries;
+}
+
+function buildZipBufferFromDir(rootDir) {
+  const entries = collectZipEntries(rootDir);
+  const localParts = [];
+  const centralParts = [];
+  let localOffset = 0;
+
+  entries.forEach((entry) => {
+    const nameBuffer = Buffer.from(entry.relPath);
+    const fileBuffer = entry.isDir ? Buffer.alloc(0) : fs.readFileSync(entry.absPath);
+    const compressedBuffer = entry.isDir ? Buffer.alloc(0) : zlib.deflateRawSync(fileBuffer, { level: 9 });
+    const { dosDate, dosTime } = zipDosDateTime(entry.stat.mtime || new Date());
+    const crc = entry.isDir ? 0 : zipCrc32(fileBuffer);
+    const compression = entry.isDir ? 0 : 8;
+    const externalAttrs = entry.isDir ? 0x10 : 0x20;
+
+    const localHeader = Buffer.alloc(30);
+    localHeader.writeUInt32LE(0x04034b50, 0);
+    localHeader.writeUInt16LE(20, 4);
+    localHeader.writeUInt16LE(0, 6);
+    localHeader.writeUInt16LE(compression, 8);
+    localHeader.writeUInt16LE(dosTime, 10);
+    localHeader.writeUInt16LE(dosDate, 12);
+    localHeader.writeUInt32LE(crc, 14);
+    localHeader.writeUInt32LE(compressedBuffer.length, 18);
+    localHeader.writeUInt32LE(fileBuffer.length, 22);
+    localHeader.writeUInt16LE(nameBuffer.length, 26);
+    localHeader.writeUInt16LE(0, 28);
+    localParts.push(localHeader, nameBuffer, compressedBuffer);
+
+    const centralHeader = Buffer.alloc(46);
+    centralHeader.writeUInt32LE(0x02014b50, 0);
+    centralHeader.writeUInt16LE(20, 4);
+    centralHeader.writeUInt16LE(20, 6);
+    centralHeader.writeUInt16LE(0, 8);
+    centralHeader.writeUInt16LE(compression, 10);
+    centralHeader.writeUInt16LE(dosTime, 12);
+    centralHeader.writeUInt16LE(dosDate, 14);
+    centralHeader.writeUInt32LE(crc, 16);
+    centralHeader.writeUInt32LE(compressedBuffer.length, 20);
+    centralHeader.writeUInt32LE(fileBuffer.length, 24);
+    centralHeader.writeUInt16LE(nameBuffer.length, 28);
+    centralHeader.writeUInt16LE(0, 30);
+    centralHeader.writeUInt16LE(0, 32);
+    centralHeader.writeUInt16LE(0, 34);
+    centralHeader.writeUInt16LE(0, 36);
+    centralHeader.writeUInt32LE(externalAttrs, 38);
+    centralHeader.writeUInt32LE(localOffset, 42);
+    centralParts.push(centralHeader, nameBuffer);
+
+    localOffset += localHeader.length + nameBuffer.length + compressedBuffer.length;
+  });
+
+  const centralSize = centralParts.reduce((total, part) => total + part.length, 0);
+  const endRecord = Buffer.alloc(22);
+  endRecord.writeUInt32LE(0x06054b50, 0);
+  endRecord.writeUInt16LE(0, 4);
+  endRecord.writeUInt16LE(0, 6);
+  endRecord.writeUInt16LE(entries.length, 8);
+  endRecord.writeUInt16LE(entries.length, 10);
+  endRecord.writeUInt32LE(centralSize, 12);
+  endRecord.writeUInt32LE(localOffset, 16);
+  endRecord.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localParts, ...centralParts, endRecord]);
+}
+
 async function buildViceroyCloneBackupZip() {
   const stamp = formatDateInTimezone(new Date(), APP_TIMEZONE).replace(/[^\dA-Za-z]+/g, '-');
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'viceroy-clone-backup-'));
@@ -2609,7 +2737,8 @@ async function buildViceroyCloneBackupZip() {
   writeJsonSnapshotFile(path.join(stagingDir, 'backup-manifest.json'), manifest);
 
   const zipPath = path.join(tmpRoot, `viceroy-clone-backup-${stamp}.zip`);
-  execFileSync('zip', ['-qr', zipPath, '.'], { cwd: stagingDir });
+  const zipBuffer = buildZipBufferFromDir(stagingDir);
+  fs.writeFileSync(zipPath, zipBuffer);
   return { zipPath, tmpRoot, fileName: `viceroy-clone-backup-${stamp}.zip` };
 }
 
