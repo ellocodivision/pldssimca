@@ -10901,6 +10901,69 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
   }
 });
 
+app.get('/api/viceroy/kpi-reservas/export.xlsx', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = isViceroyKpiReservasManager(currentEmail);
+    const store = readViceroyKpiReservasData();
+    if (!store.seededFromWhisperlist) {
+      const whisperData = await readWhisperlistData();
+      const seededRows = mergeViceroyKpiReservasRows(
+        Array.isArray(whisperData.rows) ? whisperData.rows : [],
+        Array.isArray(store.rows) ? store.rows : []
+      );
+      saveViceroyKpiReservasData(seededRows, 'viceroy-kpi-reservas.json', true);
+      store.rows = seededRows;
+      store.updatedAt = new Date().toISOString();
+      store.sourceFile = 'viceroy-kpi-reservas.json';
+      store.seededFromWhisperlist = true;
+    }
+    const rows = (Array.isArray(store.rows) ? store.rows : [])
+      .map((row) => sanitizeViceroyKpiReservasRowForUser(row, currentEmail, currentName, isGerente))
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (isGerente) {
+          const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
+          if (asesorA !== 0) return asesorA;
+        }
+        return String(a.nombreCliente || '').localeCompare(String(b.nombreCliente || ''), 'es', { sensitivity: 'base' });
+      });
+    const exportRows = viceroyKpiReservasExportRows(rows);
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 24 },
+      { wch: 26 },
+      { wch: 22 },
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 15 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 30 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 22 }
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'KPI Reservas');
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const dateTag = new Date().toISOString().slice(0, 10);
+    const fileName = `viceroy-kpi-reservas-${dateTag}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(buffer);
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-reservas/export.xlsx: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo exportar KPI Reservas' });
+  }
+});
+
 app.get('/api/viceroy/kpi-reservas/users', requireViceroyPresentAccess, async (req, res) => {
   try {
     const data = readBackendUserAccessData();
@@ -13024,6 +13087,30 @@ function normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, i
     canEdit: Boolean(isGerente) || whisperlistRowMatchesUser(row, currentEmail, currentName, false)
   };
   return visibleRow;
+}
+
+function viceroyKpiReservasExportRows(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  return items.map((row) => ({
+    ID: String(row.id || ''),
+    ASESOR: normalizeWhisperlistAsesor(row.asesor),
+    CORREO_ASESOR: String(row.correo || '').trim().toLowerCase(),
+    UNIDAD_RESERVADA: normalizeWhisperlistPersonText(row.unidadReservada),
+    NOMBRE_CLIENTE: normalizeWhisperlistPersonText(row.nombreCliente),
+    PAIS: normalizeWhisperlistCountry(row.pais),
+    CIUDAD: normalizeWhisperlistCity(row.ciudad),
+    HOJA_RESERVA: normalizeYesNo(row && row.kpi && row.kpi.hojaReserva),
+    RESERVA_PAGADA: normalizeYesNo(row && row.kpi && row.kpi.reservaPagada),
+    DOCUMENTOS_COMPLETOS: normalizeYesNo(row.documentosCompletos),
+    CONTRATO_ENVIADO: normalizeYesNo(row && row.kpi && row.kpi.contratoEnviado),
+    CONTRATO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.contratoFirmado),
+    ENGANCHE_PAGADO: normalizeYesNo(row && row.kpi && row.kpi.enganchePagado),
+    CLIENT_EMAIL: normalizeClientEmail(row.clientEmail),
+    CLIENT_PHONE: normalizeClientPhone(row.clientPhone),
+    CANAL: normalizeWhisperlistCanal(row.canal),
+    TIPO_DE_VENTA: normalizeWhisperlistTipoVenta(row.tipoVenta),
+    UPDATED_AT: String(row.updatedAt || '')
+  }));
 }
 
 function mergeViceroyKpiReservasRows(baseRows, overrideRows) {

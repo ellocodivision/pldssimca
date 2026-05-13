@@ -76,6 +76,7 @@
       <div class="actions">
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
         <button id="newBtn" class="btn primary" type="button">Nuevo cliente</button>
+        <button id="exportBtn" class="btn secondary" type="button">Descargar Excel</button>
         <button id="refreshBtn" class="btn secondary" type="button">Actualizar</button>
       </div>
     </div>
@@ -208,6 +209,7 @@
         tableHead: document.getElementById('tableHead'),
         refreshBtn: document.getElementById('refreshBtn'),
         newBtn: document.getElementById('newBtn'),
+        exportBtn: document.getElementById('exportBtn'),
         modal: document.getElementById('modal'),
         modalTitle: document.getElementById('modalTitle'),
         modalSub: document.getElementById('modalSub'),
@@ -467,8 +469,49 @@
         }
       }
 
+      async function exportExcel() {
+        try {
+          els.exportBtn.disabled = true;
+          els.status.textContent = 'Descargando Excel de KPI Reservas...';
+          els.status.className = 'status';
+          const res = await fetch('/api/viceroy/kpi-reservas/export.xlsx', {
+            credentials: 'same-origin'
+          });
+          if (!res.ok) {
+            let message = 'No se pudo descargar el Excel';
+            try {
+              const data = await res.json();
+              message = data && data.error ? data.error : message;
+            } catch {}
+            throw new Error(message);
+          }
+          const blob = await res.blob();
+          const fileName = (() => {
+            const header = res.headers.get('Content-Disposition') || '';
+            const match = header.match(/filename="([^"]+)"/i);
+            return match && match[1] ? match[1] : 'viceroy-kpi-reservas.xlsx';
+          })();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          els.status.textContent = 'Excel descargado.';
+          els.status.className = 'status ok';
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'No se pudo descargar el Excel';
+          els.status.className = 'status error';
+        } finally {
+          els.exportBtn.disabled = false;
+        }
+      }
+
       els.searchInput.addEventListener('input', renderTable);
       els.refreshBtn.addEventListener('click', () => loadData());
+      els.exportBtn.addEventListener('click', exportExcel);
       els.newBtn.addEventListener('click', () => openModal('create', null));
       els.cancelBtn.addEventListener('click', closeModal);
       els.modal.addEventListener('click', (event) => {
