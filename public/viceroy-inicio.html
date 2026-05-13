@@ -213,7 +213,8 @@
               let message = 'No se pudo descargar el backup.';
               try {
                 const body = await res.json();
-                message = body && body.error ? body.error : message;
+                const detail = body && body.details ? ` ${body.details}` : '';
+                message = body && body.error ? `${body.error}${detail}` : message;
               } catch {}
               throw new Error(message);
             }
