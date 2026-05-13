@@ -2131,6 +2131,16 @@ function formatDateKeyInTimeZone(date, timeZone) {
   }).format(date || new Date());
 }
 
+function formatDateInTimezone(dateValue, timeZone) {
+  const parts = getTimePartsInTimeZone(dateValue || new Date(), timeZone);
+  const day = String(parts.day || '01').padStart(2, '0');
+  const month = String(parts.month || '01').padStart(2, '0');
+  const year = String(parts.year || '0000');
+  const hour = String(Number(parts.hour || 0)).padStart(2, '0');
+  const minute = String(Number(parts.minute || 0)).padStart(2, '0');
+  return `${year}-${month}-${day}_${hour}-${minute}`;
+}
+
 function stripHtmlText(raw) {
   return String(raw == null ? '' : raw)
     .replace(/<[^>]*>/g, ' ')
