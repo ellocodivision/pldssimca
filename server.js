@@ -4572,17 +4572,10 @@ async function buildMahekalEmployeeQrPdf(employee, inviteUrl, qrDataUrl) {
 
   page.drawRectangle({ x: 18, y: 18, width: width - 36, height: height - 36, borderWidth: 1, borderColor: accent, color: rgb(1, 1, 1) });
   page.drawImage(logoImage, { x: 162, y: 720, width: 270, height: 105 });
-  page.drawText('QR personal de empleado', { x: 135, y: 683, size: 19, font: fontBold, color: ink });
-  page.drawText('Mahekal / Viceroy Residences', { x: 186, y: 660, size: 12, font: fontRegular, color: muted });
+  page.drawText('QR', { x: 282, y: 683, size: 22, font: fontBold, color: ink });
   page.drawRectangle({ x: 52, y: 250, width: 491, height: 376, borderWidth: 1, borderColor: accent, color: soft, opacity: 0.6 });
   page.drawImage(qrImage, { x: 153, y: 312, width: 288, height: 288 });
   page.drawText(employee.fullName || '', { x: 72, y: 214, size: 20, font: fontBold, color: ink });
-  page.drawText(`Departamento: ${employee.department || '-'}`, { x: 72, y: 186, size: 12, font: fontRegular, color: muted });
-  page.drawText(`Teléfono: ${employee.phone || '-'}`, { x: 72, y: 165, size: 12, font: fontRegular, color: muted });
-  page.drawText('Escanea este código para registrar invitados.', { x: 72, y: 141, size: 11, font: fontRegular, color: muted });
-  page.drawText('Scan this code to register guests.', { x: 72, y: 124, size: 11, font: fontRegular, color: muted });
-  page.drawText('Enlace:', { x: 72, y: 95, size: 11, font: fontBold, color: ink });
-  page.drawText(String(inviteUrl || ''), { x: 72, y: 79, size: 9, font: fontRegular, color: muted, maxWidth: 450 });
   return pdfDoc.save();
 }
 

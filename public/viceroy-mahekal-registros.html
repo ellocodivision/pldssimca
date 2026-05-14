@@ -37,7 +37,7 @@
     th,td{padding:10px;border-bottom:1px solid #ebe4d6;text-align:left;font-size:13px;vertical-align:top}
     th{background:#faf7f0;position:sticky;top:0;z-index:1}
     .small{font-size:12px;color:var(--muted)}
-    .ranking{display:grid;grid-template-columns:1.2fr .8fr;gap:10px}
+    .ranking{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
     .ranking-table{width:100%;border-collapse:collapse}
     .ranking-table th,.ranking-table td{padding:8px 6px;border-bottom:1px solid #eee7d9;font-size:12px}
     .ranking-table th{background:transparent;position:static}
@@ -80,7 +80,7 @@
     </section>
 
     <section class="card ranking">
-      <div>
+      <div class="ranking-col">
         <h2 style="margin:0 0 10px;font-size:18px">Ranking por empleado</h2>
         <div class="table-wrap">
           <table class="ranking-table">
@@ -91,7 +91,7 @@
           </table>
         </div>
       </div>
-      <div>
+      <div class="ranking-col">
         <h2 style="margin:0 0 10px;font-size:18px">Empleados registrados</h2>
         <div class="table-wrap">
           <table class="ranking-table">
