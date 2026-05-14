@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mahekal · Registro</title>
+  <style>
+    :root{
+      --bg:#f5f1e7;
+      --card:#ffffff;
+      --ink:#171717;
+      --muted:#68645d;
+      --line:#d8d1c1;
+      --accent:#ecd84d;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:linear-gradient(180deg,#f7f2e8 0%,#efe8da 100%);
+      color:var(--ink);
+      font-family:Arial,sans-serif;
+    }
+    .wrap{
+      width:min(1100px,92vw);
+      margin:0 auto;
+      padding:28px 0 40px;
+    }
+    .hero{
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:18px;
+      align-items:center;
+    }
+    .brand{
+      background:rgba(255,255,255,.72);
+      border:1px solid var(--line);
+      border-radius:28px;
+      padding:22px;
+      min-height:420px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      text-align:center;
+      box-shadow:0 20px 60px rgba(27,27,27,.06);
+    }
+    .brand img{
+      width:min(320px,78%);
+      margin:0 auto 18px;
+      display:block;
+    }
+    .brand h1{
+      margin:0;
+      font-size:clamp(28px,5vw,52px);
+      letter-spacing:.02em;
+    }
+    .brand p{
+      margin:12px auto 0;
+      max-width:520px;
+      color:var(--muted);
+      line-height:1.6;
+      font-size:16px;
+    }
+    .panel{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:20px;
+      box-shadow:0 20px 60px rgba(27,27,27,.06);
+    }
+    .qr-box{
+      border:1px dashed #bfb6a4;
+      background:#fcfaf4;
+      border-radius:22px;
+      padding:18px;
+      text-align:center;
+    }
+    .qr-box img{
+      width:min(320px,100%);
+      display:block;
+      margin:0 auto 14px;
+      border-radius:20px;
+      background:#fff;
+      box-shadow:0 10px 24px rgba(27,27,27,.08);
+    }
+    .qr-box h2{
+      margin:0 0 8px;
+      font-size:18px;
+    }
+    .qr-box p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.5;
+      font-size:14px;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      margin-top:16px;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid #bbb39f;
+      background:#fff;
+      color:#121212;
+      border-radius:12px;
+      padding:10px 14px;
+      text-decoration:none;
+      font-weight:700;
+      font-size:14px;
+    }
+    .btn.primary{
+      background:linear-gradient(180deg,#f0df59,#e2cf34);
+      border-color:#b4a52c;
+    }
+    .status{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:13px;
+      min-height:18px;
+      text-align:center;
+    }
+    .link{
+      margin-top:10px;
+      font-size:12px;
+      color:#3a64c8;
+      word-break:break-all;
+      text-align:center;
+    }
+    @media (max-width: 900px){
+      .hero{grid-template-columns:1fr}
+      .brand{min-height:auto}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <article class="brand">
+        <img src="/assets/mahekal/viceroy-logo-black.png" alt="Viceroy Residences" />
+        <h1>Registro de empleados Mahekal</h1>
+        <p>Escanea el QR para registrar al empleado del hotel. Al completar el formulario, el sistema generará su QR personal para compartir con sus invitados.</p>
+      </article>
+      <aside class="panel">
+        <div class="qr-box">
+          <img id="qrImg" alt="QR para registro de empleados" />
+          <h2>Escanear para registrar</h2>
+          <p>Este código abre el formulario de alta de empleados.</p>
+          <div class="actions">
+            <a class="btn primary" href="/mahekal/registro-empleado">Abrir registro</a>
+          </div>
+          <div id="status" class="status">Generando QR...</div>
+          <div id="link" class="link"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+  <script>
+    (function () {
+      const qrImg = document.getElementById('qrImg');
+      const status = document.getElementById('status');
+      const link = document.getElementById('link');
+      async function loadQr() {
+        try {
+          const res = await fetch('/api/mahekal/public-qr', { credentials: 'same-origin' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo generar el QR');
+          qrImg.src = data.qrDataUrl;
+          qrImg.alt = 'QR para ' + (data.leadUrl || 'registro');
+          link.textContent = data.leadUrl || '';
+          status.textContent = 'Listo para registrar';
+        } catch (err) {
+          status.textContent = err && err.message ? err.message : 'No se pudo generar el QR';
+        }
+      }
+      loadQr();
+    })();
+  </script>
+</body>
+</html>

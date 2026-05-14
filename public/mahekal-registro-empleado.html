@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mahekal · Registro de empleado</title>
+  <style>
+    :root{
+      --bg:#f6f2e8;
+      --card:#ffffff;
+      --ink:#171717;
+      --muted:#67645c;
+      --line:#d8d1c1;
+      --accent:#ebdb56;
+      --ok:#1f8d3c;
+      --err:#b42318;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:linear-gradient(180deg,#faf7ef 0%,#efe8da 100%);
+      color:var(--ink);
+      font-family:Arial,sans-serif;
+    }
+    .wrap{width:min(1200px,92vw);margin:0 auto;padding:28px 0 40px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+    .back{display:inline-flex;padding:8px 12px;border:1px solid #bdb8a9;border-radius:10px;background:#fff;color:#222;text-decoration:none;font-size:13px;font-weight:700}
+    .hero{
+      background:rgba(255,255,255,.8);
+      border:1px solid var(--line);
+      border-radius:28px;
+      padding:22px;
+      margin-bottom:18px;
+      box-shadow:0 18px 50px rgba(27,27,27,.06);
+    }
+    .brand{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+    .brand img{width:170px;max-width:100%}
+    .hero h1{margin:0;font-size:clamp(28px,4.8vw,46px)}
+    .hero p{margin:8px 0 0;color:var(--muted);line-height:1.6;max-width:760px}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 18px 50px rgba(27,27,27,.06)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    label{display:block;font-size:12px;font-weight:700;color:#4f4f5a;letter-spacing:.03em}
+    .field{width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d1c7b1;border-radius:12px;background:#fff;font:inherit}
+    .full{grid-column:1 / -1}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .btn{border:1px solid #bbb39f;background:#fff;color:#111;border-radius:12px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,#f0df59,#e2cf34);border-color:#b4a52c}
+    .status{margin-top:10px;color:var(--muted);font-size:13px;min-height:18px}
+    .status.ok{color:var(--ok)}
+    .status.err{color:var(--err)}
+    .result{margin-top:18px;display:none;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .result.open{display:grid}
+    .qr-card{border:1px solid var(--line);border-radius:20px;background:#fff;padding:16px;text-align:center}
+    .qr-card img{width:min(340px,100%);display:block;margin:0 auto 12px;border-radius:18px;box-shadow:0 10px 26px rgba(27,27,27,.08)}
+    .meta{border:1px solid var(--line);border-radius:20px;background:#fff;padding:16px}
+    .meta h2{margin:0 0 10px;font-size:18px}
+    .meta p{margin:0 0 8px;color:var(--muted);line-height:1.5}
+    .link{margin-top:8px;font-size:12px;color:#3a64c8;word-break:break-all}
+    @media (max-width: 850px){
+      .grid,.result{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <a class="back" href="/mahekal">Volver</a>
+    </div>
+    <section class="hero">
+      <div class="brand">
+        <img src="/assets/mahekal/viceroy-logo-black.png" alt="Viceroy Residences" />
+        <div>
+          <h1>Registro de empleado</h1>
+          <p>Completa los datos del colaborador del hotel. Al guardar, recibirás un QR personal que podrás compartir con invitados para registrar sus visitas.</p>
+        </div>
+      </div>
+
+      <form id="form" class="panel">
+        <div class="grid">
+          <label>
+            Nombre
+            <input id="firstName" class="field" placeholder="Nombre" required />
+          </label>
+          <label>
+            Apellido
+            <input id="lastName" class="field" placeholder="Apellido" required />
+          </label>
+          <label class="full">
+            Departamento
+            <input id="department" class="field" placeholder="Departamento" required />
+          </label>
+          <label class="full">
+            Teléfono
+            <input id="phone" class="field" type="tel" placeholder="Teléfono" required />
+          </label>
+        </div>
+        <div class="actions">
+          <button class="btn primary" type="submit">Crear QR personal</button>
+        </div>
+        <p id="status" class="status"></p>
+      </form>
+
+      <section id="result" class="result">
+        <div class="qr-card">
+          <img id="qrImg" alt="QR personal" />
+          <div class="actions" style="justify-content:center">
+            <a id="openInviteBtn" class="btn primary" href="#" target="_blank" rel="noopener">Abrir enlace</a>
+            <button id="copyBtn" class="btn" type="button">Copiar enlace</button>
+          </div>
+          <div id="inviteLink" class="link"></div>
+        </div>
+        <div class="meta">
+          <h2 id="employeeName">-</h2>
+          <p>Tu QR personal abre el formulario público para invitados. Cada lead quedará referenciado a este empleado.</p>
+          <p><strong>Departamento:</strong> <span id="employeeDept">-</span></p>
+          <p><strong>Teléfono:</strong> <span id="employeePhone">-</span></p>
+          <p id="resultStatus" class="status" style="margin-top:14px"></p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const els = {
+        form: document.getElementById('form'),
+        firstName: document.getElementById('firstName'),
+        lastName: document.getElementById('lastName'),
+        department: document.getElementById('department'),
+        phone: document.getElementById('phone'),
+        status: document.getElementById('status'),
+        result: document.getElementById('result'),
+        qrImg: document.getElementById('qrImg'),
+        openInviteBtn: document.getElementById('openInviteBtn'),
+        copyBtn: document.getElementById('copyBtn'),
+        inviteLink: document.getElementById('inviteLink'),
+        employeeName: document.getElementById('employeeName'),
+        employeeDept: document.getElementById('employeeDept'),
+        employeePhone: document.getElementById('employeePhone'),
+        resultStatus: document.getElementById('resultStatus')
+      };
+      let currentInviteUrl = '';
+
+      function setStatus(text, kind) {
+        els.status.textContent = text || '';
+        els.status.className = 'status' + (kind ? ' ' + kind : '');
+      }
+
+      function showResult(payload) {
+        const employee = payload && payload.employee ? payload.employee : {};
+        currentInviteUrl = payload && payload.inviteUrl ? payload.inviteUrl : '';
+        els.qrImg.src = payload && payload.qrDataUrl ? payload.qrDataUrl : '';
+        els.openInviteBtn.href = currentInviteUrl || '#';
+        els.inviteLink.textContent = currentInviteUrl || '';
+        els.employeeName.textContent = employee.fullName || '-';
+        els.employeeDept.textContent = employee.department || '-';
+        els.employeePhone.textContent = employee.phone || '-';
+        els.result.classList.add('open');
+        els.resultStatus.textContent = payload && payload.reusedExisting
+          ? 'Ya existía un registro igual; se reutilizó su QR.'
+          : 'Empleado registrado correctamente.';
+        els.resultStatus.className = 'status ok';
+      }
+
+      els.copyBtn.addEventListener('click', async function () {
+        if (!currentInviteUrl) return;
+        try {
+          await navigator.clipboard.writeText(currentInviteUrl);
+          els.copyBtn.textContent = 'Copiado';
+          setTimeout(() => { els.copyBtn.textContent = 'Copiar enlace'; }, 1200);
+        } catch {}
+      });
+
+      els.form.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        const payload = {
+          firstName: els.firstName.value,
+          lastName: els.lastName.value,
+          department: els.department.value,
+          phone: els.phone.value
+        };
+        setStatus('Creando QR personal...', '');
+        try {
+          const res = await fetch('/api/mahekal/employees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'No se pudo crear el QR');
+          showResult(data);
+          setStatus('QR personal generado.', 'ok');
+          els.form.reset();
+        } catch (err) {
+          setStatus(err && err.message ? err.message : 'No se pudo crear el QR', 'err');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

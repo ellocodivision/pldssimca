@@ -36,6 +36,7 @@ const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
 const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
 const MICROSOFT_AUTH_READY = Boolean(MICROSOFT_CLIENT_ID && MICROSOFT_CLIENT_SECRET);
 const LEAD_TOKEN_SECRET = process.env.LEAD_TOKEN_SECRET || SESSION_SECRET;
+const MAHEKAL_TOKEN_SECRET = process.env.MAHEKAL_TOKEN_SECRET || LEAD_TOKEN_SECRET;
 const VICEROY_PRESENT_TOKEN = String(process.env.VICEROY_PRESENT_TOKEN || '').trim();
 const LOCAL_NO_AUTH = String(process.env.LOCAL_NO_AUTH || '') === '1';
 const ALLOWED_DOMAIN = String(process.env.ALLOWED_DOMAIN || 'simca.mx').toLowerCase();
@@ -244,6 +245,8 @@ const SUBMISSIONS_PATH = path.join(DATA_DIR, 'submissions.json');
 const OWNER_SERVICES_PATH = path.join(DATA_DIR, 'owner-services.json');
 const WHISPERLIST_JSON_PATH = path.join(DATA_DIR, 'viceroy-whisperlist.json');
 const VICEROY_KPI_RESERVAS_JSON_PATH = path.join(DATA_DIR, 'viceroy-kpi-reservas.json');
+const MAHEKAL_EMPLOYEES_JSON_PATH = path.join(DATA_DIR, 'mahekal-employees.json');
+const MAHEKAL_LEADS_JSON_PATH = path.join(DATA_DIR, 'mahekal-leads.json');
 const WHISPERLIST_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY WHISPERLIST.xlsx');
 const VICEROY_REGISTROS_JSON_PATH = path.join(DATA_DIR, 'viceroy-registros.json');
 const VICEROY_REGISTROS_EXCEL_PATH = path.join(DATA_DIR, 'VICEROY REGISTROS.xlsx');
@@ -326,6 +329,7 @@ const BACKEND_SUBMODULES = {
     { key: 'inicio', label: 'Inicio' },
     { key: 'kpiReservas', label: 'KPI Reservas' },
     { key: 'whisperlist', label: 'Hot Leads' },
+    { key: 'mahekalLeads', label: 'Registros Leads Mahekal' },
     { key: 'registros', label: 'Viceroy Registros' },
     { key: 'reservas', label: 'Reserva de Oficinas' },
     { key: 'horarios', label: 'Horarios Viceroy' },
@@ -345,7 +349,7 @@ const VISIBLE_BACKEND_SUBMODULES = Object.fromEntries(
   Object.entries(BACKEND_SUBMODULES).filter(([moduleKey]) => moduleKey !== 'viceroyPilot')
 );
 const SIMCA_BACKEND_SUBMODULE_KEYS = ['faes', 'forms', 'roi', 'hojaReserva', 'horarios', 'financiamiento', 'tablaPagos'];
-const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'kpiReservas', 'reservas', 'horarios', 'registros', 'tablaPagos'];
+const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'mahekalLeads', 'kpiReservas', 'reservas', 'horarios', 'registros', 'tablaPagos'];
 
 function getBackendAccessScope(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -2735,6 +2739,8 @@ async function buildViceroyCloneBackupZip() {
     updatedAt: new Date().toISOString(),
     units: readViceroySpecialYellowUnits()
   }));
+  await addJsonSnapshot('data/mahekal-employees.json', () => readMahekalEmployeesData());
+  await addJsonSnapshot('data/mahekal-leads.json', () => readMahekalLeadsData());
 
   const inventorySource = resolveCurrentViceroyInventoryFile();
   if (inventorySource && inventorySource.fullPath) {
@@ -2861,6 +2867,9 @@ function normalizeBackendUserSubmodules(rawSubmodules, email) {
     Object.keys(out[moduleKey]).forEach((featureKey) => {
       out[moduleKey][featureKey] = allowedKeys.includes(featureKey) && Boolean(moduleValue[featureKey]);
     });
+    if (moduleKey === 'viceroy' && moduleValue.mahekalLeads === undefined) {
+      out[moduleKey].mahekalLeads = true;
+    }
   });
   return out;
 }
@@ -3112,6 +3121,7 @@ function canAccessBackendFeature(email, moduleKey, featureKey) {
   if (user) {
     const moduleAllowed = Boolean(user.modules && user.modules[moduleKey]);
     if (!moduleAllowed) return false;
+    if (moduleKey === 'viceroy' && featureKey === 'mahekalLeads') return true;
     const submodules = user.submodules && typeof user.submodules === 'object' ? user.submodules : null;
     const moduleSubmodules = submodules && submodules[moduleKey] && typeof submodules[moduleKey] === 'object'
       ? submodules[moduleKey]
@@ -4499,6 +4509,40 @@ function verifyLeadToken(token) {
   }
 }
 
+function signMahekalPayload(payloadText) {
+  return crypto
+    .createHmac('sha256', MAHEKAL_TOKEN_SECRET)
+    .update(String(payloadText || ''))
+    .digest('hex');
+}
+
+function createMahekalEmployeeToken(payload) {
+  const payloadText = JSON.stringify(payload || {});
+  const encoded = encodeBase64Url(payloadText);
+  const signature = signMahekalPayload(encoded);
+  return `${encoded}.${signature}`;
+}
+
+async function verifyMahekalEmployeeToken(token) {
+  const rawToken = String(token || '').trim();
+  const parts = rawToken.split('.');
+  if (parts.length !== 2) return null;
+  const [encoded, signature] = parts;
+  const expected = signMahekalPayload(encoded);
+  if (signature !== expected) return null;
+  try {
+    const payload = JSON.parse(decodeBase64Url(encoded));
+    const employeeId = String(payload.employeeId || '').trim();
+    if (!employeeId) return null;
+    const data = await readMahekalEmployeesData();
+    const employee = (Array.isArray(data.rows) ? data.rows : []).find((row) => String(row && row.id || '') === employeeId);
+    if (!employee) return null;
+    return employee;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeWhisperlistRow(rawRow, fallbackId) {
   const normalized = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
@@ -4769,6 +4813,172 @@ function saveViceroyKpiReservasData(rows, sourceFile, seededFromWhisperlist = tr
     updatedAt,
     sourceFile: String(sourceFile || ''),
     seededFromWhisperlist: Boolean(seededFromWhisperlist)
+  };
+}
+
+function defaultMahekalEmployeesData() {
+  return {
+    rows: [],
+    updatedAt: null,
+    sourceFile: 'mahekal-employees.json'
+  };
+}
+
+function defaultMahekalLeadsData() {
+  return {
+    rows: [],
+    updatedAt: null,
+    sourceFile: 'mahekal-leads.json'
+  };
+}
+
+function normalizeMahekalPersonText(raw) {
+  return normalizeWhisperlistPersonText(raw);
+}
+
+function normalizeMahekalDepartment(raw) {
+  return String(raw || '').trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
+function normalizeMahekalPhone(raw) {
+  return normalizeClientPhone(raw).replace(/[^\d+\-()\s]/g, '').trim();
+}
+
+function normalizeMahekalEmail(raw) {
+  return normalizeClientEmail(raw);
+}
+
+function normalizeMahekalCity(raw) {
+  return normalizeWhisperlistCity(raw);
+}
+
+function normalizeMahekalCountry(raw) {
+  return normalizeWhisperlistCountry(raw);
+}
+
+function normalizeMahekalEmployeeRow(rawRow) {
+  const source = rawRow && typeof rawRow === 'object' ? rawRow : {};
+  const firstName = normalizeMahekalPersonText(source.firstName || source.nombre || source.nombreEmpleado || source.name);
+  const lastName = normalizeMahekalPersonText(source.lastName || source.apellido || source.apellidoEmpleado || source.lastName1 || source.lastName2);
+  const department = normalizeMahekalDepartment(source.department || source.departamento || source.area || source.dept);
+  const phone = normalizeMahekalPhone(source.phone || source.telefono || source.mobile || source.whatsapp);
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  if (!fullName || !department || !phone) return null;
+  const now = new Date().toISOString();
+  const id = String(source.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).trim();
+  return {
+    id,
+    firstName,
+    lastName,
+    fullName,
+    department,
+    phone,
+    createdAt: String(source.createdAt || now),
+    updatedAt: String(source.updatedAt || now)
+  };
+}
+
+function normalizeMahekalLeadRow(rawRow) {
+  const source = rawRow && typeof rawRow === 'object' ? rawRow : {};
+  const firstName = normalizeMahekalPersonText(source.firstName || source.nombre || source.nombreLead || source.name);
+  const lastName = normalizeMahekalPersonText(source.lastName || source.apellido || source.apellidoLead || source.lastName1 || source.lastName2);
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  const email = normalizeMahekalEmail(source.email || source.clientEmail || source.correo || source.correoCliente);
+  const phone = normalizeMahekalPhone(source.phone || source.clientPhone || source.telefono || source.phoneNumber);
+  const country = normalizeMahekalCountry(source.country || source.pais);
+  const city = normalizeMahekalCity(source.city || source.ciudad);
+  const employeeId = String(source.employeeId || source.referrerId || source.referrerEmployeeId || '').trim();
+  const employeeName = normalizeMahekalPersonText(source.employeeName || source.referrerName || source.referrerFullName);
+  const department = normalizeMahekalDepartment(source.department || source.employeeDepartment || source.referrerDepartment);
+  const createdAt = String(source.createdAt || new Date().toISOString());
+  if (!fullName || !phone || !country || !city || !employeeId || !employeeName) return null;
+  return {
+    id: String(source.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).trim(),
+    employeeId,
+    employeeName,
+    department,
+    firstName,
+    lastName,
+    fullName,
+    email,
+    phone,
+    country,
+    city,
+    createdAt,
+    updatedAt: String(source.updatedAt || createdAt)
+  };
+}
+
+function readMahekalEmployeesData() {
+  const raw = readJson(MAHEKAL_EMPLOYEES_JSON_PATH, defaultMahekalEmployeesData());
+  const rows = Array.isArray(raw.rows) ? raw.rows : [];
+  return {
+    rows: rows.map((row) => normalizeMahekalEmployeeRow(row)).filter(Boolean),
+    updatedAt: raw.updatedAt || null,
+    sourceFile: String(raw.sourceFile || 'mahekal-employees.json')
+  };
+}
+
+function saveMahekalEmployeesData(rows, sourceFile) {
+  const normalizedRows = Array.isArray(rows) ? rows.map((row) => normalizeMahekalEmployeeRow(row)).filter(Boolean) : [];
+  const payload = {
+    rows: normalizedRows,
+    updatedAt: new Date().toISOString(),
+    sourceFile: String(sourceFile || 'mahekal-employees.json')
+  };
+  writeJson(MAHEKAL_EMPLOYEES_JSON_PATH, payload);
+  return payload;
+}
+
+function readMahekalLeadsData() {
+  const raw = readJson(MAHEKAL_LEADS_JSON_PATH, defaultMahekalLeadsData());
+  const rows = Array.isArray(raw.rows) ? raw.rows : [];
+  return {
+    rows: rows.map((row) => normalizeMahekalLeadRow(row)).filter(Boolean),
+    updatedAt: raw.updatedAt || null,
+    sourceFile: String(raw.sourceFile || 'mahekal-leads.json')
+  };
+}
+
+function saveMahekalLeadsData(rows, sourceFile) {
+  const normalizedRows = Array.isArray(rows) ? rows.map((row) => normalizeMahekalLeadRow(row)).filter(Boolean) : [];
+  const payload = {
+    rows: normalizedRows,
+    updatedAt: new Date().toISOString(),
+    sourceFile: String(sourceFile || 'mahekal-leads.json')
+  };
+  writeJson(MAHEKAL_LEADS_JSON_PATH, payload);
+  return payload;
+}
+
+function getMahekalLeadStats(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  const byEmployee = new Map();
+  items.forEach((row) => {
+    const id = String(row.employeeId || '').trim();
+    const name = normalizeMahekalPersonText(row.employeeName || '');
+    if (!id || !name) return;
+    const current = byEmployee.get(id) || {
+      employeeId: id,
+      employeeName: name,
+      department: normalizeMahekalDepartment(row.department || ''),
+      count: 0
+    };
+    current.count += 1;
+    if (!current.department && row.department) current.department = normalizeMahekalDepartment(row.department);
+    byEmployee.set(id, current);
+  });
+  const byEmployeeList = Array.from(byEmployee.values()).sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return String(a.employeeName || '').localeCompare(String(b.employeeName || ''), 'es', { sensitivity: 'base' });
+  });
+  const topEmployee = byEmployeeList[0] || null;
+  const total = items.length;
+  return {
+    total,
+    employeeCount: byEmployeeList.length,
+    topEmployee,
+    byEmployee: byEmployeeList
   };
 }
 
@@ -10687,6 +10897,12 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Viceroy Hot Leads</h2>
           <p class="desc">Módulo original de Hot Leads.</p>
         </a>` : '';
+  const mahekalCard = canAccessBackendFeature(currentEmail, 'viceroy', 'mahekalLeads') ? `
+        <a class="card" href="/viceroy/registros-leads-mahekal">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Registros Leads Mahekal</h2>
+          <p class="desc">QR públicos, referidos y estadísticas de empleados.</p>
+        </a>` : '';
   const kpiReservasCard = canAccessBackendFeature(currentEmail, 'viceroy', 'kpiReservas') ? `
         <a class="card" href="/viceroy/kpi-reservas">
           <span class="tag">Módulo</span>
@@ -10750,6 +10966,7 @@ app.get('/viceroy', (req, res) => {
         ${inicioCard}
         ${kpiReservasCard}
         ${whisperlistCard}
+        ${mahekalCard}
         ${registrosCard}
         ${reservasCard}
         ${horariosCard}
@@ -11561,6 +11778,10 @@ app.get('/api/viceroy/session', requireBackendModule('viceroy'), (req, res) => {
   });
 });
 
+app.get('/viceroy/registros-leads-mahekal', requireBackendModule('viceroy'), (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-mahekal-registros.html'));
+});
+
 app.get('/api/viceroy/inicio/reservation-layout', requireBackendModule('viceroy'), (req, res) => {
   const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
   return res.json({
@@ -12328,6 +12549,168 @@ app.post('/api/lead/submit', async (req, res) => {
     return res.status(201).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo registrar el cliente' });
+  }
+});
+
+app.get('/mahekal', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'mahekal-home.html'));
+});
+
+app.get('/mahekal/registro-empleado', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'mahekal-registro-empleado.html'));
+});
+
+app.get('/mahekal/invitado', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'mahekal-invitado.html'));
+});
+
+app.get('/api/mahekal/public-qr', async (req, res) => {
+  try {
+    const leadUrl = `${APP_BASE_URL_NORMALIZED}/mahekal/registro-empleado`;
+    const qrDataUrl = await QRCode.toDataURL(leadUrl, { margin: 1, width: 320 });
+    return res.json({ ok: true, leadUrl, qrDataUrl });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo generar el QR público de Mahekal' });
+  }
+});
+
+app.post('/api/mahekal/employees', async (req, res) => {
+  try {
+    const firstName = normalizeMahekalPersonText(req.body && (req.body.firstName || req.body.nombre));
+    const lastName = normalizeMahekalPersonText(req.body && (req.body.lastName || req.body.apellido));
+    const department = normalizeMahekalDepartment(req.body && (req.body.department || req.body.departamento));
+    const phone = normalizeMahekalPhone(req.body && (req.body.phone || req.body.telefono));
+    if (!firstName || !lastName || !department || !phone) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios del empleado' });
+    }
+
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+    const existingData = await readMahekalEmployeesData();
+    const existing = (Array.isArray(existingData.rows) ? existingData.rows : []).find((row) => {
+      const existingKey = [
+        normalizeMahekalPersonText(row.fullName || `${row.firstName || ''} ${row.lastName || ''}`),
+        normalizeMahekalDepartment(row.department || ''),
+        normalizeMahekalPhone(row.phone || '')
+      ].join('|');
+      const inputKey = [fullName, department, phone].join('|');
+      return existingKey === inputKey;
+    });
+
+    const employee = existing || normalizeMahekalEmployeeRow({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      firstName,
+      lastName,
+      department,
+      phone
+    });
+
+    if (!employee) return res.status(400).json({ error: 'No se pudo crear el empleado' });
+
+    const nextRows = Array.isArray(existingData.rows) ? [...existingData.rows] : [];
+    if (!existing) {
+      nextRows.push(employee);
+      await saveMahekalEmployeesData(nextRows, existingData.sourceFile || 'mahekal-employees.json');
+    }
+
+    const inviteToken = createMahekalEmployeeToken({
+      employeeId: employee.id
+    });
+    const inviteUrl = `${APP_BASE_URL_NORMALIZED}/mahekal/invitado?t=${encodeURIComponent(inviteToken)}`;
+    const qrDataUrl = await QRCode.toDataURL(inviteUrl, { margin: 1, width: 320 });
+    return res.status(existing ? 200 : 201).json({
+      ok: true,
+      employee,
+      inviteUrl,
+      inviteToken,
+      qrDataUrl,
+      reusedExisting: Boolean(existing)
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo registrar el empleado',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/mahekal/invite', async (req, res) => {
+  try {
+    const token = String(req.query && req.query.t || '').trim();
+    const employee = await verifyMahekalEmployeeToken(token);
+    if (!employee) return res.status(400).json({ error: 'QR inválido o expirado' });
+    return res.json({
+      ok: true,
+      employee: {
+        id: employee.id,
+        fullName: employee.fullName,
+        firstName: employee.firstName,
+        lastName: employee.lastName,
+        department: employee.department,
+        phone: employee.phone
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo resolver el QR' });
+  }
+});
+
+app.post('/api/mahekal/leads', async (req, res) => {
+  try {
+    const token = String(req.body && req.body.token || '').trim();
+    const employee = await verifyMahekalEmployeeToken(token);
+    if (!employee) return res.status(400).json({ error: 'QR inválido o incompleto' });
+
+    const firstName = normalizeMahekalPersonText(req.body && (req.body.firstName || req.body.nombre));
+    const lastName = normalizeMahekalPersonText(req.body && (req.body.lastName || req.body.apellido));
+    const phone = normalizeMahekalPhone(req.body && (req.body.phone || req.body.telefono));
+    const email = normalizeMahekalEmail(req.body && (req.body.email || req.body.correo));
+    const country = normalizeMahekalCountry(req.body && (req.body.country || req.body.pais));
+    const city = normalizeMahekalCity(req.body && (req.body.city || req.body.ciudad));
+    if (!firstName || !lastName || !phone || !email || !country || !city) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios del lead' });
+    }
+
+    const lead = normalizeMahekalLeadRow({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      employeeId: employee.id,
+      employeeName: employee.fullName,
+      department: employee.department,
+      firstName,
+      lastName,
+      phone,
+      email,
+      country,
+      city
+    });
+    if (!lead) return res.status(400).json({ error: 'No se pudo crear el lead' });
+
+    const data = await readMahekalLeadsData();
+    const nextRows = Array.isArray(data.rows) ? [...data.rows, lead] : [lead];
+    await saveMahekalLeadsData(nextRows, data.sourceFile || 'mahekal-leads.json');
+    return res.status(201).json({ ok: true, lead });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo registrar el lead de Mahekal',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/mahekal/leads', requireBackendModule('viceroy'), async (req, res) => {
+  try {
+    const data = readMahekalLeadsData();
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    const stats = getMahekalLeadStats(rows);
+    return res.json({
+      ok: true,
+      currentEmail: String(req.user && req.user.email || '').trim().toLowerCase(),
+      updatedAt: data.updatedAt,
+      sourceFile: data.sourceFile,
+      rows,
+      stats
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudieron leer los registros de Mahekal' });
   }
 });
 

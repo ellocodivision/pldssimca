@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viceroy · Registros Leads Mahekal</title>
+  <style>
+    :root{
+      --bg:#f4f1e8;
+      --card:#ffffff;
+      --ink:#1c1d22;
+      --muted:#6a6f78;
+      --line:#d9d4c6;
+      --accent:#efe47a;
+      --ok:#1f8d3c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1360px;margin:0 auto;padding:24px 16px 40px}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .title{margin:0;font-size:32px;line-height:1.05}
+    .sub{margin:8px 0 0;color:var(--muted)}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{border:1px solid #bfb8a5;background:#fff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer;color:#202225;text-decoration:none}
+    .btn.primary{background:var(--accent);border-color:#111}
+    .card{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .status{margin-top:8px;color:var(--muted);font-size:13px;min-height:18px}
+    .status.ok{color:var(--ok)}
+    .field{min-width:220px;padding:8px 10px;border:1px solid #cfc8b8;border-radius:10px;background:#fff}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:10px}
+    .stats-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}
+    .stats-box .label{font-size:12px;color:var(--muted);margin-bottom:4px}
+    .stats-box .value{font-size:28px;font-weight:800;line-height:1.1}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:1260px}
+    th,td{padding:10px;border-bottom:1px solid #ebe4d6;text-align:left;font-size:13px;vertical-align:top}
+    th{background:#faf7f0;position:sticky;top:0;z-index:1}
+    .small{font-size:12px;color:var(--muted)}
+    .ranking{display:grid;grid-template-columns:1.2fr .8fr;gap:10px}
+    .ranking-table{width:100%;border-collapse:collapse}
+    .ranking-table th,.ranking-table td{padding:8px 6px;border-bottom:1px solid #eee7d9;font-size:12px}
+    .ranking-table th{background:transparent;position:static}
+    @media (max-width: 900px){
+      .stats-grid,.ranking{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">Registros Leads Mahekal</h1>
+        <p class="sub">Leads generados desde los QR de empleados de Mahekal.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy">Volver a Viceroy</a>
+        <a class="btn primary" href="/mahekal" target="_blank" rel="noopener">Abrir landing pública</a>
+        <button id="refreshBtn" class="btn" type="button">Actualizar</button>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="stats-grid">
+        <div class="stats-box"><div class="label">Leads totales</div><div id="totalLeads" class="value">0</div></div>
+        <div class="stats-box"><div class="label">Empleados registrados</div><div id="totalEmployees" class="value">0</div></div>
+        <div class="stats-box"><div class="label">Top referidor</div><div id="topEmployee" class="value" style="font-size:18px">-</div></div>
+        <div class="stats-box"><div class="label">Leads por top</div><div id="topCount" class="value">0</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <span class="small">Filtrar por referrer o ciudad</span>
+        <input id="searchInput" class="field" placeholder="Buscar..." />
+      </div>
+      <p id="status" class="status"></p>
+    </section>
+
+    <section class="card ranking">
+      <div>
+        <h2 style="margin:0 0 10px;font-size:18px">Ranking por empleado</h2>
+        <div class="table-wrap">
+          <table class="ranking-table">
+            <thead>
+              <tr><th>Empleado</th><th>Departamento</th><th>Leads</th></tr>
+            </thead>
+            <tbody id="rankingBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin:0 0 10px;font-size:18px">Vista rápida</h2>
+        <div class="small">La tabla inferior muestra cada lead con su referrer asociado.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Lead</th>
+              <th>Teléfono</th>
+              <th>Correo</th>
+              <th>País</th>
+              <th>Ciudad</th>
+              <th>Referido por</th>
+              <th>Departamento</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="leadsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const state = { rows: [], stats: { byEmployee: [] } };
+      const els = {
+        totalLeads: document.getElementById('totalLeads'),
+        totalEmployees: document.getElementById('totalEmployees'),
+        topEmployee: document.getElementById('topEmployee'),
+        topCount: document.getElementById('topCount'),
+        rankingBody: document.getElementById('rankingBody'),
+        leadsBody: document.getElementById('leadsBody'),
+        status: document.getElementById('status'),
+        searchInput: document.getElementById('searchInput'),
+        refreshBtn: document.getElementById('refreshBtn')
+      };
+
+      function esc(v) {
+        return String(v || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function fmtDate(value) {
+        const d = new Date(value || '');
+        if (Number.isNaN(d.getTime())) return String(value || '');
+        return new Intl.DateTimeFormat('es-MX', {
+          timeZone: 'America/Cancun',
+          dateStyle: 'medium',
+          timeStyle: 'short'
+        }).format(d);
+      }
+
+      function matches(row, query) {
+        if (!query) return true;
+        const text = [
+          row.fullName, row.phone, row.email, row.country, row.city,
+          row.employeeName, row.department
+        ].join(' ').toLowerCase();
+        return text.includes(query);
+      }
+
+      function render() {
+        const query = String(els.searchInput.value || '').trim().toLowerCase();
+        const rows = state.rows.filter((row) => matches(row, query));
+        els.totalLeads.textContent = String(state.rows.length);
+        els.totalEmployees.textContent = String(state.stats.employeeCount || 0);
+        els.topEmployee.textContent = state.stats.topEmployee ? state.stats.topEmployee.employeeName : '-';
+        els.topCount.textContent = state.stats.topEmployee ? String(state.stats.topEmployee.count || 0) : '0';
+        els.rankingBody.innerHTML = (state.stats.byEmployee || []).map((row) => `
+          <tr>
+            <td>${esc(row.employeeName)}</td>
+            <td>${esc(row.department || '-')}</td>
+            <td>${esc(row.count)}</td>
+          </tr>
+        `).join('') || `<tr><td colspan="3" class="small">Sin datos todavía.</td></tr>`;
+        els.leadsBody.innerHTML = rows.map((row) => `
+          <tr>
+            <td><strong>${esc(row.fullName)}</strong></td>
+            <td>${esc(row.phone)}</td>
+            <td>${esc(row.email || '-')}</td>
+            <td>${esc(row.country)}</td>
+            <td>${esc(row.city)}</td>
+            <td>${esc(row.employeeName)}</td>
+            <td>${esc(row.department || '-')}</td>
+            <td>${esc(fmtDate(row.createdAt))}</td>
+          </tr>
+        `).join('') || `<tr><td colspan="8" class="small">Sin leads que coincidan.</td></tr>`;
+      }
+
+      async function loadData() {
+        els.status.textContent = 'Cargando registros...';
+        try {
+          const res = await fetch('/api/mahekal/leads', { credentials: 'same-origin', cache: 'no-store' });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'No se pudieron cargar los registros');
+          state.rows = Array.isArray(data.rows) ? data.rows : [];
+          state.stats = data.stats || { byEmployee: [] };
+          els.status.textContent = 'Actualizado: ' + (data.updatedAt ? fmtDate(data.updatedAt) : '-');
+          render();
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'No se pudieron cargar los registros';
+        }
+      }
+
+      els.searchInput.addEventListener('input', render);
+      els.refreshBtn.addEventListener('click', loadData);
+      loadData();
+    })();
+  </script>
+</body>
+</html>
