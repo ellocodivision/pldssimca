@@ -11,7 +11,7 @@
       --ink:#171717;
       --muted:#67645c;
       --line:#d8d1c1;
-      --accent:#ebdb56;
+      --accent:#dcd5c4;
       --ok:#1f8d3c;
       --err:#b42318;
     }
@@ -32,11 +32,14 @@
       box-shadow:0 18px 50px rgba(27,27,27,.06);
       margin-bottom:18px;
     }
-    .brand{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .brand{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between}
     .brand img{width:170px;max-width:100%}
     .hero h1{margin:0;font-size:clamp(28px,4.8vw,46px)}
     .hero p{margin:8px 0 0;color:var(--muted);line-height:1.6;max-width:760px}
     .panel{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 18px 50px rgba(27,27,27,.06)}
+    .lang-switch{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+    .lang-btn{border:1px solid #bdb8a9;background:#fff;color:#111;border-radius:999px;padding:8px 12px;font:inherit;font-weight:700;cursor:pointer}
+    .lang-btn.active{background:linear-gradient(180deg,#f2eee4,#ddd6c7);border-color:#bdb8a9}
     .referrer{
       border:1px solid #cfc6b1;
       background:#fcfaf4;
@@ -52,7 +55,7 @@
     .field{width:100%;margin-top:6px;padding:12px 14px;border:1px solid #d1c7b1;border-radius:12px;background:#fff;font:inherit}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
     .btn{border:1px solid #bbb39f;background:#fff;color:#111;border-radius:12px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
-    .btn.primary{background:linear-gradient(180deg,#f0df59,#e2cf34);border-color:#b4a52c}
+    .btn.primary{background:linear-gradient(180deg,#f2eee4,#ddd6c7);border-color:#bdb8a9}
     .status{margin-top:10px;color:var(--muted);font-size:13px;min-height:18px}
     .status.ok{color:var(--ok)}
     .status.err{color:var(--err)}
@@ -66,16 +69,20 @@
     <section class="hero">
       <div class="brand">
         <img src="/assets/mahekal/viceroy-logo-black.png" alt="Viceroy Residences" />
-        <div>
-          <h1>Registro de invitado</h1>
-          <p>Completa tus datos para registrar tu visita. Este formulario está vinculado al empleado que compartió el QR.</p>
+        <div style="flex:1;min-width:260px">
+          <div class="lang-switch">
+            <button class="lang-btn active" id="langEsBtn" type="button">🇲🇽 Español</button>
+            <button class="lang-btn" id="langEnBtn" type="button">🇺🇸 English</button>
+          </div>
+          <h1 id="pageTitle">Registro de invitado</h1>
+          <p id="pageDesc">Completa tus datos para registrar tu visita. Este formulario está vinculado al empleado que compartió el QR.</p>
         </div>
       </div>
     </section>
 
     <section class="panel">
       <div class="referrer">
-        <div class="label">REFERIDO POR</div>
+        <div id="referrerLabel" class="label">REFERIDO POR</div>
         <div id="referrerName" class="value">Cargando...</div>
         <div id="referrerDept" class="label" style="margin-top:4px"></div>
       </div>
@@ -83,33 +90,33 @@
       <form id="form">
         <div class="grid">
           <label>
-            Nombre
+            <span id="labelFirstName">Nombre</span>
             <input id="firstName" class="field" required />
           </label>
           <label>
-            Apellido
+            <span id="labelLastName">Apellido</span>
             <input id="lastName" class="field" required />
           </label>
           <label>
-            Teléfono
+            <span id="labelPhone">Teléfono</span>
             <input id="phone" class="field" type="tel" required />
           </label>
           <label>
-            Correo
+            <span id="labelEmail">Correo</span>
             <input id="email" class="field" type="email" required />
           </label>
           <label>
-            País
+            <span id="labelCountry">País</span>
             <input id="country" class="field" required />
           </label>
           <label>
-            Ciudad
+            <span id="labelCity">Ciudad</span>
             <input id="city" class="field" required />
           </label>
         </div>
         <div class="actions">
-          <button class="btn primary" type="submit">Registrar invitado</button>
-          <a class="btn" href="/mahekal">Volver al inicio</a>
+          <button class="btn primary" type="submit" id="submitBtn">Registrar invitado</button>
+          <a class="btn" href="/mahekal" id="backBtn">Volver al inicio</a>
         </div>
         <p id="status" class="status"></p>
       </form>
@@ -119,18 +126,97 @@
   <script>
     (function () {
       const token = new URLSearchParams(window.location.search).get('t') || '';
+      let lang = 'es';
       const els = {
         form: document.getElementById('form'),
+        langEsBtn: document.getElementById('langEsBtn'),
+        langEnBtn: document.getElementById('langEnBtn'),
+        pageTitle: document.getElementById('pageTitle'),
+        pageDesc: document.getElementById('pageDesc'),
+        referrerLabel: document.getElementById('referrerLabel'),
         referrerName: document.getElementById('referrerName'),
         referrerDept: document.getElementById('referrerDept'),
+        labelFirstName: document.getElementById('labelFirstName'),
+        labelLastName: document.getElementById('labelLastName'),
+        labelPhone: document.getElementById('labelPhone'),
+        labelEmail: document.getElementById('labelEmail'),
+        labelCountry: document.getElementById('labelCountry'),
+        labelCity: document.getElementById('labelCity'),
         firstName: document.getElementById('firstName'),
         lastName: document.getElementById('lastName'),
         phone: document.getElementById('phone'),
         email: document.getElementById('email'),
         country: document.getElementById('country'),
         city: document.getElementById('city'),
+        submitBtn: document.getElementById('submitBtn'),
+        backBtn: document.getElementById('backBtn'),
         status: document.getElementById('status')
       };
+
+      const TEXTS = {
+        es: {
+          title: 'Registro de invitado',
+          desc: 'Completa tus datos para registrar tu visita. Este formulario está vinculado al empleado que compartió el QR.',
+          referrer: 'REFERIDO POR',
+          firstName: 'Nombre',
+          lastName: 'Apellido',
+          phone: 'Teléfono',
+          email: 'Correo',
+          country: 'País',
+          city: 'Ciudad',
+          submit: 'Registrar invitado',
+          back: 'Volver al inicio',
+          loading: 'Cargando...',
+          deptPrefix: 'Departamento: ',
+          qrInvalid: 'QR inválido',
+          noQr: 'No se encontró el QR del empleado.',
+          validating: 'No se pudo validar el QR',
+          register: 'Registrando invitado...',
+          success: 'Invitado registrado correctamente.',
+          successClass: 'ok',
+          errorClass: 'err'
+        },
+        en: {
+          title: 'Guest Registration',
+          desc: 'Fill in your details to register your visit. This form is linked to the employee who shared the QR.',
+          referrer: 'REFERRED BY',
+          firstName: 'First Name',
+          lastName: 'Last Name',
+          phone: 'Phone',
+          email: 'Email',
+          country: 'Country',
+          city: 'City',
+          submit: 'Register guest',
+          back: 'Back to home',
+          loading: 'Loading...',
+          deptPrefix: 'Department: ',
+          qrInvalid: 'Invalid QR',
+          noQr: 'Employee QR not found.',
+          validating: 'Could not validate the QR',
+          register: 'Registering guest...',
+          success: 'Guest registered successfully.',
+          successClass: 'ok',
+          errorClass: 'err'
+        }
+      };
+
+      function applyText() {
+        const t = TEXTS[lang];
+        document.title = lang === 'es' ? 'Mahekal · Invitado' : 'Mahekal · Guest';
+        els.pageTitle.textContent = t.title;
+        els.pageDesc.textContent = t.desc;
+        els.referrerLabel.textContent = t.referrer;
+        els.labelFirstName.textContent = t.firstName;
+        els.labelLastName.textContent = t.lastName;
+        els.labelPhone.textContent = t.phone;
+        els.labelEmail.textContent = t.email;
+        els.labelCountry.textContent = t.country;
+        els.labelCity.textContent = t.city;
+        els.submitBtn.textContent = t.submit;
+        els.backBtn.textContent = t.back;
+        els.langEsBtn.classList.toggle('active', lang === 'es');
+        els.langEnBtn.classList.toggle('active', lang === 'en');
+      }
 
       function setStatus(text, kind) {
         els.status.textContent = text || '';
@@ -139,8 +225,9 @@
 
       async function loadInvite() {
         if (!token) {
-          els.referrerName.textContent = 'QR inválido';
-          setStatus('No se encontró el QR del empleado.', 'err');
+          els.referrerName.textContent = TEXTS[lang].qrInvalid;
+          setStatus(TEXTS[lang].noQr, 'err');
+          els.submitBtn.disabled = true;
           els.form.querySelectorAll('input,button').forEach((el) => { if (el.tagName !== 'BUTTON') el.disabled = true; });
           return;
         }
@@ -149,19 +236,21 @@
             credentials: 'same-origin'
           });
           const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || 'No se pudo validar el QR');
+          if (!res.ok) throw new Error(data.error || TEXTS[lang].validating);
           const emp = data.employee || {};
           els.referrerName.textContent = emp.fullName || '-';
-          els.referrerDept.textContent = emp.department ? ('Departamento: ' + emp.department) : '';
+          els.referrerDept.textContent = emp.department ? (TEXTS[lang].deptPrefix + emp.department) : '';
+          els.submitBtn.disabled = false;
         } catch (err) {
-          els.referrerName.textContent = 'QR inválido';
-          setStatus(err && err.message ? err.message : 'No se pudo validar el QR', 'err');
+          els.referrerName.textContent = TEXTS[lang].qrInvalid;
+          setStatus(err && err.message ? err.message : TEXTS[lang].validating, 'err');
+          els.submitBtn.disabled = true;
         }
       }
 
       els.form.addEventListener('submit', async function (ev) {
         ev.preventDefault();
-        setStatus('Registrando invitado...', '');
+        setStatus(TEXTS[lang].register, '');
         try {
           const res = await fetch('/api/mahekal/leads', {
             method: 'POST',
@@ -179,12 +268,24 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || 'No se pudo registrar el invitado');
           els.form.reset();
-          setStatus('Invitado registrado correctamente.', 'ok');
+          setStatus(TEXTS[lang].success, 'ok');
         } catch (err) {
           setStatus(err && err.message ? err.message : 'No se pudo registrar el invitado', 'err');
         }
       });
 
+      els.langEsBtn.addEventListener('click', function () {
+        lang = 'es';
+        applyText();
+        loadInvite();
+      });
+      els.langEnBtn.addEventListener('click', function () {
+        lang = 'en';
+        applyText();
+        loadInvite();
+      });
+
+      applyText();
       loadInvite();
     })();
   </script>

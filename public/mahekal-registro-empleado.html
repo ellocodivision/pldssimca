@@ -11,7 +11,7 @@
       --ink:#171717;
       --muted:#67645c;
       --line:#d8d1c1;
-      --accent:#ebdb56;
+      --accent:#dcd5c4;
       --ok:#1f8d3c;
       --err:#b42318;
     }
@@ -45,7 +45,7 @@
     .full{grid-column:1 / -1}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
     .btn{border:1px solid #bbb39f;background:#fff;color:#111;border-radius:12px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer}
-    .btn.primary{background:linear-gradient(180deg,#f0df59,#e2cf34);border-color:#b4a52c}
+    .btn.primary{background:linear-gradient(180deg,#f2eee4,#ddd6c7);border-color:#bdb8a9}
     .status{margin-top:10px;color:var(--muted);font-size:13px;min-height:18px}
     .status.ok{color:var(--ok)}
     .status.err{color:var(--err)}
@@ -104,10 +104,11 @@
       <section id="result" class="result">
         <div class="qr-card">
           <img id="qrImg" alt="QR personal" />
-          <div class="actions" style="justify-content:center">
-            <a id="openInviteBtn" class="btn primary" href="#" target="_blank" rel="noopener">Abrir enlace</a>
-            <button id="copyBtn" class="btn" type="button">Copiar enlace</button>
-          </div>
+        <div class="actions" style="justify-content:center">
+          <a id="openInviteBtn" class="btn primary" href="#" target="_blank" rel="noopener">Abrir enlace</a>
+          <button id="copyBtn" class="btn" type="button">Copiar enlace</button>
+          <a id="pdfBtn" class="btn" href="#" download style="display:none">Descargar PDF</a>
+        </div>
           <div id="inviteLink" class="link"></div>
         </div>
         <div class="meta">
@@ -134,6 +135,7 @@
         qrImg: document.getElementById('qrImg'),
         openInviteBtn: document.getElementById('openInviteBtn'),
         copyBtn: document.getElementById('copyBtn'),
+        pdfBtn: document.getElementById('pdfBtn'),
         inviteLink: document.getElementById('inviteLink'),
         employeeName: document.getElementById('employeeName'),
         employeeDept: document.getElementById('employeeDept'),
@@ -152,6 +154,8 @@
         currentInviteUrl = payload && payload.inviteUrl ? payload.inviteUrl : '';
         els.qrImg.src = payload && payload.qrDataUrl ? payload.qrDataUrl : '';
         els.openInviteBtn.href = currentInviteUrl || '#';
+        els.pdfBtn.href = payload && payload.inviteToken ? ('/api/mahekal/employees/qr.pdf?t=' + encodeURIComponent(payload.inviteToken)) : '#';
+        els.pdfBtn.style.display = 'inline-flex';
         els.inviteLink.textContent = currentInviteUrl || '';
         els.employeeName.textContent = employee.fullName || '-';
         els.employeeDept.textContent = employee.department || '-';

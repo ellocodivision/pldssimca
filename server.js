@@ -4543,6 +4543,49 @@ async function verifyMahekalEmployeeToken(token) {
   }
 }
 
+function sanitizeMahekalPdfFileName(rawName) {
+  return String(rawName || 'mahekal-qr')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .trim() || 'mahekal-qr';
+}
+
+async function buildMahekalEmployeeQrPdf(employee, inviteUrl, qrDataUrl) {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]);
+  const width = page.getWidth();
+  const height = page.getHeight();
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const logoPath = path.join(PUBLIC_DIR, 'assets', 'mahekal', 'viceroy-logo-black.png');
+  const logoBytes = fs.readFileSync(logoPath);
+  const logoImage = await pdfDoc.embedPng(logoBytes);
+  const qrData = String(qrDataUrl || '').split(',').pop() || '';
+  const qrImage = await pdfDoc.embedPng(Buffer.from(qrData, 'base64'));
+  const ink = rgb(0.12, 0.12, 0.12);
+  const muted = rgb(0.38, 0.37, 0.33);
+  const accent = rgb(0.83, 0.80, 0.72);
+  const soft = rgb(0.95, 0.93, 0.88);
+
+  page.drawRectangle({ x: 18, y: 18, width: width - 36, height: height - 36, borderWidth: 1, borderColor: accent, color: rgb(1, 1, 1) });
+  page.drawImage(logoImage, { x: 162, y: 720, width: 270, height: 105 });
+  page.drawText('QR personal de empleado', { x: 135, y: 683, size: 19, font: fontBold, color: ink });
+  page.drawText('Mahekal / Viceroy Residences', { x: 186, y: 660, size: 12, font: fontRegular, color: muted });
+  page.drawRectangle({ x: 52, y: 250, width: 491, height: 376, borderWidth: 1, borderColor: accent, color: soft, opacity: 0.6 });
+  page.drawImage(qrImage, { x: 153, y: 312, width: 288, height: 288 });
+  page.drawText(employee.fullName || '', { x: 72, y: 214, size: 20, font: fontBold, color: ink });
+  page.drawText(`Departamento: ${employee.department || '-'}`, { x: 72, y: 186, size: 12, font: fontRegular, color: muted });
+  page.drawText(`Teléfono: ${employee.phone || '-'}`, { x: 72, y: 165, size: 12, font: fontRegular, color: muted });
+  page.drawText('Escanea este código para registrar invitados.', { x: 72, y: 141, size: 11, font: fontRegular, color: muted });
+  page.drawText('Scan this code to register guests.', { x: 72, y: 124, size: 11, font: fontRegular, color: muted });
+  page.drawText('Enlace:', { x: 72, y: 95, size: 11, font: fontBold, color: ink });
+  page.drawText(String(inviteUrl || ''), { x: 72, y: 79, size: 9, font: fontRegular, color: muted, maxWidth: 450 });
+  return pdfDoc.save();
+}
+
 function normalizeWhisperlistRow(rawRow, fallbackId) {
   const normalized = {};
   Object.entries(rawRow || {}).forEach(([key, value]) => {
@@ -12654,6 +12697,28 @@ app.get('/api/mahekal/invite', async (req, res) => {
   }
 });
 
+app.get('/api/mahekal/employees/qr.pdf', async (req, res) => {
+  try {
+    const token = String(req.query && req.query.t || '').trim();
+    const employee = await verifyMahekalEmployeeToken(token);
+    if (!employee) return res.status(400).json({ error: 'QR inválido o expirado' });
+
+    const inviteUrl = `${APP_BASE_URL_NORMALIZED}/mahekal/invitado?t=${encodeURIComponent(token)}`;
+    const qrDataUrl = await QRCode.toDataURL(inviteUrl, { margin: 1, width: 340 });
+    const pdfBytes = await buildMahekalEmployeeQrPdf(employee, inviteUrl, qrDataUrl);
+    const safeName = sanitizeMahekalPdfFileName(`QR-${employee.fullName || 'empleado'}`);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"`);
+    return res.send(Buffer.from(pdfBytes));
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF del QR de Mahekal',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.post('/api/mahekal/leads', async (req, res) => {
   try {
     const token = String(req.body && req.body.token || '').trim();
@@ -12699,7 +12764,9 @@ app.post('/api/mahekal/leads', async (req, res) => {
 app.get('/api/mahekal/leads', requireBackendModule('viceroy'), async (req, res) => {
   try {
     const data = readMahekalLeadsData();
+    const employeesData = readMahekalEmployeesData();
     const rows = Array.isArray(data.rows) ? data.rows : [];
+    const employees = Array.isArray(employeesData.rows) ? employeesData.rows : [];
     const stats = getMahekalLeadStats(rows);
     return res.json({
       ok: true,
@@ -12707,10 +12774,57 @@ app.get('/api/mahekal/leads', requireBackendModule('viceroy'), async (req, res) 
       updatedAt: data.updatedAt,
       sourceFile: data.sourceFile,
       rows,
+      employees,
       stats
     });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudieron leer los registros de Mahekal' });
+  }
+});
+
+app.delete('/api/mahekal/leads/:id', requireBackendModule('viceroy'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    if (currentEmail !== GERENTE_EMAIL) {
+      return res.status(403).json({ error: 'Solo el administrador puede eliminar leads' });
+    }
+    const leadId = String(req.params && req.params.id || '').trim();
+    if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
+
+    const data = readMahekalLeadsData();
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    const nextRows = rows.filter((row) => String(row && row.id || '') !== leadId);
+    if (nextRows.length === rows.length) return res.status(404).json({ error: 'Lead no encontrado' });
+    await saveMahekalLeadsData(nextRows, data.sourceFile || 'mahekal-leads.json');
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo eliminar el lead',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.delete('/api/mahekal/employees/:id', requireBackendModule('viceroy'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    if (currentEmail !== GERENTE_EMAIL) {
+      return res.status(403).json({ error: 'Solo el administrador puede eliminar empleados' });
+    }
+    const employeeId = String(req.params && req.params.id || '').trim();
+    if (!employeeId) return res.status(400).json({ error: 'Falta el id del empleado' });
+
+    const data = readMahekalEmployeesData();
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    const nextRows = rows.filter((row) => String(row && row.id || '') !== employeeId);
+    if (nextRows.length === rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
+    await saveMahekalEmployeesData(nextRows, data.sourceFile || 'mahekal-employees.json');
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'No se pudo eliminar el empleado',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
   }
 });
 

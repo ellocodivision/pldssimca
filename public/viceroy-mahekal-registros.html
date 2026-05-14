@@ -11,7 +11,7 @@
       --ink:#1c1d22;
       --muted:#6a6f78;
       --line:#d9d4c6;
-      --accent:#efe47a;
+      --accent:#dcd5c4;
       --ok:#1f8d3c;
     }
     *{box-sizing:border-box}
@@ -41,6 +41,8 @@
     .ranking-table{width:100%;border-collapse:collapse}
     .ranking-table th,.ranking-table td{padding:8px 6px;border-bottom:1px solid #eee7d9;font-size:12px}
     .ranking-table th{background:transparent;position:static}
+    .table-wrap .action-btn{border:1px solid #bfb8a5;background:#fff;border-radius:8px;padding:6px 8px;font-weight:700;cursor:pointer;color:#202225}
+    .table-wrap .action-btn.danger{border-color:#bb6b6b;background:#f8ecec;color:#9a1e1e}
     @media (max-width: 900px){
       .stats-grid,.ranking{grid-template-columns:1fr}
     }
@@ -90,8 +92,15 @@
         </div>
       </div>
       <div>
-        <h2 style="margin:0 0 10px;font-size:18px">Vista rápida</h2>
-        <div class="small">La tabla inferior muestra cada lead con su referrer asociado.</div>
+        <h2 style="margin:0 0 10px;font-size:18px">Empleados registrados</h2>
+        <div class="table-wrap">
+          <table class="ranking-table">
+            <thead>
+              <tr><th>Empleado</th><th>Departamento</th><th>Teléfono</th><th>Leads</th><th></th></tr>
+            </thead>
+            <tbody id="employeesBody"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -108,6 +117,7 @@
               <th>Referido por</th>
               <th>Departamento</th>
               <th>Fecha</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="leadsBody"></tbody>
@@ -118,13 +128,14 @@
 
   <script>
     (function () {
-      const state = { rows: [], stats: { byEmployee: [] } };
+      const state = { rows: [], employees: [], currentEmail: '', stats: { byEmployee: [] } };
       const els = {
         totalLeads: document.getElementById('totalLeads'),
         totalEmployees: document.getElementById('totalEmployees'),
         topEmployee: document.getElementById('topEmployee'),
         topCount: document.getElementById('topCount'),
         rankingBody: document.getElementById('rankingBody'),
+        employeesBody: document.getElementById('employeesBody'),
         leadsBody: document.getElementById('leadsBody'),
         status: document.getElementById('status'),
         searchInput: document.getElementById('searchInput'),
@@ -150,6 +161,16 @@
         }).format(d);
       }
 
+      function leadCountByEmployeeId() {
+        const map = new Map();
+        (state.rows || []).forEach((row) => {
+          const key = String(row.employeeId || '').trim();
+          if (!key) return;
+          map.set(key, (map.get(key) || 0) + 1);
+        });
+        return map;
+      }
+
       function matches(row, query) {
         if (!query) return true;
         const text = [
@@ -162,8 +183,11 @@
       function render() {
         const query = String(els.searchInput.value || '').trim().toLowerCase();
         const rows = state.rows.filter((row) => matches(row, query));
+        const employees = Array.isArray(state.employees) ? state.employees : [];
+        const countMap = leadCountByEmployeeId();
+        const isAdmin = state.currentEmail === 'martin@simca.mx';
         els.totalLeads.textContent = String(state.rows.length);
-        els.totalEmployees.textContent = String(state.stats.employeeCount || 0);
+        els.totalEmployees.textContent = String((state.employees || []).length || 0);
         els.topEmployee.textContent = state.stats.topEmployee ? state.stats.topEmployee.employeeName : '-';
         els.topCount.textContent = state.stats.topEmployee ? String(state.stats.topEmployee.count || 0) : '0';
         els.rankingBody.innerHTML = (state.stats.byEmployee || []).map((row) => `
@@ -173,6 +197,15 @@
             <td>${esc(row.count)}</td>
           </tr>
         `).join('') || `<tr><td colspan="3" class="small">Sin datos todavía.</td></tr>`;
+        els.employeesBody.innerHTML = employees.map((row) => `
+          <tr>
+            <td>${esc(row.fullName)}</td>
+            <td>${esc(row.department || '-')}</td>
+            <td>${esc(row.phone || '-')}</td>
+            <td>${esc(countMap.get(String(row.id || '').trim()) || 0)}</td>
+            <td>${isAdmin ? `<button class="action-btn danger" data-employee-delete="${esc(row.id)}">Eliminar</button>` : ''}</td>
+          </tr>
+        `).join('') || `<tr><td colspan="5" class="small">Sin empleados todavía.</td></tr>`;
         els.leadsBody.innerHTML = rows.map((row) => `
           <tr>
             <td><strong>${esc(row.fullName)}</strong></td>
@@ -183,8 +216,9 @@
             <td>${esc(row.employeeName)}</td>
             <td>${esc(row.department || '-')}</td>
             <td>${esc(fmtDate(row.createdAt))}</td>
+            <td>${isAdmin ? `<button class="action-btn danger" data-lead-delete="${esc(row.id)}">Eliminar</button>` : ''}</td>
           </tr>
-        `).join('') || `<tr><td colspan="8" class="small">Sin leads que coincidan.</td></tr>`;
+        `).join('') || `<tr><td colspan="9" class="small">Sin leads que coincidan.</td></tr>`;
       }
 
       async function loadData() {
@@ -194,6 +228,8 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || 'No se pudieron cargar los registros');
           state.rows = Array.isArray(data.rows) ? data.rows : [];
+          state.employees = Array.isArray(data.employees) ? data.employees : [];
+          state.currentEmail = String(data.currentEmail || '').trim().toLowerCase();
           state.stats = data.stats || { byEmployee: [] };
           els.status.textContent = 'Actualizado: ' + (data.updatedAt ? fmtDate(data.updatedAt) : '-');
           render();
@@ -201,6 +237,28 @@
           els.status.textContent = err && err.message ? err.message : 'No se pudieron cargar los registros';
         }
       }
+
+      async function handleDelete(endpoint, label) {
+        if (!confirm(`¿Eliminar ${label}?`)) return;
+        try {
+          const res = await fetch(endpoint, { method: 'DELETE', credentials: 'same-origin' });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `No se pudo eliminar ${label}`);
+          await loadData();
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : `No se pudo eliminar ${label}`;
+        }
+      }
+
+      document.addEventListener('click', function (ev) {
+        const leadBtn = ev.target && ev.target.closest ? ev.target.closest('[data-lead-delete]') : null;
+        const employeeBtn = ev.target && ev.target.closest ? ev.target.closest('[data-employee-delete]') : null;
+        if (leadBtn) {
+          handleDelete('/api/mahekal/leads/' + encodeURIComponent(leadBtn.getAttribute('data-lead-delete')), 'lead');
+        } else if (employeeBtn) {
+          handleDelete('/api/mahekal/employees/' + encodeURIComponent(employeeBtn.getAttribute('data-employee-delete')), 'empleado');
+        }
+      });
 
       els.searchInput.addEventListener('input', render);
       els.refreshBtn.addEventListener('click', loadData);
