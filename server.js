@@ -8249,7 +8249,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       year: 'numeric',
       timeZone: APP_TIMEZONE
     }).format(new Date());
-  const defaultDeliveryText = String(payload.deliveryText || globalMeta.deliveryText || 'Delivery Winter 2028').trim();
+  const defaultDeliveryText = String(payload.deliveryText || globalMeta.deliveryText || '').trim();
   const brandHeroPath = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'hero-tropical.jpg');
   const defaultSecondaryImage = fs.existsSync(brandHeroPath) ? brandHeroPath : '';
   const defaultPrimaryImage = fs.existsSync(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png'))
