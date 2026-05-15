@@ -8342,7 +8342,6 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
   const allPaymentRows = Array.isArray(payload.payments) ? payload.payments : [];
   const presentationLayout = readViceroyPresentationLayout();
   const pageRects = presentationLayout.pages;
-  const presentationBackdrop = rgb(0.972, 0.957, 0.916);
 
   for (const row of selectedRows) {
     const pages = await outputDoc.copyPages(templateDoc, pageIndices);
@@ -8375,7 +8374,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       String(mergedMeta.secondaryImage || mergedMeta.heroImage || mergedMeta.render || defaultSecondaryImage || '').trim()
     ) || defaultSecondaryImage;
 
-    drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2), backgroundColor: presentationBackdrop });
+    drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
     drawViceroyPresentationField(page1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
 
     drawViceroyPresentationField(page2, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'left' });
@@ -8400,10 +8399,6 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment3, paymentRows[3] && paymentRows[3].value ? paymentRows[3].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.uponDelivery, paymentRows[4] && paymentRows[4].value ? paymentRows[4].value : '', { fontSize: 8.2, align: 'left' });
 
-    drawViceroyPresentationField(page5, fontBold, pageRects.page5.unit, unit, { fontSize: 9.6, align: 'left' });
-    drawViceroyPresentationField(page5, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
-    drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, sqftText, { fontSize: 9.0, align: 'left' });
-
     try {
       const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
       if (primaryImage) {
@@ -8423,6 +8418,10 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
         log(`No se pudo insertar imagen secundaria de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
       }
     }
+
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.unit, unit, { fontSize: 9.6, align: 'left' });
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, sqftText, { fontSize: 9.0, align: 'left' });
   }
 
   return Buffer.from(await outputDoc.save());
