@@ -9,6 +9,7 @@ process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
 const puppeteer = require('puppeteer');
 const XLSX = require('xlsx');
 const { PDFDocument, StandardFonts, rgb, PDFName } = require('pdf-lib');
+const fontkit = require('fontkit');
 const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
 const session = require('express-session');
@@ -228,8 +229,11 @@ const VICEROY_TIPOLOGIA_CROPS_ROOT_PATH = path.join(DATA_DIR, 'viceroy-tipologia
 const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto', 'viceroy-tipologias-crops.json');
 const VICEROY_TIPOLOGIA_THUMBS_DIR = path.join(VICEROY_PILOTO_DATA_DIR, 'tipologia-thumbs');
 const VICEROY_SPECIAL_YELLOW_UNITS_PATH = path.join(DATA_DIR, 'viceroy-special-yellow-units.json');
-const VICEROY_PRESENTATION_TEMPLATE_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-base.pdf');
+const VICEROY_PRESENTATION_TEMPLATE_ES_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-es.pdf');
+const VICEROY_PRESENTATION_TEMPLATE_EN_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-en.pdf');
 const VICEROY_PRESENTATION_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout.json');
+const VICEROY_PRESENTATION_FONT_REGULAR_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-REGULAR-TRIAL.OTF');
+const VICEROY_PRESENTATION_FONT_MEDIUM_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-MEDIUM-TRIAL.OTF');
 const VICEROY_PRESENTATION_MAX_UNITS = 5;
 const DEFAULT_VICEROY_SPECIAL_YELLOW_UNITS = [
   '003', '004', '039', '035', '040', '042', '045', '054', '056',
@@ -6811,6 +6815,12 @@ function normalizeViceroyPresentationUrl(source) {
   return '';
 }
 
+function normalizeViceroyPresentationLanguage(value) {
+  const raw = String(value == null ? '' : value).trim().toLowerCase();
+  if (raw === 'en' || raw === 'english' || raw === 'ing' || raw === 'ingles') return 'en';
+  return 'es';
+}
+
 function parseViceroyPresentationMaybeJson(value) {
   if (!value) return null;
   if (typeof value === 'object') return value;
@@ -6926,23 +6936,31 @@ async function embedViceroyPresentationImage(pdfDoc, source) {
 
 function drawImageContain(page, embeddedImage, rect, padding = 6) {
   if (!embeddedImage || !rect) return;
-  const width = Math.max(1, Number(rect.width) || 0);
-  const height = Math.max(1, Number(rect.height) || 0);
+  const box = getContainBox(rect, embeddedImage.width || rect.width || 1, embeddedImage.height || rect.height || 1, padding);
+  page.drawImage(embeddedImage, {
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height
+  });
+}
+
+function getContainBox(rect, sourceWidth, sourceHeight, padding = 0) {
+  const width = Math.max(1, Number(rect && rect.width) || 0);
+  const height = Math.max(1, Number(rect && rect.height) || 0);
   const innerWidth = Math.max(1, width - padding * 2);
   const innerHeight = Math.max(1, height - padding * 2);
-  const imageWidth = embeddedImage.width || innerWidth;
-  const imageHeight = embeddedImage.height || innerHeight;
+  const imageWidth = Math.max(1, Number(sourceWidth) || innerWidth);
+  const imageHeight = Math.max(1, Number(sourceHeight) || innerHeight);
   const scale = Math.min(innerWidth / imageWidth, innerHeight / imageHeight);
   const drawWidth = Math.max(1, imageWidth * scale);
   const drawHeight = Math.max(1, imageHeight * scale);
-  const x = rect.x + padding + (innerWidth - drawWidth) / 2;
-  const y = rect.y + padding + (innerHeight - drawHeight) / 2;
-  page.drawImage(embeddedImage, {
-    x,
-    y,
+  return {
+    x: rect.x + padding + (innerWidth - drawWidth) / 2,
+    y: rect.y + padding + (innerHeight - drawHeight) / 2,
     width: drawWidth,
     height: drawHeight
-  });
+  };
 }
 
 function drawViceroyPresentationField(page, font, rect, text, options = {}) {
@@ -7065,6 +7083,36 @@ function readViceroyPresentationFloorData() {
   return floorsData;
 }
 
+function readViceroyPresentationFloorCandidates() {
+  const floorDirs = getDevelopmentFloorSearchDirs('viceroy-piloto');
+  const out = [];
+  floorDirs.forEach((dir, sourcePriority) => {
+    const files = listFloorJsonFiles(dir);
+    files.forEach((fileName) => {
+      const fullPath = path.join(dir, fileName);
+      try {
+        const raw = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+        const rawDevSlug = String(raw && raw.developmentSlug || '').trim().toLowerCase();
+        if (rawDevSlug && rawDevSlug !== 'viceroy-piloto') return;
+        const payloadFloors = Array.isArray(raw)
+          ? raw
+          : (raw && Array.isArray(raw.floors) ? raw.floors : (raw && raw.imageDataUrl ? [raw] : []));
+        if (!payloadFloors.length) return;
+        payloadFloors.forEach((floor, floorIndex) => {
+          out.push({
+            floor,
+            fileName,
+            fullPath,
+            sourcePriority,
+            floorIndex
+          });
+        });
+      } catch {}
+    });
+  });
+  return out;
+}
+
 function buildViceroyPresentationInventoryStatusMap() {
   const candidates = resolvePreferredViceroyInventoryCandidates();
   let rows = [];
@@ -7098,134 +7146,99 @@ function buildViceroyPresentationInventoryStatusMap() {
 async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, font = null) {
   const target = unitKey(selectedUnit);
   if (!target || !rect) return;
-  const floorsData = readViceroyPresentationFloorData();
-  const floorCandidates = (Array.isArray(floorsData.floors) ? floorsData.floors : [])
-    .filter((item) => Array.isArray(item && item.zones) && item.zones.some((zone) => unitKey(zone && zone.label) === target))
+  const floorCandidates = readViceroyPresentationFloorCandidates()
+    .filter((entry) => Array.isArray(entry && entry.floor && entry.floor.zones) && entry.floor.zones.some((zone) => unitKey(zone && zone.label) === target))
     .sort((a, b) => {
-      const aZones = Array.isArray(a && a.zones) ? a.zones.length : 0;
-      const bZones = Array.isArray(b && b.zones) ? b.zones.length : 0;
+      const aZones = Array.isArray(a && a.floor && a.floor.zones) ? a.floor.zones.length : 0;
+      const bZones = Array.isArray(b && b.floor && b.floor.zones) ? b.floor.zones.length : 0;
       if (aZones !== bZones) return bZones - aZones;
-      const aW = Number(a && a.imageWidth || 0);
-      const bW = Number(b && b.imageWidth || 0);
+      const aW = Number(a && a.floor && a.floor.imageWidth || 0);
+      const bW = Number(b && b.floor && b.floor.imageWidth || 0);
       if (aW !== bW) return bW - aW;
       return 0;
     });
-  const floor = floorCandidates[0] || null;
-  const floorImageSource = getViceroyPresentationFloorImageSource(floor);
-  if (!floor || !floorImageSource || !Array.isArray(floor.zones) || !floor.zones.length) return;
+  const selectedFloor = floorCandidates[0] ? floorCandidates[0].floor : null;
+  const floorImageSource = getViceroyPresentationFloorImageSource(selectedFloor);
+  if (!selectedFloor || !floorImageSource || !Array.isArray(selectedFloor.zones) || !selectedFloor.zones.length) return;
 
   const inventoryStatusMap = buildViceroyPresentationInventoryStatusMap();
-  let renderedDataUrl = '';
-  try {
-    const browser = await getSharedPdfBrowser();
-    const pg = await browser.newPage();
-    try {
-      const width = Math.max(1, Math.round(Number(floor.imageWidth) || 1200));
-      const height = Math.max(1, Math.round(Number(floor.imageHeight) || 800));
-      const selectedMap = { [target]: { label: target } };
-      const invKeys = Array.from(inventoryStatusMap.keys());
-      const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-        html,body{margin:0;padding:0;background:#fff;overflow:hidden}
-        canvas{display:block}
-      </style></head><body>
-      <canvas id="c" width="${width}" height="${height}"></canvas>
-      <script>
-        (function(){
-          const fp = ${JSON.stringify({
-            imageDataUrl: floorImageSource,
-            imageWidth: width,
-            imageHeight: height,
-            zones: (floor.zones || []).map((z) => ({ label: z.label, points: z.points })),
-            selectedMap,
-            invKeys
-          })};
-          function unitKey(s){
-            const raw=String(s||'').trim().toUpperCase().replace(/\\s+/g,'');
-            if(!raw)return'';
-            const nc=raw.replace(/([0-9])[IL]([0-9]|$)/g,'$11$2').replace(/(^|0)[IL]([0-9])/g,'$11$2');
-            if(/^\\d+$/.test(nc)){const n=String(Number(nc));return n==='NaN'?nc:n;}
-            const m=nc.match(/^0*(\\d+)([A-Z]+)?$/);
-            if(m){const n=String(Number(m[1]));return n==='NaN'?nc:(n+(m[2]||''));}
-            return nc;
-          }
-          const img = new Image();
-          img.onload = function(){
-            const c = document.getElementById('c');
-            const ctx = c.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, c.width, c.height);
-            ctx.drawImage(img, 0, 0, c.width, c.height);
-            const invSet = {};
-            (fp.invKeys || []).forEach(function(k){ invSet[unitKey(k)] = true; });
-            (fp.zones || []).forEach(function(z){
-              const uk = unitKey(z.label);
-              const sel = fp.selectedMap[uk];
-              const pts = Array.isArray(z.points) ? z.points : [];
-              if (pts.length < 3) return;
-              ctx.beginPath();
-              ctx.moveTo(pts[0][0], pts[0][1]);
-              for (let i = 1; i < pts.length; i += 1) ctx.lineTo(pts[i][0], pts[i][1]);
-              ctx.closePath();
-              if (sel) {
-                ctx.fillStyle = 'rgba(77,189,116,0.62)';
-                ctx.fill();
-                ctx.strokeStyle = '#ffe600';
-                ctx.lineWidth = Math.max(2, c.width / 400);
-                ctx.stroke();
-                const cx = pts.reduce(function(s,p){ return s + Number(p[0] || 0); }, 0) / pts.length;
-                const cy = pts.reduce(function(s,p){ return s + Number(p[1] || 0); }, 0) / pts.length;
-                const fs = Math.max(14, Math.min(40, Math.round(c.width / 30)));
-                ctx.font = 'bold ' + fs + 'px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-                ctx.lineWidth = fs * 0.35;
-                ctx.strokeText(uk, cx, cy);
-                ctx.fillStyle = '#111';
-                ctx.fillText(uk, cx, cy);
-              } else if (!invSet[uk]) {
-                ctx.fillStyle = 'rgba(20,20,20,0.82)';
-                ctx.fill();
-              } else {
-                ctx.fillStyle = 'rgba(255,255,255,0.94)';
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(54,54,63,0.55)';
-                ctx.lineWidth = 1.2;
-                ctx.stroke();
-              }
-            });
-            window.__pdfReady = true;
-          };
-          img.onerror = function(){ window.__pdfReady = true; };
-          img.src = fp.imageDataUrl;
-        })();
-      <\/script>
-      </body></html>`;
-      await pg.setViewport({ width: Math.min(1800, width), height: Math.min(1800, height), deviceScaleFactor: 1 });
-      await pg.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      await pg.waitForFunction(() => window.__pdfReady === true, { timeout: 90000 });
-      renderedDataUrl = await pg.evaluate(() => {
-        const canvas = document.getElementById('c');
-        return canvas ? canvas.toDataURL('image/png') : '';
-      });
-    } finally {
-      try { await pg.close(); } catch {}
-    }
-  } catch (err) {
-    log(`No se pudo renderizar el mapa de Viceroy en canvas para ${target}: ${err && err.message ? err.message : err}`);
-  }
+  const baseImage = await embedViceroyPresentationImage(pdfDoc, floorImageSource);
+  if (!baseImage) return;
+  const box = getContainBox(rect, Number(selectedFloor.imageWidth) || baseImage.width || rect.width, Number(selectedFloor.imageHeight) || baseImage.height || rect.height, 0);
+  page.drawRectangle({
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    color: rgb(1, 1, 1),
+    borderWidth: 0
+  });
+  page.drawImage(baseImage, {
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height
+  });
 
-  if (!renderedDataUrl) return;
-  const embeddedImage = await embedViceroyPresentationImage(pdfDoc, renderedDataUrl);
-  if (!embeddedImage) return;
-  drawImageContain(page, embeddedImage, rect, 0);
+  const scaleX = box.width / Math.max(1, Number(selectedFloor.imageWidth) || baseImage.width || 1);
+  const scaleY = box.height / Math.max(1, Number(selectedFloor.imageHeight) || baseImage.height || 1);
+  const toPdfPoint = (pt) => ({
+    x: box.x + Number(pt && pt[0] || 0) * scaleX,
+    y: box.y + box.height - Number(pt && pt[1] || 0) * scaleY
+  });
+
+  selectedFloor.zones.forEach((zone) => {
+    const pts = Array.isArray(zone && zone.points) ? zone.points : [];
+    if (pts.length < 3) return;
+    const uk = unitKey(zone.label);
+    const zonePoints = pts.map((pt) => toPdfPoint(pt));
+    const isSelected = uk === target;
+    const isInventory = inventoryStatusMap.has(uk);
+    const isBlack = !isSelected && !isInventory;
+    if (isBlack) {
+      page.drawPolygon(zonePoints, {
+        color: rgb(0.05, 0.05, 0.05),
+        opacity: 0.95,
+        borderWidth: 0
+      });
+      return;
+    }
+    page.drawPolygon(zonePoints, {
+      color: isSelected ? rgb(0.58, 0.86, 0.64) : rgb(1, 1, 1),
+      opacity: isSelected ? 0.72 : 0.98,
+      borderColor: isSelected ? rgb(0.89, 0.73, 0.12) : rgb(0.30, 0.30, 0.34),
+      borderWidth: isSelected ? 2 : 1.2,
+      borderOpacity: 1
+    });
+    if (isSelected) {
+      const centroid = zonePoints.reduce((acc, point) => {
+        acc.x += Number(point.x) || 0;
+        acc.y += Number(point.y) || 0;
+        return acc;
+      }, { x: 0, y: 0 });
+      const cx = centroid.x / zonePoints.length;
+      const cy = centroid.y / zonePoints.length;
+      const labelSize = Math.max(14, Math.min(38, Math.round(box.width / 26)));
+      if (font) {
+        const label = String(uk || '').trim();
+        const labelWidth = font.widthOfTextAtSize(label, labelSize);
+        page.drawText(label, {
+          x: cx - (labelWidth / 2),
+          y: cy - (labelSize / 3),
+          size: labelSize,
+          font,
+          color: rgb(0.08, 0.08, 0.08)
+        });
+      }
+    }
+  });
 }
 
 async function readViceroyPresentationTemplatePageSizes() {
-  if (!fs.existsSync(VICEROY_PRESENTATION_TEMPLATE_PATH)) {
+  if (!fs.existsSync(VICEROY_PRESENTATION_TEMPLATE_ES_PATH)) {
     throw new Error('No se encontró la plantilla PDF de presentación de Viceroy');
   }
-  const templateBytes = fs.readFileSync(VICEROY_PRESENTATION_TEMPLATE_PATH);
+  const templateBytes = fs.readFileSync(VICEROY_PRESENTATION_TEMPLATE_ES_PATH);
   const templateDoc = await PDFDocument.load(templateBytes);
   return templateDoc.getPages().map((page, index) => {
     const size = page.getSize();
@@ -8480,15 +8493,20 @@ async function buildViceroyReservationPdfBuffer(payload) {
 }
 
 async function buildViceroyPresentationPdfBuffer(payload = {}) {
-  if (!fs.existsSync(VICEROY_PRESENTATION_TEMPLATE_PATH)) {
-    throw new Error('No se encontró la plantilla PDF de presentación de Viceroy');
+  const language = normalizeViceroyPresentationLanguage(payload.language || payload.lang);
+  const templatePath = language === 'en' ? VICEROY_PRESENTATION_TEMPLATE_EN_PATH : VICEROY_PRESENTATION_TEMPLATE_ES_PATH;
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`No se encontró la plantilla PDF de presentación de Viceroy (${language.toUpperCase()})`);
   }
 
-  const templateBytes = fs.readFileSync(VICEROY_PRESENTATION_TEMPLATE_PATH);
+  const templateBytes = fs.readFileSync(templatePath);
   const templateDoc = await PDFDocument.load(templateBytes);
   const outputDoc = await PDFDocument.create();
-  const fontRegular = await outputDoc.embedFont(StandardFonts.TimesRoman);
-  const fontBold = await outputDoc.embedFont(StandardFonts.TimesRomanBold);
+  outputDoc.registerFontkit(fontkit);
+  const fontRegularBytes = fs.readFileSync(VICEROY_PRESENTATION_FONT_REGULAR_PATH);
+  const fontMediumBytes = fs.readFileSync(VICEROY_PRESENTATION_FONT_MEDIUM_PATH);
+  const fontRegular = await outputDoc.embedFont(fontRegularBytes);
+  const fontBold = await outputDoc.embedFont(fontMediumBytes);
   const pageCount = templateDoc.getPageCount();
   const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
   const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
@@ -8580,7 +8598,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, sqftText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.bathrooms, bathroomsText, { fontSize: 8.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 9.3, align: 'center' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 9.3, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.contractSigning, paymentRows[0] && paymentRows[0].value ? paymentRows[0].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment1, paymentRows[1] && paymentRows[1].value ? paymentRows[1].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
@@ -12521,7 +12539,9 @@ app.post('/api/hoja-reserva-simca/render-pdf', async (req, res) => {
 });
 
 app.get('/viceroy/inicio/presentacion/pdf', (req, res) => {
-  res.sendFile(VICEROY_PRESENTATION_TEMPLATE_PATH);
+  const lang = normalizeViceroyPresentationLanguage(req.query && req.query.lang);
+  const templatePath = lang === 'en' ? VICEROY_PRESENTATION_TEMPLATE_EN_PATH : VICEROY_PRESENTATION_TEMPLATE_ES_PATH;
+  res.sendFile(templatePath);
 });
 
 app.get('/viceroy/registros', (req, res) => {
@@ -14321,12 +14341,13 @@ app.post('/api/viceroy/presentacion-generador/layout', requireBackendFeature('vi
 app.post('/api/viceroy/presentacion-generador/render', requireBackendFeature('viceroy', 'generadorPresentacion'), async (req, res) => {
   try {
     const payload = req.body && typeof req.body === 'object' ? req.body : {};
-    const pdfBuffer = await buildViceroyPresentationPdfBuffer(payload);
-    const requestedUnits = Array.isArray(payload.units)
-      ? payload.units.map((item) => String(item || '').trim()).filter(Boolean)
-      : [String(payload.unit || '').trim()].filter(Boolean);
-    const fileNameUnits = requestedUnits.slice(0, VICEROY_PRESENTATION_MAX_UNITS).join('-');
-    const fileName = `viceroy-presentacion-${fileNameUnits || 'unidad'}.pdf`;
+      const pdfBuffer = await buildViceroyPresentationPdfBuffer(payload);
+      const lang = normalizeViceroyPresentationLanguage(payload.language || payload.lang);
+      const requestedUnits = Array.isArray(payload.units)
+        ? payload.units.map((item) => String(item || '').trim()).filter(Boolean)
+        : [String(payload.unit || '').trim()].filter(Boolean);
+      const fileNameUnits = requestedUnits.slice(0, VICEROY_PRESENTATION_MAX_UNITS).join('-');
+      const fileName = `viceroy-presentacion-${lang}-${fileNameUnits || 'unidad'}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     return res.send(pdfBuffer);

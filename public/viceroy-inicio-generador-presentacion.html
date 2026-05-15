@@ -440,6 +440,13 @@
               <label for="brokerName">Nombre de bróker</label>
               <input id="brokerName" class="input" type="text" placeholder="Nombre de bróker">
             </div>
+            <div class="field">
+              <label for="pdfLanguage">Idioma del PDF</label>
+              <select id="pdfLanguage" class="select">
+                <option value="es" selected>Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
           </div>
           <div class="actions">
             <button id="generateBtn" class="btn primary" type="button">Generar PDF</button>
@@ -533,6 +540,7 @@
         pageSizes: new Map(),
         layoutPreviewPage: 'page1',
         layoutZoom: 0.65,
+        language: 'es',
         layoutPdf: null,
         layoutPdfLoading: null,
         layoutRenderToken: 0
@@ -545,6 +553,7 @@
         clientName: document.getElementById('clientName'),
         agentName: document.getElementById('agentName'),
         brokerName: document.getElementById('brokerName'),
+        pdfLanguage: document.getElementById('pdfLanguage'),
         generateBtn: document.getElementById('generateBtn'),
         clearBtn: document.getElementById('clearBtn'),
         status: document.getElementById('status'),
@@ -1155,6 +1164,7 @@
               clientName: clientName,
               agentName: agentName,
               brokerName: brokerName,
+              language: String(els.pdfLanguage.value || 'es'),
               presentationDate: new Date().toLocaleDateString('es-MX', {
                 day: '2-digit',
                 month: 'long',
