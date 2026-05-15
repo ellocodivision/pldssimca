@@ -7115,77 +7115,110 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
   if (!floor || !floorImageSource || !Array.isArray(floor.zones) || !floor.zones.length) return;
 
   const inventoryStatusMap = buildViceroyPresentationInventoryStatusMap();
-  const embeddedImage = await embedViceroyPresentationImage(pdfDoc, floorImageSource);
-  if (!embeddedImage) return;
-
-  const imageWidth = Number(embeddedImage.width || floor.imageWidth || 0) || 1;
-  const imageHeight = Number(embeddedImage.height || floor.imageHeight || 0) || 1;
-  const scale = Math.min(rect.width / imageWidth, rect.height / imageHeight);
-  const drawWidth = imageWidth * scale;
-  const drawHeight = imageHeight * scale;
-  const drawX = rect.x + (rect.width - drawWidth) / 2;
-  const drawY = rect.y + (rect.height - drawHeight) / 2;
-
-  page.drawImage(embeddedImage, {
-    x: drawX,
-    y: drawY,
-    width: drawWidth,
-    height: drawHeight
-  });
-
-  const colorFor = (status, unit) => {
-    if (unit === target) return { fill: rgb(0.301, 0.741, 0.455), stroke: rgb(1, 0.902, 0) };
-    if (status === 'vendida') return { fill: rgb(0.839, 0.325, 0.325), stroke: rgb(0.839, 0.325, 0.325) };
-    if (status === 'apartado') return { fill: rgb(1, 0.882, 0.541), stroke: rgb(1, 0.882, 0.541) };
-    return { fill: rgb(0.255, 0.675, 0.388), stroke: rgb(0.255, 0.675, 0.388) };
-  };
-
-  for (const zone of floor.zones) {
-    const points = Array.isArray(zone && zone.points) ? zone.points : [];
-    if (!points.length) continue;
-    const unit = unitKey(zone && zone.label);
-    const status = String((inventoryStatusMap.get(unit) || {}).status || '').trim().toLowerCase();
-    const hasInventoryMatch = inventoryStatusMap.has(unit);
-    const palette = unit === target
-      ? colorFor(status, unit)
-      : (!hasInventoryMatch
-        ? { fill: rgb(0, 0, 0), stroke: rgb(0, 0, 0) }
-        : colorFor(status, unit));
-    const path = points.map((point, index) => {
-      const px = Number(point && point[0] || 0);
-      const py = Number(point && point[1] || 0);
-      const x = drawX + (px * scale);
-      const y = drawY + drawHeight - (py * scale);
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ') + ' Z';
-
-    page.drawSvgPath(path, {
-      color: palette.fill,
-      opacity: unit === target ? 0.72 : (hasInventoryMatch ? 0.34 : 0.96),
-      borderColor: palette.stroke,
-      borderWidth: unit === target ? 3.4 : 1.3
-    });
-
-    if (unit === target && font) {
-      const transformedPoints = points.map((point) => {
-        const px = Number(point && point[0] || 0);
-        const py = Number(point && point[1] || 0);
-        return [
-          drawX + (px * scale),
-          drawY + drawHeight - (py * scale)
-        ];
+  let renderedDataUrl = '';
+  try {
+    const browser = await getSharedPdfBrowser();
+    const pg = await browser.newPage();
+    try {
+      const width = Math.max(1, Math.round(Number(floor.imageWidth) || 1200));
+      const height = Math.max(1, Math.round(Number(floor.imageHeight) || 800));
+      const selectedMap = { [target]: { label: target } };
+      const invKeys = Array.from(inventoryStatusMap.keys());
+      const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+        html,body{margin:0;padding:0;background:#fff;overflow:hidden}
+        canvas{display:block}
+      </style></head><body>
+      <canvas id="c" width="${width}" height="${height}"></canvas>
+      <script>
+        (function(){
+          const fp = ${JSON.stringify({
+            imageDataUrl: floorImageSource,
+            imageWidth: width,
+            imageHeight: height,
+            zones: (floor.zones || []).map((z) => ({ label: z.label, points: z.points })),
+            selectedMap,
+            invKeys
+          })};
+          function unitKey(s){
+            const raw=String(s||'').trim().toUpperCase().replace(/\\s+/g,'');
+            if(!raw)return'';
+            const nc=raw.replace(/([0-9])[IL]([0-9]|$)/g,'$11$2').replace(/(^|0)[IL]([0-9])/g,'$11$2');
+            if(/^\\d+$/.test(nc)){const n=String(Number(nc));return n==='NaN'?nc:n;}
+            const m=nc.match(/^0*(\\d+)([A-Z]+)?$/);
+            if(m){const n=String(Number(m[1]));return n==='NaN'?nc:(n+(m[2]||''));}
+            return nc;
+          }
+          const img = new Image();
+          img.onload = function(){
+            const c = document.getElementById('c');
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            const invSet = {};
+            (fp.invKeys || []).forEach(function(k){ invSet[unitKey(k)] = true; });
+            (fp.zones || []).forEach(function(z){
+              const uk = unitKey(z.label);
+              const sel = fp.selectedMap[uk];
+              const pts = Array.isArray(z.points) ? z.points : [];
+              if (pts.length < 3) return;
+              ctx.beginPath();
+              ctx.moveTo(pts[0][0], pts[0][1]);
+              for (let i = 1; i < pts.length; i += 1) ctx.lineTo(pts[i][0], pts[i][1]);
+              ctx.closePath();
+              if (sel) {
+                ctx.fillStyle = 'rgba(77,189,116,0.62)';
+                ctx.fill();
+                ctx.strokeStyle = '#ffe600';
+                ctx.lineWidth = Math.max(2, c.width / 400);
+                ctx.stroke();
+                const cx = pts.reduce(function(s,p){ return s + Number(p[0] || 0); }, 0) / pts.length;
+                const cy = pts.reduce(function(s,p){ return s + Number(p[1] || 0); }, 0) / pts.length;
+                const fs = Math.max(14, Math.min(40, Math.round(c.width / 30)));
+                ctx.font = 'bold ' + fs + 'px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+                ctx.lineWidth = fs * 0.35;
+                ctx.strokeText(uk, cx, cy);
+                ctx.fillStyle = '#111';
+                ctx.fillText(uk, cx, cy);
+              } else if (!invSet[uk]) {
+                ctx.fillStyle = 'rgba(20,20,20,0.82)';
+                ctx.fill();
+              } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.94)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(54,54,63,0.55)';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+              }
+            });
+            window.__pdfReady = true;
+          };
+          img.onerror = function(){ window.__pdfReady = true; };
+          img.src = fp.imageDataUrl;
+        })();
+      <\/script>
+      </body></html>`;
+      await pg.setViewport({ width: Math.min(1800, width), height: Math.min(1800, height), deviceScaleFactor: 1 });
+      await pg.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await pg.waitForFunction(() => window.__pdfReady === true, { timeout: 90000 });
+      renderedDataUrl = await pg.evaluate(() => {
+        const canvas = document.getElementById('c');
+        return canvas ? canvas.toDataURL('image/png') : '';
       });
-      const cx = transformedPoints.reduce((acc, pt) => acc + pt[0], 0) / transformedPoints.length;
-      const cy = transformedPoints.reduce((acc, pt) => acc + pt[1], 0) / transformedPoints.length;
-      page.drawText(zone && zone.label ? String(zone.label) : target, {
-        x: cx - 5,
-        y: cy - 5,
-        size: 12,
-        font,
-        color: rgb(0.08, 0.08, 0.08)
-      });
+    } finally {
+      try { await pg.close(); } catch {}
     }
+  } catch (err) {
+    log(`No se pudo renderizar el mapa de Viceroy en canvas para ${target}: ${err && err.message ? err.message : err}`);
   }
+
+  if (!renderedDataUrl) return;
+  const embeddedImage = await embedViceroyPresentationImage(pdfDoc, renderedDataUrl);
+  if (!embeddedImage) return;
+  drawImageContain(page, embeddedImage, rect, 0);
 }
 
 async function readViceroyPresentationTemplatePageSizes() {
