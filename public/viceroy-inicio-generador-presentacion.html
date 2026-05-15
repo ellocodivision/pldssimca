@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viceroy · Generador de Presentación</title>
+  <style>
+    :root {
+      --bg: #f7f2e8;
+      --panel: rgba(255, 255, 255, 0.94);
+      --card: #ffffff;
+      --ink: #1d1f23;
+      --muted: #61656c;
+      --line: rgba(117, 104, 77, 0.18);
+      --accent: #ffe816;
+      --accent-ink: #18191d;
+      --shadow: 0 18px 48px rgba(59, 46, 21, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(255, 232, 22, 0.18), transparent 22%),
+        radial-gradient(circle at bottom left, rgba(155, 155, 139, 0.14), transparent 24%),
+        linear-gradient(180deg, #fbf8f1 0%, var(--bg) 100%);
+    }
+
+    .wrap {
+      width: min(1460px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 22px 0 34px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid #bdb8a9;
+      background: #fff;
+      color: #111;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      border-radius: 20px;
+      padding: 18px 20px 16px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -40% auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,232,22,0.22), transparent 66%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: #75705e;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
+
+    .sub {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 860px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(420px, 520px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .section-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #5d6054;
+      letter-spacing: 0.02em;
+    }
+
+    .input,
+    .search,
+    .select {
+      width: 100%;
+      border: 1px solid #cbc5b3;
+      border-radius: 12px;
+      background: #fff;
+      color: #1d1f23;
+      font: inherit;
+      min-height: 44px;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .search {
+      min-height: 42px;
+      padding: 10px 12px;
+    }
+
+    .select {
+      min-height: 340px;
+      padding: 8px;
+    }
+
+    .input:focus,
+    .search:focus,
+    .select:focus {
+      border-color: #b6ab60;
+      box-shadow: 0 0 0 3px rgba(255, 232, 22, 0.18);
+    }
+
+    .select option {
+      padding: 6px 8px;
+      line-height: 1.4;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .count-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #d8d2c2;
+      border-radius: 999px;
+      background: #fff;
+      padding: 8px 12px;
+      color: #33353c;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge strong { font-size: 13px; }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid #bdb8a9;
+      background: #fff;
+      color: #111;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn.primary {
+      border-color: #c8b400;
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+
+    .preview {
+      display: grid;
+      gap: 12px;
+    }
+
+    .preview-card {
+      border: 1px solid #ddd6c7;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff 0%, #fcfbf6 100%);
+      padding: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+
+    .preview-card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .preview-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .preview-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #ede8db;
+      font-size: 13px;
+    }
+
+    .preview-list li:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .preview-list strong {
+      color: #40434c;
+      font-weight: 700;
+    }
+
+    .helper {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .status {
+      min-height: 20px;
+      margin: 0;
+      font-size: 13px;
+      color: #5b6156;
+    }
+
+    .empty {
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      border: 1px dashed #d1cab7;
+      border-radius: 16px;
+      color: var(--muted);
+      padding: 20px;
+      background: rgba(255,255,255,0.66);
+    }
+
+    @media (max-width: 1080px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .select {
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
+      <a class="back" href="/viceroy/inicio/excel">Abrir Excel</a>
+    </div>
+
+    <section class="hero">
+      <p class="eyebrow">Viceroy Residences Playa del Carmen</p>
+      <h1>Generador de Presentación</h1>
+      <p class="sub">
+        Selecciona una unidad desde el Excel maestro, captura cliente, agente y bróker, y el sistema genera el PDF base
+        con los datos colocados en las zonas definidas. Si eliges varias unidades, se genera un único PDF con una copia de la presentación por cada unidad.
+      </p>
+    </section>
+
+    <section class="grid">
+      <section class="panel stack">
+        <div>
+          <h2 class="section-title">1. Unidades</h2>
+          <p class="section-note">El contenido del desplegable sale directamente del Excel de tipologías.</p>
+          <input id="searchInput" class="search" type="search" placeholder="Buscar unidad, nivel o tipología...">
+          <div class="count-row">
+            <span id="unitCount">Cargando unidades...</span>
+            <span class="badge"><strong>Max</strong> 5 unidades</span>
+          </div>
+          <select id="unitSelect" class="select" multiple aria-label="Selecciona hasta cinco unidades"></select>
+          <p class="helper">Tip: usa <code>Cmd</code> o <code>Ctrl</code> para seleccionar varias unidades en el mismo PDF.</p>
+        </div>
+
+        <div>
+          <h2 class="section-title">2. Datos del cliente</h2>
+          <p class="section-note">Estos tres campos sí los captura el usuario. La fecha se toma automáticamente al generar.</p>
+          <div class="form-grid">
+            <div class="field">
+              <label for="clientName">Nombre del cliente</label>
+              <input id="clientName" class="input" type="text" placeholder="Nombre del cliente">
+            </div>
+            <div class="field">
+              <label for="agentName">Nombre de agente</label>
+              <input id="agentName" class="input" type="text" placeholder="Nombre de agente">
+            </div>
+            <div class="field">
+              <label for="brokerName">Nombre de bróker</label>
+              <input id="brokerName" class="input" type="text" placeholder="Nombre de bróker">
+            </div>
+          </div>
+          <div class="actions">
+            <button id="generateBtn" class="btn primary" type="button">Generar PDF</button>
+            <button id="clearBtn" class="btn" type="button">Limpiar</button>
+            <span id="status" class="status" aria-live="polite"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview">
+        <div class="preview-card">
+          <h3>Vista previa de unidad</h3>
+          <div id="previewEmpty" class="empty">Selecciona una unidad para ver sus datos clave antes de generar el PDF.</div>
+          <ul id="previewList" class="preview-list" hidden></ul>
+        </div>
+        <div class="preview-card">
+          <h3>Flujo del módulo</h3>
+          <ul class="preview-list">
+            <li><strong>Excel</strong><span>Origen de unidades y datos técnicos</span></li>
+            <li><strong>JSON</strong><span>Fecha, pagos e imágenes adicionales</span></li>
+            <li><strong>PDF</strong><span>Plantilla base con coordenadas fijas</span></li>
+            <li><strong>Salida</strong><span>PDF final listo para descargar</span></li>
+          </ul>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const state = {
+        units: [],
+        filteredUnits: [],
+        unitMap: new Map(),
+        selectedUnits: []
+      };
+
+      const els = {
+        searchInput: document.getElementById('searchInput'),
+        unitSelect: document.getElementById('unitSelect'),
+        unitCount: document.getElementById('unitCount'),
+        clientName: document.getElementById('clientName'),
+        agentName: document.getElementById('agentName'),
+        brokerName: document.getElementById('brokerName'),
+        generateBtn: document.getElementById('generateBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        status: document.getElementById('status'),
+        previewEmpty: document.getElementById('previewEmpty'),
+        previewList: document.getElementById('previewList')
+      };
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function parseFileName(disposition, fallback) {
+        const raw = String(disposition || '');
+        const match = raw.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"/i);
+        const encoded = match ? (match[1] || match[2] || '') : '';
+        if (!encoded) return fallback;
+        try {
+          return decodeURIComponent(encoded);
+        } catch {
+          return encoded;
+        }
+      }
+
+      function unitLabel(unit) {
+        return String(unit && (unit.display || unit.label || unit.unidad) || '').trim();
+      }
+
+      function selectedValues() {
+        return Array.from(els.unitSelect.selectedOptions || []).map(function (opt) {
+          return String(opt.value || '').trim();
+        }).filter(Boolean);
+      }
+
+      function renderSelect() {
+        const query = String(els.searchInput.value || '').trim().toLowerCase();
+        state.filteredUnits = state.units.filter(function (item) {
+          if (!query) return true;
+          const haystack = [
+            item.unidad,
+            item.level,
+            item.rooms,
+            item.sqft,
+            item.totalM2,
+            item.price,
+            item.pricePerM2,
+            item.display
+          ].join(' ').toLowerCase();
+          return haystack.includes(query);
+        });
+
+        const current = new Set(state.selectedUnits || []);
+        els.unitSelect.innerHTML = state.filteredUnits.map(function (item) {
+          const value = esc(item.unidad);
+          const label = esc(unitLabel(item));
+          const selected = current.has(String(item.unidad || '').trim()) ? ' selected' : '';
+          return '<option value="' + value + '"' + selected + '>' + label + '</option>';
+        }).join('');
+
+        els.unitCount.textContent = state.filteredUnits.length + ' unidades encontradas';
+      }
+
+      function updateSelected() {
+        const values = selectedValues();
+        if (values.length > 5) {
+          values.slice(5).forEach(function (value) {
+            const option = Array.from(els.unitSelect.options).find(function (opt) {
+              return String(opt.value || '') === value;
+            });
+            if (option) option.selected = false;
+          });
+          els.status.textContent = 'Solo puedes seleccionar hasta cinco unidades.';
+        } else {
+          els.status.textContent = values.length ? (values.length + ' unidad' + (values.length === 1 ? '' : 'es') + ' seleccionada' + (values.length === 1 ? '' : 's')) : '';
+        }
+        state.selectedUnits = values.slice(0, 5);
+        renderPreview();
+      }
+
+      function renderPreview() {
+        const first = state.selectedUnits.length ? state.unitMap.get(state.selectedUnits[0]) : null;
+        if (!first) {
+          els.previewEmpty.hidden = false;
+          els.previewList.hidden = true;
+          els.previewList.innerHTML = '';
+          return;
+        }
+
+        const rows = [
+          ['Unidad', first.unidad || 'N/D'],
+          ['Nivel', first.level || 'N/D'],
+          ['Rooms', first.rooms || 'N/D'],
+          ['SQFT', first.sqft || 'N/D'],
+          ['M2', first.totalM2 == null || first.totalM2 === '' ? 'N/D' : first.totalM2],
+          ['Precio', first.price || 'N/D'],
+          ['$/m2', first.pricePerM2 || 'N/D'],
+          ['Plano', first.planLink ? 'Disponible' : 'Sin plano']
+        ];
+
+        els.previewEmpty.hidden = true;
+        els.previewList.hidden = false;
+        els.previewList.innerHTML = rows.map(function (pair) {
+          return '<li><strong>' + esc(pair[0]) + '</strong><span>' + esc(pair[1]) + '</span></li>';
+        }).join('');
+      }
+
+      function normalizeDownloadName(name) {
+        return String(name || '')
+          .replace(/\s+/g, '-')
+          .replace(/[^A-Za-z0-9._-]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80) || 'viceroy-presentacion';
+      }
+
+      async function loadUnits() {
+        els.status.textContent = 'Cargando unidades...';
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/units', {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudieron cargar las unidades');
+          }
+          state.units = Array.isArray(data.units) ? data.units : [];
+          state.unitMap = new Map(state.units.map(function (item) {
+            return [String(item.unidad || '').trim(), item];
+          }));
+          state.filteredUnits = state.units.slice();
+          els.unitCount.textContent = state.units.length + ' unidades cargadas';
+          renderSelect();
+          renderPreview();
+          els.status.textContent = '';
+        } catch (err) {
+          els.unitCount.textContent = '0 unidades';
+          els.status.textContent = err && err.message ? err.message : 'No se pudieron cargar las unidades.';
+          els.previewEmpty.hidden = false;
+          els.previewList.hidden = true;
+        }
+      }
+
+      async function generatePdf() {
+        const units = state.selectedUnits.slice(0, 5);
+        if (!units.length) {
+          els.status.textContent = 'Selecciona al menos una unidad.';
+          return;
+        }
+        const clientName = String(els.clientName.value || '').trim();
+        const agentName = String(els.agentName.value || '').trim();
+        const brokerName = String(els.brokerName.value || '').trim();
+        if (!clientName || !agentName || !brokerName) {
+          els.status.textContent = 'Completa cliente, agente y bróker antes de generar.';
+          return;
+        }
+
+        els.generateBtn.disabled = true;
+        els.generateBtn.textContent = 'Generando...';
+        els.status.textContent = 'Preparando PDF...';
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/render', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              units: units,
+              clientName: clientName,
+              agentName: agentName,
+              brokerName: brokerName,
+              presentationDate: new Date().toLocaleDateString('es-MX', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+              })
+            })
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(function () { return {}; });
+            throw new Error(data && (data.error || data.details) ? (data.error || data.details) : 'No se pudo generar el PDF');
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const downloadedName = normalizeDownloadName(parseFileName(res.headers.get('content-disposition'), 'viceroy-presentacion.pdf'));
+          link.download = /\.pdf$/i.test(downloadedName) ? downloadedName : (downloadedName + '.pdf');
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+          els.status.textContent = 'PDF generado.';
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'No se pudo generar el PDF.';
+        } finally {
+          els.generateBtn.disabled = false;
+          els.generateBtn.textContent = 'Generar PDF';
+        }
+      }
+
+      els.searchInput.addEventListener('input', function () {
+        renderSelect();
+      });
+
+      els.unitSelect.addEventListener('change', updateSelected);
+      els.generateBtn.addEventListener('click', generatePdf);
+      els.clearBtn.addEventListener('click', function () {
+        els.unitSelect.querySelectorAll('option').forEach(function (opt) { opt.selected = false; });
+        els.searchInput.value = '';
+        els.clientName.value = '';
+        els.agentName.value = '';
+        els.brokerName.value = '';
+        state.selectedUnits = [];
+        els.status.textContent = '';
+        renderSelect();
+        updateSelected();
+      });
+
+      loadUnits();
+    })();
+  </script>
+</body>
+</html>

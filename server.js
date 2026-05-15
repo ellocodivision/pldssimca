@@ -228,6 +228,8 @@ const VICEROY_TIPOLOGIA_CROPS_ROOT_PATH = path.join(DATA_DIR, 'viceroy-tipologia
 const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'developments', 'viceroy-piloto', 'viceroy-tipologias-crops.json');
 const VICEROY_TIPOLOGIA_THUMBS_DIR = path.join(VICEROY_PILOTO_DATA_DIR, 'tipologia-thumbs');
 const VICEROY_SPECIAL_YELLOW_UNITS_PATH = path.join(DATA_DIR, 'viceroy-special-yellow-units.json');
+const VICEROY_PRESENTATION_TEMPLATE_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-base.pdf');
+const VICEROY_PRESENTATION_MAX_UNITS = 5;
 const DEFAULT_VICEROY_SPECIAL_YELLOW_UNITS = [
   '003', '004', '039', '035', '040', '042', '045', '054', '056',
   '251', '257', '208', '204', '269', '308', '302', '307', '348',
@@ -327,6 +329,7 @@ const BACKEND_SUBMODULES = {
   ],
   viceroy: [
     { key: 'inicio', label: 'Inicio' },
+    { key: 'generadorPresentacion', label: 'Generador Presentación' },
     { key: 'kpiReservas', label: 'KPI Reservas' },
     { key: 'whisperlist', label: 'Hot Leads' },
     { key: 'mahekalLeads', label: 'Registros Leads Mahekal' },
@@ -349,7 +352,7 @@ const VISIBLE_BACKEND_SUBMODULES = Object.fromEntries(
   Object.entries(BACKEND_SUBMODULES).filter(([moduleKey]) => moduleKey !== 'viceroyPilot')
 );
 const SIMCA_BACKEND_SUBMODULE_KEYS = ['faes', 'forms', 'roi', 'hojaReserva', 'horarios', 'financiamiento', 'tablaPagos'];
-const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'whisperlist', 'mahekalLeads', 'kpiReservas', 'reservas', 'horarios', 'registros', 'tablaPagos'];
+const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'generadorPresentacion', 'whisperlist', 'mahekalLeads', 'kpiReservas', 'reservas', 'horarios', 'registros', 'tablaPagos'];
 
 function getBackendAccessScope(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -6787,6 +6790,182 @@ function normalizeViceroyPlanLink(rawValue) {
   return '';
 }
 
+function formatViceroyPresentationNumber(value, digits = 0) {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  const numeric = Number(String(raw).replace(/[^0-9.\-]/g, ''));
+  if (!Number.isFinite(numeric)) return raw;
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  }).format(numeric);
+}
+
+function normalizeViceroyPresentationUrl(source) {
+  const raw = String(source == null ? '' : source).trim();
+  if (!raw) return '';
+  if (/^data:/i.test(raw)) return raw;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('/')) return `${APP_BASE_URL_NORMALIZED}${raw}`;
+  return '';
+}
+
+function parseViceroyPresentationMaybeJson(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return null;
+  const raw = value.trim();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function collectViceroyPresentationPaymentRows(source, fallbackPrice) {
+  const rows = [];
+  const normalizedSource = source && typeof source === 'object' ? source : {};
+  const basePrice = Number(String(fallbackPrice == null ? '' : fallbackPrice).replace(/[^0-9.\-]/g, ''));
+  const defaultRows = [
+    { label: 'Contract Signing', value: normalizedSource.contractSigning },
+    { label: 'Payment 1', value: normalizedSource.payment1 },
+    { label: 'Payment 2', value: normalizedSource.payment2 },
+    { label: 'Payment 3', value: normalizedSource.payment3 },
+    { label: 'Upon Delivery', value: normalizedSource.uponDelivery }
+  ];
+  if (Array.isArray(normalizedSource.paymentPlan)) {
+    normalizedSource.paymentPlan.slice(0, 5).forEach((item, idx) => {
+      defaultRows[idx] = {
+        label: String(item && item.label != null ? item.label : defaultRows[idx].label || '').trim() || defaultRows[idx].label,
+        value: item && Object.prototype.hasOwnProperty.call(item, 'value') ? item.value : item
+      };
+    });
+  }
+  defaultRows.forEach((row, idx) => {
+    const rawValue = row && Object.prototype.hasOwnProperty.call(row, 'value') ? row.value : '';
+    const numeric = Number(String(rawValue == null ? '' : rawValue).replace(/[^0-9.\-]/g, ''));
+    let rendered = String(rawValue == null ? '' : rawValue).trim();
+    if (!rendered && Number.isFinite(basePrice) && basePrice > 0 && Array.isArray(normalizedSource.paymentPercentages) && Number.isFinite(Number(normalizedSource.paymentPercentages[idx]))) {
+      rendered = `${formatViceroyPresentationNumber(basePrice * Number(normalizedSource.paymentPercentages[idx]) / 100, 0)}`;
+    } else if (!rendered && Number.isFinite(numeric)) {
+      rendered = formatViceroyPresentationNumber(numeric, 0);
+    }
+    rows.push({
+      label: row.label,
+      value: rendered
+    });
+  });
+  return rows;
+}
+
+function inferViceroyPresentationSqft(unitRow) {
+  const source = unitRow && typeof unitRow === 'object' ? unitRow : {};
+  const rawSqft = String(source.sqft == null ? '' : source.sqft).trim();
+  if (rawSqft) return rawSqft;
+  const rawM2 = Number(String(source.totalM2 == null ? '' : source.totalM2).replace(/[^0-9.\-]/g, ''));
+  if (!Number.isFinite(rawM2) || rawM2 <= 0) return '';
+  return formatViceroyPresentationNumber(rawM2 * 10.7639, 0);
+}
+
+function buildViceroyPresentationUnitRows(excelRows) {
+  return (Array.isArray(excelRows) ? excelRows : [])
+    .map((row) => {
+      const totalM2 = Number(String(row && row.totalM2 != null ? row.totalM2 : '').replace(/[^0-9.\-]/g, ''));
+      const sqft = inferViceroyPresentationSqft(row);
+      const unit = String(row && row.unidad || '').trim();
+      if (!unit) return null;
+      return {
+        ...row,
+        unidad: unit,
+        level: String(row && row.level || '').trim(),
+        rooms: String(row && (row.rooms || row.recamaras) || '').trim(),
+        sqft,
+        totalM2: Number.isFinite(totalM2) ? totalM2 : row && row.totalM2 != null ? row.totalM2 : '',
+        price: row && row.price != null ? row.price : '',
+        pricePerM2: row && row.pricePerM2 != null ? row.pricePerM2 : '',
+        label: [unit, String(row && row.level || '').trim(), String(row && (row.rooms || row.recamaras) || '').trim()].filter(Boolean).join(' · '),
+        display: [unit, String(row && row.level || '').trim(), String(row && (row.rooms || row.recamaras) || '').trim(), sqft ? `${sqft} SQFT` : ''].filter(Boolean).join(' · ')
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
+}
+
+async function readViceroyPresentationImageBuffer(source) {
+  const raw = String(source == null ? '' : source).trim();
+  if (!raw) return null;
+  if (fs.existsSync(raw) && fs.statSync(raw).isFile()) {
+    return fs.readFileSync(raw);
+  }
+  if (/^data:/i.test(raw)) {
+    const match = raw.match(/^data:([^;]+);base64,(.*)$/i);
+    if (!match) return null;
+    return Buffer.from(match[2], 'base64');
+  }
+  const url = normalizeViceroyPresentationUrl(raw);
+  if (!url) return null;
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`No se pudo leer imagen (${response.status})`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+function imageBufferMimeType(buffer, fallbackSource = '') {
+  if (!buffer || buffer.length < 4) return String(fallbackSource || '').toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return 'image/png';
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8) return 'image/jpeg';
+  if (String(fallbackSource || '').toLowerCase().includes('.png')) return 'image/png';
+  return 'image/jpeg';
+}
+
+async function embedViceroyPresentationImage(pdfDoc, source) {
+  const buffer = await readViceroyPresentationImageBuffer(source);
+  if (!buffer || !buffer.length) return null;
+  const mimeType = imageBufferMimeType(buffer, source);
+  if (mimeType === 'image/png') return pdfDoc.embedPng(buffer);
+  return pdfDoc.embedJpg(buffer);
+}
+
+function drawImageContain(page, embeddedImage, rect, padding = 6) {
+  if (!embeddedImage || !rect) return;
+  const width = Math.max(1, Number(rect.width) || 0);
+  const height = Math.max(1, Number(rect.height) || 0);
+  const innerWidth = Math.max(1, width - padding * 2);
+  const innerHeight = Math.max(1, height - padding * 2);
+  const imageWidth = embeddedImage.width || innerWidth;
+  const imageHeight = embeddedImage.height || innerHeight;
+  const scale = Math.min(innerWidth / imageWidth, innerHeight / imageHeight);
+  const drawWidth = Math.max(1, imageWidth * scale);
+  const drawHeight = Math.max(1, imageHeight * scale);
+  const x = rect.x + padding + (innerWidth - drawWidth) / 2;
+  const y = rect.y + padding + (innerHeight - drawHeight) / 2;
+  page.drawImage(embeddedImage, {
+    x,
+    y,
+    width: drawWidth,
+    height: drawHeight
+  });
+}
+
+function drawViceroyPresentationField(page, font, rect, text, options = {}) {
+  if (!rect) return;
+  if (String(text == null ? '' : text).trim()) {
+    page.drawRectangle({
+      x: rect.x - 1,
+      y: rect.y - 1,
+      width: rect.width + 2,
+      height: rect.height + 2,
+      color: rgb(1, 1, 1),
+      borderColor: rgb(1, 1, 1),
+      borderWidth: 0
+    });
+  }
+  drawTextInRect(page, font, rect, text, options);
+}
+
 function extractViceroyListPricePerM2Map(normalizedRow) {
   const source = normalizedRow && typeof normalizedRow === 'object' ? normalizedRow : {};
   const out = {};
@@ -7682,6 +7861,15 @@ function drawManualReservationField(page, font, rect, text, options = {}) {
   drawTextInRect(page, font, rect, text, options);
 }
 
+function rectFromPoint(x, y, width, height = 16) {
+  return {
+    x,
+    y: Math.max(0, y - Math.max(1, height / 2)),
+    width,
+    height
+  };
+}
+
 function offsetReservationRect(rect, offsets = {}) {
   const dx = Number.isFinite(offsets.offsetX) ? offsets.offsetX : 0;
   const dy = Number.isFinite(offsets.offsetY) ? offsets.offsetY : 0;
@@ -8016,6 +8204,175 @@ async function buildViceroyReservationPdfBuffer(payload) {
   }
 
   return Buffer.from(await pdfDoc.save({ updateFieldAppearances: false }));
+}
+
+async function buildViceroyPresentationPdfBuffer(payload = {}) {
+  if (!fs.existsSync(VICEROY_PRESENTATION_TEMPLATE_PATH)) {
+    throw new Error('No se encontró la plantilla PDF de presentación de Viceroy');
+  }
+
+  const templateBytes = fs.readFileSync(VICEROY_PRESENTATION_TEMPLATE_PATH);
+  const templateDoc = await PDFDocument.load(templateBytes);
+  const outputDoc = await PDFDocument.create();
+  const fontRegular = await outputDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await outputDoc.embedFont(StandardFonts.HelveticaBold);
+  const pageCount = templateDoc.getPageCount();
+  const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
+  const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
+  const rowsByUnit = new Map(excelData.map((row) => [String(row.unidad || '').trim(), row]));
+  const requestedUnits = Array.isArray(payload.units) ? payload.units : (payload.unit ? [payload.unit] : []);
+  const selectedUnits = requestedUnits
+    .map((unit) => String(unit || '').trim())
+    .filter(Boolean)
+    .slice(0, VICEROY_PRESENTATION_MAX_UNITS);
+
+  if (!selectedUnits.length) {
+    throw new Error('Selecciona al menos una unidad');
+  }
+
+  const selectedRows = selectedUnits.map((unit) => rowsByUnit.get(unit)).filter(Boolean);
+  if (!selectedRows.length) {
+    throw new Error('No se encontró información de la unidad seleccionada en el Excel');
+  }
+
+  const globalMeta = parseViceroyPresentationMaybeJson(payload.jsonData)
+    || parseViceroyPresentationMaybeJson(payload.metadata)
+    || parseViceroyPresentationMaybeJson(payload.extra)
+    || {};
+  const unitMetaByUnit = parseViceroyPresentationMaybeJson(payload.unitMetaByUnit)
+    || parseViceroyPresentationMaybeJson(payload.unitMetadataByUnit)
+    || {};
+  const presentationDateText = String(payload.presentationDate || globalMeta.presentationDate || '').trim()
+    || new Intl.DateTimeFormat('es-MX', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: APP_TIMEZONE
+    }).format(new Date());
+  const defaultDeliveryText = String(payload.deliveryText || globalMeta.deliveryText || 'Delivery Winter 2028').trim();
+  const brandHeroPath = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'hero-tropical.jpg');
+  const defaultSecondaryImage = fs.existsSync(brandHeroPath) ? brandHeroPath : '';
+  const defaultPrimaryImage = fs.existsSync(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png'))
+    ? path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png')
+    : defaultSecondaryImage;
+  const allPaymentRows = Array.isArray(payload.payments) ? payload.payments : [];
+
+  const pageRects = {
+    page1: {
+      name: rectFromPoint(121.3, 677.7, 330, 18),
+      date: rectFromPoint(483.3, 677.6, 125, 18)
+    },
+    page2: {
+      client: rectFromPoint(302.0, 489.4, 280, 22),
+      agent: rectFromPoint(302.0, 384.1, 280, 22),
+      broker: rectFromPoint(299.0, 284.7, 280, 22)
+    },
+    page3: {
+      delivery: rectFromPoint(205.1, 101.0, 240, 20)
+    },
+    page4: {
+      rooms: rectFromPoint(348.6, 478.7, 220, 18),
+      level: rectFromPoint(348.6, 444.7, 220, 18),
+      sqft: rectFromPoint(348.6, 410.7, 220, 18),
+      bathrooms: rectFromPoint(348.6, 376.7, 220, 18),
+      price: rectFromPoint(348.6, 289.0, 220, 18),
+      contractSigning: rectFromPoint(348.6, 254.9, 220, 18),
+      payment1: rectFromPoint(348.6, 220.9, 220, 18),
+      payment2: rectFromPoint(348.6, 186.9, 220, 18),
+      payment3: rectFromPoint(348.6, 152.9, 220, 18),
+      uponDelivery: rectFromPoint(348.6, 118.9, 220, 18)
+    },
+    page5: {
+      unit: rectFromPoint(150.0, 799.8, 280, 22),
+      level: rectFromPoint(95.0, 416.0, 120, 20),
+      sqft: rectFromPoint(214.0, 416.0, 150, 20),
+      primaryImage: { x: 68, y: 470, width: 520, height: 245 },
+      secondaryImage: { x: 68, y: 92, width: 520, height: 205 }
+    }
+  };
+
+  for (const row of selectedRows) {
+    const pages = await outputDoc.copyPages(templateDoc, pageIndices);
+    pages.forEach((page) => outputDoc.addPage(page));
+
+    const page1 = pages[0];
+    const page2 = pages[1];
+    const page3 = pages[2];
+    const page4 = pages[3];
+    const page5 = pages[4];
+    const unit = String(row.unidad || '').trim();
+    const unitMeta = parseViceroyPresentationMaybeJson(unitMetaByUnit[unit]) || {};
+    const mergedMeta = {
+      ...globalMeta,
+      ...unitMeta
+    };
+    const paymentSource = {
+      ...(mergedMeta.paymentSource && typeof mergedMeta.paymentSource === 'object' ? mergedMeta.paymentSource : {}),
+      ...(Array.isArray(mergedMeta.payments) ? { paymentPlan: mergedMeta.payments } : {}),
+      ...(Array.isArray(payload.payments) ? { paymentPlan: payload.payments } : {}),
+      ...(Array.isArray(mergedMeta.paymentPlan) ? { paymentPlan: mergedMeta.paymentPlan } : {}),
+      ...(mergedMeta.paymentPlan && typeof mergedMeta.paymentPlan === 'object' ? mergedMeta.paymentPlan : {}),
+      ...row
+    };
+    const paymentRows = collectViceroyPresentationPaymentRows(paymentSource, row.price);
+    const primaryImageSource = normalizeViceroyPresentationUrl(
+      String(mergedMeta.primaryImage || mergedMeta.image || mergedMeta.floorPlan || row.planLink || defaultPrimaryImage || '').trim()
+    ) || row.planLink || defaultPrimaryImage;
+    const secondaryImageSource = normalizeViceroyPresentationUrl(
+      String(mergedMeta.secondaryImage || mergedMeta.heroImage || mergedMeta.render || defaultSecondaryImage || '').trim()
+    ) || defaultSecondaryImage;
+
+    drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, `Estimado(a) Propietario(a), ${String(payload.clientName || payload.nombreCliente || '').trim()}`, { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
+    drawViceroyPresentationField(page1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
+
+    drawViceroyPresentationField(page2, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'left' });
+    drawViceroyPresentationField(page2, fontBold, pageRects.page2.agent, String(payload.agentName || payload.nombreAgente || '').trim(), { fontSize: 8.9, align: 'left' });
+    drawViceroyPresentationField(page2, fontBold, pageRects.page2.broker, String(payload.brokerName || payload.nombreBroker || '').trim(), { fontSize: 8.9, align: 'left' });
+
+    drawViceroyPresentationField(page3, fontBold, pageRects.page3.delivery, defaultDeliveryText, { fontSize: 9.2, align: 'left' });
+
+    const priceText = formatViceroyPresentationNumber(row.price, 0);
+    const roomsText = String(row.rooms || row.recamaras || '').trim();
+    const levelText = String(row.level || '').trim();
+    const sqftText = String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
+    const bathroomsText = String(row.banos || '').trim();
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, sqftText, { fontSize: 8.8, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.bathrooms, bathroomsText, { fontSize: 8.8, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 8.8, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.contractSigning, paymentRows[0] && paymentRows[0].value ? paymentRows[0].value : '', { fontSize: 8.2, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment1, paymentRows[1] && paymentRows[1].value ? paymentRows[1].value : '', { fontSize: 8.2, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment3, paymentRows[3] && paymentRows[3].value ? paymentRows[3].value : '', { fontSize: 8.2, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.uponDelivery, paymentRows[4] && paymentRows[4].value ? paymentRows[4].value : '', { fontSize: 8.2, align: 'left' });
+
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.unit, unit, { fontSize: 9.6, align: 'left' });
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, sqftText, { fontSize: 9.0, align: 'left' });
+
+    try {
+      const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
+      if (primaryImage) {
+        drawImageContain(page5, primaryImage, pageRects.page5.primaryImage, 8);
+      }
+    } catch (err) {
+      log(`No se pudo insertar imagen principal de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
+    }
+
+    if (secondaryImageSource) {
+      try {
+        const secondaryImage = await embedViceroyPresentationImage(outputDoc, secondaryImageSource);
+        if (secondaryImage) {
+          drawImageContain(page5, secondaryImage, pageRects.page5.secondaryImage, 8);
+        }
+      } catch (err) {
+        log(`No se pudo insertar imagen secundaria de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
+      }
+    }
+  }
+
+  return Buffer.from(await outputDoc.save());
 }
 
 function buildViceroyTipologiaRows(inventoryRows) {
@@ -10927,6 +11284,12 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Viceroy Inicio</h2>
           <p class="desc">Acceso al módulo de presentación comercial.</p>
         </a>` : '';
+  const generadorPresentacionCard = canAccessBackendFeature(currentEmail, 'viceroy', 'generadorPresentacion') ? `
+        <a class="card" href="/viceroy/inicio/generador-presentacion">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Generador de Presentación</h2>
+          <p class="desc">Completa el brochure desde Excel, JSON e imágenes para hasta 5 unidades.</p>
+        </a>` : '';
   const whisperlistCard = canAccessBackendFeature(currentEmail, 'viceroy', 'whisperlist') ? `
         <a class="card" href="/whisperlist">
           <span class="tag">Módulo</span>
@@ -11000,6 +11363,7 @@ app.get('/viceroy', (req, res) => {
       </div>
       <div class="grid">
         ${inicioCard}
+        ${generadorPresentacionCard}
         ${kpiReservasCard}
         ${whisperlistCard}
         ${mahekalCard}
@@ -11726,6 +12090,10 @@ app.get('/viceroy/inicio/presentacion', (req, res) => {
 
 app.get('/viceroy/inicio/excel', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-excel.html'));
+});
+
+app.get('/viceroy/inicio/generador-presentacion', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-generador-presentacion.html'));
 });
 
 app.get('/viceroy/inicio/acabados', (req, res) => {
@@ -13454,6 +13822,7 @@ function buildViceroyExcelViewData(options = {}) {
           sourceRowIndex: Number.isFinite(sourceRowIndex) ? sourceRowIndex : null,
           planLink,
           unidad: unit,
+          level: hasRawValue(rawRow, 5) ? rawRow[5] : '',
           totalM2: hasRawValue(rawRow, 16) ? rawRow[16] : parsed.m2,
           recamaras: hasRawValue(rawRow, 17) ? rawRow[17] : parsed.recamaras,
           den: hasRawValue(rawRow, 18) ? rawRow[18] : (/\+DEN/.test(String(parsed.recamaras || '')) ? '1' : ''),
@@ -13644,6 +14013,54 @@ app.get('/api/viceroy/inicio/excel-data', requireViceroyPresentAccess, (req, res
   } catch (err) {
     const msg = err && err.message ? err.message : 'No se pudo cargar el Excel de Viceroy';
     return res.status(500).json({ ok: false, error: msg });
+  }
+});
+
+app.get('/api/viceroy/presentacion-generador/units', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+  try {
+    const data = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
+    return res.json({
+      ok: true,
+      units: data.map((row) => ({
+        unidad: row.unidad,
+        level: row.level || '',
+        rooms: row.rooms || row.recamaras || '',
+        sqft: row.sqft || '',
+        totalM2: row.totalM2 || '',
+        price: row.price || '',
+        pricePerM2: row.pricePerM2 || '',
+        planLink: row.planLink || '',
+        display: row.display || row.label || row.unidad
+      }))
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo cargar el catálogo de unidades',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.post('/api/viceroy/presentacion-generador/render', requireBackendFeature('viceroy', 'generadorPresentacion'), async (req, res) => {
+  try {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const pdfBuffer = await buildViceroyPresentationPdfBuffer(payload);
+    const requestedUnits = Array.isArray(payload.units)
+      ? payload.units.map((item) => String(item || '').trim()).filter(Boolean)
+      : [String(payload.unit || '').trim()].filter(Boolean);
+    const fileNameUnits = requestedUnits.slice(0, VICEROY_PRESENTATION_MAX_UNITS).join('-');
+    const fileName = `viceroy-presentacion-${fileNameUnits || 'unidad'}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    log(`Error en /api/viceroy/presentacion-generador/render: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo generar la presentación de Viceroy',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
   }
 });
 
