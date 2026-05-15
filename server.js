@@ -8257,6 +8257,8 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     : defaultSecondaryImage;
   const allPaymentRows = Array.isArray(payload.payments) ? payload.payments : [];
 
+  // Ajusta estas coordenadas para mover cada bloque dentro del PDF.
+  // `x` y `y` están en coordenadas PDF; cambiar estos valores desplaza el texto o la imagen.
   const pageRects = {
     page1: {
       name: rectFromPoint(121.3, 677.7, 330, 18),
@@ -8290,6 +8292,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       secondaryImage: { x: 68, y: 92, width: 520, height: 205 }
     }
   };
+  const presentationBackdrop = rgb(0.972, 0.957, 0.916);
 
   for (const row of selectedRows) {
     const pages = await outputDoc.copyPages(templateDoc, pageIndices);
@@ -8322,7 +8325,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       String(mergedMeta.secondaryImage || mergedMeta.heroImage || mergedMeta.render || defaultSecondaryImage || '').trim()
     ) || defaultSecondaryImage;
 
-    drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, `Estimado(a) Propietario(a), ${String(payload.clientName || payload.nombreCliente || '').trim()}`, { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
+    drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2), backgroundColor: presentationBackdrop });
     drawViceroyPresentationField(page1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
 
     drawViceroyPresentationField(page2, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'left' });
