@@ -6994,7 +6994,8 @@ function defaultViceroyPresentationLayout() {
         level: { x: 95.0, y: 416.0, width: 120, height: 20 },
         sqft: { x: 214.0, y: 416.0, width: 150, height: 20 },
         primaryImage: { x: 68, y: 470, width: 520, height: 245 },
-        secondaryImage: { x: 68, y: 92, width: 520, height: 205 }
+        secondaryImage: { x: 68, y: 92, width: 520, height: 205 },
+        selectedUnitMap: { x: 68, y: 92, width: 520, height: 205 }
       }
     },
     updatedAt: ''
@@ -8506,9 +8507,6 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     const primaryImageSource = normalizeViceroyPresentationUrl(
       String(mergedMeta.primaryImage || mergedMeta.image || mergedMeta.floorPlan || row.planLink || defaultPrimaryImage || '').trim()
     ) || row.planLink || defaultPrimaryImage;
-    const secondaryImageSource = normalizeViceroyPresentationUrl(
-      String(mergedMeta.secondaryImage || mergedMeta.heroImage || mergedMeta.render || defaultSecondaryImage || '').trim()
-    ) || defaultSecondaryImage;
     drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
     drawViceroyPresentationField(page1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
 
@@ -8533,14 +8531,6 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment3, paymentRows[3] && paymentRows[3].value ? paymentRows[3].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.uponDelivery, paymentRows[4] && paymentRows[4].value ? paymentRows[4].value : '', { fontSize: 8.2, align: 'left' });
-    if (pageRects.page4 && pageRects.page4.selectedUnitMap) {
-      try {
-        await drawViceroyPresentationSelectedUnitMap(page4, outputDoc, pageRects.page4.selectedUnitMap, unit, fontBold);
-      } catch (err) {
-        log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);
-      }
-    }
-
     try {
       const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
       if (primaryImage) {
@@ -8550,14 +8540,17 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       log(`No se pudo insertar imagen principal de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
     }
 
-    if (secondaryImageSource) {
+    if (pageRects.page5 && (pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage)) {
       try {
-        const secondaryImage = await embedViceroyPresentationImage(outputDoc, secondaryImageSource);
-        if (secondaryImage) {
-          drawImageContain(page5, secondaryImage, pageRects.page5.secondaryImage, 8);
-        }
+        await drawViceroyPresentationSelectedUnitMap(
+          page5,
+          outputDoc,
+          pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage,
+          unit,
+          fontBold
+        );
       } catch (err) {
-        log(`No se pudo insertar imagen secundaria de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
+        log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);
       }
     }
 
