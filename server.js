@@ -6961,6 +6961,13 @@ function drawViceroyPresentationField(page, font, rect, text, options = {}) {
   drawTextInRect(page, font, rect, text, options);
 }
 
+function getViceroyPresentationFloorImageSource(floor) {
+  const src = floor && typeof floor === 'object' ? floor : {};
+  return normalizeViceroyPresentationUrl(
+    String(src.imageDataUrl || src.imageRawDataUrl || src.imageUrl || src.floorImageUrl || src.planImageUrl || '').trim()
+  );
+}
+
 function defaultViceroyPresentationLayout() {
   return {
     pages: {
@@ -7092,13 +7099,23 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
   const target = unitKey(selectedUnit);
   if (!target || !rect) return;
   const floorsData = readViceroyPresentationFloorData();
-  const floor = (Array.isArray(floorsData.floors) ? floorsData.floors : []).find((item) => {
-    return Array.isArray(item && item.zones) && item.zones.some((zone) => unitKey(zone && zone.label) === target);
-  }) || null;
-  if (!floor || !floor.imageDataUrl || !Array.isArray(floor.zones) || !floor.zones.length) return;
+  const floorCandidates = (Array.isArray(floorsData.floors) ? floorsData.floors : [])
+    .filter((item) => Array.isArray(item && item.zones) && item.zones.some((zone) => unitKey(zone && zone.label) === target))
+    .sort((a, b) => {
+      const aZones = Array.isArray(a && a.zones) ? a.zones.length : 0;
+      const bZones = Array.isArray(b && b.zones) ? b.zones.length : 0;
+      if (aZones !== bZones) return bZones - aZones;
+      const aW = Number(a && a.imageWidth || 0);
+      const bW = Number(b && b.imageWidth || 0);
+      if (aW !== bW) return bW - aW;
+      return 0;
+    });
+  const floor = floorCandidates[0] || null;
+  const floorImageSource = getViceroyPresentationFloorImageSource(floor);
+  if (!floor || !floorImageSource || !Array.isArray(floor.zones) || !floor.zones.length) return;
 
   const inventoryStatusMap = buildViceroyPresentationInventoryStatusMap();
-  const embeddedImage = await embedViceroyPresentationImage(pdfDoc, floor.imageDataUrl);
+  const embeddedImage = await embedViceroyPresentationImage(pdfDoc, floorImageSource);
   if (!embeddedImage) return;
 
   const imageWidth = Number(embeddedImage.width || floor.imageWidth || 0) || 1;
@@ -7118,9 +7135,9 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
 
   const colorFor = (status, unit) => {
     if (unit === target) return { fill: rgb(0.301, 0.741, 0.455), stroke: rgb(1, 0.902, 0) };
-    if (status === 'vendida') return { fill: rgb(0, 0, 0), stroke: rgb(0, 0, 0) };
-    if (status === 'apartado') return { fill: rgb(1, 1, 1), stroke: rgb(0.82, 0.82, 0.82) };
-    return { fill: rgb(1, 1, 1), stroke: rgb(0.82, 0.82, 0.82) };
+    if (status === 'vendida') return { fill: rgb(0.839, 0.325, 0.325), stroke: rgb(0.839, 0.325, 0.325) };
+    if (status === 'apartado') return { fill: rgb(1, 0.882, 0.541), stroke: rgb(1, 0.882, 0.541) };
+    return { fill: rgb(0.255, 0.675, 0.388), stroke: rgb(0.255, 0.675, 0.388) };
   };
 
   for (const zone of floor.zones) {
@@ -7144,7 +7161,7 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
 
     page.drawSvgPath(path, {
       color: palette.fill,
-      opacity: unit === target ? 0.68 : 1,
+      opacity: unit === target ? 0.72 : (hasInventoryMatch ? 0.34 : 0.96),
       borderColor: palette.stroke,
       borderWidth: unit === target ? 3.4 : 1.3
     });
@@ -8064,7 +8081,9 @@ function drawTextInRect(page, font, rect, text, options = {}) {
   const textWidth = font.widthOfTextAtSize(value, fontSize);
   const x = options.align === 'center'
     ? rect.x + Math.max(marginX, (rect.width - textWidth) / 2)
-    : rect.x + marginX;
+    : (options.align === 'right'
+      ? rect.x + Math.max(marginX, rect.width - textWidth - marginX)
+      : rect.x + marginX);
   const y = options.verticalAlign === 'top'
     ? rect.y + Math.max(1, rect.height - marginY - textHeight)
     : rect.y + Math.max(1, (rect.height - textHeight) / 2 - 1);
@@ -8510,13 +8529,16 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
     drawViceroyPresentationField(page1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
 
-    drawViceroyPresentationField(page2, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'left' });
-    drawViceroyPresentationField(page2, fontBold, pageRects.page2.agent, String(payload.agentName || payload.nombreAgente || '').trim(), { fontSize: 8.9, align: 'left' });
-    drawViceroyPresentationField(page2, fontBold, pageRects.page2.broker, String(payload.brokerName || payload.nombreBroker || '').trim(), { fontSize: 8.9, align: 'left' });
+    drawViceroyPresentationField(page2, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'center' });
+    drawViceroyPresentationField(page2, fontBold, pageRects.page2.agent, String(payload.agentName || payload.nombreAgente || '').trim(), { fontSize: 8.9, align: 'center' });
+    drawViceroyPresentationField(page2, fontBold, pageRects.page2.broker, String(payload.brokerName || payload.nombreBroker || '').trim(), { fontSize: 8.9, align: 'center' });
 
     drawViceroyPresentationField(page3, fontBold, pageRects.page3.delivery, defaultDeliveryText, { fontSize: 9.2, align: 'left' });
 
-    const priceText = formatViceroyPresentationNumber(row.price, 0);
+    const priceText = formatViceroyPresentationNumber(
+      row.price || row.priceVenta || row.priceLista || mergedMeta.price || paymentSource.price || paymentSource.priceVenta || '',
+      0
+    );
     const roomsText = String(row.rooms || row.recamaras || '').trim();
     const levelText = String(row.level || '').trim();
     const sqftText = String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
@@ -8525,7 +8547,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, sqftText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.bathrooms, bathroomsText, { fontSize: 8.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 8.8, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 9.3, align: 'center' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.contractSigning, paymentRows[0] && paymentRows[0].value ? paymentRows[0].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment1, paymentRows[1] && paymentRows[1].value ? paymentRows[1].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
