@@ -12332,7 +12332,7 @@ app.post('/api/hoja-reserva-simca/render-pdf', async (req, res) => {
 });
 
 app.get('/viceroy/inicio/presentacion/pdf', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'maresol-ppt-sales-desktop.pdf'));
+  res.sendFile(VICEROY_PRESENTATION_TEMPLATE_PATH);
 });
 
 app.get('/viceroy/registros', (req, res) => {
