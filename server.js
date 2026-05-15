@@ -7097,7 +7097,6 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
   if (!floor || !floor.imageDataUrl || !Array.isArray(floor.zones) || !floor.zones.length) return;
 
   const inventoryStatusMap = buildViceroyPresentationInventoryStatusMap();
-  const specialYellowUnits = readViceroySpecialYellowUnits();
   const embeddedImage = await embedViceroyPresentationImage(pdfDoc, floor.imageDataUrl);
   if (!embeddedImage) return;
 
@@ -7118,10 +7117,9 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
 
   const colorFor = (status, unit) => {
     if (unit === target) return { fill: rgb(0.301, 0.741, 0.455), stroke: rgb(1, 0.902, 0) };
-    if (specialYellowUnits.has(unit)) return { fill: rgb(0.824, 0.643, 0), stroke: rgb(0.824, 0.643, 0) };
-    if (status === 'vendida') return { fill: rgb(0.839, 0.325, 0.325), stroke: rgb(0.839, 0.325, 0.325) };
-    if (status === 'apartado') return { fill: rgb(1, 0.882, 0.541), stroke: rgb(1, 0.882, 0.541) };
-    return { fill: rgb(0.255, 0.675, 0.388), stroke: rgb(0.255, 0.675, 0.388) };
+    if (status === 'vendida') return { fill: rgb(0, 0, 0), stroke: rgb(0, 0, 0) };
+    if (status === 'apartado') return { fill: rgb(1, 1, 1), stroke: rgb(0.82, 0.82, 0.82) };
+    return { fill: rgb(1, 1, 1), stroke: rgb(0.82, 0.82, 0.82) };
   };
 
   for (const zone of floor.zones) {
@@ -7129,7 +7127,12 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
     if (!points.length) continue;
     const unit = unitKey(zone && zone.label);
     const status = String((inventoryStatusMap.get(unit) || {}).status || '').trim().toLowerCase();
-    const palette = colorFor(status, unit);
+    const hasInventoryMatch = inventoryStatusMap.has(unit);
+    const palette = unit === target
+      ? colorFor(status, unit)
+      : (!hasInventoryMatch
+        ? { fill: rgb(0, 0, 0), stroke: rgb(0, 0, 0) }
+        : colorFor(status, unit));
     const path = points.map((point, index) => {
       const px = Number(point && point[0] || 0);
       const py = Number(point && point[1] || 0);
@@ -7140,8 +7143,8 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
 
     page.drawSvgPath(path, {
       color: palette.fill,
-      opacity: unit === target ? 0.62 : 0.28,
-      borderColor: unit === target ? rgb(1, 0.902, 0) : palette.stroke,
+      opacity: unit === target ? 0.68 : 1,
+      borderColor: palette.stroke,
       borderWidth: unit === target ? 3.4 : 1.3
     });
 
@@ -7161,7 +7164,7 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
         y: cy - 5,
         size: 12,
         font,
-        color: rgb(0.1, 0.1, 0.1)
+        color: rgb(0.08, 0.08, 0.08)
       });
     }
   }
