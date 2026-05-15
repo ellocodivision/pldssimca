@@ -6828,29 +6828,23 @@ function collectViceroyPresentationPaymentRows(source, fallbackPrice) {
   const rows = [];
   const normalizedSource = source && typeof source === 'object' ? source : {};
   const basePrice = Number(String(fallbackPrice == null ? '' : fallbackPrice).replace(/[^0-9.\-]/g, ''));
-  const defaultRows = [
-    { label: 'Contract Signing', value: normalizedSource.contractSigning },
-    { label: 'Payment 1', value: normalizedSource.payment1 },
-    { label: 'Payment 2', value: normalizedSource.payment2 },
-    { label: 'Payment 3', value: normalizedSource.payment3 },
-    { label: 'Upon Delivery', value: normalizedSource.uponDelivery }
+  const paymentSchedule = [
+    { label: 'Contract Signing', percent: 30, fallback: normalizedSource.contractSigning },
+    { label: 'Payment 1', percent: 10, fallback: normalizedSource.payment1 },
+    { label: 'Payment 2', percent: 10, fallback: normalizedSource.payment2 },
+    { label: 'Payment 3', percent: 10, fallback: normalizedSource.payment3 },
+    { label: 'Upon Delivery', percent: 40, fallback: normalizedSource.uponDelivery }
   ];
-  if (Array.isArray(normalizedSource.paymentPlan)) {
-    normalizedSource.paymentPlan.slice(0, 5).forEach((item, idx) => {
-      defaultRows[idx] = {
-        label: String(item && item.label != null ? item.label : defaultRows[idx].label || '').trim() || defaultRows[idx].label,
-        value: item && Object.prototype.hasOwnProperty.call(item, 'value') ? item.value : item
-      };
-    });
-  }
-  defaultRows.forEach((row, idx) => {
-    const rawValue = row && Object.prototype.hasOwnProperty.call(row, 'value') ? row.value : '';
+  paymentSchedule.forEach((row) => {
+    const rawValue = row && Object.prototype.hasOwnProperty.call(row, 'fallback') ? row.fallback : '';
     const numeric = Number(String(rawValue == null ? '' : rawValue).replace(/[^0-9.\-]/g, ''));
-    let rendered = String(rawValue == null ? '' : rawValue).trim();
-    if (!rendered && Number.isFinite(basePrice) && basePrice > 0 && Array.isArray(normalizedSource.paymentPercentages) && Number.isFinite(Number(normalizedSource.paymentPercentages[idx]))) {
-      rendered = `${formatViceroyPresentationNumber(basePrice * Number(normalizedSource.paymentPercentages[idx]) / 100, 0)}`;
-    } else if (!rendered && Number.isFinite(numeric)) {
+    let rendered = '';
+    if (Number.isFinite(basePrice) && basePrice > 0) {
+      rendered = formatViceroyPresentationNumber((basePrice * Number(row.percent || 0)) / 100, 0);
+    } else if (Number.isFinite(numeric)) {
       rendered = formatViceroyPresentationNumber(numeric, 0);
+    } else {
+      rendered = String(rawValue == null ? '' : rawValue).trim();
     }
     rows.push({
       label: row.label,
