@@ -6952,14 +6952,14 @@ function drawImageContain(page, embeddedImage, rect, padding = 6) {
 
 function drawViceroyPresentationField(page, font, rect, text, options = {}) {
   if (!rect) return;
-  if (String(text == null ? '' : text).trim()) {
+  if (options && options.backgroundColor) {
     page.drawRectangle({
       x: rect.x - 1,
       y: rect.y - 1,
       width: rect.width + 2,
       height: rect.height + 2,
-      color: rgb(1, 1, 1),
-      borderColor: rgb(1, 1, 1),
+      color: options.backgroundColor,
+      borderColor: options.backgroundColor,
       borderWidth: 0
     });
   }
