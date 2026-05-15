@@ -410,6 +410,41 @@
             <li><strong>Salida</strong><span>PDF final listo para descargar</span></li>
           </ul>
         </div>
+        <div class="preview-card">
+          <h3>Ajuste de posiciones</h3>
+          <p class="helper" style="margin-bottom:12px;">Selecciona un bloque y mueve sus coordenadas. Esto afecta al PDF que se genera desde el servidor.</p>
+          <div class="stack" style="gap:10px;">
+            <div class="field">
+              <label for="layoutField">Bloque</label>
+              <select id="layoutField" class="select" style="min-height:44px;"></select>
+            </div>
+            <div class="form-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+              <div class="field">
+                <label for="layoutX">X</label>
+                <input id="layoutX" class="input" type="number" step="0.1">
+              </div>
+              <div class="field">
+                <label for="layoutY">Y</label>
+                <input id="layoutY" class="input" type="number" step="0.1">
+              </div>
+              <div class="field">
+                <label for="layoutW">Ancho</label>
+                <input id="layoutW" class="input" type="number" step="0.1">
+              </div>
+              <div class="field">
+                <label for="layoutH">Alto</label>
+                <input id="layoutH" class="input" type="number" step="0.1">
+              </div>
+            </div>
+            <div class="actions">
+              <button id="layoutApplyBtn" class="btn primary" type="button">Aplicar en memoria</button>
+              <button id="layoutSaveBtn" class="btn" type="button">Guardar layout</button>
+              <button id="layoutResetBtn" class="btn" type="button">Reset bloque</button>
+              <button id="layoutRestoreBtn" class="btn" type="button">Restaurar todo</button>
+            </div>
+            <p id="layoutStatus" class="status" aria-live="polite"></p>
+          </div>
+        </div>
       </section>
     </section>
   </main>
@@ -420,7 +455,10 @@
         units: [],
         filteredUnits: [],
         unitMap: new Map(),
-        selectedUnits: []
+        selectedUnits: [],
+        layout: null,
+        defaultLayout: null,
+        activeLayoutKey: 'page1.name'
       };
 
       const els = {
@@ -434,8 +472,42 @@
         clearBtn: document.getElementById('clearBtn'),
         status: document.getElementById('status'),
         previewEmpty: document.getElementById('previewEmpty'),
-        previewList: document.getElementById('previewList')
+        previewList: document.getElementById('previewList'),
+        layoutField: document.getElementById('layoutField'),
+        layoutX: document.getElementById('layoutX'),
+        layoutY: document.getElementById('layoutY'),
+        layoutW: document.getElementById('layoutW'),
+        layoutH: document.getElementById('layoutH'),
+        layoutApplyBtn: document.getElementById('layoutApplyBtn'),
+        layoutSaveBtn: document.getElementById('layoutSaveBtn'),
+        layoutResetBtn: document.getElementById('layoutResetBtn'),
+        layoutRestoreBtn: document.getElementById('layoutRestoreBtn'),
+        layoutStatus: document.getElementById('layoutStatus')
       };
+
+      const layoutFields = [
+        { key: 'page1.name', label: 'Página 1 · Nombre' },
+        { key: 'page1.date', label: 'Página 1 · Fecha' },
+        { key: 'page2.client', label: 'Página 2 · Client' },
+        { key: 'page2.agent', label: 'Página 2 · Agent' },
+        { key: 'page2.broker', label: 'Página 2 · Broker' },
+        { key: 'page3.delivery', label: 'Página 3 · Delivery' },
+        { key: 'page4.rooms', label: 'Página 4 · Rooms' },
+        { key: 'page4.level', label: 'Página 4 · Level' },
+        { key: 'page4.sqft', label: 'Página 4 · SQFT' },
+        { key: 'page4.bathrooms', label: 'Página 4 · Bathrooms' },
+        { key: 'page4.price', label: 'Página 4 · Price' },
+        { key: 'page4.contractSigning', label: 'Página 4 · Contract Signing' },
+        { key: 'page4.payment1', label: 'Página 4 · Payment 1' },
+        { key: 'page4.payment2', label: 'Página 4 · Payment 2' },
+        { key: 'page4.payment3', label: 'Página 4 · Payment 3' },
+        { key: 'page4.uponDelivery', label: 'Página 4 · Upon Delivery' },
+        { key: 'page5.unit', label: 'Página 5 · Unit' },
+        { key: 'page5.level', label: 'Página 5 · Level' },
+        { key: 'page5.sqft', label: 'Página 5 · SQFT' },
+        { key: 'page5.primaryImage', label: 'Página 5 · Imagen principal' },
+        { key: 'page5.secondaryImage', label: 'Página 5 · Imagen secundaria' }
+      ];
 
       function esc(value) {
         return String(value == null ? '' : value)
@@ -549,6 +621,150 @@
           .slice(0, 80) || 'viceroy-presentacion';
       }
 
+      function cloneLayout(layout) {
+        return JSON.parse(JSON.stringify(layout || { pages: {} }));
+      }
+
+      function layoutFieldParts(key) {
+        const parts = String(key || '').split('.');
+        return {
+          page: parts[0] || '',
+          field: parts[1] || ''
+        };
+      }
+
+      function ensureActiveLayout() {
+        if (!state.layout) state.layout = cloneLayout(state.defaultLayout);
+      }
+
+      function getLayoutRect(layout, key) {
+        const parts = layoutFieldParts(key);
+        const pages = layout && layout.pages && layout.pages[parts.page] ? layout.pages[parts.page] : {};
+        return pages && pages[parts.field] ? pages[parts.field] : null;
+      }
+
+      function setLayoutRect(layout, key, rect) {
+        const parts = layoutFieldParts(key);
+        if (!layout.pages) layout.pages = {};
+        if (!layout.pages[parts.page]) layout.pages[parts.page] = {};
+        layout.pages[parts.page][parts.field] = {
+          x: Number(rect.x) || 0,
+          y: Number(rect.y) || 0,
+          width: Number(rect.width) || 0,
+          height: Number(rect.height) || 0
+        };
+      }
+
+      function selectedLayoutKey() {
+        return String(els.layoutField.value || state.activeLayoutKey || 'page1.name');
+      }
+
+      function setLayoutStatus(message) {
+        els.layoutStatus.textContent = message || '';
+      }
+
+      function renderLayoutFieldOptions() {
+        els.layoutField.innerHTML = layoutFields.map(function (item) {
+          return '<option value="' + esc(item.key) + '">' + esc(item.label) + '</option>';
+        }).join('');
+        els.layoutField.value = state.activeLayoutKey;
+      }
+
+      function syncLayoutFormFromState() {
+        ensureActiveLayout();
+        const rect = getLayoutRect(state.layout, selectedLayoutKey());
+        if (!rect) return;
+        els.layoutX.value = rect.x;
+        els.layoutY.value = rect.y;
+        els.layoutW.value = rect.width;
+        els.layoutH.value = rect.height;
+      }
+
+      function applyLayoutFormToState() {
+        ensureActiveLayout();
+        const key = selectedLayoutKey();
+        const nextRect = {
+          x: Number(els.layoutX.value),
+          y: Number(els.layoutY.value),
+          width: Number(els.layoutW.value),
+          height: Number(els.layoutH.value)
+        };
+        setLayoutRect(state.layout, key, nextRect);
+      }
+
+      function loadRectIntoForm(key) {
+        state.activeLayoutKey = key;
+        const rect = getLayoutRect(state.layout, key) || { x: 0, y: 0, width: 0, height: 0 };
+        els.layoutX.value = rect.x;
+        els.layoutY.value = rect.y;
+        els.layoutW.value = rect.width;
+        els.layoutH.value = rect.height;
+      }
+
+      async function loadLayout() {
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/layout', {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo cargar el layout');
+          }
+          state.layout = cloneLayout(data.layout);
+          state.defaultLayout = cloneLayout(data.defaults || data.layout);
+          renderLayoutFieldOptions();
+          loadRectIntoForm(state.activeLayoutKey);
+          setLayoutStatus('Layout cargado.');
+        } catch (err) {
+          state.defaultLayout = {
+            pages: {},
+            updatedAt: ''
+          };
+          state.layout = cloneLayout(state.defaultLayout);
+          renderLayoutFieldOptions();
+          setLayoutStatus(err && err.message ? err.message : 'No se pudo cargar el layout.');
+        }
+      }
+
+      async function saveLayout() {
+        applyLayoutFormToState();
+        setLayoutStatus('Guardando layout...');
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/layout', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ layout: state.layout })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo guardar el layout');
+          }
+          state.layout = cloneLayout(data.layout);
+          setLayoutStatus('Layout guardado.');
+        } catch (err) {
+          setLayoutStatus(err && err.message ? err.message : 'No se pudo guardar el layout.');
+        }
+      }
+
+      function resetActiveField() {
+        ensureActiveLayout();
+        const defaults = cloneLayout(state.defaultLayout);
+        const key = selectedLayoutKey();
+        const rect = getLayoutRect(defaults, key);
+        if (!rect) return;
+        setLayoutRect(state.layout, key, rect);
+        loadRectIntoForm(key);
+        setLayoutStatus('Bloque restaurado.');
+      }
+
+      function resetAllLayout() {
+        state.layout = cloneLayout(state.defaultLayout);
+        loadRectIntoForm(selectedLayoutKey());
+        setLayoutStatus('Layout completo restaurado.');
+      }
+
       async function loadUnits() {
         els.status.textContent = 'Cargando unidades...';
         try {
@@ -640,6 +856,26 @@
 
       els.unitSelect.addEventListener('change', updateSelected);
       els.generateBtn.addEventListener('click', generatePdf);
+      els.layoutField.addEventListener('change', function () {
+        applyLayoutFormToState();
+        loadRectIntoForm(selectedLayoutKey());
+      });
+      [els.layoutX, els.layoutY, els.layoutW, els.layoutH].forEach(function (el) {
+        el.addEventListener('input', function () {
+          applyLayoutFormToState();
+        });
+      });
+      els.layoutApplyBtn.addEventListener('click', function () {
+        applyLayoutFormToState();
+        setLayoutStatus('Cambios aplicados en memoria.');
+      });
+      els.layoutSaveBtn.addEventListener('click', saveLayout);
+      els.layoutResetBtn.addEventListener('click', resetActiveField);
+      els.layoutRestoreBtn.addEventListener('click', function () {
+        state.layout = cloneLayout(state.defaultLayout);
+        loadRectIntoForm(selectedLayoutKey());
+        setLayoutStatus('Layout completo restaurado.');
+      });
       els.clearBtn.addEventListener('click', function () {
         els.unitSelect.querySelectorAll('option').forEach(function (opt) { opt.selected = false; });
         els.searchInput.value = '';
@@ -652,7 +888,8 @@
         updateSelected();
       });
 
-      loadUnits();
+      renderLayoutFieldOptions();
+      Promise.all([loadUnits(), loadLayout()]);
     })();
   </script>
 </body>

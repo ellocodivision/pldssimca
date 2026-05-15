@@ -229,6 +229,7 @@ const VICEROY_TIPOLOGIA_CROPS_REPO_PATH = path.join(REPO_DATA_DIR, 'developments
 const VICEROY_TIPOLOGIA_THUMBS_DIR = path.join(VICEROY_PILOTO_DATA_DIR, 'tipologia-thumbs');
 const VICEROY_SPECIAL_YELLOW_UNITS_PATH = path.join(DATA_DIR, 'viceroy-special-yellow-units.json');
 const VICEROY_PRESENTATION_TEMPLATE_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-base.pdf');
+const VICEROY_PRESENTATION_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout.json');
 const VICEROY_PRESENTATION_MAX_UNITS = 5;
 const DEFAULT_VICEROY_SPECIAL_YELLOW_UNITS = [
   '003', '004', '039', '035', '040', '042', '045', '054', '056',
@@ -6966,6 +6967,89 @@ function drawViceroyPresentationField(page, font, rect, text, options = {}) {
   drawTextInRect(page, font, rect, text, options);
 }
 
+function defaultViceroyPresentationLayout() {
+  return {
+    pages: {
+      page1: {
+        name: { x: 121.3, y: 677.7, width: 330, height: 18 },
+        date: { x: 483.3, y: 677.6, width: 125, height: 18 }
+      },
+      page2: {
+        client: { x: 302.0, y: 489.4, width: 280, height: 22 },
+        agent: { x: 302.0, y: 384.1, width: 280, height: 22 },
+        broker: { x: 299.0, y: 284.7, width: 280, height: 22 }
+      },
+      page3: {
+        delivery: { x: 205.1, y: 101.0, width: 240, height: 20 }
+      },
+      page4: {
+        rooms: { x: 348.6, y: 478.7, width: 220, height: 18 },
+        level: { x: 348.6, y: 444.7, width: 220, height: 18 },
+        sqft: { x: 348.6, y: 410.7, width: 220, height: 18 },
+        bathrooms: { x: 348.6, y: 376.7, width: 220, height: 18 },
+        price: { x: 348.6, y: 289.0, width: 220, height: 18 },
+        contractSigning: { x: 348.6, y: 254.9, width: 220, height: 18 },
+        payment1: { x: 348.6, y: 220.9, width: 220, height: 18 },
+        payment2: { x: 348.6, y: 186.9, width: 220, height: 18 },
+        payment3: { x: 348.6, y: 152.9, width: 220, height: 18 },
+        uponDelivery: { x: 348.6, y: 118.9, width: 220, height: 18 }
+      },
+      page5: {
+        unit: { x: 150.0, y: 799.8, width: 280, height: 22 },
+        level: { x: 95.0, y: 416.0, width: 120, height: 20 },
+        sqft: { x: 214.0, y: 416.0, width: 150, height: 20 },
+        primaryImage: { x: 68, y: 470, width: 520, height: 245 },
+        secondaryImage: { x: 68, y: 92, width: 520, height: 205 }
+      }
+    },
+    updatedAt: ''
+  };
+}
+
+function normalizeViceroyPresentationLayoutRect(value, fallback) {
+  const src = value && typeof value === 'object' ? value : {};
+  const base = fallback && typeof fallback === 'object' ? fallback : {};
+  return {
+    x: clampNumber(src.x, Number(base.x) || 0, -20, 600),
+    y: clampNumber(src.y, Number(base.y) || 0, -20, 840),
+    width: clampNumber(src.width, Number(base.width) || 100, 12, 700),
+    height: clampNumber(src.height, Number(base.height) || 16, 8, 500)
+  };
+}
+
+function normalizeViceroyPresentationLayout(layout) {
+  const defaults = defaultViceroyPresentationLayout();
+  const incoming = layout && typeof layout === 'object' ? layout : {};
+  const pages = {};
+  Object.keys(defaults.pages).forEach((pageKey) => {
+    const defaultPage = defaults.pages[pageKey];
+    const inputPage = incoming.pages && typeof incoming.pages === 'object' && incoming.pages[pageKey] && typeof incoming.pages[pageKey] === 'object'
+      ? incoming.pages[pageKey]
+      : {};
+    const page = {};
+    Object.keys(defaultPage).forEach((fieldKey) => {
+      page[fieldKey] = normalizeViceroyPresentationLayoutRect(inputPage[fieldKey], defaultPage[fieldKey]);
+    });
+    pages[pageKey] = page;
+  });
+  return {
+    pages,
+    updatedAt: String(incoming.updatedAt || '').trim(),
+    updatedBy: String(incoming.updatedBy || '').trim()
+  };
+}
+
+function readViceroyPresentationLayout() {
+  return normalizeViceroyPresentationLayout(readJson(VICEROY_PRESENTATION_LAYOUT_PATH, null));
+}
+
+function saveViceroyPresentationLayout(layout) {
+  const normalized = normalizeViceroyPresentationLayout(layout);
+  normalized.updatedAt = new Date().toISOString();
+  writeJson(VICEROY_PRESENTATION_LAYOUT_PATH, normalized);
+  return normalized;
+}
+
 function extractViceroyListPricePerM2Map(normalizedRow) {
   const source = normalizedRow && typeof normalizedRow === 'object' ? normalizedRow : {};
   const out = {};
@@ -8256,42 +8340,8 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     ? path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png')
     : defaultSecondaryImage;
   const allPaymentRows = Array.isArray(payload.payments) ? payload.payments : [];
-
-  // Ajusta estas coordenadas para mover cada bloque dentro del PDF.
-  // `x` y `y` están en coordenadas PDF; cambiar estos valores desplaza el texto o la imagen.
-  const pageRects = {
-    page1: {
-      name: rectFromPoint(121.3, 677.7, 330, 18),
-      date: rectFromPoint(483.3, 677.6, 125, 18)
-    },
-    page2: {
-      client: rectFromPoint(302.0, 489.4, 280, 22),
-      agent: rectFromPoint(302.0, 384.1, 280, 22),
-      broker: rectFromPoint(299.0, 284.7, 280, 22)
-    },
-    page3: {
-      delivery: rectFromPoint(205.1, 101.0, 240, 20)
-    },
-    page4: {
-      rooms: rectFromPoint(348.6, 478.7, 220, 18),
-      level: rectFromPoint(348.6, 444.7, 220, 18),
-      sqft: rectFromPoint(348.6, 410.7, 220, 18),
-      bathrooms: rectFromPoint(348.6, 376.7, 220, 18),
-      price: rectFromPoint(348.6, 289.0, 220, 18),
-      contractSigning: rectFromPoint(348.6, 254.9, 220, 18),
-      payment1: rectFromPoint(348.6, 220.9, 220, 18),
-      payment2: rectFromPoint(348.6, 186.9, 220, 18),
-      payment3: rectFromPoint(348.6, 152.9, 220, 18),
-      uponDelivery: rectFromPoint(348.6, 118.9, 220, 18)
-    },
-    page5: {
-      unit: rectFromPoint(150.0, 799.8, 280, 22),
-      level: rectFromPoint(95.0, 416.0, 120, 20),
-      sqft: rectFromPoint(214.0, 416.0, 150, 20),
-      primaryImage: { x: 68, y: 470, width: 520, height: 245 },
-      secondaryImage: { x: 68, y: 92, width: 520, height: 205 }
-    }
-  };
+  const presentationLayout = readViceroyPresentationLayout();
+  const pageRects = presentationLayout.pages;
   const presentationBackdrop = rgb(0.972, 0.957, 0.916);
 
   for (const row of selectedRows) {
@@ -14040,6 +14090,38 @@ app.get('/api/viceroy/presentacion-generador/units', requireBackendFeature('vice
     return res.status(500).json({
       ok: false,
       error: 'No se pudo cargar el catálogo de unidades',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.get('/api/viceroy/presentacion-generador/layout', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+  try {
+    const layout = readViceroyPresentationLayout();
+    return res.json({
+      ok: true,
+      layout,
+      defaults: defaultViceroyPresentationLayout()
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo cargar el layout de presentación',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.post('/api/viceroy/presentacion-generador/layout', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const inputLayout = body.layout && typeof body.layout === 'object' ? body.layout : body;
+    const layout = saveViceroyPresentationLayout(inputLayout);
+    return res.json({ ok: true, layout });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo guardar el layout de presentación',
       details: err && err.message ? err.message : 'error desconocido'
     });
   }
