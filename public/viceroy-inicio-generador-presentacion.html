@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Viceroy · Generador de Presentación</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.js"></script>
   <style>
     :root {
       --bg: #f7f2e8;
@@ -531,7 +532,10 @@
         activeLayoutKey: 'page1.name',
         pageSizes: new Map(),
         layoutPreviewPage: 'page1',
-        layoutZoom: 0.65
+        layoutZoom: 0.65,
+        layoutPdf: null,
+        layoutPdfLoading: null,
+        layoutRenderToken: 0
       };
 
       const els = {
@@ -786,6 +790,25 @@
         });
       }
 
+      async function loadLayoutPdf() {
+        if (state.layoutPdf) return state.layoutPdf;
+        if (state.layoutPdfLoading) return state.layoutPdfLoading;
+        if (!window.pdfjsLib) throw new Error('No se pudo cargar el visor PDF');
+        if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
+        }
+        state.layoutPdfLoading = window.pdfjsLib.getDocument({
+          url: '/viceroy/inicio/presentacion/pdf',
+          withCredentials: true
+        }).promise.then(function (doc) {
+          state.layoutPdf = doc;
+          return doc;
+        }).finally(function () {
+          state.layoutPdfLoading = null;
+        });
+        return state.layoutPdfLoading;
+      }
+
       function syncLayoutFormFromState() {
         ensureActiveLayout();
         const rect = getLayoutRect(state.layout, selectedLayoutKey());
@@ -796,7 +819,7 @@
         els.layoutH.value = rect.height;
       }
 
-      function renderLayoutPreview() {
+      async function renderLayoutPreview() {
         if (!els.layoutCanvas) return;
         ensureActiveLayout();
         updateLayoutZoomReadout();
@@ -807,36 +830,56 @@
         const maxWidth = 760;
         const maxHeight = 860;
         const fitScale = Math.min(maxWidth / pageSize.width, maxHeight / pageSize.height);
-        const displayScale = fitScale * zoom;
-        const drawWidth = Math.max(280, Math.round(pageSize.width * displayScale));
-        const drawHeight = Math.max(340, Math.round(pageSize.height * displayScale));
+        const pageScale = fitScale * zoom;
+        const drawWidth = Math.max(280, Math.round(pageSize.width * pageScale));
+        const drawHeight = Math.max(340, Math.round(pageSize.height * pageScale));
         const dpr = window.devicePixelRatio || 1;
         const canvas = els.layoutCanvas;
         const ctx = canvas.getContext('2d');
+        const renderToken = ++state.layoutRenderToken;
 
         canvas.width = Math.round(drawWidth * dpr);
         canvas.height = Math.round(drawHeight * dpr);
         canvas.style.width = drawWidth + 'px';
         canvas.style.height = drawHeight + 'px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, drawWidth, drawHeight);
 
-        const margin = 20;
-        const pageScale = Math.min((drawWidth - margin * 2) / pageSize.width, (drawHeight - margin * 2) / pageSize.height);
+        try {
+          const pdfDoc = await loadLayoutPdf();
+          if (renderToken !== state.layoutRenderToken) return;
+          const pageNumber = Math.max(1, Number(pageKey.replace('page', '')) || 1);
+          const pdfPage = await pdfDoc.getPage(pageNumber);
+          if (renderToken !== state.layoutRenderToken) return;
+          const viewport = pdfPage.getViewport({ scale: pageScale * dpr });
+          canvas.width = Math.round(viewport.width);
+          canvas.height = Math.round(viewport.height);
+          canvas.style.width = drawWidth + 'px';
+          canvas.style.height = drawHeight + 'px';
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          await pdfPage.render({
+            canvasContext: ctx,
+            viewport
+          }).promise;
+          if (renderToken !== state.layoutRenderToken) return;
+        } catch (err) {
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.fillStyle = '#f6f2e7';
+          ctx.fillRect(0, 0, drawWidth, drawHeight);
+          ctx.fillStyle = '#5b6156';
+          ctx.font = '700 16px Arial, sans-serif';
+          ctx.fillText('No se pudo cargar la vista previa del PDF', 24, 36);
+          ctx.font = '12px Arial, sans-serif';
+          ctx.fillText(err && err.message ? err.message : 'Reintenta en unos segundos.', 24, 58);
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const pageWidth = pageSize.width * pageScale;
         const pageHeight = pageSize.height * pageScale;
-        const originX = (drawWidth - pageWidth) / 2;
-        const originY = (drawHeight - pageHeight) / 2;
+        const originX = 0;
+        const originY = 0;
         const activeKey = selectedLayoutKey();
         const fields = layoutFieldsForPage(pageKey);
-
-        ctx.fillStyle = '#eef0ea';
-        ctx.fillRect(0, 0, drawWidth, drawHeight);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(originX, originY, pageWidth, pageHeight);
-        ctx.strokeStyle = '#b8b0a1';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(originX + 0.5, originY + 0.5, pageWidth - 1, pageHeight - 1);
 
         ctx.save();
         ctx.beginPath();
