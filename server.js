@@ -7087,108 +7087,83 @@ function buildViceroyPresentationInventoryStatusMap() {
   return byUnit;
 }
 
-async function renderViceroyPresentationFloorImageDataUrl(selectedUnit) {
+async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, font = null) {
   const target = unitKey(selectedUnit);
-  if (!target) return '';
+  if (!target || !rect) return;
   const floorsData = readViceroyPresentationFloorData();
   const floor = (Array.isArray(floorsData.floors) ? floorsData.floors : []).find((item) => {
     return Array.isArray(item && item.zones) && item.zones.some((zone) => unitKey(zone && zone.label) === target);
   }) || null;
-  if (!floor || !floor.imageDataUrl || !Array.isArray(floor.zones) || !floor.zones.length) return '';
+  if (!floor || !floor.imageDataUrl || !Array.isArray(floor.zones) || !floor.zones.length) return;
 
   const inventoryStatusMap = buildViceroyPresentationInventoryStatusMap();
   const specialYellowUnits = readViceroySpecialYellowUnits();
-  const browser = await getSharedPdfBrowser();
-  const page = await browser.newPage();
-  try {
-    page.setDefaultTimeout(60000);
-    page.setDefaultNavigationTimeout(60000);
-    await page.setViewport({ width: 1600, height: 2200, deviceScaleFactor: 1 });
-    await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#fff"><canvas id="c"></canvas></body></html>', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    const dataUrl = await page.evaluate(async ({ floorPayload, targetUnit, inventoryRows, specialUnits }) => {
-      const canvas = document.getElementById('c');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      const toUnitKey = (value) => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
-      const specialSet = new Set(Array.isArray(specialUnits) ? specialUnits.map(toUnitKey).filter(Boolean) : []);
-      const statusByUnit = new Map();
-      (Array.isArray(inventoryRows) ? inventoryRows : []).forEach((row) => {
-        const key = toUnitKey(row && row.unit);
-        if (!key) return;
-        statusByUnit.set(key, String(row && row.status || '').trim().toLowerCase());
-      });
-      const getUnitColor = (status, unit) => {
-        if (unit === targetUnit) return '#4dbd74';
-        if (specialSet.has(unit)) return '#d2a400';
-        if (status === 'vendida') return '#d65353';
-        if (status === 'apartado') return '#ffe18a';
-        return '#41ac63';
-      };
-      const imageDataUrl = String(floorPayload && floorPayload.imageDataUrl || '');
-      const zones = Array.isArray(floorPayload && floorPayload.zones) ? floorPayload.zones : [];
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = imageDataUrl;
-      });
-      const width = Math.max(1, Math.round(Number(floorPayload && floorPayload.imageWidth) || img.naturalWidth || img.width || 1200));
-      const height = Math.max(1, Math.round(Number(floorPayload && floorPayload.imageHeight) || img.naturalHeight || img.height || 800));
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(img, 0, 0, width, height);
-      zones.forEach((zone) => {
-        const points = Array.isArray(zone && zone.points) ? zone.points : [];
-        if (!points.length) return;
-        const unit = toUnitKey(zone && zone.label);
-        const status = statusByUnit.get(unit) || '';
-        const isSelected = unit === targetUnit;
-        const color = getUnitColor(status, unit);
-        ctx.beginPath();
-        points.forEach((point, index) => {
-          const px = Number(point && point[0] || 0);
-          const py = Number(point && point[1] || 0);
-          if (index === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
-        ctx.closePath();
-        ctx.fillStyle = isSelected ? 'rgba(77,189,116,0.62)' : (color + '66');
-        ctx.strokeStyle = isSelected ? '#ffe600' : color;
-        ctx.lineWidth = isSelected ? 4 : 2;
-        ctx.fill();
-        ctx.stroke();
-        if (isSelected) {
-          const cx = points.reduce((acc, point) => acc + Number(point && point[0] || 0), 0) / points.length;
-          const cy = points.reduce((acc, point) => acc + Number(point && point[1] || 0), 0) / points.length;
-          ctx.save();
-          ctx.font = '700 18px Arial, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = '#1d1f22';
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 4;
-          ctx.strokeText(zone && zone.label ? String(zone.label) : targetUnit, cx, cy);
-          ctx.fillText(zone && zone.label ? String(zone.label) : targetUnit, cx, cy);
-          ctx.restore();
-        }
-      });
-      return canvas.toDataURL('image/png');
-    }, {
-      floorPayload: {
-        imageDataUrl: floor.imageDataUrl,
-        imageWidth: floor.imageWidth,
-        imageHeight: floor.imageHeight,
-        zones: floor.zones
-      },
-      targetUnit: target,
-      inventoryRows: Array.from(inventoryStatusMap.entries()).map(([unit, value]) => ({
-        unit,
-        status: value && value.status ? value.status : ''
-      })),
-      specialUnits: Array.from(specialYellowUnits || []).map((unit) => String(unit || '').trim()).filter(Boolean)
+  const embeddedImage = await embedViceroyPresentationImage(pdfDoc, floor.imageDataUrl);
+  if (!embeddedImage) return;
+
+  const imageWidth = Number(embeddedImage.width || floor.imageWidth || 0) || 1;
+  const imageHeight = Number(embeddedImage.height || floor.imageHeight || 0) || 1;
+  const scale = Math.min(rect.width / imageWidth, rect.height / imageHeight);
+  const drawWidth = imageWidth * scale;
+  const drawHeight = imageHeight * scale;
+  const drawX = rect.x + (rect.width - drawWidth) / 2;
+  const drawY = rect.y + (rect.height - drawHeight) / 2;
+
+  page.drawImage(embeddedImage, {
+    x: drawX,
+    y: drawY,
+    width: drawWidth,
+    height: drawHeight
+  });
+
+  const colorFor = (status, unit) => {
+    if (unit === target) return { fill: rgb(0.301, 0.741, 0.455), stroke: rgb(1, 0.902, 0) };
+    if (specialYellowUnits.has(unit)) return { fill: rgb(0.824, 0.643, 0), stroke: rgb(0.824, 0.643, 0) };
+    if (status === 'vendida') return { fill: rgb(0.839, 0.325, 0.325), stroke: rgb(0.839, 0.325, 0.325) };
+    if (status === 'apartado') return { fill: rgb(1, 0.882, 0.541), stroke: rgb(1, 0.882, 0.541) };
+    return { fill: rgb(0.255, 0.675, 0.388), stroke: rgb(0.255, 0.675, 0.388) };
+  };
+
+  for (const zone of floor.zones) {
+    const points = Array.isArray(zone && zone.points) ? zone.points : [];
+    if (!points.length) continue;
+    const unit = unitKey(zone && zone.label);
+    const status = String((inventoryStatusMap.get(unit) || {}).status || '').trim().toLowerCase();
+    const palette = colorFor(status, unit);
+    const path = points.map((point, index) => {
+      const px = Number(point && point[0] || 0);
+      const py = Number(point && point[1] || 0);
+      const x = drawX + (px * scale);
+      const y = drawY + drawHeight - (py * scale);
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ') + ' Z';
+
+    page.drawSvgPath(path, {
+      color: palette.fill,
+      opacity: unit === target ? 0.62 : 0.28,
+      borderColor: unit === target ? rgb(1, 0.902, 0) : palette.stroke,
+      borderWidth: unit === target ? 3.4 : 1.3
     });
-    return String(dataUrl || '');
-  } finally {
-    try { await page.close(); } catch {}
+
+    if (unit === target && font) {
+      const transformedPoints = points.map((point) => {
+        const px = Number(point && point[0] || 0);
+        const py = Number(point && point[1] || 0);
+        return [
+          drawX + (px * scale),
+          drawY + drawHeight - (py * scale)
+        ];
+      });
+      const cx = transformedPoints.reduce((acc, pt) => acc + pt[0], 0) / transformedPoints.length;
+      const cy = transformedPoints.reduce((acc, pt) => acc + pt[1], 0) / transformedPoints.length;
+      page.drawText(zone && zone.label ? String(zone.label) : target, {
+        x: cx - 5,
+        y: cy - 5,
+        size: 12,
+        font,
+        color: rgb(0.1, 0.1, 0.1)
+      });
+    }
   }
 }
 
@@ -8456,8 +8431,8 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
   const templateBytes = fs.readFileSync(VICEROY_PRESENTATION_TEMPLATE_PATH);
   const templateDoc = await PDFDocument.load(templateBytes);
   const outputDoc = await PDFDocument.create();
-  const fontRegular = await outputDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await outputDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontRegular = await outputDoc.embedFont(StandardFonts.TimesRoman);
+  const fontBold = await outputDoc.embedFont(StandardFonts.TimesRomanBold);
   const pageCount = templateDoc.getPageCount();
   const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
   const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
@@ -8531,18 +8506,6 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     const secondaryImageSource = normalizeViceroyPresentationUrl(
       String(mergedMeta.secondaryImage || mergedMeta.heroImage || mergedMeta.render || defaultSecondaryImage || '').trim()
     ) || defaultSecondaryImage;
-    const inventoryMapSource = await renderViceroyPresentationFloorImageDataUrl(unit);
-    if (inventoryMapSource && pageRects.page4 && pageRects.page4.selectedUnitMap) {
-      try {
-        const inventoryMapImage = await embedViceroyPresentationImage(outputDoc, inventoryMapSource);
-        if (inventoryMapImage) {
-          drawImageContain(page4, inventoryMapImage, pageRects.page4.selectedUnitMap, 4);
-        }
-      } catch (err) {
-        log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);
-      }
-    }
-
     drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
     drawViceroyPresentationField(page1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
 
@@ -8567,6 +8530,13 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment3, paymentRows[3] && paymentRows[3].value ? paymentRows[3].value : '', { fontSize: 8.2, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.uponDelivery, paymentRows[4] && paymentRows[4].value ? paymentRows[4].value : '', { fontSize: 8.2, align: 'left' });
+    if (pageRects.page4 && pageRects.page4.selectedUnitMap) {
+      try {
+        await drawViceroyPresentationSelectedUnitMap(page4, outputDoc, pageRects.page4.selectedUnitMap, unit, fontBold);
+      } catch (err) {
+        log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);
+      }
+    }
 
     try {
       const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
