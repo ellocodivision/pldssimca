@@ -299,6 +299,59 @@
       font-weight: 700;
     }
 
+    .layout-preview {
+      display: grid;
+      gap: 10px;
+      margin: 12px 0 14px;
+    }
+
+    .layout-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .layout-toolbar .zoom-readout {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid #cbc5b3;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      color: #454950;
+      white-space: nowrap;
+    }
+
+    .layout-canvas-shell {
+      overflow: auto;
+      border: 1px solid #d7d0c0;
+      border-radius: 14px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.75), rgba(249,245,236,0.95)),
+        repeating-linear-gradient(45deg, rgba(133, 121, 92, 0.04) 0, rgba(133, 121, 92, 0.04) 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px);
+      padding: 12px;
+    }
+
+    #layoutCanvas {
+      display: block;
+      border-radius: 10px;
+      background: #fdfaf3;
+      box-shadow: 0 12px 28px rgba(60, 48, 25, 0.12);
+      cursor: crosshair;
+    }
+
+    .layout-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
     .helper {
       margin: 0;
       color: var(--muted);
@@ -413,6 +466,23 @@
         <div class="preview-card">
           <h3>Ajuste de posiciones</h3>
           <p class="helper" style="margin-bottom:12px;">Selecciona un bloque y mueve sus coordenadas. Esto afecta al PDF que se genera desde el servidor.</p>
+          <div class="layout-preview">
+            <div class="layout-toolbar">
+              <div class="field">
+                <label for="layoutPage">Vista de página</label>
+                <select id="layoutPage" class="select" style="min-height:44px;"></select>
+              </div>
+              <div class="field">
+                <label for="layoutZoom">Zoom</label>
+                <input id="layoutZoom" type="range" min="0.35" max="1.15" step="0.05" value="0.65">
+              </div>
+              <div class="zoom-readout" id="layoutZoomReadout">65%</div>
+            </div>
+            <div class="layout-canvas-shell">
+              <canvas id="layoutCanvas" width="612" height="792" aria-label="Vista previa del PDF"></canvas>
+            </div>
+            <p class="layout-hint">Haz clic en la hoja para mover el bloque seleccionado a ese punto. La vista usa la misma proporción que el PDF.</p>
+          </div>
           <div class="stack" style="gap:10px;">
             <div class="field">
               <label for="layoutField">Bloque</label>
@@ -458,7 +528,10 @@
         selectedUnits: [],
         layout: null,
         defaultLayout: null,
-        activeLayoutKey: 'page1.name'
+        activeLayoutKey: 'page1.name',
+        pageSizes: new Map(),
+        layoutPreviewPage: 'page1',
+        layoutZoom: 0.65
       };
 
       const els = {
@@ -474,6 +547,10 @@
         previewEmpty: document.getElementById('previewEmpty'),
         previewList: document.getElementById('previewList'),
         layoutField: document.getElementById('layoutField'),
+        layoutPage: document.getElementById('layoutPage'),
+        layoutZoom: document.getElementById('layoutZoom'),
+        layoutZoomReadout: document.getElementById('layoutZoomReadout'),
+        layoutCanvas: document.getElementById('layoutCanvas'),
         layoutX: document.getElementById('layoutX'),
         layoutY: document.getElementById('layoutY'),
         layoutW: document.getElementById('layoutW'),
@@ -507,6 +584,13 @@
         { key: 'page5.sqft', label: 'Página 5 · SQFT' },
         { key: 'page5.primaryImage', label: 'Página 5 · Imagen principal' },
         { key: 'page5.secondaryImage', label: 'Página 5 · Imagen secundaria' }
+      ];
+      const layoutPages = [
+        { key: 'page1', label: 'Página 1' },
+        { key: 'page2', label: 'Página 2' },
+        { key: 'page3', label: 'Página 3' },
+        { key: 'page4', label: 'Página 4' },
+        { key: 'page5', label: 'Página 5' }
       ];
 
       function esc(value) {
@@ -659,6 +743,10 @@
         return String(els.layoutField.value || state.activeLayoutKey || 'page1.name');
       }
 
+      function selectedLayoutPageKey() {
+        return String(els.layoutPage.value || state.layoutPreviewPage || layoutFieldParts(selectedLayoutKey()).page || 'page1');
+      }
+
       function setLayoutStatus(message) {
         els.layoutStatus.textContent = message || '';
       }
@@ -668,6 +756,34 @@
           return '<option value="' + esc(item.key) + '">' + esc(item.label) + '</option>';
         }).join('');
         els.layoutField.value = state.activeLayoutKey;
+      }
+
+      function renderLayoutPageOptions() {
+        els.layoutPage.innerHTML = layoutPages.map(function (item) {
+          return '<option value="' + esc(item.key) + '">' + esc(item.label) + '</option>';
+        }).join('');
+        els.layoutPage.value = state.layoutPreviewPage || 'page1';
+      }
+
+      function pageSizeFor(pageKey) {
+        const page = state.pageSizes && state.pageSizes.get ? state.pageSizes.get(pageKey) : null;
+        if (page && Number(page.width) > 0 && Number(page.height) > 0) return page;
+        return { page: pageKey, width: 612, height: 792 };
+      }
+
+      function clampValue(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function updateLayoutZoomReadout() {
+        const pct = Math.round((Number(state.layoutZoom) || 0.65) * 100);
+        els.layoutZoomReadout.textContent = pct + '%';
+      }
+
+      function layoutFieldsForPage(pageKey) {
+        return layoutFields.filter(function (item) {
+          return layoutFieldParts(item.key).page === pageKey;
+        });
       }
 
       function syncLayoutFormFromState() {
@@ -680,9 +796,168 @@
         els.layoutH.value = rect.height;
       }
 
-      function applyLayoutFormToState() {
+      function renderLayoutPreview() {
+        if (!els.layoutCanvas) return;
+        ensureActiveLayout();
+        updateLayoutZoomReadout();
+
+        const pageKey = selectedLayoutPageKey();
+        const pageSize = pageSizeFor(pageKey);
+        const zoom = clampValue(Number(state.layoutZoom) || 0.65, 0.35, 1.15);
+        const maxWidth = 760;
+        const maxHeight = 860;
+        const fitScale = Math.min(maxWidth / pageSize.width, maxHeight / pageSize.height);
+        const displayScale = fitScale * zoom;
+        const drawWidth = Math.max(280, Math.round(pageSize.width * displayScale));
+        const drawHeight = Math.max(340, Math.round(pageSize.height * displayScale));
+        const dpr = window.devicePixelRatio || 1;
+        const canvas = els.layoutCanvas;
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = Math.round(drawWidth * dpr);
+        canvas.height = Math.round(drawHeight * dpr);
+        canvas.style.width = drawWidth + 'px';
+        canvas.style.height = drawHeight + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, drawWidth, drawHeight);
+
+        const margin = 20;
+        const pageScale = Math.min((drawWidth - margin * 2) / pageSize.width, (drawHeight - margin * 2) / pageSize.height);
+        const pageWidth = pageSize.width * pageScale;
+        const pageHeight = pageSize.height * pageScale;
+        const originX = (drawWidth - pageWidth) / 2;
+        const originY = (drawHeight - pageHeight) / 2;
+        const activeKey = selectedLayoutKey();
+        const fields = layoutFieldsForPage(pageKey);
+
+        ctx.fillStyle = '#eef0ea';
+        ctx.fillRect(0, 0, drawWidth, drawHeight);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(originX, originY, pageWidth, pageHeight);
+        ctx.strokeStyle = '#b8b0a1';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(originX + 0.5, originY + 0.5, pageWidth - 1, pageHeight - 1);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(originX, originY, pageWidth, pageHeight);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(145, 135, 113, 0.18)';
+        ctx.lineWidth = 1;
+        const gridStep = 50;
+        for (let x = 0; x <= pageSize.width; x += gridStep) {
+          const px = originX + x * pageScale;
+          ctx.beginPath();
+          ctx.moveTo(px, originY);
+          ctx.lineTo(px, originY + pageHeight);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= pageSize.height; y += gridStep) {
+          const py = originY + pageHeight - y * pageScale;
+          ctx.beginPath();
+          ctx.moveTo(originX, py);
+          ctx.lineTo(originX + pageWidth, py);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        ctx.fillStyle = '#535660';
+        ctx.font = '700 14px Arial, sans-serif';
+        ctx.fillText(pageSize.page || pageKey, originX, Math.max(16, originY - 6));
+        ctx.font = '12px Arial, sans-serif';
+        ctx.fillStyle = '#6d7368';
+        ctx.fillText(Math.round(pageSize.width) + ' x ' + Math.round(pageSize.height) + ' pt', originX, originY + pageHeight + 16);
+
+        fields.forEach(function (item) {
+          const rect = getLayoutRect(state.layout, item.key);
+          if (!rect) return;
+          const x = originX + rect.x * pageScale;
+          const y = originY + pageHeight - (rect.y + rect.height) * pageScale;
+          const w = rect.width * pageScale;
+          const h = rect.height * pageScale;
+          const isActive = item.key === activeKey;
+          const isImage = /image/i.test(item.key);
+
+          ctx.save();
+          ctx.fillStyle = isImage ? (isActive ? 'rgba(32, 110, 173, 0.16)' : 'rgba(32, 110, 173, 0.10)') : (isActive ? 'rgba(255, 232, 22, 0.22)' : 'rgba(84, 90, 101, 0.10)');
+          ctx.strokeStyle = isActive ? '#d0b400' : (isImage ? '#2d6a97' : '#6d7280');
+          ctx.lineWidth = isActive ? 2.5 : 1.4;
+          ctx.setLineDash(isImage ? [6, 4] : []);
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeRect(x + 0.5, y + 0.5, Math.max(0, w - 1), Math.max(0, h - 1));
+          ctx.setLineDash([]);
+
+          const label = item.label;
+          ctx.font = '700 11px Arial, sans-serif';
+          const labelPadding = 5;
+          const textWidth = Math.min(ctx.measureText(label).width + 10, Math.max(0, w - 8));
+          const labelX = x + 4;
+          const labelY = Math.max(originY + 14, y - 4);
+          ctx.fillStyle = 'rgba(255,255,255,0.94)';
+          ctx.fillRect(labelX, labelY - 11, Math.max(42, textWidth), 16);
+          ctx.strokeStyle = isActive ? '#d0b400' : '#b8b0a1';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(labelX + 0.5, labelY - 10.5, Math.max(42, textWidth) - 1, 15);
+          ctx.fillStyle = '#3b3f46';
+          ctx.fillText(label, labelX + labelPadding, labelY + 1);
+
+          if (isActive) {
+            ctx.fillStyle = '#d0b400';
+            [
+              [x, y],
+              [x + w, y],
+              [x, y + h],
+              [x + w, y + h]
+            ].forEach(function (point) {
+              ctx.beginPath();
+              ctx.arc(point[0], point[1], 3.5, 0, Math.PI * 2);
+              ctx.fill();
+            });
+          }
+          ctx.restore();
+        });
+      }
+
+      function updateLayoutRectFromCanvasPoint(clientX, clientY) {
         ensureActiveLayout();
         const key = selectedLayoutKey();
+        const pageKey = selectedLayoutPageKey();
+        const pageSize = pageSizeFor(pageKey);
+        const canvas = els.layoutCanvas;
+        const bounds = canvas.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
+        const pageScale = Math.min(bounds.width / pageSize.width, bounds.height / pageSize.height);
+        const pageWidth = pageSize.width * pageScale;
+        const pageHeight = pageSize.height * pageScale;
+        const originX = (bounds.width - pageWidth) / 2;
+        const originY = (bounds.height - pageHeight) / 2;
+        const xPx = clientX - bounds.left;
+        const yPx = clientY - bounds.top;
+        if (xPx < originX || xPx > originX + pageWidth || yPx < originY || yPx > originY + pageHeight) {
+          return;
+        }
+        const pageX = (xPx - originX) / pageScale;
+        const pageYFromTop = (yPx - originY) / pageScale;
+        const pageY = pageSize.height - pageYFromTop;
+        const rect = getLayoutRect(state.layout, key) || { width: 120, height: 20 };
+        const nextRect = {
+          x: clampValue(pageX - rect.width / 2, 0, Math.max(0, pageSize.width - rect.width)),
+          y: clampValue(pageY - rect.height / 2, 0, Math.max(0, pageSize.height - rect.height)),
+          width: rect.width,
+          height: rect.height
+        };
+        setLayoutRect(state.layout, key, nextRect);
+        els.layoutX.value = nextRect.x;
+        els.layoutY.value = nextRect.y;
+        els.layoutW.value = nextRect.width;
+        els.layoutH.value = nextRect.height;
+        setLayoutStatus('Bloque movido en la vista previa.');
+        renderLayoutPreview();
+      }
+
+      function applyLayoutFormToState(keyOverride) {
+        ensureActiveLayout();
+        const key = String(keyOverride || selectedLayoutKey() || state.activeLayoutKey || 'page1.name');
         const nextRect = {
           x: Number(els.layoutX.value),
           y: Number(els.layoutY.value),
@@ -690,15 +965,20 @@
           height: Number(els.layoutH.value)
         };
         setLayoutRect(state.layout, key, nextRect);
+        renderLayoutPreview();
       }
 
       function loadRectIntoForm(key) {
         state.activeLayoutKey = key;
+        const parts = layoutFieldParts(key);
+        state.layoutPreviewPage = parts.page || state.layoutPreviewPage || 'page1';
+        els.layoutPage.value = state.layoutPreviewPage;
         const rect = getLayoutRect(state.layout, key) || { x: 0, y: 0, width: 0, height: 0 };
         els.layoutX.value = rect.x;
         els.layoutY.value = rect.y;
         els.layoutW.value = rect.width;
         els.layoutH.value = rect.height;
+        renderLayoutPreview();
       }
 
       async function loadLayout() {
@@ -713,6 +993,15 @@
           }
           state.layout = cloneLayout(data.layout);
           state.defaultLayout = cloneLayout(data.defaults || data.layout);
+          state.pageSizes = new Map((Array.isArray(data.pageSizes) ? data.pageSizes : []).map(function (item) {
+            return [String(item && item.page || '').trim(), {
+              page: String(item && item.page || '').trim(),
+              width: Number(item && item.width) || 612,
+              height: Number(item && item.height) || 792
+            }];
+          }));
+          state.layoutPreviewPage = layoutFieldParts(state.activeLayoutKey).page || 'page1';
+          renderLayoutPageOptions();
           renderLayoutFieldOptions();
           loadRectIntoForm(state.activeLayoutKey);
           setLayoutStatus('Layout cargado.');
@@ -722,6 +1011,9 @@
             updatedAt: ''
           };
           state.layout = cloneLayout(state.defaultLayout);
+          state.pageSizes = new Map();
+          state.layoutPreviewPage = 'page1';
+          renderLayoutPageOptions();
           renderLayoutFieldOptions();
           setLayoutStatus(err && err.message ? err.message : 'No se pudo cargar el layout.');
         }
@@ -857,13 +1149,37 @@
       els.unitSelect.addEventListener('change', updateSelected);
       els.generateBtn.addEventListener('click', generatePdf);
       els.layoutField.addEventListener('change', function () {
-        applyLayoutFormToState();
-        loadRectIntoForm(selectedLayoutKey());
+        const previousKey = state.activeLayoutKey;
+        const nextKey = selectedLayoutKey();
+        applyLayoutFormToState(previousKey);
+        loadRectIntoForm(nextKey);
+      });
+      els.layoutPage.addEventListener('change', function () {
+        const previousKey = state.activeLayoutKey;
+        const pageKey = String(els.layoutPage.value || 'page1');
+        applyLayoutFormToState(previousKey);
+        const nextField = layoutFields.find(function (item) {
+          return layoutFieldParts(item.key).page === pageKey;
+        });
+        if (nextField) {
+          loadRectIntoForm(nextField.key);
+        } else {
+          state.layoutPreviewPage = pageKey;
+          renderLayoutPreview();
+        }
+      });
+      els.layoutZoom.addEventListener('input', function () {
+        state.layoutZoom = Number(els.layoutZoom.value) || 0.65;
+        updateLayoutZoomReadout();
+        renderLayoutPreview();
       });
       [els.layoutX, els.layoutY, els.layoutW, els.layoutH].forEach(function (el) {
         el.addEventListener('input', function () {
           applyLayoutFormToState();
         });
+      });
+      els.layoutCanvas.addEventListener('click', function (event) {
+        updateLayoutRectFromCanvasPoint(event.clientX, event.clientY);
       });
       els.layoutApplyBtn.addEventListener('click', function () {
         applyLayoutFormToState();
@@ -889,6 +1205,8 @@
       });
 
       renderLayoutFieldOptions();
+      renderLayoutPageOptions();
+      updateLayoutZoomReadout();
       Promise.all([loadUnits(), loadLayout()]);
     })();
   </script>

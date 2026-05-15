@@ -7050,6 +7050,22 @@ function saveViceroyPresentationLayout(layout) {
   return normalized;
 }
 
+async function readViceroyPresentationTemplatePageSizes() {
+  if (!fs.existsSync(VICEROY_PRESENTATION_TEMPLATE_PATH)) {
+    throw new Error('No se encontró la plantilla PDF de presentación de Viceroy');
+  }
+  const templateBytes = fs.readFileSync(VICEROY_PRESENTATION_TEMPLATE_PATH);
+  const templateDoc = await PDFDocument.load(templateBytes);
+  return templateDoc.getPages().map((page, index) => {
+    const size = page.getSize();
+    return {
+      page: `page${index + 1}`,
+      width: Number(size.width) || 612,
+      height: Number(size.height) || 792
+    };
+  });
+}
+
 function extractViceroyListPricePerM2Map(normalizedRow) {
   const source = normalizedRow && typeof normalizedRow === 'object' ? normalizedRow : {};
   const out = {};
@@ -14094,13 +14110,15 @@ app.get('/api/viceroy/presentacion-generador/units', requireBackendFeature('vice
   }
 });
 
-app.get('/api/viceroy/presentacion-generador/layout', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+app.get('/api/viceroy/presentacion-generador/layout', requireBackendFeature('viceroy', 'generadorPresentacion'), async (req, res) => {
   try {
     const layout = readViceroyPresentationLayout();
+    const pageSizes = await readViceroyPresentationTemplatePageSizes();
     return res.json({
       ok: true,
       layout,
-      defaults: defaultViceroyPresentationLayout()
+      defaults: defaultViceroyPresentationLayout(),
+      pageSizes
     });
   } catch (err) {
     return res.status(500).json({
