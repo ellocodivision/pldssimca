@@ -171,6 +171,11 @@
     }
 
     .select {
+      min-height: 44px;
+      padding: 10px 12px;
+    }
+
+    .select.multiple {
       min-height: 340px;
       padding: 8px;
     }
@@ -420,7 +425,7 @@
             <span id="unitCount">Cargando unidades...</span>
             <span class="badge"><strong>Max</strong> 5 unidades</span>
           </div>
-          <select id="unitSelect" class="select" multiple aria-label="Selecciona hasta cinco unidades"></select>
+          <select id="unitSelect" class="select multiple" multiple aria-label="Selecciona hasta cinco unidades"></select>
           <p class="helper">Tip: usa <code>Cmd</code> o <code>Ctrl</code> para seleccionar varias unidades en el mismo PDF.</p>
         </div>
 
@@ -479,6 +484,10 @@
         </div>
         <div class="preview-card">
           <h3>Ajuste de posiciones</h3>
+          <p class="helper" style="margin:0 0 8px;">
+            Layout actual: <strong id="layoutLanguageBadge">Español</strong>.
+            Cambia el idioma del PDF para editar las posiciones de esa versión.
+          </p>
           <p class="helper" style="margin-bottom:12px;">Selecciona un bloque y mueve sus coordenadas. Esto afecta al PDF que se genera desde el servidor.</p>
           <div class="layout-preview">
             <div class="layout-toolbar">
@@ -581,7 +590,8 @@
         layoutSaveBtn: document.getElementById('layoutSaveBtn'),
         layoutResetBtn: document.getElementById('layoutResetBtn'),
         layoutRestoreBtn: document.getElementById('layoutRestoreBtn'),
-        layoutStatus: document.getElementById('layoutStatus')
+        layoutStatus: document.getElementById('layoutStatus'),
+        layoutLanguageBadge: document.getElementById('layoutLanguageBadge')
       };
 
       const layoutFields = [
@@ -800,6 +810,12 @@
       function updateLayoutZoomReadout() {
         const pct = Math.round((Number(state.layoutZoom) || 0.65) * 100);
         els.layoutZoomReadout.textContent = pct + '%';
+      }
+
+      function updateLayoutLanguageBadge() {
+        if (!els.layoutLanguageBadge) return;
+        const lang = String(state.language || els.pdfLanguage.value || 'es').trim().toLowerCase();
+        els.layoutLanguageBadge.textContent = lang === 'en' ? 'English' : 'Español';
       }
 
       function layoutFieldsForPage(pageKey) {
@@ -1067,6 +1083,7 @@
           renderLayoutPageOptions();
           renderLayoutFieldOptions();
           loadRectIntoForm(state.activeLayoutKey);
+          updateLayoutLanguageBadge();
           setLayoutStatus('Layout cargado.');
         } catch (err) {
           state.defaultLayout = {
@@ -1078,6 +1095,7 @@
           state.layoutPreviewPage = 'page1';
           renderLayoutPageOptions();
           renderLayoutFieldOptions();
+          updateLayoutLanguageBadge();
           setLayoutStatus(err && err.message ? err.message : 'No se pudo cargar el layout.');
         }
       }
@@ -1261,6 +1279,7 @@
         els.pdfLanguage.addEventListener('change', function () {
           const lang = String(els.pdfLanguage.value || 'es').trim() || 'es';
           state.language = lang;
+          updateLayoutLanguageBadge();
           loadLayout(lang).catch(function () {});
         });
       }
@@ -1324,6 +1343,7 @@
       renderLayoutPageOptions();
       updateLayoutZoomReadout();
       state.language = String(els.pdfLanguage && els.pdfLanguage.value || 'es').trim() || 'es';
+      updateLayoutLanguageBadge();
       Promise.all([loadUnits(), loadLayout(state.language), loadFloorJsonFiles()]);
     })();
   </script>
