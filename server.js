@@ -233,6 +233,7 @@ const VICEROY_PRESENTATION_TEMPLATE_ES_PATH = path.join(PUBLIC_DIR, 'assets', 'v
 const VICEROY_PRESENTATION_TEMPLATE_EN_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-en.pdf');
 const VICEROY_PRESENTATION_LAYOUT_ES_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout.json');
 const VICEROY_PRESENTATION_LAYOUT_EN_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout-en.json');
+const VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON = 'imagen-related-mapeada-2026-05-07T18-03-04-537Z.json';
 const VICEROY_PRESENTATION_LAYOUT_PATH = VICEROY_PRESENTATION_LAYOUT_ES_PATH;
 const VICEROY_PRESENTATION_FONT_REGULAR_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-REGULAR-TRIAL.OTF');
 const VICEROY_PRESENTATION_FONT_MEDIUM_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-MEDIUM-TRIAL.OTF');
@@ -7107,7 +7108,7 @@ function saveViceroyPresentationLayout(layout, language = 'es') {
 
 function readViceroyPresentationFloorData() {
   const config = readViceroyPilotoConfig();
-  const requestedName = String(config.selectedFloorJsonName || '').trim();
+  const requestedName = String(config.selectedFloorJsonName || VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON || '').trim();
   let floorsData = requestedName
     ? readNamedFloorsByDevelopment('viceroy-piloto', requestedName)
     : readMergedFloorsByDevelopment('viceroy-piloto');
@@ -7152,6 +7153,7 @@ function resolveViceroyPresentationFloorForMap(selectedUnit, options = {}) {
   if (!target) return null;
   const requestedFloorJsonName = sanitizeJsonFileName(String(options.floorJsonName || options.floorFileName || '').trim());
   const requestedFloorId = String(options.floorId || '').trim();
+  const preferredFloorJsonName = sanitizeJsonFileName(String(readViceroyPilotoConfig().selectedFloorJsonName || VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON || '').trim());
 
   const makeEntries = (floors, fileName = '') => (Array.isArray(floors) ? floors : []).map((floor, floorIndex) => ({
     floor,
@@ -7159,9 +7161,12 @@ function resolveViceroyPresentationFloorForMap(selectedUnit, options = {}) {
     floorIndex
   }));
 
+  const preferredEntries = preferredFloorJsonName
+    ? makeEntries(readNamedFloorsByDevelopment('viceroy-piloto', preferredFloorJsonName).floors, preferredFloorJsonName)
+    : [];
   const entries = requestedFloorJsonName
     ? makeEntries(readNamedFloorsByDevelopment('viceroy-piloto', requestedFloorJsonName).floors, requestedFloorJsonName)
-    : readViceroyPresentationFloorCandidates();
+    : preferredEntries.concat(readViceroyPresentationFloorCandidates());
 
   const exactFloor = requestedFloorId
     ? entries.find((entry) => String(entry && entry.floor && entry.floor.id || '').trim() === requestedFloorId)
@@ -14087,7 +14092,7 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
   const devSlug = 'viceroy-piloto';
   const config = readViceroyPilotoConfig();
   const requestedName = typeof req.query.name === 'string' ? req.query.name.trim() : '';
-  const selectedName = requestedName || String(config.selectedFloorJsonName || '').trim();
+  const selectedName = requestedName || String(config.selectedFloorJsonName || VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON || '').trim();
   let floorsData = selectedName
     ? readNamedFloorsByDevelopment(devSlug, selectedName)
     : readMergedFloorsByDevelopment(devSlug);
@@ -14119,7 +14124,10 @@ app.get('/api/viceroy-piloto/public-data', requireViceroyPresentAccess, (req, re
     floors: floorsData.floors,
     loadedFiles: floorsData.loadedFiles,
     showUnitLabels: floorsData.showUnitLabels !== false,
-    config,
+    config: {
+      ...config,
+      selectedFloorJsonName: String(config.selectedFloorJsonName || VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON || '').trim()
+    },
     inventoryFileName,
     inventoryRows,
     specialYellowUnits: readViceroySpecialYellowUnits(),
@@ -14405,6 +14413,10 @@ app.get('/api/viceroy/presentacion-generador/floor-json-files', requireBackendFe
       seen.add(value.toLowerCase());
       files.push(value);
     });
+    if (VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON && !seen.has(VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON.toLowerCase())) {
+      files.push(VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON);
+      seen.add(VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON.toLowerCase());
+    }
     if (!files.length) {
       readViceroyPresentationFloorCandidates().forEach((entry) => {
         const fileName = String(entry && entry.fileName || '').trim();
@@ -14416,7 +14428,7 @@ app.get('/api/viceroy/presentacion-generador/floor-json-files', requireBackendFe
     return res.json({
       ok: true,
       files,
-      selectedFloorJsonName: String(config.selectedFloorJsonName || '').trim()
+      selectedFloorJsonName: String(config.selectedFloorJsonName || VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON || '').trim()
     });
   } catch (err) {
     return res.status(500).json({
