@@ -6897,6 +6897,15 @@ function buildViceroyPresentationUnitRows(excelRows) {
     .sort((a, b) => String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es', { numeric: true, sensitivity: 'base' }));
 }
 
+function inferViceroyPresentationM2(unitRow) {
+  const source = unitRow && typeof unitRow === 'object' ? unitRow : {};
+  const rawM2 = String(source.totalM2 == null ? '' : source.totalM2).trim() || String(source.m2 == null ? '' : source.m2).trim();
+  if (rawM2) return rawM2;
+  const rawSqft = Number(String(source.sqft == null ? '' : source.sqft).replace(/[^0-9.\-]/g, ''));
+  if (!Number.isFinite(rawSqft) || rawSqft <= 0) return '';
+  return formatViceroyPresentationNumber(rawSqft / 10.7639, 0);
+}
+
 async function readViceroyPresentationImageBuffer(source) {
   const raw = String(source == null ? '' : source).trim();
   if (!raw) return null;
@@ -7015,12 +7024,12 @@ function defaultViceroyPresentationLayout() {
         selectedUnitMap: { x: 56, y: 100, width: 246, height: 228 }
       },
       page5: {
-        unit: { x: 112.0, y: 452.0, width: 180, height: 18 },
-        level: { x: 112.0, y: 424.0, width: 120, height: 18 },
-        sqft: { x: 112.0, y: 396.0, width: 140, height: 18 },
-        primaryImage: { x: 68, y: 470, width: 520, height: 245 },
-        secondaryImage: { x: 68, y: 92, width: 520, height: 205 },
-        selectedUnitMap: { x: 68, y: 92, width: 520, height: 205 }
+        unit: { x: 64.0, y: 404.0, width: 200, height: 18 },
+        level: { x: 64.0, y: 376.0, width: 120, height: 18 },
+        sqft: { x: 64.0, y: 348.0, width: 160, height: 18 },
+        primaryImage: { x: 52, y: 446, width: 553, height: 276 },
+        secondaryImage: { x: 50, y: 56, width: 557, height: 306 },
+        selectedUnitMap: { x: 50, y: 56, width: 557, height: 306 }
       }
     },
     updatedAt: ''
@@ -7143,7 +7152,7 @@ function buildViceroyPresentationInventoryStatusMap() {
   return byUnit;
 }
 
-async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, font = null) {
+async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, excelUnitSet = null, font = null) {
   const target = normalizeWhisperlistSelectionUnitKey(selectedUnit);
   if (!target || !rect) return;
   const mergedFloorsData = readViceroyPresentationFloorData();
@@ -7166,7 +7175,6 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
   const floorImageSource = getViceroyPresentationFloorImageSource(floorToUse);
   if (!floorToUse || !floorImageSource || !Array.isArray(floorToUse.zones) || !floorToUse.zones.length) return;
 
-  const inventoryStatusMap = buildViceroyPresentationInventoryStatusMap();
   const baseImage = await embedViceroyPresentationImage(pdfDoc, floorImageSource);
   if (!baseImage) return;
   const box = getContainBox(rect, Number(floorToUse.imageWidth) || baseImage.width || rect.width, Number(floorToUse.imageHeight) || baseImage.height || rect.height, 0);
@@ -7198,8 +7206,8 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
     const uk = normalizeWhisperlistSelectionUnitKey(zone.label);
     const zonePoints = pts.map((pt) => toPdfPoint(pt));
     const isSelected = uk === target;
-    const isInventory = inventoryStatusMap.has(uk);
-    const isBlack = !isSelected && !isInventory;
+    const isInExcel = excelUnitSet && typeof excelUnitSet.has === 'function' ? excelUnitSet.has(uk) : false;
+    const isBlack = !isSelected && !isInExcel;
     if (isBlack) {
       page.drawPolygon(zonePoints, {
         color: rgb(0.05, 0.05, 0.05),
@@ -8515,6 +8523,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
   const pageCount = templateDoc.getPageCount();
   const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
   const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
+  const excelUnitSet = new Set(excelData.map((row) => normalizeWhisperlistSelectionUnitKey(row.unidad)).filter(Boolean));
   const rowsByUnit = new Map(excelData.map((row) => [normalizeWhisperlistSelectionUnitKey(row.unidad), row]).filter((entry) => Boolean(entry[0])));
   const requestedUnits = Array.isArray(payload.units) ? payload.units : (payload.unit ? [payload.unit] : []);
   const selectedUnits = requestedUnits
@@ -8600,7 +8609,9 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     )} MXN` : '';
     const roomsText = String(row.rooms || row.recamaras || '').trim();
     const levelText = String(row.level || '').trim();
-    const sqftText = String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
+    const sqftText = language === 'es'
+      ? String(inferViceroyPresentationM2(row) || row.totalM2 || row.m2 || '').trim()
+      : String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
     const bathroomsText = String(row.banos || '').trim();
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
@@ -8615,7 +8626,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     try {
       const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
       if (primaryImage) {
-        drawImageContain(page5, primaryImage, pageRects.page5.primaryImage, 8);
+        drawImageContain(page5, primaryImage, pageRects.page5.primaryImage, 4);
       }
     } catch (err) {
       log(`No se pudo insertar imagen principal de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
@@ -8628,6 +8639,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
           outputDoc,
           pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage,
           unit,
+          excelUnitSet,
           fontBold
         );
       } catch (err) {
