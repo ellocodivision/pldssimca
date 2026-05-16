@@ -7122,6 +7122,48 @@ function readViceroyPresentationFloorCandidates() {
   return out;
 }
 
+function resolveViceroyPresentationFloorForMap(selectedUnit, options = {}) {
+  const target = normalizeWhisperlistSelectionUnitKey(selectedUnit);
+  if (!target) return null;
+  const requestedFloorJsonName = sanitizeJsonFileName(String(options.floorJsonName || options.floorFileName || '').trim());
+  const requestedFloorId = String(options.floorId || '').trim();
+
+  const makeEntries = (floors, fileName = '') => (Array.isArray(floors) ? floors : []).map((floor, floorIndex) => ({
+    floor,
+    fileName,
+    floorIndex
+  }));
+
+  const entries = requestedFloorJsonName
+    ? makeEntries(readNamedFloorsByDevelopment('viceroy-piloto', requestedFloorJsonName).floors, requestedFloorJsonName)
+    : readViceroyPresentationFloorCandidates();
+
+  const exactFloor = requestedFloorId
+    ? entries.find((entry) => String(entry && entry.floor && entry.floor.id || '').trim() === requestedFloorId)
+    : null;
+  if (exactFloor && exactFloor.floor) return exactFloor.floor;
+
+  const matchingEntries = entries.filter((entry) => {
+    const floor = entry && entry.floor;
+    const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
+    if (!zones.length) return false;
+    if (requestedFloorId && String(floor.id || '').trim() === requestedFloorId) return true;
+    return zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target);
+  });
+
+  matchingEntries.sort((a, b) => {
+    const aZones = Array.isArray(a && a.floor && a.floor.zones) ? a.floor.zones.length : 0;
+    const bZones = Array.isArray(b && b.floor && b.floor.zones) ? b.floor.zones.length : 0;
+    if (aZones !== bZones) return bZones - aZones;
+    const aW = Number(a && a.floor && a.floor.imageWidth || 0);
+    const bW = Number(b && b.floor && b.floor.imageWidth || 0);
+    if (aW !== bW) return bW - aW;
+    return 0;
+  });
+
+  return matchingEntries[0] && matchingEntries[0].floor ? matchingEntries[0].floor : null;
+}
+
 function buildViceroyPresentationInventoryStatusMap() {
   const candidates = resolvePreferredViceroyInventoryCandidates();
   let rows = [];
@@ -7152,20 +7194,12 @@ function buildViceroyPresentationInventoryStatusMap() {
   return byUnit;
 }
 
-async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, excelUnitSet = null, font = null) {
+async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, excelUnitSet = null, font = null, floorOverride = null) {
   const target = normalizeWhisperlistSelectionUnitKey(selectedUnit);
   if (!target || !rect) return;
-  const floorToUse = readViceroyPresentationFloorCandidates()
-    .filter((entry) => Array.isArray(entry && entry.floor && entry.floor.zones) && entry.floor.zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target))
-    .sort((a, b) => {
-      const aZones = Array.isArray(a && a.floor && a.floor.zones) ? a.floor.zones.length : 0;
-      const bZones = Array.isArray(b && b.floor && b.floor.zones) ? b.floor.zones.length : 0;
-      if (aZones !== bZones) return bZones - aZones;
-      const aW = Number(a && a.floor && a.floor.imageWidth || 0);
-      const bW = Number(b && b.floor && b.floor.imageWidth || 0);
-      if (aW !== bW) return bW - aW;
-      return 0;
-    })[0]?.floor || null;
+  const floorToUse = floorOverride && typeof floorOverride === 'object'
+    ? floorOverride
+    : resolveViceroyPresentationFloorForMap(target);
   const floorImageSource = getViceroyPresentationFloorImageSource(floorToUse);
   if (!floorToUse || !floorImageSource || !Array.isArray(floorToUse.zones) || !floorToUse.zones.length) return;
 
@@ -8524,6 +8558,8 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     .map((unit) => String(unit || '').trim())
     .filter(Boolean)
     .slice(0, VICEROY_PRESENTATION_MAX_UNITS);
+  const requestedFloorJsonName = sanitizeJsonFileName(String(payload.floorJsonName || payload.floorFileName || '').trim());
+  const requestedFloorId = String(payload.floorId || '').trim();
 
   if (!selectedUnits.length) {
     throw new Error('Selecciona al menos una unidad');
@@ -8607,6 +8643,10 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     const bathroomsText = String(row.banos || '').trim();
     const page5UnitText = language === 'es' ? `Unidad: ${unit}` : unit;
     const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : areaText;
+    const floorForMap = resolveViceroyPresentationFloorForMap(unit, {
+      floorJsonName: requestedFloorJsonName,
+      floorId: requestedFloorId
+    });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, areaText, { fontSize: 8.8, align: 'left' });
@@ -8634,7 +8674,8 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
           pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage,
           unit,
           excelUnitSet,
-          fontBold
+          fontBold,
+          floorForMap
         );
       } catch (err) {
         log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);

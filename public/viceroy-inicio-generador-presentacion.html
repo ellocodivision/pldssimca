@@ -447,6 +447,12 @@
                 <option value="en">English</option>
               </select>
             </div>
+            <div class="field">
+              <label for="floorJsonName">Plano JSON</label>
+              <select id="floorJsonName" class="select">
+                <option value="">Auto (usar piso activo)</option>
+              </select>
+            </div>
           </div>
           <div class="actions">
             <button id="generateBtn" class="btn primary" type="button">Generar PDF</button>
@@ -541,6 +547,8 @@
         layoutPreviewPage: 'page1',
         layoutZoom: 0.65,
         language: 'es',
+        floorJsonName: '',
+        floorJsonFiles: [],
         layoutPdf: null,
         layoutPdfLoading: null,
         layoutRenderToken: 0
@@ -554,6 +562,7 @@
         agentName: document.getElementById('agentName'),
         brokerName: document.getElementById('brokerName'),
         pdfLanguage: document.getElementById('pdfLanguage'),
+        floorJsonName: document.getElementById('floorJsonName'),
         generateBtn: document.getElementById('generateBtn'),
         clearBtn: document.getElementById('clearBtn'),
         status: document.getElementById('status'),
@@ -1137,6 +1146,42 @@
         }
       }
 
+      function renderFloorJsonSelect() {
+        const current = String(state.floorJsonName || '').trim();
+        const options = ['<option value="">Auto (usar piso activo)</option>']
+          .concat((Array.isArray(state.floorJsonFiles) ? state.floorJsonFiles : []).map(function (name) {
+            const value = String(name || '').trim();
+            if (!value) return '';
+            const selected = value === current ? ' selected' : '';
+            return '<option value="' + esc(value) + '"' + selected + '>' + esc(value) + '</option>';
+          }).filter(Boolean));
+        if (els.floorJsonName) {
+          els.floorJsonName.innerHTML = options.join('');
+          els.floorJsonName.value = current;
+        }
+      }
+
+      async function loadFloorJsonFiles() {
+        try {
+          const res = await fetch('/api/viceroy-piloto/floors', {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudieron cargar los pisos');
+          }
+          state.floorJsonFiles = Array.isArray(data.loadedFiles) ? data.loadedFiles.slice() : [];
+          if (state.floorJsonName && !state.floorJsonFiles.includes(state.floorJsonName)) {
+            state.floorJsonName = '';
+          }
+          renderFloorJsonSelect();
+        } catch (_) {
+          state.floorJsonFiles = [];
+          renderFloorJsonSelect();
+        }
+      }
+
       async function generatePdf() {
         const units = state.selectedUnits.slice(0, 5);
         if (!units.length) {
@@ -1165,6 +1210,7 @@
               agentName: agentName,
               brokerName: brokerName,
               language: String(els.pdfLanguage.value || 'es'),
+              floorJsonName: String(els.floorJsonName && els.floorJsonName.value || '').trim(),
               presentationDate: new Date().toLocaleDateString('es-MX', {
                 day: '2-digit',
                 month: 'long',
@@ -1201,6 +1247,11 @@
 
       els.unitSelect.addEventListener('change', updateSelected);
       els.generateBtn.addEventListener('click', generatePdf);
+      if (els.floorJsonName) {
+        els.floorJsonName.addEventListener('change', function () {
+          state.floorJsonName = String(els.floorJsonName.value || '').trim();
+        });
+      }
       els.layoutField.addEventListener('change', function () {
         const previousKey = state.activeLayoutKey;
         const nextKey = selectedLayoutKey();
@@ -1260,7 +1311,7 @@
       renderLayoutFieldOptions();
       renderLayoutPageOptions();
       updateLayoutZoomReadout();
-      Promise.all([loadUnits(), loadLayout()]);
+      Promise.all([loadUnits(), loadLayout(), loadFloorJsonFiles()]);
     })();
   </script>
 </body>
