@@ -7232,10 +7232,11 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
     : resolveViceroyPresentationFloorForMap(target);
   const floorImageSource = getViceroyPresentationFloorImageSource(floorToUse);
   if (!floorToUse || !floorImageSource || !Array.isArray(floorToUse.zones) || !floorToUse.zones.length) return;
-
-  const baseImage = await embedViceroyPresentationImage(pdfDoc, floorImageSource);
-  if (!baseImage) return;
-  const box = getContainBox(rect, Number(floorToUse.imageWidth) || baseImage.width || rect.width, Number(floorToUse.imageHeight) || baseImage.height || rect.height, 0);
+  const paintedDataUrl = await renderViceroyPresentationPaintedFloorDataUrl(floorToUse, target, excelUnitSet);
+  if (!paintedDataUrl) return;
+  const paintedImage = await embedViceroyPresentationImage(pdfDoc, paintedDataUrl);
+  if (!paintedImage) return;
+  const box = getContainBox(rect, paintedImage.width || rect.width, paintedImage.height || rect.height, 0);
   page.drawRectangle({
     x: rect.x,
     y: rect.y,
@@ -7244,65 +7245,151 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
     color: rgb(1, 1, 1),
     borderWidth: 0
   });
-  page.drawImage(baseImage, {
+  page.drawImage(paintedImage, {
     x: box.x,
     y: box.y,
     width: box.width,
     height: box.height
   });
+}
 
-  const scaleX = box.width / Math.max(1, Number(floorToUse.imageWidth) || baseImage.width || 1);
-  const scaleY = box.height / Math.max(1, Number(floorToUse.imageHeight) || baseImage.height || 1);
-  const toPdfPoint = (pt) => ({
-    x: box.x + Number(pt && pt[0] || 0) * scaleX,
-    y: box.y + box.height - Number(pt && pt[1] || 0) * scaleY
-  });
-
-  floorToUse.zones.forEach((zone) => {
-    const pts = Array.isArray(zone && zone.points) ? zone.points : [];
-    if (pts.length < 3) return;
-    const uk = extractUnitCode(zone && zone.label);
-    const zonePoints = pts.map((pt) => toPdfPoint(pt));
-    const isSelected = uk === target;
-    const isInExcel = excelUnitSet && typeof excelUnitSet.has === 'function' ? excelUnitSet.has(uk) : false;
-    const isBlack = !isSelected && !isInExcel;
-    if (isBlack) {
-      page.drawPolygon(zonePoints, {
-        color: rgb(0.05, 0.05, 0.05),
-        opacity: 0.95,
-        borderWidth: 0
-      });
-      return;
-    }
-    page.drawPolygon(zonePoints, {
-      color: isSelected ? rgb(0.58, 0.86, 0.64) : rgb(1, 1, 1),
-      opacity: isSelected ? 0.72 : 0.98,
-      borderColor: isSelected ? rgb(0.89, 0.73, 0.12) : rgb(0.30, 0.30, 0.34),
-      borderWidth: isSelected ? 2 : 1.2,
-      borderOpacity: 1
+async function renderViceroyPresentationPaintedFloorDataUrl(floor, selectedUnit, excelUnitSet = null) {
+  const target = extractUnitCode(selectedUnit);
+  if (!target || !floor || !Array.isArray(floor.zones) || !floor.zones.length) return '';
+  const floorImageSource = getViceroyPresentationFloorImageSource(floor);
+  if (!floorImageSource) return '';
+  let imageBuffer = null;
+  try {
+    imageBuffer = await readViceroyPresentationImageBuffer(floorImageSource);
+  } catch (err) {
+    log(`No se pudo leer la imagen base del piso Viceroy: ${err && err.message ? err.message : err}`);
+    return '';
+  }
+  if (!imageBuffer || !imageBuffer.length) return '';
+  const mimeType = imageBufferMimeType(imageBuffer, floorImageSource);
+  const floorImageDataUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+  const width = Math.max(1, Number(floor.imageWidth) || 1200);
+  const height = Math.max(1, Number(floor.imageHeight) || 800);
+  const zonesJson = JSON.stringify(Array.isArray(floor.zones) ? floor.zones.map((zone) => ({
+    label: zone && zone.label,
+    points: Array.isArray(zone && zone.points) ? zone.points : []
+  })) : []);
+  const excelUnitsJson = JSON.stringify(Array.from(excelUnitSet && typeof excelUnitSet.has === 'function' ? excelUnitSet : new Set()).map((unit) => String(unit || '').trim()).filter(Boolean));
+  const browser = await getSharedPdfBrowser();
+  const page = await browser.newPage();
+  try {
+    page.setDefaultTimeout(120000);
+    page.setDefaultNavigationTimeout(120000);
+    await page.setViewport({
+      width: Math.ceil(width),
+      height: Math.ceil(height),
+      deviceScaleFactor: 1
     });
-    if (isSelected) {
-      const centroid = zonePoints.reduce((acc, point) => {
-        acc.x += Number(point.x) || 0;
-        acc.y += Number(point.y) || 0;
-        return acc;
-      }, { x: 0, y: 0 });
-      const cx = centroid.x / zonePoints.length;
-      const cy = centroid.y / zonePoints.length;
-      const labelSize = Math.max(14, Math.min(38, Math.round(box.width / 26)));
-      if (font) {
-        const label = String(uk || target || '').trim();
-        const labelWidth = font.widthOfTextAtSize(label, labelSize);
-        page.drawText(label, {
-          x: cx - (labelWidth / 2),
-          y: cy - (labelSize / 3),
-          size: labelSize,
-          font,
-          color: rgb(0.08, 0.08, 0.08)
-        });
-      }
-    }
-  });
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            html, body { margin: 0; padding: 0; background: #fff; overflow: hidden; }
+            canvas { display: block; }
+          </style>
+        </head>
+        <body>
+          <canvas id="floor" width="${width}" height="${height}"></canvas>
+          <script>
+            (function () {
+              window.__floorReady = false;
+              const target = ${JSON.stringify(String(target || '').trim())};
+              const zones = ${zonesJson};
+              const excelSet = new Set(${excelUnitsJson});
+              function unitKey(s) {
+                const raw = String(s || '').trim().toUpperCase().replace(/\\s+/g, '');
+                if (!raw) return '';
+                const nc = raw.replace(/([0-9])[IL]([0-9]|$)/g, '$11$2').replace(/(^|0)[IL]([0-9])/g, '$11$2');
+                if (/^\\d+$/.test(nc)) {
+                  const n = String(Number(nc));
+                  return n === 'NaN' ? nc : n;
+                }
+                const m = nc.match(/^0*(\\d+)([A-Z]+)?$/);
+                if (m) {
+                  const n = String(Number(m[1]));
+                  return n === 'NaN' ? nc : (n + (m[2] || ''));
+                }
+                return nc;
+              }
+              const img = new Image();
+              img.onload = function () {
+                const canvas = document.getElementById('floor');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                zones.forEach(function (zone) {
+                  const points = Array.isArray(zone && zone.points) ? zone.points : [];
+                  if (points.length < 3) return;
+                  const uk = unitKey(zone && zone.label);
+                  const isSelected = uk === target;
+                  const isInExcel = excelSet.has(uk);
+                  const fill = isSelected ? 'rgba(149, 228, 163, 0.82)' : (isInExcel ? 'rgba(255,255,255,0.96)' : 'rgba(18,18,18,0.92)');
+                  const stroke = isSelected ? '#d8b61a' : (isInExcel ? '#4a4d52' : '#0f0f10');
+                  ctx.beginPath();
+                  points.forEach(function (point, index) {
+                    const px = Number(point && point[0] || 0);
+                    const py = Number(point && point[1] || 0);
+                    if (index === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                  });
+                  ctx.closePath();
+                  ctx.fillStyle = fill;
+                  ctx.fill();
+                  ctx.strokeStyle = stroke;
+                  ctx.lineWidth = isSelected ? 3 : 1.4;
+                  ctx.stroke();
+                  if (isSelected) {
+                    const cx = points.reduce(function (acc, point) { return acc + Number(point && point[0] || 0); }, 0) / points.length;
+                    const cy = points.reduce(function (acc, point) { return acc + Number(point && point[1] || 0); }, 0) / points.length;
+                    const label = String(uk || target || '').trim();
+                    if (label) {
+                      ctx.save();
+                      ctx.font = '700 28px Arial';
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'middle';
+                      ctx.strokeStyle = '#ffffff';
+                      ctx.lineWidth = 4;
+                      ctx.strokeText(label, cx, cy);
+                      ctx.fillStyle = '#111111';
+                      ctx.fillText(label, cx, cy);
+                      ctx.restore();
+                    }
+                  }
+                });
+                window.__floorReady = true;
+              };
+              img.onerror = function () {
+                window.__floorReady = true;
+              };
+              img.src = ${JSON.stringify(floorImageDataUrl)};
+            })();
+          <\/script>
+        </body>
+      </html>`;
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    try {
+      await page.waitForFunction(() => window.__floorReady === true, { timeout: 90000 });
+    } catch {}
+    const canvas = await page.$('#floor');
+    if (!canvas) return '';
+    return await page.evaluate(() => {
+      const canvasEl = document.getElementById('floor');
+      return canvasEl ? canvasEl.toDataURL('image/png') : '';
+    });
+  } catch (err) {
+    log(`No se pudo rasterizar el mapa pintado de Viceroy: ${err && err.message ? err.message : err}`);
+    return '';
+  } finally {
+    try { await page.close(); } catch {}
+  }
 }
 
 async function readViceroyPresentationTemplatePageSizes() {
