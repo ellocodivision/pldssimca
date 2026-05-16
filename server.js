@@ -8858,7 +8858,6 @@ function readMergedFloorsByDevelopment(devSlug) {
       }
       floors.push(...payloadFloors);
       loadedFiles.push(path.basename(entry.fullPath));
-      if (devSlug === 'viceroy-piloto' && floors.length) break;
     } catch {}
   }
   return { floors, loadedFiles };
