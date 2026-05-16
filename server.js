@@ -12523,6 +12523,14 @@ app.get('/viceroy/inicio/excel', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-excel.html'));
 });
 
+app.get('/viceroy/inicio/bienvenida-cliente', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-bienvenida-cliente.html'));
+});
+
+app.get('/viceroy/inicio/generador-bienvenida-cliente', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-bienvenida-cliente.html'));
+});
+
 app.get('/viceroy/inicio/generador-presentacion', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-inicio-generador-presentacion.html'));
 });

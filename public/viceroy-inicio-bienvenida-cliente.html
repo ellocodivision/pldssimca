@@ -1,0 +1,1373 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viceroy · Generador de Bienvenida a Cliente</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.js"></script>
+  <style>
+    :root {
+      --bg: #f7f2e8;
+      --panel: rgba(255, 255, 255, 0.94);
+      --card: #ffffff;
+      --ink: #1d1f23;
+      --muted: #61656c;
+      --line: rgba(117, 104, 77, 0.18);
+      --accent: #ffe816;
+      --accent-ink: #18191d;
+      --shadow: 0 18px 48px rgba(59, 46, 21, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(255, 232, 22, 0.18), transparent 22%),
+        radial-gradient(circle at bottom left, rgba(155, 155, 139, 0.14), transparent 24%),
+        linear-gradient(180deg, #fbf8f1 0%, var(--bg) 100%);
+    }
+
+    .wrap {
+      width: min(1460px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 22px 0 34px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid #bdb8a9;
+      background: #fff;
+      color: #111;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      border-radius: 20px;
+      padding: 18px 20px 16px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -40% auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,232,22,0.22), transparent 66%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: #75705e;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
+
+    .sub {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 860px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(420px, 520px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .section-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #5d6054;
+      letter-spacing: 0.02em;
+    }
+
+    .input,
+    .search,
+    .select {
+      width: 100%;
+      border: 1px solid #cbc5b3;
+      border-radius: 12px;
+      background: #fff;
+      color: #1d1f23;
+      font: inherit;
+      min-height: 44px;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .search {
+      min-height: 42px;
+      padding: 10px 12px;
+    }
+
+    .select {
+      min-height: 44px;
+      padding: 10px 12px;
+    }
+
+    .select.multiple {
+      min-height: 340px;
+      padding: 8px;
+    }
+
+    .input:focus,
+    .search:focus,
+    .select:focus {
+      border-color: #b6ab60;
+      box-shadow: 0 0 0 3px rgba(255, 232, 22, 0.18);
+    }
+
+    .select option {
+      padding: 6px 8px;
+      line-height: 1.4;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .count-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #d8d2c2;
+      border-radius: 999px;
+      background: #fff;
+      padding: 8px 12px;
+      color: #33353c;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge strong { font-size: 13px; }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid #bdb8a9;
+      background: #fff;
+      color: #111;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn.primary {
+      border-color: #c8b400;
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+
+    .preview {
+      display: grid;
+      gap: 12px;
+    }
+
+    .preview-card {
+      border: 1px solid #ddd6c7;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff 0%, #fcfbf6 100%);
+      padding: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+
+    .preview-card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .preview-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .preview-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #ede8db;
+      font-size: 13px;
+    }
+
+    .preview-list li:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .preview-list strong {
+      color: #40434c;
+      font-weight: 700;
+    }
+
+    .layout-preview {
+      display: grid;
+      gap: 10px;
+      margin: 12px 0 14px;
+    }
+
+    .layout-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .layout-toolbar .zoom-readout {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid #cbc5b3;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      color: #454950;
+      white-space: nowrap;
+    }
+
+    .layout-canvas-shell {
+      overflow: auto;
+      border: 1px solid #d7d0c0;
+      border-radius: 14px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.75), rgba(249,245,236,0.95)),
+        repeating-linear-gradient(45deg, rgba(133, 121, 92, 0.04) 0, rgba(133, 121, 92, 0.04) 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px);
+      padding: 12px;
+    }
+
+    #layoutCanvas {
+      display: block;
+      border-radius: 10px;
+      background: #fdfaf3;
+      box-shadow: 0 12px 28px rgba(60, 48, 25, 0.12);
+      cursor: crosshair;
+    }
+
+    .layout-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .helper {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .status {
+      min-height: 20px;
+      margin: 0;
+      font-size: 13px;
+      color: #5b6156;
+    }
+
+    .empty {
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      border: 1px dashed #d1cab7;
+      border-radius: 16px;
+      color: var(--muted);
+      padding: 20px;
+      background: rgba(255,255,255,0.66);
+    }
+
+    @media (max-width: 1080px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .select {
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <a class="back" href="/viceroy/inicio">Volver a Viceroy</a>
+      <a class="back" href="/viceroy/inicio/excel">Abrir Excel</a>
+    </div>
+
+    <section class="hero">
+      <p class="eyebrow">Viceroy Residences Playa del Carmen</p>
+      <h1>Generador de Bienvenida a Cliente</h1>
+      <p class="sub">
+        Selecciona una unidad desde el Excel maestro, captura cliente, agente y bróker, y el sistema genera el PDF base
+        con los datos colocados en las zonas definidas.
+      </p>
+    </section>
+
+    <section class="grid">
+      <section class="panel stack">
+        <div>
+          <h2 class="section-title">1. Unidad</h2>
+          <p class="section-note">El contenido del desplegable sale directamente del Excel de tipologías.</p>
+          <input id="searchInput" class="search" type="search" placeholder="Buscar unidad, nivel o tipología...">
+          <div class="count-row">
+            <span id="unitCount">Cargando unidades...</span>
+            <span class="badge"><strong>Max</strong> 1 unidad</span>
+          </div>
+          <select id="unitSelect" class="select" aria-label="Selecciona una unidad"></select>
+        </div>
+
+        <div>
+          <h2 class="section-title">2. Datos del cliente</h2>
+          <p class="section-note">Estos tres campos sí los captura el usuario. La fecha se toma automáticamente al generar.</p>
+          <div class="form-grid">
+            <div class="field">
+              <label for="clientName">Nombre del cliente</label>
+              <input id="clientName" class="input" type="text" placeholder="Nombre del cliente">
+            </div>
+            <div class="field">
+              <label for="agentName">Nombre de agente</label>
+              <input id="agentName" class="input" type="text" placeholder="Nombre de agente">
+            </div>
+            <div class="field">
+              <label for="brokerName">Nombre de bróker</label>
+              <input id="brokerName" class="input" type="text" placeholder="Nombre de bróker">
+            </div>
+            <div class="field">
+              <label for="pdfLanguage">Idioma del PDF</label>
+              <select id="pdfLanguage" class="select">
+                <option value="es" selected>Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="floorJsonName">Plano JSON</label>
+              <select id="floorJsonName" class="select">
+                <option value="">Auto (usar piso activo)</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="generateBtn" class="btn primary" type="button">Generar PDF</button>
+            <button id="clearBtn" class="btn" type="button">Limpiar</button>
+            <span id="status" class="status" aria-live="polite"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview">
+        <div class="preview-card">
+          <h3>Vista previa de unidad</h3>
+          <div id="previewEmpty" class="empty">Selecciona una unidad para ver sus datos clave antes de generar el PDF.</div>
+          <ul id="previewList" class="preview-list" hidden></ul>
+        </div>
+        <div class="preview-card">
+          <h3>Flujo del módulo</h3>
+          <ul class="preview-list">
+            <li><strong>Excel</strong><span>Origen de unidades y datos técnicos</span></li>
+            <li><strong>JSON</strong><span>Fecha, pagos e imágenes adicionales</span></li>
+            <li><strong>PDF</strong><span>Plantilla base con coordenadas fijas</span></li>
+            <li><strong>Salida</strong><span>PDF final listo para descargar</span></li>
+          </ul>
+        </div>
+        <div class="preview-card">
+          <h3>Ajuste de posiciones</h3>
+          <p class="helper" style="margin:0 0 8px;">
+            Layout actual: <strong id="layoutLanguageBadge">Español</strong>.
+            Cambia el idioma del PDF para editar las posiciones de esa versión.
+          </p>
+          <p class="helper" style="margin-bottom:12px;">Selecciona un bloque y mueve sus coordenadas. Esto afecta al PDF que se genera desde el servidor.</p>
+          <div class="layout-preview">
+            <div class="layout-toolbar">
+              <div class="field">
+                <label for="layoutPage">Vista de página</label>
+                <select id="layoutPage" class="select" style="min-height:44px;"></select>
+              </div>
+              <div class="field">
+                <label for="layoutZoom">Zoom</label>
+                <input id="layoutZoom" type="range" min="0.35" max="1.15" step="0.05" value="0.65">
+              </div>
+              <div class="zoom-readout" id="layoutZoomReadout">65%</div>
+            </div>
+            <div class="layout-canvas-shell">
+              <canvas id="layoutCanvas" width="612" height="792" aria-label="Vista previa del PDF"></canvas>
+            </div>
+            <p class="layout-hint">Haz clic en la hoja para mover el bloque seleccionado a ese punto. La vista usa la misma proporción que el PDF.</p>
+          </div>
+          <div class="stack" style="gap:10px;">
+            <div class="field">
+              <label for="layoutField">Bloque</label>
+              <select id="layoutField" class="select" style="min-height:44px;"></select>
+            </div>
+            <div class="form-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+              <div class="field">
+                <label for="layoutX">X</label>
+                <input id="layoutX" class="input" type="number" step="0.1">
+              </div>
+              <div class="field">
+                <label for="layoutY">Y</label>
+                <input id="layoutY" class="input" type="number" step="0.1">
+              </div>
+              <div class="field">
+                <label for="layoutW">Ancho</label>
+                <input id="layoutW" class="input" type="number" step="0.1">
+              </div>
+              <div class="field">
+                <label for="layoutH">Alto</label>
+                <input id="layoutH" class="input" type="number" step="0.1">
+              </div>
+            </div>
+            <div class="actions">
+              <button id="layoutApplyBtn" class="btn primary" type="button">Aplicar en memoria</button>
+              <button id="layoutSaveBtn" class="btn" type="button">Guardar layout</button>
+              <button id="layoutResetBtn" class="btn" type="button">Reset bloque</button>
+              <button id="layoutRestoreBtn" class="btn" type="button">Restaurar todo</button>
+            </div>
+            <p id="layoutStatus" class="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const state = {
+        units: [],
+        filteredUnits: [],
+        unitMap: new Map(),
+        selectedUnits: [],
+        layout: null,
+        defaultLayout: null,
+        activeLayoutKey: 'page1.name',
+        pageSizes: new Map(),
+        layoutPreviewPage: 'page1',
+        layoutZoom: 0.65,
+        language: 'es',
+        floorJsonName: '',
+        floorJsonFiles: [],
+        layoutPdf: null,
+        layoutPdfLoading: null,
+        layoutRenderToken: 0
+      };
+
+      const els = {
+        searchInput: document.getElementById('searchInput'),
+        unitSelect: document.getElementById('unitSelect'),
+        unitCount: document.getElementById('unitCount'),
+        clientName: document.getElementById('clientName'),
+        agentName: document.getElementById('agentName'),
+        brokerName: document.getElementById('brokerName'),
+        pdfLanguage: document.getElementById('pdfLanguage'),
+        floorJsonName: document.getElementById('floorJsonName'),
+        generateBtn: document.getElementById('generateBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        status: document.getElementById('status'),
+        previewEmpty: document.getElementById('previewEmpty'),
+        previewList: document.getElementById('previewList'),
+        layoutField: document.getElementById('layoutField'),
+        layoutPage: document.getElementById('layoutPage'),
+        layoutZoom: document.getElementById('layoutZoom'),
+        layoutZoomReadout: document.getElementById('layoutZoomReadout'),
+        layoutCanvas: document.getElementById('layoutCanvas'),
+        layoutX: document.getElementById('layoutX'),
+        layoutY: document.getElementById('layoutY'),
+        layoutW: document.getElementById('layoutW'),
+        layoutH: document.getElementById('layoutH'),
+        layoutApplyBtn: document.getElementById('layoutApplyBtn'),
+        layoutSaveBtn: document.getElementById('layoutSaveBtn'),
+        layoutResetBtn: document.getElementById('layoutResetBtn'),
+        layoutRestoreBtn: document.getElementById('layoutRestoreBtn'),
+        layoutStatus: document.getElementById('layoutStatus'),
+        layoutLanguageBadge: document.getElementById('layoutLanguageBadge')
+      };
+
+      const layoutFields = [
+        { key: 'page1.name', label: 'Página 1 · Nombre' },
+        { key: 'page1.date', label: 'Página 1 · Fecha' },
+        { key: 'page2.client', label: 'Página 2 · Client' },
+        { key: 'page2.agent', label: 'Página 2 · Agent' },
+        { key: 'page2.broker', label: 'Página 2 · Broker' },
+        { key: 'page3.delivery', label: 'Página 3 · Delivery' },
+        { key: 'page4.rooms', label: 'Página 4 · Rooms' },
+        { key: 'page4.level', label: 'Página 4 · Level' },
+        { key: 'page4.sqft', label: 'Página 4 · SQFT' },
+        { key: 'page4.bathrooms', label: 'Página 4 · Bathrooms' },
+        { key: 'page4.price', label: 'Página 4 · Price' },
+        { key: 'page4.contractSigning', label: 'Página 4 · Contract Signing' },
+        { key: 'page4.payment1', label: 'Página 4 · Payment 1' },
+        { key: 'page4.payment2', label: 'Página 4 · Payment 2' },
+        { key: 'page4.payment3', label: 'Página 4 · Payment 3' },
+        { key: 'page4.uponDelivery', label: 'Página 4 · Upon Delivery' },
+        { key: 'page5.unit', label: 'Página 5 · Unit' },
+        { key: 'page5.level', label: 'Página 5 · Level' },
+        { key: 'page5.sqft', label: 'Página 5 · SQFT' },
+        { key: 'page5.primaryImage', label: 'Página 5 · Imagen principal' },
+        { key: 'page5.selectedUnitMap', label: 'Página 5 · Mapa inventario' }
+      ];
+      const layoutPages = [
+        { key: 'page1', label: 'Página 1' },
+        { key: 'page2', label: 'Página 2' },
+        { key: 'page3', label: 'Página 3' },
+        { key: 'page4', label: 'Página 4' },
+        { key: 'page5', label: 'Página 5' }
+      ];
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function parseFileName(disposition, fallback) {
+        const raw = String(disposition || '');
+        const match = raw.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"/i);
+        const encoded = match ? (match[1] || match[2] || '') : '';
+        if (!encoded) return fallback;
+        try {
+          return decodeURIComponent(encoded);
+        } catch {
+          return encoded;
+        }
+      }
+
+      function unitLabel(unit) {
+        return String(unit && (unit.display || unit.label || unit.unidad) || '').trim();
+      }
+
+      function selectedValues() {
+        return Array.from(els.unitSelect.selectedOptions || []).map(function (opt) {
+          return String(opt.value || '').trim();
+        }).filter(Boolean);
+      }
+
+      function renderSelect() {
+        const query = String(els.searchInput.value || '').trim().toLowerCase();
+        state.filteredUnits = state.units.filter(function (item) {
+          if (!query) return true;
+          const haystack = [
+            item.unidad,
+            item.level,
+            item.rooms,
+            item.sqft,
+            item.totalM2,
+            item.price,
+            item.pricePerM2,
+            item.display
+          ].join(' ').toLowerCase();
+          return haystack.includes(query);
+        });
+
+        const current = new Set(state.selectedUnits || []);
+        els.unitSelect.innerHTML = state.filteredUnits.map(function (item) {
+          const value = esc(item.unidad);
+          const label = esc(unitLabel(item));
+          const selected = current.has(String(item.unidad || '').trim()) ? ' selected' : '';
+          return '<option value="' + value + '"' + selected + '>' + label + '</option>';
+        }).join('');
+
+        els.unitCount.textContent = state.filteredUnits.length + ' unidades encontradas';
+      }
+
+      function updateSelected() {
+        const values = selectedValues();
+        const next = values.slice(0, 1);
+        if (values.length > 1) {
+          values.slice(1).forEach(function (value) {
+            const option = Array.from(els.unitSelect.options).find(function (opt) {
+              return String(opt.value || '') === value;
+            });
+            if (option) option.selected = false;
+          });
+          els.status.textContent = 'Solo puedes seleccionar una unidad.';
+        } else {
+          els.status.textContent = values.length ? '1 unidad seleccionada' : '';
+        }
+        state.selectedUnits = next;
+        renderPreview();
+      }
+
+      function renderPreview() {
+        const first = state.selectedUnits.length ? state.unitMap.get(state.selectedUnits[0]) : null;
+        if (!first) {
+          els.previewEmpty.hidden = false;
+          els.previewList.hidden = true;
+          els.previewList.innerHTML = '';
+          return;
+        }
+
+        const rows = [
+          ['Unidad', first.unidad || 'N/D'],
+          ['Nivel', first.level || 'N/D'],
+          ['Rooms', first.rooms || 'N/D'],
+          ['SQFT', first.sqft || 'N/D'],
+          ['M2', first.totalM2 == null || first.totalM2 === '' ? 'N/D' : first.totalM2],
+          ['Precio', first.price || 'N/D'],
+          ['$/m2', first.pricePerM2 || 'N/D'],
+          ['Plano', first.planLink ? 'Disponible' : 'Sin plano']
+        ];
+
+        els.previewEmpty.hidden = true;
+        els.previewList.hidden = false;
+        els.previewList.innerHTML = rows.map(function (pair) {
+          return '<li><strong>' + esc(pair[0]) + '</strong><span>' + esc(pair[1]) + '</span></li>';
+        }).join('');
+      }
+
+      function normalizeDownloadName(name) {
+        return String(name || '')
+          .replace(/\s+/g, '-')
+          .replace(/[^A-Za-z0-9._-]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80) || 'viceroy-presentacion';
+      }
+
+      function cloneLayout(layout) {
+        return JSON.parse(JSON.stringify(layout || { pages: {} }));
+      }
+
+      function layoutFieldParts(key) {
+        const parts = String(key || '').split('.');
+        return {
+          page: parts[0] || '',
+          field: parts[1] || ''
+        };
+      }
+
+      function ensureActiveLayout() {
+        if (!state.layout) state.layout = cloneLayout(state.defaultLayout);
+      }
+
+      function getLayoutRect(layout, key) {
+        const parts = layoutFieldParts(key);
+        const pages = layout && layout.pages && layout.pages[parts.page] ? layout.pages[parts.page] : {};
+        return pages && pages[parts.field] ? pages[parts.field] : null;
+      }
+
+      function setLayoutRect(layout, key, rect) {
+        const parts = layoutFieldParts(key);
+        if (!layout.pages) layout.pages = {};
+        if (!layout.pages[parts.page]) layout.pages[parts.page] = {};
+        layout.pages[parts.page][parts.field] = {
+          x: Number(rect.x) || 0,
+          y: Number(rect.y) || 0,
+          width: Number(rect.width) || 0,
+          height: Number(rect.height) || 0
+        };
+      }
+
+      function selectedLayoutKey() {
+        return String(els.layoutField.value || state.activeLayoutKey || 'page1.name');
+      }
+
+      function selectedLayoutPageKey() {
+        return String(els.layoutPage.value || state.layoutPreviewPage || layoutFieldParts(selectedLayoutKey()).page || 'page1');
+      }
+
+      function setLayoutStatus(message) {
+        els.layoutStatus.textContent = message || '';
+      }
+
+      function renderLayoutFieldOptions() {
+        els.layoutField.innerHTML = layoutFields.map(function (item) {
+          return '<option value="' + esc(item.key) + '">' + esc(item.label) + '</option>';
+        }).join('');
+        els.layoutField.value = state.activeLayoutKey;
+      }
+
+      function renderLayoutPageOptions() {
+        els.layoutPage.innerHTML = layoutPages.map(function (item) {
+          return '<option value="' + esc(item.key) + '">' + esc(item.label) + '</option>';
+        }).join('');
+        els.layoutPage.value = state.layoutPreviewPage || 'page1';
+      }
+
+      function pageSizeFor(pageKey) {
+        const page = state.pageSizes && state.pageSizes.get ? state.pageSizes.get(pageKey) : null;
+        if (page && Number(page.width) > 0 && Number(page.height) > 0) return page;
+        return { page: pageKey, width: 612, height: 792 };
+      }
+
+      function clampValue(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function updateLayoutZoomReadout() {
+        const pct = Math.round((Number(state.layoutZoom) || 0.65) * 100);
+        els.layoutZoomReadout.textContent = pct + '%';
+      }
+
+      function updateLayoutLanguageBadge() {
+        if (!els.layoutLanguageBadge) return;
+        const lang = String(state.language || els.pdfLanguage.value || 'es').trim().toLowerCase();
+        els.layoutLanguageBadge.textContent = lang === 'en' ? 'English' : 'Español';
+      }
+
+      function layoutFieldsForPage(pageKey) {
+        return layoutFields.filter(function (item) {
+          return layoutFieldParts(item.key).page === pageKey;
+        });
+      }
+
+      async function loadLayoutPdf() {
+        if (state.layoutPdf) return state.layoutPdf;
+        if (state.layoutPdfLoading) return state.layoutPdfLoading;
+        if (!window.pdfjsLib) throw new Error('No se pudo cargar el visor PDF');
+        if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
+        }
+        state.layoutPdfLoading = window.pdfjsLib.getDocument({
+          url: '/viceroy/inicio/presentacion/pdf',
+          withCredentials: true
+        }).promise.then(function (doc) {
+          state.layoutPdf = doc;
+          return doc;
+        }).finally(function () {
+          state.layoutPdfLoading = null;
+        });
+        return state.layoutPdfLoading;
+      }
+
+      function syncLayoutFormFromState() {
+        ensureActiveLayout();
+        const rect = getLayoutRect(state.layout, selectedLayoutKey());
+        if (!rect) return;
+        els.layoutX.value = rect.x;
+        els.layoutY.value = rect.y;
+        els.layoutW.value = rect.width;
+        els.layoutH.value = rect.height;
+      }
+
+      async function renderLayoutPreview() {
+        if (!els.layoutCanvas) return;
+        ensureActiveLayout();
+        updateLayoutZoomReadout();
+
+        const pageKey = selectedLayoutPageKey();
+        const pageSize = pageSizeFor(pageKey);
+        const zoom = clampValue(Number(state.layoutZoom) || 0.65, 0.35, 1.15);
+        const maxWidth = 760;
+        const maxHeight = 860;
+        const fitScale = Math.min(maxWidth / pageSize.width, maxHeight / pageSize.height);
+        const pageScale = fitScale * zoom;
+        const drawWidth = Math.max(280, Math.round(pageSize.width * pageScale));
+        const drawHeight = Math.max(340, Math.round(pageSize.height * pageScale));
+        const dpr = window.devicePixelRatio || 1;
+        const canvas = els.layoutCanvas;
+        const ctx = canvas.getContext('2d');
+        const renderToken = ++state.layoutRenderToken;
+
+        canvas.width = Math.round(drawWidth * dpr);
+        canvas.height = Math.round(drawHeight * dpr);
+        canvas.style.width = drawWidth + 'px';
+        canvas.style.height = drawHeight + 'px';
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, drawWidth, drawHeight);
+
+        try {
+          const pdfDoc = await loadLayoutPdf();
+          if (renderToken !== state.layoutRenderToken) return;
+          const pageNumber = Math.max(1, Number(pageKey.replace('page', '')) || 1);
+          const pdfPage = await pdfDoc.getPage(pageNumber);
+          if (renderToken !== state.layoutRenderToken) return;
+          const viewport = pdfPage.getViewport({ scale: pageScale * dpr });
+          canvas.width = Math.round(viewport.width);
+          canvas.height = Math.round(viewport.height);
+          canvas.style.width = drawWidth + 'px';
+          canvas.style.height = drawHeight + 'px';
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          await pdfPage.render({
+            canvasContext: ctx,
+            viewport
+          }).promise;
+          if (renderToken !== state.layoutRenderToken) return;
+        } catch (err) {
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.fillStyle = '#f6f2e7';
+          ctx.fillRect(0, 0, drawWidth, drawHeight);
+          ctx.fillStyle = '#5b6156';
+          ctx.font = '700 16px Arial, sans-serif';
+          ctx.fillText('No se pudo cargar la vista previa del PDF', 24, 36);
+          ctx.font = '12px Arial, sans-serif';
+          ctx.fillText(err && err.message ? err.message : 'Reintenta en unos segundos.', 24, 58);
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const pageWidth = pageSize.width * pageScale;
+        const pageHeight = pageSize.height * pageScale;
+        const originX = 0;
+        const originY = 0;
+        const activeKey = selectedLayoutKey();
+        const fields = layoutFieldsForPage(pageKey);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(originX, originY, pageWidth, pageHeight);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(145, 135, 113, 0.18)';
+        ctx.lineWidth = 1;
+        const gridStep = 50;
+        for (let x = 0; x <= pageSize.width; x += gridStep) {
+          const px = originX + x * pageScale;
+          ctx.beginPath();
+          ctx.moveTo(px, originY);
+          ctx.lineTo(px, originY + pageHeight);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= pageSize.height; y += gridStep) {
+          const py = originY + pageHeight - y * pageScale;
+          ctx.beginPath();
+          ctx.moveTo(originX, py);
+          ctx.lineTo(originX + pageWidth, py);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        ctx.fillStyle = '#535660';
+        ctx.font = '700 14px Arial, sans-serif';
+        ctx.fillText(pageSize.page || pageKey, originX, Math.max(16, originY - 6));
+        ctx.font = '12px Arial, sans-serif';
+        ctx.fillStyle = '#6d7368';
+        ctx.fillText(Math.round(pageSize.width) + ' x ' + Math.round(pageSize.height) + ' pt', originX, originY + pageHeight + 16);
+
+        fields.forEach(function (item) {
+          const rect = getLayoutRect(state.layout, item.key);
+          if (!rect) return;
+          const x = originX + rect.x * pageScale;
+          const y = originY + pageHeight - (rect.y + rect.height) * pageScale;
+          const w = rect.width * pageScale;
+          const h = rect.height * pageScale;
+          const isActive = item.key === activeKey;
+          const isImage = /image/i.test(item.key);
+
+          ctx.save();
+          ctx.fillStyle = isImage ? (isActive ? 'rgba(32, 110, 173, 0.16)' : 'rgba(32, 110, 173, 0.10)') : (isActive ? 'rgba(255, 232, 22, 0.22)' : 'rgba(84, 90, 101, 0.10)');
+          ctx.strokeStyle = isActive ? '#d0b400' : (isImage ? '#2d6a97' : '#6d7280');
+          ctx.lineWidth = isActive ? 2.5 : 1.4;
+          ctx.setLineDash(isImage ? [6, 4] : []);
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeRect(x + 0.5, y + 0.5, Math.max(0, w - 1), Math.max(0, h - 1));
+          ctx.setLineDash([]);
+
+          const label = item.label;
+          ctx.font = '700 11px Arial, sans-serif';
+          const labelPadding = 5;
+          const textWidth = Math.min(ctx.measureText(label).width + 10, Math.max(0, w - 8));
+          const labelX = x + 4;
+          const labelY = Math.max(originY + 14, y - 4);
+          ctx.fillStyle = 'rgba(255,255,255,0.94)';
+          ctx.fillRect(labelX, labelY - 11, Math.max(42, textWidth), 16);
+          ctx.strokeStyle = isActive ? '#d0b400' : '#b8b0a1';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(labelX + 0.5, labelY - 10.5, Math.max(42, textWidth) - 1, 15);
+          ctx.fillStyle = '#3b3f46';
+          ctx.fillText(label, labelX + labelPadding, labelY + 1);
+
+          if (isActive) {
+            ctx.fillStyle = '#d0b400';
+            [
+              [x, y],
+              [x + w, y],
+              [x, y + h],
+              [x + w, y + h]
+            ].forEach(function (point) {
+              ctx.beginPath();
+              ctx.arc(point[0], point[1], 3.5, 0, Math.PI * 2);
+              ctx.fill();
+            });
+          }
+          ctx.restore();
+        });
+      }
+
+      function updateLayoutRectFromCanvasPoint(clientX, clientY) {
+        ensureActiveLayout();
+        const key = selectedLayoutKey();
+        const pageKey = selectedLayoutPageKey();
+        const pageSize = pageSizeFor(pageKey);
+        const canvas = els.layoutCanvas;
+        const bounds = canvas.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
+        const pageScale = Math.min(bounds.width / pageSize.width, bounds.height / pageSize.height);
+        const pageWidth = pageSize.width * pageScale;
+        const pageHeight = pageSize.height * pageScale;
+        const originX = (bounds.width - pageWidth) / 2;
+        const originY = (bounds.height - pageHeight) / 2;
+        const xPx = clientX - bounds.left;
+        const yPx = clientY - bounds.top;
+        if (xPx < originX || xPx > originX + pageWidth || yPx < originY || yPx > originY + pageHeight) {
+          return;
+        }
+        const pageX = (xPx - originX) / pageScale;
+        const pageYFromTop = (yPx - originY) / pageScale;
+        const pageY = pageSize.height - pageYFromTop;
+        const rect = getLayoutRect(state.layout, key) || { width: 120, height: 20 };
+        const nextRect = {
+          x: clampValue(pageX - rect.width / 2, 0, Math.max(0, pageSize.width - rect.width)),
+          y: clampValue(pageY - rect.height / 2, 0, Math.max(0, pageSize.height - rect.height)),
+          width: rect.width,
+          height: rect.height
+        };
+        setLayoutRect(state.layout, key, nextRect);
+        els.layoutX.value = nextRect.x;
+        els.layoutY.value = nextRect.y;
+        els.layoutW.value = nextRect.width;
+        els.layoutH.value = nextRect.height;
+        setLayoutStatus('Bloque movido en la vista previa.');
+        renderLayoutPreview();
+      }
+
+      function applyLayoutFormToState(keyOverride) {
+        ensureActiveLayout();
+        const key = String(keyOverride || selectedLayoutKey() || state.activeLayoutKey || 'page1.name');
+        const nextRect = {
+          x: Number(els.layoutX.value),
+          y: Number(els.layoutY.value),
+          width: Number(els.layoutW.value),
+          height: Number(els.layoutH.value)
+        };
+        setLayoutRect(state.layout, key, nextRect);
+        renderLayoutPreview();
+      }
+
+      function loadRectIntoForm(key) {
+        state.activeLayoutKey = key;
+        const parts = layoutFieldParts(key);
+        state.layoutPreviewPage = parts.page || state.layoutPreviewPage || 'page1';
+        els.layoutPage.value = state.layoutPreviewPage;
+        const rect = getLayoutRect(state.layout, key) || { x: 0, y: 0, width: 0, height: 0 };
+        els.layoutX.value = rect.x;
+        els.layoutY.value = rect.y;
+        els.layoutW.value = rect.width;
+        els.layoutH.value = rect.height;
+        renderLayoutPreview();
+      }
+
+      async function loadLayout(language) {
+        const lang = String(language || els.pdfLanguage.value || 'es').trim() || 'es';
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/layout?lang=' + encodeURIComponent(lang), {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo cargar el layout');
+          }
+          state.language = lang;
+          state.layout = cloneLayout(data.layout);
+          state.defaultLayout = cloneLayout(data.defaults || data.layout);
+          state.pageSizes = new Map((Array.isArray(data.pageSizes) ? data.pageSizes : []).map(function (item) {
+            return [String(item && item.page || '').trim(), {
+              page: String(item && item.page || '').trim(),
+              width: Number(item && item.width) || 612,
+              height: Number(item && item.height) || 792
+            }];
+          }));
+          state.layoutPreviewPage = layoutFieldParts(state.activeLayoutKey).page || 'page1';
+          renderLayoutPageOptions();
+          renderLayoutFieldOptions();
+          loadRectIntoForm(state.activeLayoutKey);
+          updateLayoutLanguageBadge();
+          setLayoutStatus('Layout cargado.');
+        } catch (err) {
+          state.defaultLayout = {
+            pages: {},
+            updatedAt: ''
+          };
+          state.layout = cloneLayout(state.defaultLayout);
+          state.pageSizes = new Map();
+          state.layoutPreviewPage = 'page1';
+          renderLayoutPageOptions();
+          renderLayoutFieldOptions();
+          updateLayoutLanguageBadge();
+          setLayoutStatus(err && err.message ? err.message : 'No se pudo cargar el layout.');
+        }
+      }
+
+      async function saveLayout() {
+        applyLayoutFormToState();
+        setLayoutStatus('Guardando layout...');
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/layout', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ layout: state.layout, language: String(els.pdfLanguage.value || state.language || 'es') })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo guardar el layout');
+          }
+          state.layout = cloneLayout(data.layout);
+          setLayoutStatus('Layout guardado.');
+        } catch (err) {
+          setLayoutStatus(err && err.message ? err.message : 'No se pudo guardar el layout.');
+        }
+      }
+
+      function resetActiveField() {
+        ensureActiveLayout();
+        const defaults = cloneLayout(state.defaultLayout);
+        const key = selectedLayoutKey();
+        const rect = getLayoutRect(defaults, key);
+        if (!rect) return;
+        setLayoutRect(state.layout, key, rect);
+        loadRectIntoForm(key);
+        setLayoutStatus('Bloque restaurado.');
+      }
+
+      function resetAllLayout() {
+        state.layout = cloneLayout(state.defaultLayout);
+        loadRectIntoForm(selectedLayoutKey());
+        setLayoutStatus('Layout completo restaurado.');
+      }
+
+      async function loadUnits() {
+        els.status.textContent = 'Cargando unidades...';
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/units', {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudieron cargar las unidades');
+          }
+          state.units = Array.isArray(data.units) ? data.units : [];
+          state.unitMap = new Map(state.units.map(function (item) {
+            return [String(item.unidad || '').trim(), item];
+          }));
+          state.filteredUnits = state.units.slice();
+          els.unitCount.textContent = state.units.length + ' unidades cargadas';
+          renderSelect();
+          renderPreview();
+          els.status.textContent = '';
+        } catch (err) {
+          els.unitCount.textContent = '0 unidades';
+          els.status.textContent = err && err.message ? err.message : 'No se pudieron cargar las unidades.';
+          els.previewEmpty.hidden = false;
+          els.previewList.hidden = true;
+        }
+      }
+
+      function renderFloorJsonSelect() {
+        const current = String(state.floorJsonName || '').trim();
+        const options = ['<option value="">Auto (usar piso activo)</option>']
+          .concat((Array.isArray(state.floorJsonFiles) ? state.floorJsonFiles : []).map(function (name) {
+            const value = String(name || '').trim();
+            if (!value) return '';
+            const selected = value === current ? ' selected' : '';
+            return '<option value="' + esc(value) + '"' + selected + '>' + esc(value) + '</option>';
+          }).filter(Boolean));
+        if (els.floorJsonName) {
+          els.floorJsonName.innerHTML = options.join('');
+          els.floorJsonName.value = current;
+        }
+      }
+
+      async function loadFloorJsonFiles() {
+        try {
+          const publicDataRes = await fetch('/api/viceroy-piloto/public-data', {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          const publicData = await publicDataRes.json().catch(function () { return {}; });
+          const publicFiles = [];
+          if (publicData && publicData.ok) {
+            const loaded = Array.isArray(publicData.loadedFiles) ? publicData.loadedFiles : [];
+            loaded.forEach(function (name) {
+              const value = String(name || '').trim();
+              if (value) publicFiles.push(value);
+            });
+          }
+
+          let files = publicFiles;
+          let selectedFloorJsonName = '';
+          if (!files.length) {
+            const res = await fetch('/api/viceroy/presentacion-generador/floor-json-files', {
+              cache: 'no-store',
+              credentials: 'same-origin'
+            });
+            const data = await res.json().catch(function () { return {}; });
+            if (!res.ok || !data || !data.ok) {
+              throw new Error(data && data.error ? data.error : 'No se pudieron cargar los pisos');
+            }
+            files = Array.isArray(data.files) ? data.files.slice() : [];
+            selectedFloorJsonName = String(data.selectedFloorJsonName || '').trim();
+          } else {
+            selectedFloorJsonName = String(publicData && publicData.config && publicData.config.selectedFloorJsonName || '').trim();
+          }
+          state.floorJsonFiles = files;
+          if (!state.floorJsonName && selectedFloorJsonName) {
+            state.floorJsonName = selectedFloorJsonName;
+          }
+          if (state.floorJsonName && !state.floorJsonFiles.includes(state.floorJsonName)) {
+            state.floorJsonName = state.floorJsonFiles[0] || '';
+          }
+          renderFloorJsonSelect();
+        } catch (_) {
+          state.floorJsonFiles = [];
+          renderFloorJsonSelect();
+        }
+      }
+
+      async function generatePdf() {
+        const units = state.selectedUnits.slice(0, 1);
+        if (!units.length) {
+          els.status.textContent = 'Selecciona al menos una unidad.';
+          return;
+        }
+        const clientName = String(els.clientName.value || '').trim();
+        const agentName = String(els.agentName.value || '').trim();
+        const brokerName = String(els.brokerName.value || '').trim();
+        if (!clientName || !agentName || !brokerName) {
+          els.status.textContent = 'Completa cliente, agente y bróker antes de generar.';
+          return;
+        }
+
+        els.generateBtn.disabled = true;
+        els.generateBtn.textContent = 'Generando...';
+        els.status.textContent = 'Preparando PDF...';
+        try {
+          const res = await fetch('/api/viceroy/presentacion-generador/render', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              units: units,
+              clientName: clientName,
+              agentName: agentName,
+              brokerName: brokerName,
+              language: String(els.pdfLanguage.value || 'es'),
+              floorJsonName: String(els.floorJsonName && els.floorJsonName.value || '').trim(),
+              presentationDate: new Date().toLocaleDateString('es-MX', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+              })
+            })
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(function () { return {}; });
+            throw new Error(data && (data.error || data.details) ? (data.error || data.details) : 'No se pudo generar el PDF');
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const downloadedName = normalizeDownloadName(parseFileName(res.headers.get('content-disposition'), 'viceroy-presentacion.pdf'));
+          link.download = /\.pdf$/i.test(downloadedName) ? downloadedName : (downloadedName + '.pdf');
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+          els.status.textContent = 'PDF generado.';
+        } catch (err) {
+          els.status.textContent = err && err.message ? err.message : 'No se pudo generar el PDF.';
+        } finally {
+          els.generateBtn.disabled = false;
+          els.generateBtn.textContent = 'Generar PDF';
+        }
+      }
+
+      els.searchInput.addEventListener('input', function () {
+        renderSelect();
+      });
+
+      els.unitSelect.addEventListener('change', updateSelected);
+      els.generateBtn.addEventListener('click', generatePdf);
+      if (els.floorJsonName) {
+        els.floorJsonName.addEventListener('change', function () {
+          state.floorJsonName = String(els.floorJsonName.value || '').trim();
+        });
+      }
+      if (els.pdfLanguage) {
+        els.pdfLanguage.addEventListener('change', function () {
+          const lang = String(els.pdfLanguage.value || 'es').trim() || 'es';
+          state.language = lang;
+          updateLayoutLanguageBadge();
+          loadLayout(lang).catch(function () {});
+        });
+      }
+      els.layoutField.addEventListener('change', function () {
+        const previousKey = state.activeLayoutKey;
+        const nextKey = selectedLayoutKey();
+        applyLayoutFormToState(previousKey);
+        loadRectIntoForm(nextKey);
+      });
+      els.layoutPage.addEventListener('change', function () {
+        const previousKey = state.activeLayoutKey;
+        const pageKey = String(els.layoutPage.value || 'page1');
+        applyLayoutFormToState(previousKey);
+        const nextField = layoutFields.find(function (item) {
+          return layoutFieldParts(item.key).page === pageKey;
+        });
+        if (nextField) {
+          loadRectIntoForm(nextField.key);
+        } else {
+          state.layoutPreviewPage = pageKey;
+          renderLayoutPreview();
+        }
+      });
+      els.layoutZoom.addEventListener('input', function () {
+        state.layoutZoom = Number(els.layoutZoom.value) || 0.65;
+        updateLayoutZoomReadout();
+        renderLayoutPreview();
+      });
+      [els.layoutX, els.layoutY, els.layoutW, els.layoutH].forEach(function (el) {
+        el.addEventListener('input', function () {
+          applyLayoutFormToState();
+        });
+      });
+      els.layoutCanvas.addEventListener('click', function (event) {
+        updateLayoutRectFromCanvasPoint(event.clientX, event.clientY);
+      });
+      els.layoutApplyBtn.addEventListener('click', function () {
+        applyLayoutFormToState();
+        setLayoutStatus('Cambios aplicados en memoria.');
+      });
+      els.layoutSaveBtn.addEventListener('click', saveLayout);
+      els.layoutResetBtn.addEventListener('click', resetActiveField);
+      els.layoutRestoreBtn.addEventListener('click', function () {
+        state.layout = cloneLayout(state.defaultLayout);
+        loadRectIntoForm(selectedLayoutKey());
+        setLayoutStatus('Layout completo restaurado.');
+      });
+      els.clearBtn.addEventListener('click', function () {
+        els.unitSelect.querySelectorAll('option').forEach(function (opt) { opt.selected = false; });
+        els.searchInput.value = '';
+        els.clientName.value = '';
+        els.agentName.value = '';
+        els.brokerName.value = '';
+        state.selectedUnits = [];
+        els.status.textContent = '';
+        renderSelect();
+        updateSelected();
+      });
+
+      renderLayoutFieldOptions();
+      renderLayoutPageOptions();
+      updateLayoutZoomReadout();
+      state.language = String(els.pdfLanguage && els.pdfLanguage.value || 'es').trim() || 'es';
+      updateLayoutLanguageBadge();
+      Promise.all([loadUnits(), loadLayout(state.language), loadFloorJsonFiles()]);
+    })();
+  </script>
+</body>
+</html>
