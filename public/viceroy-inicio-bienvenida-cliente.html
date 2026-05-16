@@ -305,6 +305,10 @@
       font-weight: 700;
     }
 
+    .restricted-only[hidden] {
+      display: none !important;
+    }
+
     .layout-preview {
       display: grid;
       gap: 10px;
@@ -451,7 +455,7 @@
                 <option value="en">English</option>
               </select>
             </div>
-            <div class="field">
+            <div class="field restricted-only" id="floorJsonField" hidden>
               <label for="floorJsonName">Plano JSON</label>
               <select id="floorJsonName" class="select">
                 <option value="">Auto (usar piso activo)</option>
@@ -467,12 +471,12 @@
       </section>
 
       <section class="preview">
-        <div class="preview-card">
+        <div class="preview-card restricted-only" id="previewUnitCard" hidden>
           <h3>Vista previa de unidad</h3>
           <div id="previewEmpty" class="empty">Selecciona una unidad para ver sus datos clave antes de generar el PDF.</div>
           <ul id="previewList" class="preview-list" hidden></ul>
         </div>
-        <div class="preview-card">
+        <div class="preview-card restricted-only" id="flowCard" hidden>
           <h3>Flujo del módulo</h3>
           <ul class="preview-list">
             <li><strong>Excel</strong><span>Origen de unidades y datos técnicos</span></li>
@@ -481,7 +485,7 @@
             <li><strong>Salida</strong><span>PDF final listo para descargar</span></li>
           </ul>
         </div>
-        <div class="preview-card">
+        <div class="preview-card restricted-only" id="layoutCard" hidden>
           <h3>Ajuste de posiciones</h3>
           <p class="helper" style="margin:0 0 8px;">
             Layout actual: <strong id="layoutLanguageBadge">Español</strong>.
@@ -590,7 +594,11 @@
         layoutResetBtn: document.getElementById('layoutResetBtn'),
         layoutRestoreBtn: document.getElementById('layoutRestoreBtn'),
         layoutStatus: document.getElementById('layoutStatus'),
-        layoutLanguageBadge: document.getElementById('layoutLanguageBadge')
+        layoutLanguageBadge: document.getElementById('layoutLanguageBadge'),
+        floorJsonField: document.getElementById('floorJsonField'),
+        previewUnitCard: document.getElementById('previewUnitCard'),
+        flowCard: document.getElementById('flowCard'),
+        layoutCard: document.getElementById('layoutCard')
       };
 
       const layoutFields = [
@@ -783,6 +791,13 @@
         els.layoutStatus.textContent = message || '';
       }
 
+      function setRestrictedSectionsVisible(isVisible) {
+        [els.floorJsonField, els.previewUnitCard, els.flowCard, els.layoutCard].forEach(function (el) {
+          if (!el) return;
+          el.hidden = !isVisible;
+        });
+      }
+
       function renderLayoutFieldOptions() {
         els.layoutField.innerHTML = layoutFields.map(function (item) {
           return '<option value="' + esc(item.key) + '">' + esc(item.label) + '</option>';
@@ -816,6 +831,24 @@
         if (!els.layoutLanguageBadge) return;
         const lang = String(state.language || els.pdfLanguage.value || 'es').trim().toLowerCase();
         els.layoutLanguageBadge.textContent = lang === 'en' ? 'English' : 'Español';
+      }
+
+      async function loadRestrictedAccess() {
+        try {
+          const res = await fetch('/api/session-info', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          if (!res.ok) {
+            setRestrictedSectionsVisible(false);
+            return;
+          }
+          const data = await res.json().catch(function () { return {}; });
+          const email = String(data && data.email || '').trim().toLowerCase();
+          setRestrictedSectionsVisible(email === 'martin@simca.mx');
+        } catch {
+          setRestrictedSectionsVisible(false);
+        }
       }
 
       function layoutFieldsForPage(pageKey) {
@@ -1361,12 +1394,13 @@
         updateSelected();
       });
 
+      setRestrictedSectionsVisible(false);
       renderLayoutFieldOptions();
       renderLayoutPageOptions();
       updateLayoutZoomReadout();
       state.language = String(els.pdfLanguage && els.pdfLanguage.value || 'es').trim() || 'es';
       updateLayoutLanguageBadge();
-      Promise.all([loadUnits(), loadLayout(state.language), loadFloorJsonFiles()]);
+      Promise.all([loadUnits(), loadLayout(state.language), loadFloorJsonFiles(), loadRestrictedAccess()]);
     })();
   </script>
 </body>
