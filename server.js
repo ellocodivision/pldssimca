@@ -7109,6 +7109,14 @@ function readViceroyPresentationLayout(language = 'es', module = 'welcome-client
   const primaryPath = getViceroyPresentationLayoutPath(lang, module);
   const secondaryPath = getViceroyPresentationLayoutPath(lang === 'en' ? 'es' : 'en', module);
   let raw = readJson(primaryPath, null);
+  if (!raw && normalizeViceroyPresentationModule(module) === 'presentation-multi') {
+    const welcomeClientPath = getViceroyPresentationLayoutPath(lang, 'welcome-client');
+    raw = readJson(welcomeClientPath, null);
+    if (!raw) {
+      const alternateWelcomeClientPath = getViceroyPresentationLayoutPath(lang === 'en' ? 'es' : 'en', 'welcome-client');
+      raw = readJson(alternateWelcomeClientPath, null);
+    }
+  }
   if (!raw) {
     const fallback = readJson(secondaryPath, null);
     if (fallback) {
@@ -8909,10 +8917,10 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
     pages.forEach((page) => outputDoc.addPage(page));
     return pages;
   };
-  // The multi-unit template removes the original cover page, so the shared intro
-  // now spans the first 3 pages and the repeatable unit section lives on pages 4-5.
-  const prefixPages = await addPages([0, 1, 2]);
-  const suffixIndices = [5, 6].filter((idx) => idx >= 0 && idx < pageCount);
+  // The new multi template already removed the cover page, so everything shifts
+  // one page earlier compared with the old presentation flow.
+  const prefixPages = await addPages([0, 1]);
+  const suffixIndices = [4, 5, 6].filter((idx) => idx >= 0 && idx < pageCount);
 
   const prefixPage1 = prefixPages[0] || null;
   const prefixPage2 = prefixPages[1] || null;
@@ -8926,7 +8934,7 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
   }
 
   for (const row of selectedRows) {
-    const unitPages = await addPages([3, 4]);
+    const unitPages = await addPages([2, 3]);
     const page3 = unitPages[0] || null;
     const page4 = unitPages[1] || null;
     const unit = String(row.unidad || '').trim();
