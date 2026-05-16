@@ -231,7 +231,9 @@ const VICEROY_TIPOLOGIA_THUMBS_DIR = path.join(VICEROY_PILOTO_DATA_DIR, 'tipolog
 const VICEROY_SPECIAL_YELLOW_UNITS_PATH = path.join(DATA_DIR, 'viceroy-special-yellow-units.json');
 const VICEROY_PRESENTATION_TEMPLATE_ES_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-es.pdf');
 const VICEROY_PRESENTATION_TEMPLATE_EN_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-en.pdf');
-const VICEROY_PRESENTATION_LAYOUT_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout.json');
+const VICEROY_PRESENTATION_LAYOUT_ES_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout.json');
+const VICEROY_PRESENTATION_LAYOUT_EN_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout-en.json');
+const VICEROY_PRESENTATION_LAYOUT_PATH = VICEROY_PRESENTATION_LAYOUT_ES_PATH;
 const VICEROY_PRESENTATION_FONT_REGULAR_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-REGULAR-TRIAL.OTF');
 const VICEROY_PRESENTATION_FONT_MEDIUM_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-MEDIUM-TRIAL.OTF');
 const VICEROY_PRESENTATION_MAX_UNITS = 5;
@@ -7069,14 +7071,37 @@ function normalizeViceroyPresentationLayout(layout) {
   };
 }
 
-function readViceroyPresentationLayout() {
-  return normalizeViceroyPresentationLayout(readJson(VICEROY_PRESENTATION_LAYOUT_PATH, null));
+function cloneViceroyPresentationLayout(layout) {
+  return normalizeViceroyPresentationLayout(layout);
 }
 
-function saveViceroyPresentationLayout(layout) {
+function readViceroyPresentationLayout(language = 'es') {
+  const lang = normalizeViceroyPresentationLanguage(language);
+  const primaryPath = lang === 'en' ? VICEROY_PRESENTATION_LAYOUT_EN_PATH : VICEROY_PRESENTATION_LAYOUT_ES_PATH;
+  const secondaryPath = lang === 'en' ? VICEROY_PRESENTATION_LAYOUT_ES_PATH : VICEROY_PRESENTATION_LAYOUT_EN_PATH;
+  let raw = readJson(primaryPath, null);
+  if (!raw) {
+    const fallback = readJson(secondaryPath, null);
+    if (fallback) {
+      raw = fallback;
+    }
+  }
+  const normalized = normalizeViceroyPresentationLayout(raw);
+  if (!fs.existsSync(primaryPath) && normalized && normalized.pages) {
+    const fallbackLayout = lang === 'en' && fs.existsSync(VICEROY_PRESENTATION_LAYOUT_ES_PATH)
+      ? normalizeViceroyPresentationLayout(readJson(VICEROY_PRESENTATION_LAYOUT_ES_PATH, null))
+      : normalized;
+    return cloneViceroyPresentationLayout(fallbackLayout);
+  }
+  return normalized;
+}
+
+function saveViceroyPresentationLayout(layout, language = 'es') {
+  const lang = normalizeViceroyPresentationLanguage(language);
+  const filePath = lang === 'en' ? VICEROY_PRESENTATION_LAYOUT_EN_PATH : VICEROY_PRESENTATION_LAYOUT_ES_PATH;
   const normalized = normalizeViceroyPresentationLayout(layout);
   normalized.updatedAt = new Date().toISOString();
-  writeJson(VICEROY_PRESENTATION_LAYOUT_PATH, normalized);
+  writeJson(filePath, normalized);
   return normalized;
 }
 
@@ -8591,7 +8616,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     ? path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png')
     : defaultSecondaryImage;
   const allPaymentRows = Array.isArray(payload.payments) ? payload.payments : [];
-  const presentationLayout = readViceroyPresentationLayout();
+  const presentationLayout = readViceroyPresentationLayout(language);
   const pageRects = presentationLayout.pages;
 
   for (const row of selectedRows) {
@@ -8642,7 +8667,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       : String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
     const bathroomsText = String(row.banos || '').trim();
     const page5UnitText = language === 'es' ? `Unidad: ${unit}` : unit;
-    const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : areaText;
+    const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : `Square feet: ${areaText}`;
     const floorForMap = resolveViceroyPresentationFloorForMap(unit, {
       floorJsonName: requestedFloorJsonName,
       floorId: requestedFloorId
@@ -14359,9 +14384,34 @@ app.get('/api/viceroy/presentacion-generador/units', requireBackendFeature('vice
   }
 });
 
+app.get('/api/viceroy/presentacion-generador/floor-json-files', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
+  try {
+    const config = readViceroyPilotoConfig();
+    const files = [];
+    const seen = new Set();
+    readViceroyPresentationFloorCandidates().forEach((entry) => {
+      const fileName = String(entry && entry.fileName || '').trim();
+      if (!fileName || seen.has(fileName.toLowerCase())) return;
+      seen.add(fileName.toLowerCase());
+      files.push(fileName);
+    });
+    return res.json({
+      ok: true,
+      files,
+      selectedFloorJsonName: String(config.selectedFloorJsonName || '').trim()
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudieron cargar los JSON de pisos',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
 app.get('/api/viceroy/presentacion-generador/layout', requireBackendFeature('viceroy', 'generadorPresentacion'), async (req, res) => {
   try {
-    const layout = readViceroyPresentationLayout();
+    const layout = readViceroyPresentationLayout(req.query && req.query.lang);
     const pageSizes = await readViceroyPresentationTemplatePageSizes();
     return res.json({
       ok: true,
@@ -14382,8 +14432,9 @@ app.post('/api/viceroy/presentacion-generador/layout', requireBackendFeature('vi
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const inputLayout = body.layout && typeof body.layout === 'object' ? body.layout : body;
-    const layout = saveViceroyPresentationLayout(inputLayout);
-    return res.json({ ok: true, layout });
+    const lang = normalizeViceroyPresentationLanguage(body.language || req.query && req.query.lang);
+    const layout = saveViceroyPresentationLayout(inputLayout, lang);
+    return res.json({ ok: true, layout, language: lang });
   } catch (err) {
     return res.status(500).json({
       ok: false,

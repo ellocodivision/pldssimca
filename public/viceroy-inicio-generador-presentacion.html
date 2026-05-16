@@ -1042,9 +1042,10 @@
         renderLayoutPreview();
       }
 
-      async function loadLayout() {
+      async function loadLayout(language) {
+        const lang = String(language || els.pdfLanguage.value || 'es').trim() || 'es';
         try {
-          const res = await fetch('/api/viceroy/presentacion-generador/layout', {
+          const res = await fetch('/api/viceroy/presentacion-generador/layout?lang=' + encodeURIComponent(lang), {
             cache: 'no-store',
             credentials: 'same-origin'
           });
@@ -1052,6 +1053,7 @@
           if (!res.ok || !data || !data.ok) {
             throw new Error(data && data.error ? data.error : 'No se pudo cargar el layout');
           }
+          state.language = lang;
           state.layout = cloneLayout(data.layout);
           state.defaultLayout = cloneLayout(data.defaults || data.layout);
           state.pageSizes = new Map((Array.isArray(data.pageSizes) ? data.pageSizes : []).map(function (item) {
@@ -1088,7 +1090,7 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ layout: state.layout })
+            body: JSON.stringify({ layout: state.layout, language: String(els.pdfLanguage.value || state.language || 'es') })
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok || !data || !data.ok) {
@@ -1163,7 +1165,7 @@
 
       async function loadFloorJsonFiles() {
         try {
-          const res = await fetch('/api/viceroy-piloto/floors', {
+          const res = await fetch('/api/viceroy/presentacion-generador/floor-json-files', {
             cache: 'no-store',
             credentials: 'same-origin'
           });
@@ -1171,7 +1173,10 @@
           if (!res.ok || !data || !data.ok) {
             throw new Error(data && data.error ? data.error : 'No se pudieron cargar los pisos');
           }
-          state.floorJsonFiles = Array.isArray(data.loadedFiles) ? data.loadedFiles.slice() : [];
+          state.floorJsonFiles = Array.isArray(data.files) ? data.files.slice() : [];
+          if (!state.floorJsonName && data.selectedFloorJsonName) {
+            state.floorJsonName = String(data.selectedFloorJsonName || '').trim();
+          }
           if (state.floorJsonName && !state.floorJsonFiles.includes(state.floorJsonName)) {
             state.floorJsonName = '';
           }
@@ -1252,6 +1257,13 @@
           state.floorJsonName = String(els.floorJsonName.value || '').trim();
         });
       }
+      if (els.pdfLanguage) {
+        els.pdfLanguage.addEventListener('change', function () {
+          const lang = String(els.pdfLanguage.value || 'es').trim() || 'es';
+          state.language = lang;
+          loadLayout(lang).catch(function () {});
+        });
+      }
       els.layoutField.addEventListener('change', function () {
         const previousKey = state.activeLayoutKey;
         const nextKey = selectedLayoutKey();
@@ -1311,7 +1323,8 @@
       renderLayoutFieldOptions();
       renderLayoutPageOptions();
       updateLayoutZoomReadout();
-      Promise.all([loadUnits(), loadLayout(), loadFloorJsonFiles()]);
+      state.language = String(els.pdfLanguage && els.pdfLanguage.value || 'es').trim() || 'es';
+      Promise.all([loadUnits(), loadLayout(state.language), loadFloorJsonFiles()]);
     })();
   </script>
 </body>
