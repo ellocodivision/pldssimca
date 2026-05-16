@@ -7155,23 +7155,17 @@ function buildViceroyPresentationInventoryStatusMap() {
 async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, excelUnitSet = null, font = null) {
   const target = normalizeWhisperlistSelectionUnitKey(selectedUnit);
   if (!target || !rect) return;
-  const mergedFloorsData = readViceroyPresentationFloorData();
-  const mergedFloors = Array.isArray(mergedFloorsData && mergedFloorsData.floors) ? mergedFloorsData.floors : [];
-  const selectedFloor = mergedFloors.find((floor) => Array.isArray(floor && floor.zones) && floor.zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target)) || null;
-  const fallbackFloor = !selectedFloor
-    ? readViceroyPresentationFloorCandidates()
-      .filter((entry) => Array.isArray(entry && entry.floor && entry.floor.zones) && entry.floor.zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target))
-      .sort((a, b) => {
-        const aZones = Array.isArray(a && a.floor && a.floor.zones) ? a.floor.zones.length : 0;
-        const bZones = Array.isArray(b && b.floor && b.floor.zones) ? b.floor.zones.length : 0;
-        if (aZones !== bZones) return bZones - aZones;
-        const aW = Number(a && a.floor && a.floor.imageWidth || 0);
-        const bW = Number(b && b.floor && b.floor.imageWidth || 0);
-        if (aW !== bW) return bW - aW;
-        return 0;
-      })[0] || null
-    : null;
-  const floorToUse = selectedFloor || (fallbackFloor && fallbackFloor.floor) || null;
+  const floorToUse = readViceroyPresentationFloorCandidates()
+    .filter((entry) => Array.isArray(entry && entry.floor && entry.floor.zones) && entry.floor.zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target))
+    .sort((a, b) => {
+      const aZones = Array.isArray(a && a.floor && a.floor.zones) ? a.floor.zones.length : 0;
+      const bZones = Array.isArray(b && b.floor && b.floor.zones) ? b.floor.zones.length : 0;
+      if (aZones !== bZones) return bZones - aZones;
+      const aW = Number(a && a.floor && a.floor.imageWidth || 0);
+      const bW = Number(b && b.floor && b.floor.imageWidth || 0);
+      if (aW !== bW) return bW - aW;
+      return 0;
+    })[0]?.floor || null;
   const floorImageSource = getViceroyPresentationFloorImageSource(floorToUse);
   if (!floorToUse || !floorImageSource || !Array.isArray(floorToUse.zones) || !floorToUse.zones.length) return;
 
@@ -8600,22 +8594,22 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
 
     drawViceroyPresentationField(page3, fontBold, pageRects.page3.delivery, defaultDeliveryText, { fontSize: 9.2, align: 'left' });
 
-    const priceText = formatViceroyPresentationNumber(
+    const priceNumberText = formatViceroyPresentationNumber(
       row.price || row.priceVenta || row.priceLista || mergedMeta.price || paymentSource.price || paymentSource.priceVenta || '',
       0
-    ) ? `${formatViceroyPresentationNumber(
-      row.price || row.priceVenta || row.priceLista || mergedMeta.price || paymentSource.price || paymentSource.priceVenta || '',
-      0
-    )} MXN` : '';
+    );
+    const priceText = priceNumberText ? `${priceNumberText} MXN` : '';
     const roomsText = String(row.rooms || row.recamaras || '').trim();
     const levelText = String(row.level || '').trim();
-    const sqftText = language === 'es'
+    const areaText = language === 'es'
       ? String(inferViceroyPresentationM2(row) || row.totalM2 || row.m2 || '').trim()
       : String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
     const bathroomsText = String(row.banos || '').trim();
+    const page5UnitText = language === 'es' ? `Unidad: ${unit}` : unit;
+    const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : areaText;
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, sqftText, { fontSize: 8.8, align: 'left' });
+    drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, areaText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.bathrooms, bathroomsText, { fontSize: 8.8, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 9.3, align: 'left' });
     drawViceroyPresentationField(page4, fontBold, pageRects.page4.contractSigning, paymentRows[0] && paymentRows[0].value ? paymentRows[0].value : '', { fontSize: 8.2, align: 'left' });
@@ -8647,9 +8641,9 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       }
     }
 
-    drawViceroyPresentationField(page5, fontBold, pageRects.page5.unit, unit, { fontSize: 9.6, align: 'left' });
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.unit, page5UnitText, { fontSize: 9.6, align: 'left' });
     drawViceroyPresentationField(page5, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
-    drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, sqftText, { fontSize: 9.0, align: 'left' });
+    drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, page5AreaText, { fontSize: 9.0, align: 'left' });
   }
 
   return Buffer.from(await outputDoc.save());
