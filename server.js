@@ -7148,7 +7148,7 @@ function readViceroyPresentationFloorCandidates() {
 }
 
 function resolveViceroyPresentationFloorForMap(selectedUnit, options = {}) {
-  const target = normalizeWhisperlistSelectionUnitKey(selectedUnit);
+  const target = extractUnitCode(selectedUnit);
   if (!target) return null;
   const requestedFloorJsonName = sanitizeJsonFileName(String(options.floorJsonName || options.floorFileName || '').trim());
   const requestedFloorId = String(options.floorId || '').trim();
@@ -7173,7 +7173,7 @@ function resolveViceroyPresentationFloorForMap(selectedUnit, options = {}) {
     const zones = Array.isArray(floor && floor.zones) ? floor.zones : [];
     if (!zones.length) return false;
     if (requestedFloorId && String(floor.id || '').trim() === requestedFloorId) return true;
-    return zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target);
+    return zones.some((zone) => extractUnitCode(zone && zone.label) === target);
   });
 
   matchingEntries.sort((a, b) => {
@@ -7220,7 +7220,7 @@ function buildViceroyPresentationInventoryStatusMap() {
 }
 
 async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, excelUnitSet = null, font = null, floorOverride = null) {
-  const target = normalizeWhisperlistSelectionUnitKey(selectedUnit);
+  const target = extractUnitCode(selectedUnit);
   if (!target || !rect) return;
   const floorToUse = floorOverride && typeof floorOverride === 'object'
     ? floorOverride
@@ -7256,7 +7256,7 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
   floorToUse.zones.forEach((zone) => {
     const pts = Array.isArray(zone && zone.points) ? zone.points : [];
     if (pts.length < 3) return;
-    const uk = normalizeWhisperlistSelectionUnitKey(zone.label);
+    const uk = extractUnitCode(zone && zone.label);
     const zonePoints = pts.map((pt) => toPdfPoint(pt));
     const isSelected = uk === target;
     const isInExcel = excelUnitSet && typeof excelUnitSet.has === 'function' ? excelUnitSet.has(uk) : false;
@@ -7286,7 +7286,7 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
       const cy = centroid.y / zonePoints.length;
       const labelSize = Math.max(14, Math.min(38, Math.round(box.width / 26)));
       if (font) {
-        const label = String(uk || '').trim();
+        const label = String(uk || target || '').trim();
         const labelWidth = font.widthOfTextAtSize(label, labelSize);
         page.drawText(label, {
           x: cx - (labelWidth / 2),
@@ -8576,8 +8576,8 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
   const pageCount = templateDoc.getPageCount();
   const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
   const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
-  const excelUnitSet = new Set(excelData.map((row) => normalizeWhisperlistSelectionUnitKey(row.unidad)).filter(Boolean));
-  const rowsByUnit = new Map(excelData.map((row) => [normalizeWhisperlistSelectionUnitKey(row.unidad), row]).filter((entry) => Boolean(entry[0])));
+  const excelUnitSet = new Set(excelData.map((row) => extractUnitCode(row.unidad)).filter(Boolean));
+  const rowsByUnit = new Map(excelData.map((row) => [extractUnitCode(row.unidad), row]).filter((entry) => Boolean(entry[0])));
   const requestedUnits = Array.isArray(payload.units) ? payload.units : (payload.unit ? [payload.unit] : []);
   const selectedUnits = requestedUnits
     .map((unit) => String(unit || '').trim())
@@ -8590,7 +8590,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     throw new Error('Selecciona al menos una unidad');
   }
 
-  const selectedRows = selectedUnits.map((unit) => rowsByUnit.get(normalizeWhisperlistSelectionUnitKey(unit)) || rowsByUnit.get(String(unit || '').trim())).filter(Boolean);
+  const selectedRows = selectedUnits.map((unit) => rowsByUnit.get(extractUnitCode(unit)) || rowsByUnit.get(String(unit || '').trim())).filter(Boolean);
   if (!selectedRows.length) {
     throw new Error('No se encontró información de la unidad seleccionada en el Excel');
   }
@@ -14387,14 +14387,32 @@ app.get('/api/viceroy/presentacion-generador/units', requireBackendFeature('vice
 app.get('/api/viceroy/presentacion-generador/floor-json-files', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
   try {
     const config = readViceroyPilotoConfig();
+    const publicData = (() => {
+      try {
+        const data = readMergedFloorsByDevelopment('viceroy-piloto');
+        return {
+          loadedFiles: Array.isArray(data.loadedFiles) ? data.loadedFiles : []
+        };
+      } catch {
+        return { loadedFiles: [] };
+      }
+    })();
     const files = [];
     const seen = new Set();
-    readViceroyPresentationFloorCandidates().forEach((entry) => {
-      const fileName = String(entry && entry.fileName || '').trim();
-      if (!fileName || seen.has(fileName.toLowerCase())) return;
-      seen.add(fileName.toLowerCase());
-      files.push(fileName);
+    (Array.isArray(publicData.loadedFiles) ? publicData.loadedFiles : []).forEach((fileName) => {
+      const value = String(fileName || '').trim();
+      if (!value || seen.has(value.toLowerCase())) return;
+      seen.add(value.toLowerCase());
+      files.push(value);
     });
+    if (!files.length) {
+      readViceroyPresentationFloorCandidates().forEach((entry) => {
+        const fileName = String(entry && entry.fileName || '').trim();
+        if (!fileName || seen.has(fileName.toLowerCase())) return;
+        seen.add(fileName.toLowerCase());
+        files.push(fileName);
+      });
+    }
     return res.json({
       ok: true,
       files,

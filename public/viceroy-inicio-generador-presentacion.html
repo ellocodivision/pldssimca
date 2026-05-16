@@ -1183,20 +1183,42 @@
 
       async function loadFloorJsonFiles() {
         try {
-          const res = await fetch('/api/viceroy/presentacion-generador/floor-json-files', {
+          const publicDataRes = await fetch('/api/viceroy-piloto/public-data', {
             cache: 'no-store',
             credentials: 'same-origin'
           });
-          const data = await res.json().catch(function () { return {}; });
-          if (!res.ok || !data || !data.ok) {
-            throw new Error(data && data.error ? data.error : 'No se pudieron cargar los pisos');
+          const publicData = await publicDataRes.json().catch(function () { return {}; });
+          const publicFiles = [];
+          if (publicData && publicData.ok) {
+            const loaded = Array.isArray(publicData.loadedFiles) ? publicData.loadedFiles : [];
+            loaded.forEach(function (name) {
+              const value = String(name || '').trim();
+              if (value) publicFiles.push(value);
+            });
           }
-          state.floorJsonFiles = Array.isArray(data.files) ? data.files.slice() : [];
-          if (!state.floorJsonName && data.selectedFloorJsonName) {
-            state.floorJsonName = String(data.selectedFloorJsonName || '').trim();
+
+          let files = publicFiles;
+          let selectedFloorJsonName = '';
+          if (!files.length) {
+            const res = await fetch('/api/viceroy/presentacion-generador/floor-json-files', {
+              cache: 'no-store',
+              credentials: 'same-origin'
+            });
+            const data = await res.json().catch(function () { return {}; });
+            if (!res.ok || !data || !data.ok) {
+              throw new Error(data && data.error ? data.error : 'No se pudieron cargar los pisos');
+            }
+            files = Array.isArray(data.files) ? data.files.slice() : [];
+            selectedFloorJsonName = String(data.selectedFloorJsonName || '').trim();
+          } else {
+            selectedFloorJsonName = String(publicData && publicData.config && publicData.config.selectedFloorJsonName || '').trim();
+          }
+          state.floorJsonFiles = files;
+          if (!state.floorJsonName && selectedFloorJsonName) {
+            state.floorJsonName = selectedFloorJsonName;
           }
           if (state.floorJsonName && !state.floorJsonFiles.includes(state.floorJsonName)) {
-            state.floorJsonName = '';
+            state.floorJsonName = state.floorJsonFiles[0] || '';
           }
           renderFloorJsonSelect();
         } catch (_) {
