@@ -556,6 +556,7 @@
         layoutPreviewPage: 'page1',
         layoutZoom: 0.65,
         language: 'es',
+        module: 'presentation-multi',
         floorJsonName: '',
         floorJsonFiles: [],
         layoutPdf: null,
@@ -1061,7 +1062,7 @@
       async function loadLayout(language) {
         const lang = String(language || els.pdfLanguage.value || 'es').trim() || 'es';
         try {
-          const res = await fetch('/api/viceroy/presentacion-generador/layout?lang=' + encodeURIComponent(lang), {
+          const res = await fetch('/api/viceroy/presentacion-generador/layout?lang=' + encodeURIComponent(lang) + '&module=' + encodeURIComponent(state.module), {
             cache: 'no-store',
             credentials: 'same-origin'
           });
@@ -1108,7 +1109,7 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ layout: state.layout, language: String(els.pdfLanguage.value || state.language || 'es') })
+            body: JSON.stringify({ layout: state.layout, language: String(els.pdfLanguage.value || state.language || 'es'), module: state.module })
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok || !data || !data.ok) {
@@ -1255,6 +1256,7 @@
               agentName: agentName,
               brokerName: brokerName,
               language: String(els.pdfLanguage.value || 'es'),
+              module: state.module,
               floorJsonName: String(els.floorJsonName && els.floorJsonName.value || '').trim(),
               presentationDate: new Date().toLocaleDateString('es-MX', {
                 day: '2-digit',

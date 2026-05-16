@@ -231,8 +231,12 @@ const VICEROY_TIPOLOGIA_THUMBS_DIR = path.join(VICEROY_PILOTO_DATA_DIR, 'tipolog
 const VICEROY_SPECIAL_YELLOW_UNITS_PATH = path.join(DATA_DIR, 'viceroy-special-yellow-units.json');
 const VICEROY_PRESENTATION_TEMPLATE_ES_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-es.pdf');
 const VICEROY_PRESENTATION_TEMPLATE_EN_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'viceroy-presentacion-en.pdf');
+const VICEROY_PRESENTATION_MULTI_TEMPLATE_ES_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'presentation-generator', 'viceroy-presentacion-es-new.pdf');
+const VICEROY_PRESENTATION_MULTI_TEMPLATE_EN_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'presentation-generator', 'viceroy-presentacion-en-new.pdf');
 const VICEROY_PRESENTATION_LAYOUT_ES_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout.json');
 const VICEROY_PRESENTATION_LAYOUT_EN_PATH = path.join(DATA_DIR, 'viceroy-presentacion-layout-en.json');
+const VICEROY_PRESENTATION_MULTI_LAYOUT_ES_PATH = path.join(DATA_DIR, 'viceroy-presentacion-multi-layout.json');
+const VICEROY_PRESENTATION_MULTI_LAYOUT_EN_PATH = path.join(DATA_DIR, 'viceroy-presentacion-multi-layout-en.json');
 const VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON = 'imagen-related-mapeada-2026-05-07T18-03-04-537Z.json';
 const VICEROY_PRESENTATION_LAYOUT_PATH = VICEROY_PRESENTATION_LAYOUT_ES_PATH;
 const VICEROY_PRESENTATION_FONT_REGULAR_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-REGULAR-TRIAL.OTF');
@@ -7076,10 +7080,34 @@ function cloneViceroyPresentationLayout(layout) {
   return normalizeViceroyPresentationLayout(layout);
 }
 
-function readViceroyPresentationLayout(language = 'es') {
+function normalizeViceroyPresentationModule(rawModule) {
+  const value = String(rawModule || '').trim().toLowerCase();
+  if (value === 'presentation-multi' || value === 'multi' || value === 'generador-presentacion') return 'presentation-multi';
+  return 'welcome-client';
+}
+
+function getViceroyPresentationTemplatePath(language = 'es', module = 'welcome-client') {
   const lang = normalizeViceroyPresentationLanguage(language);
-  const primaryPath = lang === 'en' ? VICEROY_PRESENTATION_LAYOUT_EN_PATH : VICEROY_PRESENTATION_LAYOUT_ES_PATH;
-  const secondaryPath = lang === 'en' ? VICEROY_PRESENTATION_LAYOUT_ES_PATH : VICEROY_PRESENTATION_LAYOUT_EN_PATH;
+  const normalizedModule = normalizeViceroyPresentationModule(module);
+  if (normalizedModule === 'presentation-multi') {
+    return lang === 'en' ? VICEROY_PRESENTATION_MULTI_TEMPLATE_EN_PATH : VICEROY_PRESENTATION_MULTI_TEMPLATE_ES_PATH;
+  }
+  return lang === 'en' ? VICEROY_PRESENTATION_TEMPLATE_EN_PATH : VICEROY_PRESENTATION_TEMPLATE_ES_PATH;
+}
+
+function getViceroyPresentationLayoutPath(language = 'es', module = 'welcome-client') {
+  const lang = normalizeViceroyPresentationLanguage(language);
+  const normalizedModule = normalizeViceroyPresentationModule(module);
+  if (normalizedModule === 'presentation-multi') {
+    return lang === 'en' ? VICEROY_PRESENTATION_MULTI_LAYOUT_EN_PATH : VICEROY_PRESENTATION_MULTI_LAYOUT_ES_PATH;
+  }
+  return lang === 'en' ? VICEROY_PRESENTATION_LAYOUT_EN_PATH : VICEROY_PRESENTATION_LAYOUT_ES_PATH;
+}
+
+function readViceroyPresentationLayout(language = 'es', module = 'welcome-client') {
+  const lang = normalizeViceroyPresentationLanguage(language);
+  const primaryPath = getViceroyPresentationLayoutPath(lang, module);
+  const secondaryPath = getViceroyPresentationLayoutPath(lang === 'en' ? 'es' : 'en', module);
   let raw = readJson(primaryPath, null);
   if (!raw) {
     const fallback = readJson(secondaryPath, null);
@@ -7089,17 +7117,17 @@ function readViceroyPresentationLayout(language = 'es') {
   }
   const normalized = normalizeViceroyPresentationLayout(raw);
   if (!fs.existsSync(primaryPath) && normalized && normalized.pages) {
-    const fallbackLayout = lang === 'en' && fs.existsSync(VICEROY_PRESENTATION_LAYOUT_ES_PATH)
-      ? normalizeViceroyPresentationLayout(readJson(VICEROY_PRESENTATION_LAYOUT_ES_PATH, null))
+    const fallbackLayout = lang === 'en' && fs.existsSync(getViceroyPresentationLayoutPath('es', module))
+      ? normalizeViceroyPresentationLayout(readJson(getViceroyPresentationLayoutPath('es', module), null))
       : normalized;
     return cloneViceroyPresentationLayout(fallbackLayout);
   }
   return normalized;
 }
 
-function saveViceroyPresentationLayout(layout, language = 'es') {
+function saveViceroyPresentationLayout(layout, language = 'es', module = 'welcome-client') {
   const lang = normalizeViceroyPresentationLanguage(language);
-  const filePath = lang === 'en' ? VICEROY_PRESENTATION_LAYOUT_EN_PATH : VICEROY_PRESENTATION_LAYOUT_ES_PATH;
+  const filePath = getViceroyPresentationLayoutPath(lang, module);
   const normalized = normalizeViceroyPresentationLayout(layout);
   normalized.updatedAt = new Date().toISOString();
   writeJson(filePath, normalized);
@@ -7392,11 +7420,12 @@ async function renderViceroyPresentationPaintedFloorDataUrl(floor, selectedUnit,
   }
 }
 
-async function readViceroyPresentationTemplatePageSizes() {
-  if (!fs.existsSync(VICEROY_PRESENTATION_TEMPLATE_ES_PATH)) {
+async function readViceroyPresentationTemplatePageSizes(language = 'es', module = 'welcome-client') {
+  const templatePath = getViceroyPresentationTemplatePath(language, module);
+  if (!fs.existsSync(templatePath)) {
     throw new Error('No se encontró la plantilla PDF de presentación de Viceroy');
   }
-  const templateBytes = fs.readFileSync(VICEROY_PRESENTATION_TEMPLATE_ES_PATH);
+  const templateBytes = fs.readFileSync(templatePath);
   const templateDoc = await PDFDocument.load(templateBytes);
   return templateDoc.getPages().map((page, index) => {
     const size = page.getSize();
@@ -8651,8 +8680,16 @@ async function buildViceroyReservationPdfBuffer(payload) {
 }
 
 async function buildViceroyPresentationPdfBuffer(payload = {}) {
+  const moduleKey = normalizeViceroyPresentationModule(payload.module || payload.variant || payload.mode);
+  if (moduleKey === 'presentation-multi') {
+    return buildViceroyPresentationMultiPdfBuffer(payload);
+  }
+  return buildViceroyPresentationSinglePdfBuffer(payload);
+}
+
+async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
   const language = normalizeViceroyPresentationLanguage(payload.language || payload.lang);
-  const templatePath = language === 'en' ? VICEROY_PRESENTATION_TEMPLATE_EN_PATH : VICEROY_PRESENTATION_TEMPLATE_ES_PATH;
+  const templatePath = getViceroyPresentationTemplatePath(language, 'welcome-client');
   if (!fs.existsSync(templatePath)) {
     throw new Error(`No se encontró la plantilla PDF de presentación de Viceroy (${language.toUpperCase()})`);
   }
@@ -8708,7 +8745,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     ? path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png')
     : defaultSecondaryImage;
   const allPaymentRows = Array.isArray(payload.payments) ? payload.payments : [];
-  const presentationLayout = readViceroyPresentationLayout(language);
+  const presentationLayout = readViceroyPresentationLayout(language, 'welcome-client');
   const pageRects = presentationLayout.pages;
 
   for (const row of selectedRows) {
@@ -8802,6 +8839,176 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     drawViceroyPresentationField(page5, fontBold, pageRects.page5.unit, page5UnitText, { fontSize: 9.6, align: 'left' });
     drawViceroyPresentationField(page5, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
     drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, page5AreaText, { fontSize: 9.0, align: 'left' });
+  }
+
+  return Buffer.from(await outputDoc.save());
+}
+
+async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
+  const language = normalizeViceroyPresentationLanguage(payload.language || payload.lang);
+  const templatePath = getViceroyPresentationTemplatePath(language, 'presentation-multi');
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`No se encontró la plantilla PDF de presentación de Viceroy (${language.toUpperCase()})`);
+  }
+
+  const templateBytes = fs.readFileSync(templatePath);
+  const templateDoc = await PDFDocument.load(templateBytes);
+  const outputDoc = await PDFDocument.create();
+  outputDoc.registerFontkit(fontkit);
+  const fontRegularBytes = fs.readFileSync(VICEROY_PRESENTATION_FONT_REGULAR_PATH);
+  const fontMediumBytes = fs.readFileSync(VICEROY_PRESENTATION_FONT_MEDIUM_PATH);
+  const fontRegular = await outputDoc.embedFont(fontRegularBytes);
+  const fontBold = await outputDoc.embedFont(fontMediumBytes);
+  const pageCount = templateDoc.getPageCount();
+  const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
+  const excelUnitSet = new Set(excelData.map((row) => extractUnitCode(row.unidad)).filter(Boolean));
+  const rowsByUnit = new Map(excelData.map((row) => [extractUnitCode(row.unidad), row]).filter((entry) => Boolean(entry[0])));
+  const requestedUnits = Array.isArray(payload.units) ? payload.units : (payload.unit ? [payload.unit] : []);
+  const selectedUnits = requestedUnits
+    .map((unit) => String(unit || '').trim())
+    .filter(Boolean)
+    .slice(0, VICEROY_PRESENTATION_MAX_UNITS);
+  const requestedFloorJsonName = sanitizeJsonFileName(String(payload.floorJsonName || payload.floorFileName || '').trim());
+  const requestedFloorId = String(payload.floorId || '').trim();
+
+  if (!selectedUnits.length) {
+    throw new Error('Selecciona al menos una unidad');
+  }
+
+  const selectedRows = selectedUnits.map((unit) => rowsByUnit.get(extractUnitCode(unit)) || rowsByUnit.get(String(unit || '').trim())).filter(Boolean);
+  if (!selectedRows.length) {
+    throw new Error('No se encontró información de la unidad seleccionada en el Excel');
+  }
+
+  const globalMeta = parseViceroyPresentationMaybeJson(payload.jsonData)
+    || parseViceroyPresentationMaybeJson(payload.metadata)
+    || parseViceroyPresentationMaybeJson(payload.extra)
+    || {};
+  const unitMetaByUnit = parseViceroyPresentationMaybeJson(payload.unitMetaByUnit)
+    || parseViceroyPresentationMaybeJson(payload.unitMetadataByUnit)
+    || {};
+  const presentationDateText = String(payload.presentationDate || globalMeta.presentationDate || '').trim()
+    || new Intl.DateTimeFormat('es-MX', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: APP_TIMEZONE
+    }).format(new Date());
+  const defaultDeliveryText = String(payload.deliveryText || globalMeta.deliveryText || '').trim();
+  const brandHeroPath = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'hero-tropical.jpg');
+  const defaultSecondaryImage = fs.existsSync(brandHeroPath) ? brandHeroPath : '';
+  const defaultPrimaryImage = fs.existsSync(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png'))
+    ? path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png')
+    : defaultSecondaryImage;
+  const presentationLayout = readViceroyPresentationLayout(language, 'presentation-multi');
+  const pageRects = presentationLayout.pages;
+  const addPages = async (indices) => {
+    const usable = indices.filter((idx) => idx >= 0 && idx < pageCount);
+    if (!usable.length) return [];
+    const pages = await outputDoc.copyPages(templateDoc, usable);
+    pages.forEach((page) => outputDoc.addPage(page));
+    return pages;
+  };
+  // The multi-unit template removes the original cover page, so the shared intro
+  // now spans the first 3 pages and the repeatable unit section lives on pages 4-5.
+  const prefixPages = await addPages([0, 1, 2]);
+  const suffixIndices = [5, 6].filter((idx) => idx >= 0 && idx < pageCount);
+
+  const prefixPage1 = prefixPages[0] || null;
+  const prefixPage2 = prefixPages[1] || null;
+  if (prefixPage1) {
+    drawViceroyPresentationField(prefixPage1, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'center' });
+    drawViceroyPresentationField(prefixPage1, fontBold, pageRects.page2.agent, String(payload.agentName || payload.nombreAgente || '').trim(), { fontSize: 8.9, align: 'center' });
+    drawViceroyPresentationField(prefixPage1, fontBold, pageRects.page2.broker, String(payload.brokerName || payload.nombreBroker || '').trim(), { fontSize: 8.9, align: 'center' });
+  }
+  if (prefixPage2) {
+    drawViceroyPresentationField(prefixPage2, fontBold, pageRects.page3.delivery, defaultDeliveryText, { fontSize: 9.2, align: 'left' });
+  }
+
+  for (const row of selectedRows) {
+    const unitPages = await addPages([3, 4]);
+    const page3 = unitPages[0] || null;
+    const page4 = unitPages[1] || null;
+    const unit = String(row.unidad || '').trim();
+    const unitMeta = parseViceroyPresentationMaybeJson(unitMetaByUnit[unit]) || {};
+    const mergedMeta = { ...globalMeta, ...unitMeta };
+    const paymentSource = {
+      ...(mergedMeta.paymentSource && typeof mergedMeta.paymentSource === 'object' ? mergedMeta.paymentSource : {}),
+      ...(Array.isArray(mergedMeta.payments) ? { paymentPlan: mergedMeta.payments } : {}),
+      ...(Array.isArray(payload.payments) ? { paymentPlan: payload.payments } : {}),
+      ...(Array.isArray(mergedMeta.paymentPlan) ? { paymentPlan: mergedMeta.paymentPlan } : {}),
+      ...(mergedMeta.paymentPlan && typeof mergedMeta.paymentPlan === 'object' ? mergedMeta.paymentPlan : {}),
+      ...row
+    };
+    const paymentRows = collectViceroyPresentationPaymentRows(paymentSource, row.price);
+    const primaryImageSource = normalizeViceroyPresentationUrl(
+      String(mergedMeta.primaryImage || mergedMeta.image || mergedMeta.floorPlan || row.planLink || defaultPrimaryImage || '').trim()
+    ) || row.planLink || defaultPrimaryImage;
+    const priceNumberText = formatViceroyPresentationNumber(
+      row.price || row.priceVenta || row.priceLista || mergedMeta.price || paymentSource.price || paymentSource.priceVenta || '',
+      0
+    );
+    const priceText = priceNumberText ? `${priceNumberText} MXN` : '';
+    const roomsText = String(row.rooms || row.recamaras || '').trim();
+    const levelText = String(row.level || '').trim();
+    const areaText = language === 'es'
+      ? String(inferViceroyPresentationM2(row) || row.totalM2 || row.m2 || '').trim()
+      : String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
+    const bathroomsText = String(row.banos || '').trim();
+    const page5UnitText = language === 'es' ? `Unidad: ${unit}` : `Unit: ${unit}`;
+    const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : `Square feet: ${areaText}`;
+    const floorForMap = resolveViceroyPresentationFloorForMap(unit, {
+      floorJsonName: requestedFloorJsonName,
+      floorId: requestedFloorId
+    });
+
+    if (page3) {
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.sqft, areaText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.bathrooms, bathroomsText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.price, priceText, { fontSize: 9.3, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.contractSigning, paymentRows[0] && paymentRows[0].value ? paymentRows[0].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.payment1, paymentRows[1] && paymentRows[1].value ? paymentRows[1].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.payment3, paymentRows[3] && paymentRows[3].value ? paymentRows[3].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page3, fontBold, pageRects.page4.uponDelivery, paymentRows[4] && paymentRows[4].value ? paymentRows[4].value : '', { fontSize: 8.2, align: 'left' });
+    }
+
+    if (page4) {
+      try {
+        const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
+        if (primaryImage) {
+          drawImageContain(page4, primaryImage, pageRects.page5.primaryImage, 4);
+        }
+      } catch (err) {
+        log(`No se pudo insertar imagen principal de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
+      }
+
+      if (pageRects.page5 && (pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage)) {
+        try {
+          await drawViceroyPresentationSelectedUnitMap(
+            page4,
+            outputDoc,
+            pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage,
+            unit,
+            excelUnitSet,
+            fontBold,
+            floorForMap
+          );
+        } catch (err) {
+          log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);
+        }
+      }
+
+      drawViceroyPresentationField(page4, fontBold, pageRects.page5.unit, page5UnitText, { fontSize: 9.6, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page5.sqft, page5AreaText, { fontSize: 9.0, align: 'left' });
+    }
+  }
+
+  if (suffixIndices.length) {
+    await addPages(suffixIndices);
   }
 
   return Buffer.from(await outputDoc.save());
@@ -14535,13 +14742,15 @@ app.get('/api/viceroy/presentacion-generador/floor-json-files', requireBackendFe
 
 app.get('/api/viceroy/presentacion-generador/layout', requireBackendFeature('viceroy', 'generadorPresentacion'), async (req, res) => {
   try {
-    const layout = readViceroyPresentationLayout(req.query && req.query.lang);
-    const pageSizes = await readViceroyPresentationTemplatePageSizes();
+    const moduleKey = normalizeViceroyPresentationModule(req.query && req.query.module);
+    const layout = readViceroyPresentationLayout(req.query && req.query.lang, moduleKey);
+    const pageSizes = await readViceroyPresentationTemplatePageSizes(req.query && req.query.lang, moduleKey);
     return res.json({
       ok: true,
       layout,
       defaults: defaultViceroyPresentationLayout(),
-      pageSizes
+      pageSizes,
+      module: moduleKey
     });
   } catch (err) {
     return res.status(500).json({
@@ -14557,8 +14766,9 @@ app.post('/api/viceroy/presentacion-generador/layout', requireBackendFeature('vi
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const inputLayout = body.layout && typeof body.layout === 'object' ? body.layout : body;
     const lang = normalizeViceroyPresentationLanguage(body.language || req.query && req.query.lang);
-    const layout = saveViceroyPresentationLayout(inputLayout, lang);
-    return res.json({ ok: true, layout, language: lang });
+    const moduleKey = normalizeViceroyPresentationModule(body.module || req.query && req.query.module);
+    const layout = saveViceroyPresentationLayout(inputLayout, lang, moduleKey);
+    return res.json({ ok: true, layout, language: lang, module: moduleKey });
   } catch (err) {
     return res.status(500).json({
       ok: false,
@@ -14571,13 +14781,15 @@ app.post('/api/viceroy/presentacion-generador/layout', requireBackendFeature('vi
 app.post('/api/viceroy/presentacion-generador/render', requireBackendFeature('viceroy', 'generadorPresentacion'), async (req, res) => {
   try {
     const payload = req.body && typeof req.body === 'object' ? req.body : {};
-      const pdfBuffer = await buildViceroyPresentationPdfBuffer(payload);
-      const lang = normalizeViceroyPresentationLanguage(payload.language || payload.lang);
-      const requestedUnits = Array.isArray(payload.units)
-        ? payload.units.map((item) => String(item || '').trim()).filter(Boolean)
-        : [String(payload.unit || '').trim()].filter(Boolean);
-      const fileNameUnits = requestedUnits.slice(0, VICEROY_PRESENTATION_MAX_UNITS).join('-');
-      const fileName = `viceroy-presentacion-${lang}-${fileNameUnits || 'unidad'}.pdf`;
+    const pdfBuffer = await buildViceroyPresentationPdfBuffer(payload);
+    const lang = normalizeViceroyPresentationLanguage(payload.language || payload.lang);
+    const moduleKey = normalizeViceroyPresentationModule(payload.module || payload.variant || payload.mode);
+    const requestedUnits = Array.isArray(payload.units)
+      ? payload.units.map((item) => String(item || '').trim()).filter(Boolean)
+      : [String(payload.unit || '').trim()].filter(Boolean);
+    const fileNameUnits = requestedUnits.slice(0, VICEROY_PRESENTATION_MAX_UNITS).join('-');
+    const fileNamePrefix = moduleKey === 'presentation-multi' ? 'viceroy-presentacion' : 'viceroy-bienvenida-cliente';
+    const fileName = `${fileNamePrefix}-${lang}-${fileNameUnits || 'unidad'}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     return res.send(pdfBuffer);
