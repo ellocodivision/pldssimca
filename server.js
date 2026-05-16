@@ -6858,7 +6858,7 @@ function collectViceroyPresentationPaymentRows(source, fallbackPrice) {
     }
     rows.push({
       label: row.label,
-      value: rendered
+      value: rendered ? `${rendered} MXN` : ''
     });
   });
   return rows;
@@ -7015,9 +7015,9 @@ function defaultViceroyPresentationLayout() {
         selectedUnitMap: { x: 56, y: 100, width: 246, height: 228 }
       },
       page5: {
-        unit: { x: 150.0, y: 799.8, width: 280, height: 22 },
-        level: { x: 95.0, y: 416.0, width: 120, height: 20 },
-        sqft: { x: 214.0, y: 416.0, width: 150, height: 20 },
+        unit: { x: 112.0, y: 452.0, width: 180, height: 18 },
+        level: { x: 112.0, y: 424.0, width: 120, height: 18 },
+        sqft: { x: 112.0, y: 396.0, width: 140, height: 18 },
         primaryImage: { x: 68, y: 470, width: 520, height: 245 },
         secondaryImage: { x: 68, y: 92, width: 520, height: 205 },
         selectedUnitMap: { x: 68, y: 92, width: 520, height: 205 }
@@ -7133,7 +7133,7 @@ function buildViceroyPresentationInventoryStatusMap() {
   }
   const byUnit = new Map();
   rows.forEach((row) => {
-    const key = unitKey(row && row.unidad || '');
+    const key = normalizeWhisperlistSelectionUnitKey(row && row.unidad || '');
     if (!key || byUnit.has(key)) return;
     byUnit.set(key, {
       status: String(row && row.status || '').trim().toLowerCase(),
@@ -7144,27 +7144,32 @@ function buildViceroyPresentationInventoryStatusMap() {
 }
 
 async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, selectedUnit, font = null) {
-  const target = unitKey(selectedUnit);
+  const target = normalizeWhisperlistSelectionUnitKey(selectedUnit);
   if (!target || !rect) return;
-  const floorCandidates = readViceroyPresentationFloorCandidates()
-    .filter((entry) => Array.isArray(entry && entry.floor && entry.floor.zones) && entry.floor.zones.some((zone) => unitKey(zone && zone.label) === target))
-    .sort((a, b) => {
-      const aZones = Array.isArray(a && a.floor && a.floor.zones) ? a.floor.zones.length : 0;
-      const bZones = Array.isArray(b && b.floor && b.floor.zones) ? b.floor.zones.length : 0;
-      if (aZones !== bZones) return bZones - aZones;
-      const aW = Number(a && a.floor && a.floor.imageWidth || 0);
-      const bW = Number(b && b.floor && b.floor.imageWidth || 0);
-      if (aW !== bW) return bW - aW;
-      return 0;
-    });
-  const selectedFloor = floorCandidates[0] ? floorCandidates[0].floor : null;
-  const floorImageSource = getViceroyPresentationFloorImageSource(selectedFloor);
-  if (!selectedFloor || !floorImageSource || !Array.isArray(selectedFloor.zones) || !selectedFloor.zones.length) return;
+  const mergedFloorsData = readViceroyPresentationFloorData();
+  const mergedFloors = Array.isArray(mergedFloorsData && mergedFloorsData.floors) ? mergedFloorsData.floors : [];
+  const selectedFloor = mergedFloors.find((floor) => Array.isArray(floor && floor.zones) && floor.zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target)) || null;
+  const fallbackFloor = !selectedFloor
+    ? readViceroyPresentationFloorCandidates()
+      .filter((entry) => Array.isArray(entry && entry.floor && entry.floor.zones) && entry.floor.zones.some((zone) => normalizeWhisperlistSelectionUnitKey(zone && zone.label) === target))
+      .sort((a, b) => {
+        const aZones = Array.isArray(a && a.floor && a.floor.zones) ? a.floor.zones.length : 0;
+        const bZones = Array.isArray(b && b.floor && b.floor.zones) ? b.floor.zones.length : 0;
+        if (aZones !== bZones) return bZones - aZones;
+        const aW = Number(a && a.floor && a.floor.imageWidth || 0);
+        const bW = Number(b && b.floor && b.floor.imageWidth || 0);
+        if (aW !== bW) return bW - aW;
+        return 0;
+      })[0] || null
+    : null;
+  const floorToUse = selectedFloor || (fallbackFloor && fallbackFloor.floor) || null;
+  const floorImageSource = getViceroyPresentationFloorImageSource(floorToUse);
+  if (!floorToUse || !floorImageSource || !Array.isArray(floorToUse.zones) || !floorToUse.zones.length) return;
 
   const inventoryStatusMap = buildViceroyPresentationInventoryStatusMap();
   const baseImage = await embedViceroyPresentationImage(pdfDoc, floorImageSource);
   if (!baseImage) return;
-  const box = getContainBox(rect, Number(selectedFloor.imageWidth) || baseImage.width || rect.width, Number(selectedFloor.imageHeight) || baseImage.height || rect.height, 0);
+  const box = getContainBox(rect, Number(floorToUse.imageWidth) || baseImage.width || rect.width, Number(floorToUse.imageHeight) || baseImage.height || rect.height, 0);
   page.drawRectangle({
     x: rect.x,
     y: rect.y,
@@ -7180,17 +7185,17 @@ async function drawViceroyPresentationSelectedUnitMap(page, pdfDoc, rect, select
     height: box.height
   });
 
-  const scaleX = box.width / Math.max(1, Number(selectedFloor.imageWidth) || baseImage.width || 1);
-  const scaleY = box.height / Math.max(1, Number(selectedFloor.imageHeight) || baseImage.height || 1);
+  const scaleX = box.width / Math.max(1, Number(floorToUse.imageWidth) || baseImage.width || 1);
+  const scaleY = box.height / Math.max(1, Number(floorToUse.imageHeight) || baseImage.height || 1);
   const toPdfPoint = (pt) => ({
     x: box.x + Number(pt && pt[0] || 0) * scaleX,
     y: box.y + box.height - Number(pt && pt[1] || 0) * scaleY
   });
 
-  selectedFloor.zones.forEach((zone) => {
+  floorToUse.zones.forEach((zone) => {
     const pts = Array.isArray(zone && zone.points) ? zone.points : [];
     if (pts.length < 3) return;
-    const uk = unitKey(zone.label);
+    const uk = normalizeWhisperlistSelectionUnitKey(zone.label);
     const zonePoints = pts.map((pt) => toPdfPoint(pt));
     const isSelected = uk === target;
     const isInventory = inventoryStatusMap.has(uk);
@@ -8510,7 +8515,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
   const pageCount = templateDoc.getPageCount();
   const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
   const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
-  const rowsByUnit = new Map(excelData.map((row) => [String(row.unidad || '').trim(), row]));
+  const rowsByUnit = new Map(excelData.map((row) => [normalizeWhisperlistSelectionUnitKey(row.unidad), row]).filter((entry) => Boolean(entry[0])));
   const requestedUnits = Array.isArray(payload.units) ? payload.units : (payload.unit ? [payload.unit] : []);
   const selectedUnits = requestedUnits
     .map((unit) => String(unit || '').trim())
@@ -8521,7 +8526,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     throw new Error('Selecciona al menos una unidad');
   }
 
-  const selectedRows = selectedUnits.map((unit) => rowsByUnit.get(unit)).filter(Boolean);
+  const selectedRows = selectedUnits.map((unit) => rowsByUnit.get(normalizeWhisperlistSelectionUnitKey(unit)) || rowsByUnit.get(String(unit || '').trim())).filter(Boolean);
   if (!selectedRows.length) {
     throw new Error('No se encontró información de la unidad seleccionada en el Excel');
   }
@@ -8589,7 +8594,10 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
     const priceText = formatViceroyPresentationNumber(
       row.price || row.priceVenta || row.priceLista || mergedMeta.price || paymentSource.price || paymentSource.priceVenta || '',
       0
-    );
+    ) ? `${formatViceroyPresentationNumber(
+      row.price || row.priceVenta || row.priceLista || mergedMeta.price || paymentSource.price || paymentSource.priceVenta || '',
+      0
+    )} MXN` : '';
     const roomsText = String(row.rooms || row.recamaras || '').trim();
     const levelText = String(row.level || '').trim();
     const sqftText = String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
