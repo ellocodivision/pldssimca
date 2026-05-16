@@ -8666,7 +8666,7 @@ async function buildViceroyPresentationPdfBuffer(payload = {}) {
       ? String(inferViceroyPresentationM2(row) || row.totalM2 || row.m2 || '').trim()
       : String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
     const bathroomsText = String(row.banos || '').trim();
-    const page5UnitText = language === 'es' ? `Unidad: ${unit}` : unit;
+    const page5UnitText = language === 'es' ? `Unidad: ${unit}` : `Unit: ${unit}`;
     const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : `Square feet: ${areaText}`;
     const floorForMap = resolveViceroyPresentationFloorForMap(unit, {
       floorJsonName: requestedFloorJsonName,
