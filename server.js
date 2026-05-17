@@ -7016,7 +7016,8 @@ function defaultViceroyPresentationLayout() {
         broker: { x: 299.0, y: 284.7, width: 280, height: 22 }
       },
       page3: {
-        delivery: { x: 205.1, y: 101.0, width: 240, height: 20 }
+        delivery: { x: 205.1, y: 101.0, width: 240, height: 20 },
+        unit: { x: 64.0, y: 527.0, width: 240, height: 20 }
       },
       page4: {
         rooms: { x: 348.6, y: 478.7, width: 220, height: 18 },
@@ -8709,10 +8710,8 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
   outputDoc.registerFontkit(fontkit);
   const fontRegularBytes = fs.readFileSync(VICEROY_PRESENTATION_FONT_REGULAR_PATH);
   const fontMediumBytes = fs.readFileSync(VICEROY_PRESENTATION_FONT_MEDIUM_PATH);
-  const fontRomieBytes = fs.readFileSync(VICEROY_PRESENTATION_FONT_ROMIE_REGULAR_PATH);
   const fontRegular = await outputDoc.embedFont(fontRegularBytes);
   const fontBold = await outputDoc.embedFont(fontMediumBytes);
-  const fontRomie = await outputDoc.embedFont(fontRomieBytes);
   const pageCount = templateDoc.getPageCount();
   const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
   const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
@@ -8806,6 +8805,7 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
       ? String(inferViceroyPresentationM2(row) || row.totalM2 || row.m2 || '').trim()
       : String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
     const bathroomsText = String(row.banos || '').trim();
+    const page3UnitText = language === 'es' ? `Unidad: ${unit}` : `Unit: ${unit}`;
     const page5UnitText = language === 'es' ? `Unidad: ${unit}` : `Unit: ${unit}`;
     const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : `Square feet: ${areaText}`;
     const floorForMap = resolveViceroyPresentationFloorForMap(unit, {
@@ -8977,7 +8977,7 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
     });
 
     if (page3) {
-      drawViceroyPresentationField(page3, fontRomie, { x: 64, y: 527, width: 240, height: 20 }, page3UnitText, { fontSize: 11.1, align: 'left' });
+      drawViceroyPresentationField(page3, fontRomie, pageRects.page3.unit, page3UnitText, { fontSize: 12.6, align: 'left' });
       drawViceroyPresentationField(page3, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
       drawViceroyPresentationField(page3, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
       drawViceroyPresentationField(page3, fontBold, pageRects.page4.sqft, areaText, { fontSize: 8.8, align: 'left' });
