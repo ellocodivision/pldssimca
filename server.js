@@ -8716,7 +8716,6 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
   const fontBold = await outputDoc.embedFont(fontMediumBytes);
   const fontRomie = await outputDoc.embedFont(fontRomieBytes);
   const pageCount = templateDoc.getPageCount();
-  const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
   const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
   const excelUnitSet = new Set(excelData.map((row) => extractUnitCode(row.unidad)).filter(Boolean));
   const rowsByUnit = new Map(excelData.map((row) => [extractUnitCode(row.unidad), row]).filter((entry) => Boolean(entry[0])));
@@ -8761,21 +8760,43 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
   const presentationLayout = readViceroyPresentationLayout(language, 'welcome-client');
   const pageRects = presentationLayout.pages;
 
-  for (const row of selectedRows) {
-    const pages = await outputDoc.copyPages(templateDoc, pageIndices);
+  const addPages = async (indices) => {
+    const usable = indices.filter((idx) => idx >= 0 && idx < pageCount);
+    if (!usable.length) return [];
+    const pages = await outputDoc.copyPages(templateDoc, usable);
     pages.forEach((page) => outputDoc.addPage(page));
+    return pages;
+  };
 
-    const page1 = pages[0];
-    const page2 = pages[1];
-    const page3 = pages[2];
-    const page4 = pages[3];
-    const page5 = pages[4];
+  // Welcome client keeps the intro once, repeats the unit block per selection,
+  // and closes once at the end.
+  const prefixPages = await addPages([0, 1, 2]);
+  const suffixIndices = [5, 6].filter((idx) => idx >= 0 && idx < pageCount);
+
+  const prefixPage1 = prefixPages[0] || null;
+  const prefixPage2 = prefixPages[1] || null;
+  const prefixPage3 = prefixPages[2] || null;
+
+  if (prefixPage1) {
+    drawViceroyPresentationField(prefixPage1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
+    drawViceroyPresentationField(prefixPage1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
+  }
+  if (prefixPage2) {
+    drawViceroyPresentationField(prefixPage2, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'center' });
+    drawViceroyPresentationField(prefixPage2, fontBold, pageRects.page2.agent, String(payload.agentName || payload.nombreAgente || '').trim(), { fontSize: 8.9, align: 'center' });
+    drawViceroyPresentationField(prefixPage2, fontBold, pageRects.page2.broker, String(payload.brokerName || payload.nombreBroker || '').trim(), { fontSize: 8.9, align: 'center' });
+  }
+  if (prefixPage3) {
+    drawViceroyPresentationField(prefixPage3, fontBold, pageRects.page3.delivery, defaultDeliveryText, { fontSize: 9.2, align: 'left' });
+  }
+
+  for (const row of selectedRows) {
+    const unitPages = await addPages([3, 4]);
+    const page4 = unitPages[0] || null;
+    const page5 = unitPages[1] || null;
     const unit = String(row.unidad || '').trim();
     const unitMeta = parseViceroyPresentationMaybeJson(unitMetaByUnit[unit]) || {};
-    const mergedMeta = {
-      ...globalMeta,
-      ...unitMeta
-    };
+    const mergedMeta = { ...globalMeta, ...unitMeta };
     const paymentSource = {
       ...(mergedMeta.paymentSource && typeof mergedMeta.paymentSource === 'object' ? mergedMeta.paymentSource : {}),
       ...(Array.isArray(mergedMeta.payments) ? { paymentPlan: mergedMeta.payments } : {}),
@@ -8788,15 +8809,6 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
     const primaryImageSource = normalizeViceroyPresentationUrl(
       String(mergedMeta.primaryImage || mergedMeta.image || mergedMeta.floorPlan || row.planLink || defaultPrimaryImage || '').trim()
     ) || row.planLink || defaultPrimaryImage;
-    drawViceroyPresentationField(page1, fontBold, pageRects.page1.name, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 9.1, align: 'left', color: rgb(0.2, 0.2, 0.2) });
-    drawViceroyPresentationField(page1, fontRegular, pageRects.page1.date, presentationDateText, { fontSize: 8.6, align: 'left', color: rgb(0.2, 0.2, 0.2) });
-
-    drawViceroyPresentationField(page2, fontBold, pageRects.page2.client, String(payload.clientName || payload.nombreCliente || '').trim(), { fontSize: 8.9, align: 'center' });
-    drawViceroyPresentationField(page2, fontBold, pageRects.page2.agent, String(payload.agentName || payload.nombreAgente || '').trim(), { fontSize: 8.9, align: 'center' });
-    drawViceroyPresentationField(page2, fontBold, pageRects.page2.broker, String(payload.brokerName || payload.nombreBroker || '').trim(), { fontSize: 8.9, align: 'center' });
-
-    drawViceroyPresentationField(page3, fontBold, pageRects.page3.delivery, defaultDeliveryText, { fontSize: 9.2, align: 'left' });
-
     const priceNumberText = formatViceroyPresentationNumber(
       row.price || row.priceVenta || row.priceLista || mergedMeta.price || paymentSource.price || paymentSource.priceVenta || '',
       0
@@ -8814,44 +8826,54 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
       floorJsonName: requestedFloorJsonName,
       floorId: requestedFloorId
     });
-    drawViceroyPresentationField(page4, fontRomie, pageRects.page4.unit, page4UnitText, { fontSize: 12.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, areaText, { fontSize: 8.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.bathrooms, bathroomsText, { fontSize: 8.8, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 9.3, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.contractSigning, paymentRows[0] && paymentRows[0].value ? paymentRows[0].value : '', { fontSize: 8.2, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment1, paymentRows[1] && paymentRows[1].value ? paymentRows[1].value : '', { fontSize: 8.2, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment3, paymentRows[3] && paymentRows[3].value ? paymentRows[3].value : '', { fontSize: 8.2, align: 'left' });
-    drawViceroyPresentationField(page4, fontBold, pageRects.page4.uponDelivery, paymentRows[4] && paymentRows[4].value ? paymentRows[4].value : '', { fontSize: 8.2, align: 'left' });
-    try {
-      const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
-      if (primaryImage) {
-        drawImageContain(page5, primaryImage, pageRects.page5.primaryImage, 4);
-      }
-    } catch (err) {
-      log(`No se pudo insertar imagen principal de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
+
+    if (page4) {
+      drawViceroyPresentationField(page4, fontRomie, pageRects.page4.unit, page4UnitText, { fontSize: 12.8, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.sqft, areaText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.bathrooms, bathroomsText, { fontSize: 8.8, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.price, priceText, { fontSize: 9.3, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.contractSigning, paymentRows[0] && paymentRows[0].value ? paymentRows[0].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment1, paymentRows[1] && paymentRows[1].value ? paymentRows[1].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment2, paymentRows[2] && paymentRows[2].value ? paymentRows[2].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.payment3, paymentRows[3] && paymentRows[3].value ? paymentRows[3].value : '', { fontSize: 8.2, align: 'left' });
+      drawViceroyPresentationField(page4, fontBold, pageRects.page4.uponDelivery, paymentRows[4] && paymentRows[4].value ? paymentRows[4].value : '', { fontSize: 8.2, align: 'left' });
     }
 
-    if (pageRects.page5 && (pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage)) {
+    if (page5) {
       try {
-        await drawViceroyPresentationSelectedUnitMap(
-          page5,
-          outputDoc,
-          pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage,
-          unit,
-          excelUnitSet,
-          fontBold,
-          floorForMap
-        );
+        const primaryImage = await embedViceroyPresentationImage(outputDoc, primaryImageSource);
+        if (primaryImage) {
+          drawImageContain(page5, primaryImage, pageRects.page5.primaryImage, 4);
+        }
       } catch (err) {
-        log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);
+        log(`No se pudo insertar imagen principal de Viceroy para ${unit}: ${err && err.message ? err.message : err}`);
       }
-    }
 
-    drawViceroyPresentationField(page5, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
-    drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, page5AreaText, { fontSize: 9.0, align: 'left' });
+      if (pageRects.page5 && (pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage)) {
+        try {
+          await drawViceroyPresentationSelectedUnitMap(
+            page5,
+            outputDoc,
+            pageRects.page5.selectedUnitMap || pageRects.page5.secondaryImage,
+            unit,
+            excelUnitSet,
+            fontBold,
+            floorForMap
+          );
+        } catch (err) {
+          log(`No se pudo insertar mapa de inventario para ${unit}: ${err && err.message ? err.message : err}`);
+        }
+      }
+
+      drawViceroyPresentationField(page5, fontBold, pageRects.page5.level, levelText, { fontSize: 9.0, align: 'left' });
+      drawViceroyPresentationField(page5, fontBold, pageRects.page5.sqft, page5AreaText, { fontSize: 9.0, align: 'left' });
+    }
+  }
+
+  if (suffixIndices.length) {
+    await addPages(suffixIndices);
   }
 
   return Buffer.from(await outputDoc.save());
