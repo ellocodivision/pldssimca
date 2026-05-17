@@ -8771,7 +8771,7 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
   // Welcome client keeps the intro once, repeats the unit block per selection,
   // and closes once at the end.
   const prefixPages = await addPages([0, 1, 2]);
-  const suffixIndices = [5, 6].filter((idx) => idx >= 0 && idx < pageCount);
+  const suffixIndices = [5, 6, 7].filter((idx) => idx >= 0 && idx < pageCount);
 
   const prefixPage1 = prefixPages[0] || null;
   const prefixPage2 = prefixPages[1] || null;
