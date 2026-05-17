@@ -8924,10 +8924,10 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
     pages.forEach((page) => outputDoc.addPage(page));
     return pages;
   };
-  // The new multi template keeps the intro on the first 3 pages, then repeats
-  // the unit block on pages 4-5 and leaves the ending pages once at the end.
-  const prefixPages = await addPages([0, 1, 2]);
-  const suffixIndices = [5, 6].filter((idx) => idx >= 0 && idx < pageCount);
+  // The new multi template already removed the cover page, so everything shifts
+  // one page earlier compared with the old presentation flow.
+  const prefixPages = await addPages([0, 1]);
+  const suffixIndices = [4, 5, 6].filter((idx) => idx >= 0 && idx < pageCount);
 
   const prefixPage1 = prefixPages[0] || null;
   const prefixPage2 = prefixPages[1] || null;
@@ -8941,7 +8941,7 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
   }
 
   for (const row of selectedRows) {
-    const unitPages = await addPages([3, 4]);
+    const unitPages = await addPages([2, 3]);
     const page3 = unitPages[0] || null;
     const page4 = unitPages[1] || null;
     const unit = String(row.unidad || '').trim();
@@ -8970,7 +8970,7 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
       ? String(inferViceroyPresentationM2(row) || row.totalM2 || row.m2 || '').trim()
       : String(row.sqft || inferViceroyPresentationSqft(row) || '').trim();
     const bathroomsText = String(row.banos || '').trim();
-    const page4UnitText = language === 'es' ? `Unidad: ${unit}` : `Unit: ${unit}`;
+    const page3UnitText = language === 'es' ? `Unidad: ${unit}` : `Unit: ${unit}`;
     const page5AreaText = language === 'es' ? `Metros cuadrados: ${areaText}` : `Square feet: ${areaText}`;
     const floorForMap = resolveViceroyPresentationFloorForMap(unit, {
       floorJsonName: requestedFloorJsonName,
@@ -8978,7 +8978,7 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
     });
 
     if (page3) {
-      drawViceroyPresentationField(page3, fontRomie, pageRects.page4.unit, page4UnitText, { fontSize: 12.8, align: 'left' });
+      drawViceroyPresentationField(page3, fontRomie, pageRects.page3.unit, page3UnitText, { fontSize: 12.6, align: 'left' });
       drawViceroyPresentationField(page3, fontBold, pageRects.page4.rooms, roomsText, { fontSize: 8.8, align: 'left' });
       drawViceroyPresentationField(page3, fontBold, pageRects.page4.level, levelText, { fontSize: 8.8, align: 'left' });
       drawViceroyPresentationField(page3, fontBold, pageRects.page4.sqft, areaText, { fontSize: 8.8, align: 'left' });
