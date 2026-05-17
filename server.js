@@ -11965,6 +11965,12 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">Generador de Presentación</h2>
           <p class="desc">Completa el brochure desde Excel, JSON e imágenes para hasta 5 unidades.</p>
         </a>` : '';
+  const bienvenidaClienteCard = canAccessBackendFeature(currentEmail, 'viceroy', 'generadorPresentacion') ? `
+        <a class="card" href="/viceroy/inicio/bienvenida-cliente">
+          <span class="tag">Módulo</span>
+          <h2 class="name">Generador de bienvenida a cliente</h2>
+          <p class="desc">Genera la presentación de bienvenida con datos, planos e inventario.</p>
+        </a>` : '';
   const whisperlistCard = canAccessBackendFeature(currentEmail, 'viceroy', 'whisperlist') ? `
         <a class="card" href="/whisperlist">
           <span class="tag">Módulo</span>
@@ -12038,6 +12044,7 @@ app.get('/viceroy', (req, res) => {
       </div>
       <div class="grid">
         ${inicioCard}
+        ${bienvenidaClienteCard}
         ${generadorPresentacionCard}
         ${kpiReservasCard}
         ${whisperlistCard}
