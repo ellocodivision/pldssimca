@@ -8716,7 +8716,7 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
   const fontBold = await outputDoc.embedFont(fontMediumBytes);
   const fontRomie = await outputDoc.embedFont(fontRomieBytes);
   const pageCount = templateDoc.getPageCount();
-  const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
+  const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData({ includeHidden: true }).rows);
   const excelUnitSet = new Set(excelData.map((row) => extractUnitCode(row.unidad)).filter(Boolean));
   const rowsByUnit = new Map(excelData.map((row) => [extractUnitCode(row.unidad), row]).filter((entry) => Boolean(entry[0])));
   const requestedUnits = Array.isArray(payload.units) ? payload.units : (payload.unit ? [payload.unit] : []);
@@ -8897,7 +8897,7 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
   const fontBold = await outputDoc.embedFont(fontMediumBytes);
   const fontRomie = await outputDoc.embedFont(fontRomieBytes);
   const pageCount = templateDoc.getPageCount();
-  const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
+  const excelData = buildViceroyPresentationUnitRows(buildViceroyExcelViewData({ includeHidden: true }).rows);
   const excelUnitSet = new Set(excelData.map((row) => extractUnitCode(row.unidad)).filter(Boolean));
   const rowsByUnit = new Map(excelData.map((row) => [extractUnitCode(row.unidad), row]).filter((entry) => Boolean(entry[0])));
   const requestedUnits = Array.isArray(payload.units) ? payload.units : (payload.unit ? [payload.unit] : []);
@@ -14706,7 +14706,7 @@ app.get('/api/viceroy/inicio/excel-data', requireViceroyPresentAccess, (req, res
 
 app.get('/api/viceroy/presentacion-generador/units', requireBackendFeature('viceroy', 'generadorPresentacion'), (req, res) => {
   try {
-    const data = buildViceroyPresentationUnitRows(buildViceroyExcelViewData().rows);
+    const data = buildViceroyPresentationUnitRows(buildViceroyExcelViewData({ includeHidden: true }).rows);
     return res.json({
       ok: true,
       units: data.map((row) => ({
