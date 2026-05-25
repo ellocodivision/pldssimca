@@ -502,6 +502,7 @@
         currentRowId: { kpi: '', hot: '' },
         wizardIndex: 0,
         wizardStepIndex: 0,
+        wizardComplete: false,
         dirty: false,
         loading: false
       };
@@ -554,12 +555,13 @@
         kpi: [
           { key: 'nombreCliente', label: 'Nombre del cliente', type: 'text', full: true, placeholder: 'Nombre del cliente' },
           { key: 'unidadReservada', label: 'Unidad reservada', type: 'text', placeholder: 'Unidad reservada' },
+          { key: 'unidadAsignada', label: '¿Reservó esta unidad?', type: 'yesno' },
           { key: 'pais', label: 'País', type: 'text', placeholder: 'País' },
           { key: 'ciudad', label: 'Ciudad', type: 'text', placeholder: 'Ciudad' },
           { key: 'documentosCompletos', label: 'Documentos completos', type: 'yesno' },
+          { key: 'contratoSolicitado', label: 'Contrato solicitado', type: 'yesno' },
           { key: 'hojaReserva', label: 'Hoja de reserva', type: 'yesno' },
           { key: 'reservaPagada', label: 'Reserva pagada', type: 'yesno' },
-          { key: 'contratoSolicitado', label: 'Contrato solicitado', type: 'yesno' },
           { key: 'contratoEnviado', label: 'Contrato enviado', type: 'yesno' },
           { key: 'contratoFirmado', label: 'Contrato firmado', type: 'yesno' },
           { key: 'enganchePagado', label: 'Enganche pagado', type: 'yesno' }
@@ -575,6 +577,7 @@
         ]
       };
       const wizardSteps = [
+        { key: 'unidadAsignada', label: '¿Confirma que el cliente reservó esta unidad?' },
         { key: 'reservaPagada', label: 'Apartado pagado' },
         { key: 'hojaReserva', label: 'Hoja de reserva firmada' },
         { key: 'documentosCompletos', label: 'Documentos completos' },
@@ -701,9 +704,12 @@
               const active = index === (state.indexByTab[state.tab] || 0);
               const statusChips = [];
               if (state.tab === 'kpi') {
+                if (isYes(row.kpi && row.kpi.unidadAsignada)) statusChips.push('<span class="chip good">Reservada</span>');
                 if (isYes(row.kpi && row.kpi.reservaPagada)) statusChips.push('<span class="chip good">Pagada</span>');
-                if (isYes(row.kpi && row.kpi.contratoFirmado)) statusChips.push('<span class="chip good">Firmado</span>');
+                if (isYes(row.kpi && row.kpi.documentosCompletos)) statusChips.push('<span class="chip good">Docs</span>');
                 if (isYes(row.kpi && row.kpi.contratoSolicitado)) statusChips.push('<span class="chip">Contrato solicitado</span>');
+                if (isYes(row.kpi && row.kpi.contratoEnviado)) statusChips.push('<span class="chip">Enviado</span>');
+                if (isYes(row.kpi && row.kpi.contratoFirmado)) statusChips.push('<span class="chip good">Firmado</span>');
               } else {
                 statusChips.push(`<span class="chip ${isYes(row.kpi && row.kpi.esHot) ? 'good' : 'bad'}">${isYes(row.kpi && row.kpi.esHot) ? 'HOT' : 'NO HOT'}</span>`);
               }
@@ -837,10 +843,20 @@
         if (!rows.length) {
           state.wizardIndex = 0;
           state.wizardStepIndex = 0;
+          state.wizardComplete = false;
           return;
         }
         state.wizardIndex = Math.min(Math.max(state.wizardIndex || 0, 0), rows.length - 1);
         state.wizardStepIndex = Math.min(Math.max(state.wizardStepIndex || 0, 0), wizardSteps.length - 1);
+      }
+
+      function getWizardStepLabel(step, row) {
+        if (!step) return '';
+        if (step.key === 'unidadAsignada') {
+          const unit = normalizeText(row && row.unidadReservada);
+          return `¿Confirma que el cliente reservó esta unidad${unit ? ` ${unit}` : ''}?`;
+        }
+        return step.label;
       }
 
       function renderWizard() {
@@ -853,12 +869,19 @@
         els.wizardStatus.textContent = totalClients ? `Cliente ${currentClientNumber} / ${totalClients}` : 'Sin clientes';
         els.wizardClient.textContent = current ? rowLabel(current) : 'Sin cliente seleccionado';
         els.wizardUnits.textContent = current ? rowMeta(current) || 'Cliente actual' : 'Cliente actual';
-        els.wizardStepChip.textContent = step ? `Pregunta ${stepNumber} / ${wizardSteps.length}` : 'Pregunta -';
-        els.wizardQuestion.textContent = step ? step.label : 'Pulsa iniciar para comenzar';
-        els.wizardSub.textContent = current
-          ? 'Responde y el sistema avanzará solo a la siguiente pregunta.'
-          : 'No hay clientes para mostrar.';
-        els.wizardButtons.classList.toggle('hidden', !current || !step);
+        if (state.wizardComplete && current) {
+          els.wizardStepChip.textContent = 'Completado';
+          els.wizardQuestion.textContent = 'Secuencia completada';
+          els.wizardSub.textContent = 'Ya no se repite la secuencia. Puedes pasar al siguiente cliente o cambiar a Actualización específica.';
+          els.wizardButtons.classList.add('hidden');
+        } else {
+          els.wizardStepChip.textContent = step ? `Pregunta ${stepNumber} / ${wizardSteps.length}` : 'Pregunta -';
+          els.wizardQuestion.textContent = step ? getWizardStepLabel(step, current) : 'Pulsa iniciar para comenzar';
+          els.wizardSub.textContent = current
+            ? 'Responde y el sistema avanzará solo a la siguiente pregunta.'
+            : 'No hay clientes para mostrar.';
+          els.wizardButtons.classList.toggle('hidden', !current || !step);
+        }
         els.wizardSaveChip.textContent = 'Auto guardado';
         els.wizardNo.disabled = !current || !step;
         els.wizardYes.disabled = !current || !step;
@@ -884,13 +907,18 @@
           const idx = rows.findIndex((row) => String(row.id || '') === String(current.id || ''));
           if (idx >= 0) rows[idx] = data.row || rows[idx];
           if (state.wizardStepIndex >= wizardSteps.length - 1) {
-            state.wizardStepIndex = 0;
-            state.wizardIndex = Math.min((state.wizardIndex || 0) + 1, Math.max(rows.length - 1, 0));
+            const nextClient = Math.min((state.wizardIndex || 0) + 1, Math.max(rows.length - 1, 0));
+            if (nextClient === state.wizardIndex || rows.length <= 1 && nextClient === state.wizardIndex) {
+              state.wizardComplete = true;
+              state.wizardStepIndex = wizardSteps.length - 1;
+            } else {
+              state.wizardComplete = false;
+              state.wizardIndex = nextClient;
+              state.wizardStepIndex = 0;
+            }
           } else {
+            state.wizardComplete = false;
             state.wizardStepIndex += 1;
-          }
-          if (state.wizardIndex >= rows.length) {
-            state.wizardIndex = Math.max(rows.length - 1, 0);
           }
           setNotice('Guardado. Siguiente pregunta.', 'ok');
           renderAll();
@@ -903,6 +931,7 @@
         state.view = view === 'specific' ? 'specific' : 'inicio';
         if (state.view === 'inicio') {
           state.tab = 'kpi';
+          state.wizardComplete = false;
         }
         els.viewInicio.classList.toggle('active', state.view === 'inicio');
         els.viewSpecific.classList.toggle('active', state.view === 'specific');
@@ -1059,7 +1088,7 @@
         renderWizard();
         els.hotAddSection.classList.toggle('hidden', state.tab !== 'hot');
         els.wizard.classList.toggle('open', state.view === 'inicio');
-        els.wizardButtons.classList.toggle('hidden', state.view !== 'inicio' || !getWizardCurrentRow() || !getWizardCurrentStep());
+        els.wizardButtons.classList.toggle('hidden', state.view !== 'inicio' || !getWizardCurrentRow() || !getWizardCurrentStep() || state.wizardComplete);
       }
 
       function wireEvents() {
@@ -1077,6 +1106,7 @@
           if (!rows.length) return;
           state.indexByTab[state.tab] = 0;
           state.currentRowId[state.tab] = String(rows[0].id || '');
+          state.wizardComplete = false;
           renderAll();
         });
         els.prevBtn.addEventListener('click', () => move(-1));
