@@ -642,10 +642,10 @@
           : 'ONE TO ONE RESERVAS COMENZAR';
       }
 
-      function enterWizardMode(mode, index = 0, stepIndex = 0, complete = false) {
+      function setWizardModeState(mode, index = 0, stepIndex = 0, started = false, complete = false) {
         state.wizardMode = mode === 'hot' ? 'hot' : 'kpi';
         state.tab = state.wizardMode;
-        state.wizardStarted = true;
+        state.wizardStarted = !!started;
         state.wizardIndex = index;
         state.wizardStepIndex = stepIndex;
         state.wizardComplete = complete;
@@ -956,6 +956,8 @@
         els.wizardTop.classList.toggle('hidden', !started);
         els.wizardProgress.classList.toggle('hidden', !started);
         els.wizardQuestionWrap.classList.toggle('hidden', !started);
+        els.wizardStartTitle.textContent = flowLabel;
+        els.wizardStartBtn.textContent = 'Comenzar';
         els.wizardKicker.textContent = state.wizardComplete ? `${flowLabel} · Completado` : flowLabel;
         els.wizardStatus.textContent = totalClients ? `Cliente ${currentClientNumber} / ${totalClients}` : 'Sin clientes';
         els.wizardClient.textContent = current ? rowLabel(current) : 'Sin cliente seleccionado';
@@ -1039,7 +1041,7 @@
               if (state.wizardMode === 'kpi') {
                 const hotRows = getWizardRowsForMode('hot');
                 if (hotRows.length) {
-                  enterWizardMode('hot', 0, 0, false);
+                  setWizardModeState('hot', 0, 0, false, false);
                   setNotice('Guardado. Inicia Hot Leads.', 'ok');
                   renderAll();
                   return;
@@ -1066,12 +1068,7 @@
       function setView(view) {
         state.view = view === 'specific' ? 'specific' : 'inicio';
         if (state.view === 'inicio') {
-          state.wizardMode = 'kpi';
-          state.tab = 'kpi';
-          state.wizardStarted = false;
-          state.wizardIndex = 0;
-          state.wizardStepIndex = 0;
-          state.wizardComplete = false;
+          setWizardModeState('kpi', 0, 0, false, false);
         }
         els.viewInicio.classList.toggle('active', state.view === 'inicio');
         els.viewSpecific.classList.toggle('active', state.view === 'specific');
@@ -1242,17 +1239,15 @@
           renderAll();
         });
         els.wizardStartBtn.addEventListener('click', () => {
-          enterWizardMode('kpi', 0, 0, false);
+          setWizardModeState(state.wizardMode, 0, 0, true, false);
           renderAll();
         });
         els.startBtn.addEventListener('click', () => {
           const rows = getFilteredRows();
           if (!rows.length) return;
-          state.wizardStarted = true;
-          state.wizardMode = 'kpi';
+          setWizardModeState('kpi', 0, 0, true, false);
           state.indexByTab[state.tab] = 0;
           state.currentRowId[state.tab] = String(rows[0].id || '');
-          state.wizardComplete = false;
           renderAll();
         });
         els.prevBtn.addEventListener('click', () => move(-1));
