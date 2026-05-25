@@ -334,16 +334,9 @@
     }
     .wizard-start h2{
       margin:0;
-      font-size:36px;
+      font-size:42px;
       line-height:1.05;
       letter-spacing:-0.03em;
-    }
-    .wizard-start p{
-      margin:0;
-      color:var(--muted);
-      max-width:520px;
-      font-size:18px;
-      line-height:1.45;
     }
     .wizard-start .btn{
       min-width:190px;
@@ -398,9 +391,7 @@
     <section id="wizard" class="wizard" aria-live="polite">
       <div class="wizard-card">
         <div id="wizardStart" class="wizard-start">
-          <p id="wizardStartKicker" class="wizard-kicker">ONE TO ONE RESERVAS COMENZAR</p>
-          <h2 id="wizardStartTitle">Toca comenzar para arrancar la secuencia</h2>
-          <p id="wizardStartCopy">Vas a avanzar cliente por cliente, con una sola ventana, sin duplicar pantallas.</p>
+          <h2 id="wizardStartTitle">ONE TO ONE RESERVAS COMENZAR</h2>
           <button id="wizardStartBtn" class="btn primary" type="button">Comenzar</button>
         </div>
         <div id="wizardTop" class="wizard-top">
@@ -560,9 +551,7 @@
         wizard: document.getElementById('wizard'),
         wizardStart: document.getElementById('wizardStart'),
         wizardStartBtn: document.getElementById('wizardStartBtn'),
-        wizardStartKicker: document.getElementById('wizardStartKicker'),
         wizardStartTitle: document.getElementById('wizardStartTitle'),
-        wizardStartCopy: document.getElementById('wizardStartCopy'),
         wizardTop: document.getElementById('wizardTop'),
         wizardProgress: document.getElementById('wizardProgress'),
         wizardQuestionWrap: document.getElementById('wizardQuestionWrap'),
@@ -651,6 +640,18 @@
         return mode === 'hot'
           ? 'ONE TO ONE HOT LEADS COMENZAR'
           : 'ONE TO ONE RESERVAS COMENZAR';
+      }
+
+      function enterWizardMode(mode, index = 0, stepIndex = 0, complete = false) {
+        state.wizardMode = mode === 'hot' ? 'hot' : 'kpi';
+        state.tab = state.wizardMode;
+        state.wizardStarted = true;
+        state.wizardIndex = index;
+        state.wizardStepIndex = stepIndex;
+        state.wizardComplete = complete;
+        const rows = getWizardRowsForMode(state.wizardMode);
+        const safeIndex = rows.length ? Math.min(Math.max(index, 0), rows.length - 1) : 0;
+        state.currentRowId[state.tab] = rows.length ? String(rows[safeIndex].id || '') : '';
       }
 
       function normalizeText(value) {
@@ -1038,11 +1039,7 @@
               if (state.wizardMode === 'kpi') {
                 const hotRows = getWizardRowsForMode('hot');
                 if (hotRows.length) {
-                  state.wizardMode = 'hot';
-                  setTab('hot');
-                  state.wizardIndex = 0;
-                  state.wizardStepIndex = 0;
-                  state.wizardComplete = false;
+                  enterWizardMode('hot', 0, 0, false);
                   setNotice('Guardado. Inicia Hot Leads.', 'ok');
                   renderAll();
                   return;
@@ -1245,14 +1242,7 @@
           renderAll();
         });
         els.wizardStartBtn.addEventListener('click', () => {
-          const rows = getWizardRowsForMode('kpi');
-          state.wizardMode = 'kpi';
-          state.tab = 'kpi';
-          state.wizardStarted = true;
-          state.wizardIndex = 0;
-          state.wizardStepIndex = 0;
-          state.wizardComplete = false;
-          state.currentRowId.kpi = rows.length ? String(rows[0].id || '') : '';
+          enterWizardMode('kpi', 0, 0, false);
           renderAll();
         });
         els.startBtn.addEventListener('click', () => {
