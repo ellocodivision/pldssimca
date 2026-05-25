@@ -243,6 +243,17 @@
         return String(value == null ? '' : value).trim().toLowerCase();
       }
 
+      function formatUpdatedAt(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '—';
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
+        return new Intl.DateTimeFormat('es-MX', {
+          dateStyle: 'medium',
+          timeStyle: 'short'
+        }).format(date);
+      }
+
       function yesNoChip(value) {
         const raw = String(value || '').trim().toUpperCase();
         if (raw === 'SI') return '<span class="kpi-chip paid">SI</span>';
@@ -312,6 +323,7 @@
           '<th>Hoja reserva</th>',
           '<th>Reserva pagada</th>',
           '<th>Documentos completos</th>',
+          '<th>Última actualización</th>',
           '<th>Contrato enviado</th>',
           '<th>Contrato firmado</th>',
           '<th>Enganche pagado</th>',
@@ -332,19 +344,20 @@
           cells.push(
             `<td><strong>${escapeText(row.unidadReservada || '—')}</strong></td>`,
             `<td><strong>${escapeText(row.nombreCliente || '—')}</strong></td>`,
-            `<td>${escapeText(row.pais || '—')}</td>`,
-            `<td>${escapeText(row.ciudad || '—')}</td>`,
-            `<td>${yesNoChip(row.kpi && row.kpi.hojaReserva)}</td>`,
-            `<td>${yesNoChip(row.kpi && row.kpi.reservaPagada)}</td>`,
-            `<td>${yesNoChip(row.documentosCompletos)}</td>`,
-            `<td>${yesNoChip(row.kpi && row.kpi.contratoEnviado)}</td>`,
-            `<td>${yesNoChip(row.kpi && row.kpi.contratoFirmado)}</td>`,
-            `<td>${yesNoChip(row.kpi && row.kpi.enganchePagado)}</td>`,
-            `<td><div class="cell-actions"><button class="btn" type="button" data-edit="${escapeText(row.id)}">Editar</button></div></td>`,
-            `<td><div class="cell-actions"><button class="btn danger" type="button" data-delete="${escapeText(row.id)}">Eliminar</button></div></td>`
-          );
-          return `<tr>${cells.join('')}</tr>`;
-        }).join('') || `<tr><td colspan="${state.isGerente ? 13 : 12}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
+          `<td>${escapeText(row.pais || '—')}</td>`,
+          `<td>${escapeText(row.ciudad || '—')}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.hojaReserva)}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.reservaPagada)}</td>`,
+          `<td>${yesNoChip(row.documentosCompletos)}</td>`,
+          `<td>${escapeText(formatUpdatedAt(row.updatedAt))}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.contratoEnviado)}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.contratoFirmado)}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.enganchePagado)}</td>`,
+          `<td><div class="cell-actions"><button class="btn" type="button" data-edit="${escapeText(row.id)}">Editar</button></div></td>`,
+          `<td><div class="cell-actions"><button class="btn danger" type="button" data-delete="${escapeText(row.id)}">Eliminar</button></div></td>`
+        );
+        return `<tr>${cells.join('')}</tr>`;
+        }).join('') || `<tr><td colspan="${state.isGerente ? 14 : 13}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
       }
 
       function openModal(mode, row) {

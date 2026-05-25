@@ -354,7 +354,7 @@
     <div class="top">
       <div>
         <h1 class="title">One to One</h1>
-        <p class="sub">Wizard por cliente para <strong>KPI Reservas</strong> y <strong>Hot Leads</strong>. Cada usuario ve solo sus propios registros y puede avanzar uno por uno, corregir algo en cualquier momento y guardar sin salir del flujo.</p>
+        <p class="sub"></p>
       </div>
       <div class="actions">
         <a class="btn secondary" href="/viceroy">Volver a Viceroy</a>
@@ -395,7 +395,7 @@
         </div>
         <div class="wizard-question">
           <div>
-            <p id="wizardSub" class="wizard-sub">Pulsa iniciar para comenzar.</p>
+            <p id="wizardSub" class="wizard-sub"></p>
             <h2 id="wizardQuestion">Aquí aparecerá la pregunta</h2>
           </div>
           <div id="wizardButtons" class="wizard-buttons hidden">
@@ -418,7 +418,7 @@
         <div class="main-head">
           <div>
             <h2 id="mainTitle" class="main-title">Selecciona un cliente</h2>
-            <p id="mainMeta" class="main-meta">Pulsa <strong>Iniciar</strong> o selecciona una fila del listado.</p>
+            <p id="mainMeta" class="main-meta"></p>
           </div>
           <div class="nav">
             <button id="startBtn" class="btn primary" type="button">Iniciar</button>
@@ -628,7 +628,6 @@
           if (normalizeText(row.unidadReservada)) parts.push(`Unidad ${normalizeText(row.unidadReservada)}`);
           if (normalizeText(row.pais)) parts.push(normalizeText(row.pais));
           if (normalizeText(row.ciudad)) parts.push(normalizeText(row.ciudad));
-          if (normalizeText(row.updatedAt)) parts.push(`Actualizado ${formatUpdatedAt(row.updatedAt)}`);
           return parts.join(' · ');
         }
         const parts = [];
@@ -806,13 +805,22 @@
           : '<div class="empty full">Selecciona un cliente para empezar.</div>';
 
         const title = state.tab === 'kpi' ? 'KPI Reservas' : 'Hot Leads';
-        els.mainTitle.textContent = row ? rowLabel(row) : `Selecciona un cliente de ${title}`;
+        const unit = row ? normalizeText(row.unidadReservada) : '';
+        const clientName = row ? normalizeText(row.nombreCliente) : '';
+        els.mainTitle.textContent = row
+          ? (state.tab === 'kpi'
+            ? (unit ? `Unidad ${unit}` : 'Cliente seleccionado')
+            : rowLabel(row))
+          : `Selecciona un cliente de ${title}`;
         const count = getFilteredRows().length;
         const index = row ? (state.indexByTab[state.tab] || 0) + 1 : 0;
-        const updatedAt = row ? formatUpdatedAt(row.updatedAt) : 'Sin actualización';
-        els.mainMeta.innerHTML = row
-          ? `${escapeHtml(title)} · Cliente ${index} de ${count}. Última actualización: ${escapeHtml(updatedAt)}. Guarda con frecuencia para no perder cambios.`
-          : 'Pulsa <strong>Iniciar</strong> o elige una fila del listado.';
+        els.mainMeta.innerHTML = row ? '' : 'Pulsa <strong>Iniciar</strong> o elige una fila del listado.';
+        els.wizardClient.textContent = row
+          ? (unit ? `Unidad ${unit}` : 'Cliente seleccionado')
+          : 'Selecciona un cliente';
+        els.wizardUnits.textContent = row
+          ? (clientName ? `Cliente: ${clientName}` : 'Cliente actual')
+          : 'Cliente actual';
 
         els.prevBtn.disabled = !row || index <= 1;
         els.nextBtn.disabled = !row || index >= count;
@@ -1026,7 +1034,7 @@
             throw new Error(data && data.error ? data.error : 'No se pudo cargar el módulo');
           }
           state.boot = data;
-          if (showMessage) setNotice('Datos actualizados.', 'ok');
+          if (showMessage) setNotice('', '');
           ensureCurrentIndex();
           renderAll();
         } catch (err) {
