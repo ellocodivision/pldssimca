@@ -315,24 +315,40 @@
     .hidden{display:none !important}
     body.view-inicio .tabs,
     body.view-inicio .summary,
-    body.view-inicio .layout > aside,
-    body.view-inicio .layout .main-head .nav,
-    body.view-inicio .layout .form-grid,
-    body.view-inicio .layout .actions-row,
-    body.view-inicio .layout .section{
-      display:none !important;
-    }
     body.view-inicio .layout{
-      grid-template-columns:1fr;
+      display:none !important;
     }
     body.view-inicio .wizard{
       display:block;
     }
-    body.view-inicio .layout{
-      margin-top:14px;
-    }
     body.view-inicio .card{
       padding:14px;
+    }
+    .wizard-start{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      min-height:58vh;
+      align-items:flex-start;
+      justify-content:center;
+    }
+    .wizard-start h2{
+      margin:0;
+      font-size:36px;
+      line-height:1.05;
+      letter-spacing:-0.03em;
+    }
+    .wizard-start p{
+      margin:0;
+      color:var(--muted);
+      max-width:520px;
+      font-size:18px;
+      line-height:1.45;
+    }
+    .wizard-start .btn{
+      min-width:190px;
+      min-height:60px;
+      font-size:18px;
     }
     @media (max-width:1080px){
       .layout{grid-template-columns:1fr}
@@ -381,7 +397,13 @@
 
     <section id="wizard" class="wizard" aria-live="polite">
       <div class="wizard-card">
-        <div class="wizard-top">
+        <div id="wizardStart" class="wizard-start">
+          <p id="wizardStartKicker" class="wizard-kicker">ONE TO ONE RESERVAS COMENZAR</p>
+          <h2 id="wizardStartTitle">Toca comenzar para arrancar la secuencia</h2>
+          <p id="wizardStartCopy">Vas a avanzar cliente por cliente, con una sola ventana, sin duplicar pantallas.</p>
+          <button id="wizardStartBtn" class="btn primary" type="button">Comenzar</button>
+        </div>
+        <div id="wizardTop" class="wizard-top">
           <div>
             <p id="wizardKicker" class="wizard-kicker">1 to 1 KPI Reservas</p>
             <h2 id="wizardClient" class="wizard-client">Selecciona un cliente</h2>
@@ -389,11 +411,11 @@
           </div>
           <span id="wizardStatus" class="chip">0 / 0</span>
         </div>
-        <div class="wizard-progress">
+        <div id="wizardProgress" class="wizard-progress">
           <span id="wizardStepChip" class="chip">Pregunta -</span>
           <span id="wizardSaveChip" class="chip">Auto guardado</span>
         </div>
-        <div class="wizard-question">
+        <div id="wizardQuestionWrap" class="wizard-question">
           <div>
             <p id="wizardSub" class="wizard-sub"></p>
             <h2 id="wizardQuestion">Aquí aparecerá la pregunta</h2>
@@ -503,6 +525,7 @@
         currentRowId: { kpi: '', hot: '' },
         wizardIndex: 0,
         wizardStepIndex: 0,
+        wizardStarted: false,
         wizardComplete: false,
         dirty: false,
         loading: false
@@ -535,6 +558,14 @@
         saveBtn: document.getElementById('saveBtn'),
         notice: document.getElementById('notice'),
         wizard: document.getElementById('wizard'),
+        wizardStart: document.getElementById('wizardStart'),
+        wizardStartBtn: document.getElementById('wizardStartBtn'),
+        wizardStartKicker: document.getElementById('wizardStartKicker'),
+        wizardStartTitle: document.getElementById('wizardStartTitle'),
+        wizardStartCopy: document.getElementById('wizardStartCopy'),
+        wizardTop: document.getElementById('wizardTop'),
+        wizardProgress: document.getElementById('wizardProgress'),
+        wizardQuestionWrap: document.getElementById('wizardQuestionWrap'),
         wizardClient: document.getElementById('wizardClient'),
         wizardKicker: document.getElementById('wizardKicker'),
         wizardUnits: document.getElementById('wizardUnits'),
@@ -919,11 +950,22 @@
         const currentClientNumber = totalClients ? state.wizardIndex + 1 : 0;
         const stepNumber = step ? state.wizardStepIndex + 1 : 0;
         const flowLabel = getWizardFlowLabel(state.wizardMode);
+        const started = !!state.wizardStarted;
+        els.wizardStart.classList.toggle('hidden', started);
+        els.wizardTop.classList.toggle('hidden', !started);
+        els.wizardProgress.classList.toggle('hidden', !started);
+        els.wizardQuestionWrap.classList.toggle('hidden', !started);
         els.wizardKicker.textContent = state.wizardComplete ? `${flowLabel} · Completado` : flowLabel;
         els.wizardStatus.textContent = totalClients ? `Cliente ${currentClientNumber} / ${totalClients}` : 'Sin clientes';
         els.wizardClient.textContent = current ? rowLabel(current) : 'Sin cliente seleccionado';
         els.wizardUnits.textContent = current ? rowMeta(current) || 'Cliente actual' : 'Cliente actual';
-        if (state.wizardComplete && current) {
+        if (!started) {
+          els.wizardStepChip.textContent = totalClients ? 'Listo para comenzar' : 'Sin clientes';
+          els.wizardQuestion.textContent = 'Toca comenzar para arrancar la secuencia';
+          els.wizardSub.textContent = '';
+          els.wizardButtons.classList.add('hidden');
+          els.wizardStatus.textContent = totalClients ? `Clientes disponibles: ${totalClients}` : 'Sin clientes';
+        } else if (state.wizardComplete && current) {
           els.wizardStepChip.textContent = 'Completado';
           els.wizardQuestion.textContent = 'Secuencia completada';
           els.wizardSub.textContent = '';
@@ -1029,6 +1071,9 @@
         if (state.view === 'inicio') {
           state.wizardMode = 'kpi';
           state.tab = 'kpi';
+          state.wizardStarted = false;
+          state.wizardIndex = 0;
+          state.wizardStepIndex = 0;
           state.wizardComplete = false;
         }
         els.viewInicio.classList.toggle('active', state.view === 'inicio');
@@ -1199,9 +1244,21 @@
           ensureCurrentIndex();
           renderAll();
         });
+        els.wizardStartBtn.addEventListener('click', () => {
+          const rows = getWizardRowsForMode('kpi');
+          state.wizardMode = 'kpi';
+          state.tab = 'kpi';
+          state.wizardStarted = true;
+          state.wizardIndex = 0;
+          state.wizardStepIndex = 0;
+          state.wizardComplete = false;
+          state.currentRowId.kpi = rows.length ? String(rows[0].id || '') : '';
+          renderAll();
+        });
         els.startBtn.addEventListener('click', () => {
           const rows = getFilteredRows();
           if (!rows.length) return;
+          state.wizardStarted = true;
           state.wizardMode = 'kpi';
           state.indexByTab[state.tab] = 0;
           state.currentRowId[state.tab] = String(rows[0].id || '');
