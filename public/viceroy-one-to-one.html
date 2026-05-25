@@ -617,7 +617,9 @@
       }
 
       function getWizardFlowLabel(mode = state.wizardMode) {
-        return `1 to 1 ${getWizardSectionLabel(mode)}`;
+        return mode === 'hot'
+          ? 'ONE TO ONE HOT LEADS COMENZAR'
+          : 'ONE TO ONE RESERVAS COMENZAR';
       }
 
       function normalizeText(value) {
@@ -924,15 +926,13 @@
         if (state.wizardComplete && current) {
           els.wizardStepChip.textContent = 'Completado';
           els.wizardQuestion.textContent = 'Secuencia completada';
-          els.wizardSub.textContent = 'Ya no se repite la secuencia. Puedes pasar al siguiente cliente o cambiar a Actualización específica.';
+          els.wizardSub.textContent = '';
           els.wizardButtons.classList.add('hidden');
         } else {
           const steps = getWizardStepsForMode(state.wizardMode);
           els.wizardStepChip.textContent = step ? `Pregunta ${stepNumber} / ${steps.length}` : 'Pregunta -';
           els.wizardQuestion.textContent = step ? getWizardStepLabel(step, current) : 'Pulsa iniciar para comenzar';
-          els.wizardSub.textContent = current
-            ? `Sección actual: ${getWizardSectionLabel(state.wizardMode)}. Responde y el sistema avanzará solo a la siguiente pregunta.`
-            : 'No hay clientes para mostrar.';
+          els.wizardSub.textContent = '';
           els.wizardButtons.classList.toggle('hidden', !current || !step);
         }
         els.wizardSaveChip.textContent = 'Auto guardado';
@@ -946,6 +946,33 @@
         if (!current || !step) return;
         try {
           setNotice('Guardando respuesta...', '');
+          if (state.wizardMode === 'hot' && step.key === 'esHot' && String(value || '').toUpperCase() === 'NO') {
+            const moveRes = await fetch(`/api/whisperlist/rows/${encodeURIComponent(current.id)}/send-to-registros`, {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({})
+            });
+            const moveData = await moveRes.json().catch(() => ({}));
+            if (!moveRes.ok || !moveData || !moveData.ok) {
+              throw new Error(moveData && moveData.error ? moveData.error : 'No se pudo mover a Registros Leads Mahekal');
+            }
+            await reloadBootstrap(false);
+            const hotRowsAfter = getWizardRowsForMode('hot');
+            if (!hotRowsAfter.length) {
+              state.wizardComplete = true;
+              setNotice('Guardado. Cliente movido a Registros Leads Mahekal.', 'ok');
+              renderAll();
+              return;
+            }
+            state.wizardIndex = Math.min(state.wizardIndex || 0, Math.max(hotRowsAfter.length - 1, 0));
+            state.wizardStepIndex = 0;
+            state.wizardComplete = false;
+            setNotice('Guardado. Cliente movido a Registros Leads Mahekal.', 'ok');
+            renderAll();
+            return;
+          }
+
           const endpoint = state.wizardMode === 'hot'
             ? `/api/viceroy/one-to-one/hot/${encodeURIComponent(current.id)}`
             : `/api/viceroy/one-to-one/kpi/${encodeURIComponent(current.id)}`;
