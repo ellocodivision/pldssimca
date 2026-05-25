@@ -83,6 +83,110 @@
       margin-top:14px;
       color:var(--muted);
     }
+    .view-switch{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:16px;
+    }
+    .view-btn{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:14px;
+      padding:12px 16px;
+      font-weight:800;
+      cursor:pointer;
+      min-height:48px;
+    }
+    .view-btn.active{background:var(--accent);border-color:#111}
+    .wizard{
+      display:none;
+      margin-top:14px;
+    }
+    .wizard.open{display:block}
+    .wizard-card{
+      background:linear-gradient(180deg,#fff,#fcfaf3);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+      box-shadow:0 14px 32px rgba(25,26,31,.06);
+    }
+    .wizard-top{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .wizard-kicker{
+      margin:0;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .wizard-client{
+      margin:6px 0 0;
+      font-size:30px;
+      line-height:1.05;
+      letter-spacing:-.02em;
+    }
+    .wizard-units{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:14px;
+    }
+    .wizard-progress{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .wizard-question{
+      margin-top:16px;
+      padding:18px 14px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid #e7dfcc;
+      min-height:180px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+    .wizard-question h2{
+      margin:0;
+      font-size:28px;
+      line-height:1.08;
+    }
+    .wizard-question p{
+      margin:10px 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+    .wizard-buttons{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:16px;
+    }
+    .wizard-buttons .btn{
+      min-height:58px;
+      border-radius:16px;
+      font-size:18px;
+    }
+    .wizard-buttons .btn.primary{
+      background:#dff4e4;
+      border-color:#1f8d3c;
+      color:#1f8d3c;
+    }
+    .wizard-buttons .btn.secondary{
+      background:#fff3f0;
+      border-color:#d46b59;
+      color:#8b1f16;
+    }
     .layout{
       display:grid;
       grid-template-columns:340px minmax(0,1fr);
@@ -209,6 +313,27 @@
     }
     .toggle .btn{padding:9px 12px}
     .hidden{display:none !important}
+    body.view-inicio .tabs,
+    body.view-inicio .summary,
+    body.view-inicio .layout > aside,
+    body.view-inicio .layout .main-head .nav,
+    body.view-inicio .layout .form-grid,
+    body.view-inicio .layout .actions-row,
+    body.view-inicio .layout .section{
+      display:none !important;
+    }
+    body.view-inicio .layout{
+      grid-template-columns:1fr;
+    }
+    body.view-inicio .wizard{
+      display:block;
+    }
+    body.view-inicio .layout{
+      margin-top:14px;
+    }
+    body.view-inicio .card{
+      padding:14px;
+    }
     @media (max-width:1080px){
       .layout{grid-template-columns:1fr}
       .list{max-height:none}
@@ -218,6 +343,9 @@
       .form-grid{grid-template-columns:1fr}
       .main-title{font-size:22px}
       .top{gap:10px}
+      .wizard-client{font-size:24px}
+      .wizard-question h2{font-size:24px}
+      .wizard-buttons .btn{min-height:54px;font-size:16px}
     }
   </style>
 </head>
@@ -234,6 +362,11 @@
       </div>
     </div>
 
+    <div class="view-switch">
+      <button id="viewInicio" class="view-btn active" type="button">Inicio</button>
+      <button id="viewSpecific" class="view-btn" type="button">Actualización específica</button>
+    </div>
+
     <div class="tabs">
       <button id="tabKpi" class="tab active" type="button">KPI Reservas <span id="kpiCountChip" class="chip">0</span></button>
       <button id="tabHot" class="tab" type="button">Hot Leads <span id="hotCountChip" class="chip">0</span></button>
@@ -245,6 +378,33 @@
       <span id="rowsChip" class="chip">Registros: -</span>
       <span id="selectedChip" class="chip">Seleccionado: -</span>
     </div>
+
+    <section id="wizard" class="wizard" aria-live="polite">
+      <div class="wizard-card">
+        <div class="wizard-top">
+          <div>
+            <p class="wizard-kicker">Inicio</p>
+            <h2 id="wizardClient" class="wizard-client">Selecciona un cliente</h2>
+            <div id="wizardUnits" class="wizard-units">Cliente actual</div>
+          </div>
+          <span id="wizardStatus" class="chip">0 / 0</span>
+        </div>
+        <div class="wizard-progress">
+          <span id="wizardStepChip" class="chip">Pregunta -</span>
+          <span id="wizardSaveChip" class="chip">Auto guardado</span>
+        </div>
+        <div class="wizard-question">
+          <div>
+            <p id="wizardSub" class="wizard-sub">Pulsa iniciar para comenzar.</p>
+            <h2 id="wizardQuestion">Aquí aparecerá la pregunta</h2>
+          </div>
+          <div id="wizardButtons" class="wizard-buttons hidden">
+            <button id="wizardNo" class="btn secondary" type="button">NO</button>
+            <button id="wizardYes" class="btn primary" type="button">SI</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div class="layout">
       <aside class="card">
@@ -334,11 +494,14 @@
       };
 
       const state = {
+        view: 'inicio',
         tab: 'kpi',
         boot: null,
         query: '',
         indexByTab: { kpi: 0, hot: 0 },
         currentRowId: { kpi: '', hot: '' },
+        wizardIndex: 0,
+        wizardStepIndex: 0,
         dirty: false,
         loading: false
       };
@@ -363,10 +526,23 @@
         nextBtn: document.getElementById('nextBtn'),
         reloadBtn: document.getElementById('reloadBtn'),
         refreshBtn: document.getElementById('refreshBtn'),
+        viewInicio: document.getElementById('viewInicio'),
+        viewSpecific: document.getElementById('viewSpecific'),
         formGrid: document.getElementById('formGrid'),
         editorForm: document.getElementById('editorForm'),
         saveBtn: document.getElementById('saveBtn'),
         notice: document.getElementById('notice'),
+        wizard: document.getElementById('wizard'),
+        wizardClient: document.getElementById('wizardClient'),
+        wizardUnits: document.getElementById('wizardUnits'),
+        wizardStatus: document.getElementById('wizardStatus'),
+        wizardStepChip: document.getElementById('wizardStepChip'),
+        wizardSaveChip: document.getElementById('wizardSaveChip'),
+        wizardQuestion: document.getElementById('wizardQuestion'),
+        wizardSub: document.getElementById('wizardSub'),
+        wizardButtons: document.getElementById('wizardButtons'),
+        wizardNo: document.getElementById('wizardNo'),
+        wizardYes: document.getElementById('wizardYes'),
         hotAddSection: document.getElementById('hotAddSection'),
         hotAddForm: document.getElementById('hotAddForm'),
         hotAddName: document.getElementById('hotAddName'),
@@ -398,6 +574,15 @@
           { key: 'ciudad', label: 'Ciudad', type: 'text', placeholder: 'Ciudad' }
         ]
       };
+      const wizardSteps = [
+        { key: 'reservaPagada', label: 'Apartado pagado' },
+        { key: 'hojaReserva', label: 'Hoja de reserva firmada' },
+        { key: 'documentosCompletos', label: 'Documentos completos' },
+        { key: 'contratoSolicitado', label: 'Contrato solicitado' },
+        { key: 'contratoEnviado', label: 'Contrato enviado' },
+        { key: 'contratoFirmado', label: 'Contrato firmado' },
+        { key: 'enganchePagado', label: 'Enganche pagado' }
+      ];
 
       function setNotice(message, kind = '') {
         els.notice.textContent = message || '';
@@ -632,6 +817,99 @@
         }
       }
 
+      function getWizardRows() {
+        return Array.isArray(state.boot && state.boot.kpiRows) ? state.boot.kpiRows : [];
+      }
+
+      function getWizardCurrentRow() {
+        const rows = getWizardRows();
+        if (!rows.length) return null;
+        const index = Math.min(Math.max(state.wizardIndex || 0, 0), rows.length - 1);
+        return rows[index] || null;
+      }
+
+      function getWizardCurrentStep() {
+        return wizardSteps[Math.min(Math.max(state.wizardStepIndex || 0, 0), wizardSteps.length - 1)] || null;
+      }
+
+      function ensureWizardBounds() {
+        const rows = getWizardRows();
+        if (!rows.length) {
+          state.wizardIndex = 0;
+          state.wizardStepIndex = 0;
+          return;
+        }
+        state.wizardIndex = Math.min(Math.max(state.wizardIndex || 0, 0), rows.length - 1);
+        state.wizardStepIndex = Math.min(Math.max(state.wizardStepIndex || 0, 0), wizardSteps.length - 1);
+      }
+
+      function renderWizard() {
+        const rows = getWizardRows();
+        const current = getWizardCurrentRow();
+        const step = getWizardCurrentStep();
+        const totalClients = rows.length;
+        const currentClientNumber = totalClients ? state.wizardIndex + 1 : 0;
+        const stepNumber = step ? state.wizardStepIndex + 1 : 0;
+        els.wizardStatus.textContent = totalClients ? `Cliente ${currentClientNumber} / ${totalClients}` : 'Sin clientes';
+        els.wizardClient.textContent = current ? rowLabel(current) : 'Sin cliente seleccionado';
+        els.wizardUnits.textContent = current ? rowMeta(current) || 'Cliente actual' : 'Cliente actual';
+        els.wizardStepChip.textContent = step ? `Pregunta ${stepNumber} / ${wizardSteps.length}` : 'Pregunta -';
+        els.wizardQuestion.textContent = step ? step.label : 'Pulsa iniciar para comenzar';
+        els.wizardSub.textContent = current
+          ? 'Responde y el sistema avanzará solo a la siguiente pregunta.'
+          : 'No hay clientes para mostrar.';
+        els.wizardButtons.classList.toggle('hidden', !current || !step);
+        els.wizardSaveChip.textContent = 'Auto guardado';
+        els.wizardNo.disabled = !current || !step;
+        els.wizardYes.disabled = !current || !step;
+      }
+
+      async function answerWizard(value) {
+        const current = getWizardCurrentRow();
+        const step = getWizardCurrentStep();
+        if (!current || !step) return;
+        try {
+          setNotice('Guardando respuesta...', '');
+          const res = await fetch(`/api/viceroy/one-to-one/kpi/${encodeURIComponent(current.id)}`, {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [step.key]: value })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo guardar la respuesta');
+          }
+          const rows = getWizardRows();
+          const idx = rows.findIndex((row) => String(row.id || '') === String(current.id || ''));
+          if (idx >= 0) rows[idx] = data.row || rows[idx];
+          if (state.wizardStepIndex >= wizardSteps.length - 1) {
+            state.wizardStepIndex = 0;
+            state.wizardIndex = Math.min((state.wizardIndex || 0) + 1, Math.max(rows.length - 1, 0));
+          } else {
+            state.wizardStepIndex += 1;
+          }
+          if (state.wizardIndex >= rows.length) {
+            state.wizardIndex = Math.max(rows.length - 1, 0);
+          }
+          setNotice('Guardado. Siguiente pregunta.', 'ok');
+          renderAll();
+        } catch (err) {
+          setNotice(err.message || 'No se pudo guardar la respuesta', 'error');
+        }
+      }
+
+      function setView(view) {
+        state.view = view === 'specific' ? 'specific' : 'inicio';
+        if (state.view === 'inicio') {
+          state.tab = 'kpi';
+        }
+        els.viewInicio.classList.toggle('active', state.view === 'inicio');
+        els.viewSpecific.classList.toggle('active', state.view === 'specific');
+        document.body.classList.toggle('view-inicio', state.view === 'inicio');
+        renderAll();
+      }
+
       function readFormPayload() {
         const payload = {};
         const row = getCurrentRow();
@@ -772,13 +1050,21 @@
       }
 
       function renderAll() {
+        ensureWizardBounds();
+        document.body.classList.toggle('view-inicio', state.view === 'inicio');
+        els.wizard.classList.toggle('open', state.view === 'inicio');
         renderSummary();
         renderList();
         renderEditor();
+        renderWizard();
         els.hotAddSection.classList.toggle('hidden', state.tab !== 'hot');
+        els.wizard.classList.toggle('open', state.view === 'inicio');
+        els.wizardButtons.classList.toggle('hidden', state.view !== 'inicio' || !getWizardCurrentRow() || !getWizardCurrentStep());
       }
 
       function wireEvents() {
+        els.viewInicio.addEventListener('click', () => setView('inicio'));
+        els.viewSpecific.addEventListener('click', () => setView('specific'));
         els.tabKpi.addEventListener('click', () => setTab('kpi'));
         els.tabHot.addEventListener('click', () => setTab('hot'));
         els.searchInput.addEventListener('input', () => {
@@ -799,11 +1085,13 @@
         els.refreshBtn.addEventListener('click', () => reloadBootstrap(true));
         els.editorForm.addEventListener('submit', handleSave);
         els.hotAddForm.addEventListener('submit', handleAddHot);
+        els.wizardNo.addEventListener('click', () => answerWizard('NO'));
+        els.wizardYes.addEventListener('click', () => answerWizard('SI'));
       }
 
       wireEvents();
       reloadBootstrap(true);
-      setTab('kpi');
+      setView('inicio');
     })();
   </script>
 </body>
