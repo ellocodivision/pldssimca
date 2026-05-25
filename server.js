@@ -4473,9 +4473,11 @@ function normalizeWhisperlistKpi(raw) {
     hojaReserva: normalizeYesNo(item.hojaReserva) || 'NO',
     reservaPagada: normalizeYesNo(item.reservaPagada) || 'NO',
     unidadAsignada: normalizeYesNo(item.unidadAsignada) || 'NO',
+    contratoSolicitado: normalizeYesNo(item.contratoSolicitado) || 'NO',
     contratoEnviado: normalizeYesNo(item.contratoEnviado) || 'NO',
     contratoFirmado: normalizeYesNo(item.contratoFirmado) || 'NO',
-    enganchePagado: normalizeYesNo(item.enganchePagado) || 'NO'
+    enganchePagado: normalizeYesNo(item.enganchePagado) || 'NO',
+    esHot: normalizeYesNo(item.esHot) || 'NO'
   };
 }
 
@@ -4635,9 +4637,11 @@ function normalizeWhisperlistRow(rawRow, fallbackId) {
       hojaReserva: normalized.hoja_de_reserva || normalized.kpi_hoja_de_reserva,
       reservaPagada: normalized.reserva_pagada || normalized.kpi_reserva_pagada,
       unidadAsignada: normalized.unidad_asignada || normalized.kpi_unidad_asignada,
+      contratoSolicitado: normalized.contrato_solicitado || normalized.kpi_contrato_solicitado,
       contratoEnviado: normalized.contrato_enviado || normalized.kpi_contrato_enviado,
       contratoFirmado: normalized.contrato_firmado || normalized.kpi_contrato_firmado,
-      enganchePagado: normalized.enganche_pagado || normalized.kpi_enganche_pagado
+      enganchePagado: normalized.enganche_pagado || normalized.kpi_enganche_pagado,
+      esHot: normalized.es_hot || normalized.kpi_es_hot
     }),
     updatedAt: new Date().toISOString()
   };
@@ -5489,9 +5493,11 @@ function whisperlistExportRows(rows) {
     KPI_HOJA_DE_RESERVA: normalizeYesNo(row && row.kpi && row.kpi.hojaReserva),
     KPI_RESERVA_PAGADA: normalizeYesNo(row && row.kpi && row.kpi.reservaPagada),
     KPI_UNIDAD_ASIGNADA: normalizeYesNo(row && row.kpi && row.kpi.unidadAsignada),
+    KPI_CONTRATO_SOLICITADO: normalizeYesNo(row && row.kpi && row.kpi.contratoSolicitado),
     KPI_CONTRATO_ENVIADO: normalizeYesNo(row && row.kpi && row.kpi.contratoEnviado),
     KPI_CONTRATO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.contratoFirmado),
     KPI_ENGANCHE_PAGADO: normalizeYesNo(row && row.kpi && row.kpi.enganchePagado),
+    KPI_ES_HOT: normalizeYesNo(row && row.kpi && row.kpi.esHot),
     UPDATED_AT: String(row.updatedAt || '')
   }));
 }
@@ -11989,6 +11995,12 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">KPI Reservas</h2>
           <p class="desc">Clientes de Hot Leads con reserva pagada.</p>
         </a>` : '';
+  const oneToOneCard = canAccessBackendModule(currentEmail, 'viceroy') ? `
+        <a class="card" href="/viceroy/one-to-one">
+          <span class="tag">Módulo</span>
+          <h2 class="name">One to One</h2>
+          <p class="desc">Wizard por cliente para KPI Reservas y Hot Leads.</p>
+        </a>` : '';
   const reservasCard = canAccessBackendFeature(currentEmail, 'viceroy', 'reservas') ? `
         <a class="card" href="/viceroy/reservas">
           <span class="tag">Módulo</span>
@@ -12047,6 +12059,7 @@ app.get('/viceroy', (req, res) => {
         ${bienvenidaClienteCard}
         ${generadorPresentacionCard}
         ${kpiReservasCard}
+        ${oneToOneCard}
         ${whisperlistCard}
         ${mahekalCard}
         ${registrosCard}
@@ -12102,6 +12115,224 @@ app.get('/viceroy/reservas', (req, res) => {
 
 app.get('/viceroy/kpi-reservas', requireViceroyPresentAccess, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-kpi-reservas.html'));
+});
+
+app.get('/viceroy/one-to-one', requireViceroyPresentAccess, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-one-to-one.html'));
+});
+
+app.get('/api/viceroy/one-to-one/bootstrap', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = isViceroyKpiReservasManager(currentEmail);
+
+    const kpiStore = readViceroyKpiReservasData();
+    if (!kpiStore.seededFromWhisperlist) {
+      const whisperData = await readWhisperlistData();
+      const seededRows = mergeViceroyKpiReservasRows(
+        Array.isArray(whisperData.rows) ? whisperData.rows : [],
+        Array.isArray(kpiStore.rows) ? kpiStore.rows : []
+      );
+      saveViceroyKpiReservasData(seededRows, 'viceroy-kpi-reservas.json', true);
+      kpiStore.rows = seededRows;
+      kpiStore.updatedAt = new Date().toISOString();
+      kpiStore.sourceFile = 'viceroy-kpi-reservas.json';
+      kpiStore.seededFromWhisperlist = true;
+    }
+
+    const kpiRows = buildViceroyKpiReservasRows(
+      Array.isArray(kpiStore.rows) ? kpiStore.rows : [],
+      currentEmail,
+      currentName,
+      isGerente
+    )
+      .map((row) => normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, isGerente))
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (isGerente) {
+          const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
+          if (asesorA !== 0) return asesorA;
+        }
+        return String(a.nombreCliente || '').localeCompare(String(b.nombreCliente || ''), 'es', { sensitivity: 'base' });
+      });
+
+    const whisperData = await readWhisperlistData();
+    const hotRows = (Array.isArray(whisperData.rows) ? whisperData.rows : [])
+      .map((row) => ({
+        ...row,
+        asesor: normalizeWhisperlistAsesor(row.asesor),
+        nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+        recamaras: normalizeWhisperlistRecamaras(row.recamaras),
+        clientEmail: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
+          ? normalizeClientEmail(row.clientEmail)
+          : '',
+        clientPhone: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
+          ? normalizeClientPhone(row.clientPhone)
+          : '',
+        canEdit: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente),
+        canViewClientData: whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente)
+      }))
+      .filter((row) => whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente))
+      .sort((a, b) => {
+        if (isGerente) {
+          const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
+          if (asesorA !== 0) return asesorA;
+        }
+        return String(a.nombreCliente || '').localeCompare(String(b.nombreCliente || ''), 'es', { sensitivity: 'base' });
+      });
+
+    return res.json({
+      ok: true,
+      currentEmail,
+      currentName,
+      isGerente,
+      kpiRows,
+      hotRows,
+      counts: {
+        kpi: kpiRows.length,
+        hot: hotRows.length
+      }
+    });
+  } catch (err) {
+    log(`Error en /api/viceroy/one-to-one/bootstrap: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      ok: false,
+      error: 'No se pudo cargar el módulo One to One',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
+});
+
+app.patch('/api/viceroy/one-to-one/kpi/:id', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = isViceroyKpiReservasManager(currentEmail);
+    const body = req.body || {};
+    const store = readViceroyKpiReservasData();
+    const index = store.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const target = store.rows[index];
+    if (!whisperlistRowMatchesUser(target, currentEmail, currentName, isGerente)) {
+      return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+    }
+
+    const nextRow = {
+      ...target,
+      asesor: isGerente && body.asesor !== undefined ? normalizeWhisperlistAsesor(body.asesor) : normalizeWhisperlistAsesor(target.asesor),
+      nombreCliente: body.nombreCliente !== undefined ? normalizeWhisperlistPersonText(body.nombreCliente) : normalizeWhisperlistPersonText(target.nombreCliente),
+      unidadReservada: body.unidadReservada !== undefined ? normalizeWhisperlistPersonText(body.unidadReservada) : normalizeWhisperlistPersonText(target.unidadReservada),
+      documentosCompletos: body.documentosCompletos !== undefined ? normalizeYesNo(body.documentosCompletos) : normalizeYesNo(target.documentosCompletos) || 'NO',
+      clientEmail: body.clientEmail !== undefined ? normalizeClientEmail(body.clientEmail) : normalizeClientEmail(target.clientEmail),
+      clientPhone: body.clientPhone !== undefined ? normalizeClientPhone(body.clientPhone) : normalizeClientPhone(target.clientPhone),
+      pais: body.pais !== undefined ? normalizeWhisperlistCountry(body.pais) : normalizeWhisperlistCountry(target.pais),
+      ciudad: body.ciudad !== undefined ? normalizeWhisperlistCity(body.ciudad) : normalizeWhisperlistCity(target.ciudad),
+      kpi: normalizeWhisperlistKpi({
+        ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
+        hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : target.kpi && target.kpi.hojaReserva,
+        reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : target.kpi && target.kpi.reservaPagada,
+        contratoSolicitado: body.contratoSolicitado !== undefined ? body.contratoSolicitado : target.kpi && target.kpi.contratoSolicitado,
+        contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : target.kpi && target.kpi.contratoEnviado,
+        contratoFirmado: body.contratoFirmado !== undefined ? body.contratoFirmado : target.kpi && target.kpi.contratoFirmado,
+        enganchePagado: body.enganchePagado !== undefined ? body.enganchePagado : target.kpi && target.kpi.enganchePagado
+      }),
+      updatedAt: new Date().toISOString()
+    };
+    store.rows[index] = nextRow;
+    saveViceroyKpiReservasData(store.rows, 'viceroy-kpi-reservas.json', Boolean(store.seededFromWhisperlist));
+    const visibleRow = normalizeViceroyKpiReservasVisibleRow(nextRow, currentEmail, currentName, isGerente);
+    return res.json({ ok: true, row: visibleRow });
+  } catch (err) {
+    log(`Error en /api/viceroy/one-to-one/kpi/:id: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo guardar KPI' });
+  }
+});
+
+app.patch('/api/viceroy/one-to-one/hot/:id', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const body = req.body || {};
+    const data = await readWhisperlistData();
+    const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
+    if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
+
+    const target = data.rows[index];
+    if (!whisperlistRowMatchesUser(target, currentEmail, currentName, isGerente)) {
+      return res.status(403).json({ error: 'Solo puedes editar filas asignadas a tu correo' });
+    }
+
+    const nextRow = {
+      ...target,
+      canal: body.canal !== undefined ? normalizeWhisperlistCanal(body.canal) : normalizeWhisperlistCanal(target.canal),
+      tipoVenta: body.tipoVenta !== undefined ? normalizeWhisperlistTipoVenta(body.tipoVenta) : normalizeWhisperlistTipoVenta(target.tipoVenta),
+      nombreCliente: body.nombreCliente !== undefined ? normalizeWhisperlistPersonText(body.nombreCliente) : normalizeWhisperlistPersonText(target.nombreCliente),
+      recamaras: body.recamaras !== undefined ? normalizeWhisperlistRecamaras(body.recamaras) : normalizeWhisperlistRecamaras(target.recamaras),
+      pais: body.pais !== undefined ? normalizeWhisperlistCountry(body.pais) : normalizeWhisperlistCountry(target.pais),
+      ciudad: body.ciudad !== undefined ? normalizeWhisperlistCity(body.ciudad) : normalizeWhisperlistCity(target.ciudad),
+      clientEmail: body.clientEmail !== undefined ? normalizeClientEmail(body.clientEmail) : normalizeClientEmail(target.clientEmail),
+      clientPhone: body.clientPhone !== undefined ? normalizeClientPhone(body.clientPhone) : normalizeClientPhone(target.clientPhone),
+      kpi: normalizeWhisperlistKpi({
+        ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
+        ...(body.kpi && typeof body.kpi === 'object' ? body.kpi : {}),
+        esHot: body.esHot !== undefined ? body.esHot : (body.kpi && body.kpi.esHot !== undefined ? body.kpi.esHot : target.kpi && target.kpi.esHot)
+      }),
+      updatedAt: new Date().toISOString()
+    };
+    data.rows[index] = nextRow;
+    await saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.json({ ok: true, row: nextRow });
+  } catch (err) {
+    log(`Error en /api/viceroy/one-to-one/hot/:id: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo guardar Hot Lead' });
+  }
+});
+
+app.post('/api/viceroy/one-to-one/hot', requireViceroyPresentAccess, async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const fallbackName = currentName || currentEmail.split('@')[0] || '';
+    const body = req.body || {};
+    const nombreCliente = normalizeWhisperlistPersonText(body.nombreCliente);
+    if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
+
+    const data = await readWhisperlistData();
+    const asesor = normalizeWhisperlistAsesor(fallbackName || body.asesor || currentEmail);
+    const newRow = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor,
+      correo: currentEmail,
+      canal: normalizeWhisperlistCanal(body.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(body.tipoVenta),
+      nombreCliente,
+      recamaras: normalizeWhisperlistRecamaras(body.recamaras),
+      pais: normalizeWhisperlistCountry(body.pais),
+      ciudad: normalizeWhisperlistCity(body.ciudad),
+      clientEmail: normalizeClientEmail(body.clientEmail),
+      clientPhone: normalizeClientPhone(body.clientPhone),
+      kpi: normalizeWhisperlistKpi({
+        ...(body.kpi && typeof body.kpi === 'object' ? body.kpi : {}),
+        esHot: body.esHot !== undefined ? body.esHot : (body.kpi && body.kpi.esHot !== undefined ? body.kpi.esHot : 'SI')
+      }),
+      updatedAt: new Date().toISOString()
+    };
+    data.rows.push(newRow);
+    await saveWhisperlistRows(data.rows, data.sourceFile || path.basename(WHISPERLIST_EXCEL_PATH));
+    return res.status(201).json({ ok: true, row: newRow });
+  } catch (err) {
+    log(`Error en /api/viceroy/one-to-one/hot: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo agregar Hot Lead' });
+  }
 });
 
 app.get('/viceroy/tipologias-demanda', (req, res) => {
@@ -12311,6 +12542,7 @@ app.post('/api/viceroy/kpi-reservas/rows', requireViceroyPresentAccess, async (r
       kpi: normalizeWhisperlistKpi({
         hojaReserva: body.hojaReserva,
         reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : 'SI',
+        contratoSolicitado: body.contratoSolicitado,
         contratoEnviado: body.contratoEnviado,
         contratoFirmado: body.contratoFirmado,
         enganchePagado: body.enganchePagado
@@ -12357,6 +12589,7 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
         ciudad: body.ciudad !== undefined ? normalizeWhisperlistCity(body.ciudad) : normalizeWhisperlistCity(target.ciudad),
         kpi: normalizeWhisperlistKpi({
           ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
+          contratoSolicitado: body.contratoSolicitado !== undefined ? body.contratoSolicitado : target.kpi && target.kpi.contratoSolicitado,
           hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : target.kpi && target.kpi.hojaReserva,
           reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : target.kpi && target.kpi.reservaPagada,
           contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : target.kpi && target.kpi.contratoEnviado,
@@ -12386,6 +12619,7 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
         ciudad: body.ciudad !== undefined ? normalizeWhisperlistCity(body.ciudad) : normalizeWhisperlistCity(whisperRow.ciudad),
         kpi: normalizeWhisperlistKpi({
           ...(whisperRow.kpi && typeof whisperRow.kpi === 'object' ? whisperRow.kpi : {}),
+          contratoSolicitado: body.contratoSolicitado !== undefined ? body.contratoSolicitado : whisperRow.kpi && whisperRow.kpi.contratoSolicitado,
           hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : whisperRow.kpi && whisperRow.kpi.hojaReserva,
           reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : whisperRow.kpi && whisperRow.kpi.reservaPagada,
           contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : whisperRow.kpi && whisperRow.kpi.contratoEnviado,
@@ -13492,7 +13726,8 @@ app.post('/api/whisperlist/rows/:id/kpi', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
       kpi: normalizeWhisperlistKpi({
         ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
-        ...(body && typeof body === 'object' ? body : {})
+        ...(body && typeof body === 'object' ? body : {}),
+        esHot: body.esHot !== undefined ? body.esHot : target.kpi && target.kpi.esHot
       }),
       updatedAt: new Date().toISOString()
     };
@@ -13528,7 +13763,10 @@ app.post('/api/whisperlist/rows', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone),
-      kpi: normalizeWhisperlistKpi(body.kpi),
+      kpi: normalizeWhisperlistKpi({
+        ...(body.kpi && typeof body.kpi === 'object' ? body.kpi : {}),
+        esHot: body.esHot !== undefined ? body.esHot : body.kpi && body.kpi.esHot
+      }),
       updatedAt: new Date().toISOString()
     };
     data.rows.push(newRow);
@@ -14633,6 +14871,7 @@ function normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, i
       hojaReserva: normalizeYesNo(visibleKpi.hojaReserva) || 'NO',
       reservaPagada: normalizeYesNo(visibleKpi.reservaPagada) || 'NO',
       documentosCompletos: normalizeYesNo(visibleKpi.documentosCompletos) || 'NO',
+      contratoSolicitado: normalizeYesNo(visibleKpi.contratoSolicitado) || 'NO',
       contratoEnviado: normalizeYesNo(visibleKpi.contratoEnviado) || 'NO',
       contratoFirmado: normalizeYesNo(visibleKpi.contratoFirmado) || 'NO',
       enganchePagado: normalizeYesNo(visibleKpi.enganchePagado) || 'NO'
@@ -14656,6 +14895,7 @@ function viceroyKpiReservasExportRows(rows) {
     HOJA_RESERVA: normalizeYesNo(row && row.kpi && row.kpi.hojaReserva),
     RESERVA_PAGADA: normalizeYesNo(row && row.kpi && row.kpi.reservaPagada),
     DOCUMENTOS_COMPLETOS: normalizeYesNo(row.documentosCompletos),
+    CONTRATO_SOLICITADO: normalizeYesNo(row && row.kpi && row.kpi.contratoSolicitado),
     CONTRATO_ENVIADO: normalizeYesNo(row && row.kpi && row.kpi.contratoEnviado),
     CONTRATO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.contratoFirmado),
     ENGANCHE_PAGADO: normalizeYesNo(row && row.kpi && row.kpi.enganchePagado),
@@ -14663,6 +14903,7 @@ function viceroyKpiReservasExportRows(rows) {
     CLIENT_PHONE: normalizeClientPhone(row.clientPhone),
     CANAL: normalizeWhisperlistCanal(row.canal),
     TIPO_DE_VENTA: normalizeWhisperlistTipoVenta(row.tipoVenta),
+    KPI_ES_HOT: normalizeYesNo(row && row.kpi && row.kpi.esHot),
     UPDATED_AT: String(row.updatedAt || '')
   }));
 }

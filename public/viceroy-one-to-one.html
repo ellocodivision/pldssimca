@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viceroy One to One</title>
+  <style>
+    :root{
+      --bg:#f4f1e8;
+      --panel:#ffffff;
+      --ink:#191a1f;
+      --muted:#666b73;
+      --line:#d9d2c2;
+      --accent:#ffe41d;
+      --accent-ink:#141414;
+      --good:#1f8d3c;
+      --bad:#c13f31;
+      --soft:#f7f4ec;
+      --pill:#efe7c9;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+    a{color:inherit}
+    .wrap{max-width:1440px;margin:0 auto;padding:22px 16px 40px}
+    .top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .title{margin:0;font-size:36px;line-height:1}
+    .sub{margin:8px 0 0;color:var(--muted);max-width:840px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .btn{
+      border:1px solid #bbb39f;
+      background:#fff;
+      color:#1c1d22;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:700;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .btn.primary{background:var(--accent);border-color:#111}
+    .btn.secondary{background:#fff}
+    .btn.ghost{background:transparent}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:var(--pill);
+      color:#34323b;
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .chip.good{background:#e6f5ea;color:var(--good)}
+    .chip.bad{background:#fbe8e4;color:var(--bad)}
+    .tabs{
+      display:flex;
+      gap:10px;
+      margin-top:18px;
+      flex-wrap:wrap;
+    }
+    .tab{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:999px;
+      padding:10px 16px;
+      font-weight:800;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .tab.active{background:var(--accent);border-color:#111}
+    .summary{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:14px;
+      color:var(--muted);
+    }
+    .layout{
+      display:grid;
+      grid-template-columns:340px minmax(0,1fr);
+      gap:14px;
+      margin-top:14px;
+      align-items:start;
+    }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 10px 30px rgba(22,20,12,.04);
+    }
+    .card-title{margin:0 0 8px;font-size:18px}
+    .card-sub{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.5}
+    .search{
+      width:100%;
+      border:1px solid #cfc7b7;
+      border-radius:12px;
+      background:#fff;
+      padding:11px 12px;
+      font:inherit;
+    }
+    .list{
+      margin-top:10px;
+      max-height:calc(100vh - 330px);
+      overflow:auto;
+      border:1px solid #e5ddcc;
+      border-radius:14px;
+      background:#fcfaf6;
+    }
+    .item{
+      width:100%;
+      display:block;
+      text-align:left;
+      border:0;
+      border-bottom:1px solid #ece3d0;
+      background:transparent;
+      padding:12px 12px 11px;
+      cursor:pointer;
+    }
+    .item:last-child{border-bottom:0}
+    .item.active{background:#fff2a6}
+    .item-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .item-title{font-weight:800;font-size:14px;line-height:1.25}
+    .item-sub{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.4}
+    .item-tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+    .main-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .main-title{margin:0;font-size:24px;line-height:1.1}
+    .main-meta{margin:6px 0 0;color:var(--muted);font-size:13px}
+    .nav{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .form-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+    .field{font-size:13px}
+    .label{display:block;font-size:11px;color:var(--muted);margin:0 0 4px;font-weight:700;letter-spacing:.02em}
+    .input,.select{
+      width:100%;
+      border:1px solid #cfc7b7;
+      border-radius:12px;
+      background:#fff;
+      padding:10px 12px;
+      font:inherit;
+    }
+    .input[readonly]{background:#f6f4ee}
+    .full{grid-column:1 / -1}
+    .actions-row{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    .section{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px dashed #e3dac8;
+    }
+    .section-head{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .section-head h3{margin:0;font-size:18px}
+    .section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .notice{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      min-height:18px;
+    }
+    .notice.ok{color:var(--good)}
+    .notice.error{color:var(--bad)}
+    .empty{
+      padding:22px 14px;
+      text-align:center;
+      color:var(--muted);
+      border:1px dashed #d7cdb8;
+      border-radius:14px;
+      background:#fffdf8;
+    }
+    .toggle{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .toggle .btn{padding:9px 12px}
+    .hidden{display:none !important}
+    @media (max-width:1080px){
+      .layout{grid-template-columns:1fr}
+      .list{max-height:none}
+    }
+    @media (max-width:760px){
+      .title{font-size:28px}
+      .form-grid{grid-template-columns:1fr}
+      .main-title{font-size:22px}
+      .top{gap:10px}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">One to One</h1>
+        <p class="sub">Wizard por cliente para <strong>KPI Reservas</strong> y <strong>Hot Leads</strong>. Cada usuario ve solo sus propios registros y puede avanzar uno por uno, corregir algo en cualquier momento y guardar sin salir del flujo.</p>
+      </div>
+      <div class="actions">
+        <a class="btn secondary" href="/viceroy">Volver a Viceroy</a>
+        <button id="refreshBtn" class="btn secondary" type="button">Actualizar</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button id="tabKpi" class="tab active" type="button">KPI Reservas <span id="kpiCountChip" class="chip">0</span></button>
+      <button id="tabHot" class="tab" type="button">Hot Leads <span id="hotCountChip" class="chip">0</span></button>
+    </div>
+
+    <div class="summary">
+      <span id="userChip" class="chip">Usuario: -</span>
+      <span id="scopeChip" class="chip">Acceso: -</span>
+      <span id="rowsChip" class="chip">Registros: -</span>
+      <span id="selectedChip" class="chip">Seleccionado: -</span>
+    </div>
+
+    <div class="layout">
+      <aside class="card">
+        <h2 id="sideTitle" class="card-title">Clientes KPI</h2>
+        <p id="sideSub" class="card-sub">Busca un cliente o unidad y navega caso por caso.</p>
+        <input id="searchInput" class="search" placeholder="Buscar cliente, unidad, recámaras o texto..." />
+        <div id="list" class="list" aria-label="Lista de clientes"></div>
+      </aside>
+
+      <section class="card">
+        <div class="main-head">
+          <div>
+            <h2 id="mainTitle" class="main-title">Selecciona un cliente</h2>
+            <p id="mainMeta" class="main-meta">Pulsa <strong>Iniciar</strong> o selecciona una fila del listado.</p>
+          </div>
+          <div class="nav">
+            <button id="startBtn" class="btn primary" type="button">Iniciar</button>
+            <button id="prevBtn" class="btn secondary" type="button">Anterior</button>
+            <button id="nextBtn" class="btn secondary" type="button">Siguiente</button>
+            <button id="reloadBtn" class="btn secondary" type="button">Recargar</button>
+          </div>
+        </div>
+
+        <form id="editorForm">
+          <div id="formGrid" class="form-grid"></div>
+          <div class="actions-row">
+            <button id="saveBtn" class="btn primary" type="submit">Guardar cambios</button>
+          </div>
+        </form>
+
+        <div id="hotAddSection" class="section hidden">
+          <div class="section-head">
+            <div>
+              <h3>Agregar cliente hot</h3>
+              <p>Si el cliente es nuevo, lo agregamos al final con recámaras y estado hot.</p>
+            </div>
+          </div>
+          <form id="hotAddForm">
+            <div class="form-grid">
+              <label class="field full">
+                <span class="label">Nombre del cliente</span>
+                <input id="hotAddName" class="input" placeholder="Nombre del cliente" />
+              </label>
+              <label class="field">
+                <span class="label">Recámaras</span>
+                <select id="hotAddRecamaras" class="select">
+                  <option value="">Selecciona</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="2PH">2PH</option>
+                  <option value="3PH">3PH</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="label">Hot</span>
+                <select id="hotAddEsHot" class="select">
+                  <option value="SI">SI</option>
+                  <option value="NO">NO</option>
+                </select>
+              </label>
+            </div>
+            <div class="actions-row">
+              <button id="addHotBtn" class="btn primary" type="submit">Agregar hot lead</button>
+            </div>
+          </form>
+        </div>
+
+        <p id="notice" class="notice"></p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const MODES = {
+        kpi: {
+          label: 'KPI Reservas',
+          description: 'Avanza cliente por cliente y actualiza los indicadores de reserva.',
+          listKey: 'kpiRows'
+        },
+        hot: {
+          label: 'Hot Leads',
+          description: 'Confirma si el cliente está hot y agrega nuevos leads al final.',
+          listKey: 'hotRows'
+        }
+      };
+
+      const state = {
+        tab: 'kpi',
+        boot: null,
+        query: '',
+        indexByTab: { kpi: 0, hot: 0 },
+        currentRowId: { kpi: '', hot: '' },
+        dirty: false,
+        loading: false
+      };
+
+      const els = {
+        tabKpi: document.getElementById('tabKpi'),
+        tabHot: document.getElementById('tabHot'),
+        kpiCountChip: document.getElementById('kpiCountChip'),
+        hotCountChip: document.getElementById('hotCountChip'),
+        userChip: document.getElementById('userChip'),
+        scopeChip: document.getElementById('scopeChip'),
+        rowsChip: document.getElementById('rowsChip'),
+        selectedChip: document.getElementById('selectedChip'),
+        sideTitle: document.getElementById('sideTitle'),
+        sideSub: document.getElementById('sideSub'),
+        searchInput: document.getElementById('searchInput'),
+        list: document.getElementById('list'),
+        mainTitle: document.getElementById('mainTitle'),
+        mainMeta: document.getElementById('mainMeta'),
+        startBtn: document.getElementById('startBtn'),
+        prevBtn: document.getElementById('prevBtn'),
+        nextBtn: document.getElementById('nextBtn'),
+        reloadBtn: document.getElementById('reloadBtn'),
+        refreshBtn: document.getElementById('refreshBtn'),
+        formGrid: document.getElementById('formGrid'),
+        editorForm: document.getElementById('editorForm'),
+        saveBtn: document.getElementById('saveBtn'),
+        notice: document.getElementById('notice'),
+        hotAddSection: document.getElementById('hotAddSection'),
+        hotAddForm: document.getElementById('hotAddForm'),
+        hotAddName: document.getElementById('hotAddName'),
+        hotAddRecamaras: document.getElementById('hotAddRecamaras'),
+        hotAddEsHot: document.getElementById('hotAddEsHot')
+      };
+
+      const fieldDefs = {
+        kpi: [
+          { key: 'nombreCliente', label: 'Nombre del cliente', type: 'text', full: true, placeholder: 'Nombre del cliente' },
+          { key: 'unidadReservada', label: 'Unidad reservada', type: 'text', placeholder: 'Unidad reservada' },
+          { key: 'pais', label: 'País', type: 'text', placeholder: 'País' },
+          { key: 'ciudad', label: 'Ciudad', type: 'text', placeholder: 'Ciudad' },
+          { key: 'documentosCompletos', label: 'Documentos completos', type: 'yesno' },
+          { key: 'hojaReserva', label: 'Hoja de reserva', type: 'yesno' },
+          { key: 'reservaPagada', label: 'Reserva pagada', type: 'yesno' },
+          { key: 'contratoSolicitado', label: 'Contrato solicitado', type: 'yesno' },
+          { key: 'contratoEnviado', label: 'Contrato enviado', type: 'yesno' },
+          { key: 'contratoFirmado', label: 'Contrato firmado', type: 'yesno' },
+          { key: 'enganchePagado', label: 'Enganche pagado', type: 'yesno' }
+        ],
+        hot: [
+          { key: 'nombreCliente', label: 'Nombre del cliente', type: 'text', full: true, placeholder: 'Nombre del cliente' },
+          { key: 'recamaras', label: 'Recámaras', type: 'rooms' },
+          { key: 'esHot', label: 'Hot', type: 'yesno' },
+          { key: 'canal', label: 'Canal', type: 'text', placeholder: 'Canal' },
+          { key: 'tipoVenta', label: 'Tipo de venta', type: 'text', placeholder: 'Tipo de venta' },
+          { key: 'pais', label: 'País', type: 'text', placeholder: 'País' },
+          { key: 'ciudad', label: 'Ciudad', type: 'text', placeholder: 'Ciudad' }
+        ]
+      };
+
+      function setNotice(message, kind = '') {
+        els.notice.textContent = message || '';
+        els.notice.className = 'notice' + (kind ? ' ' + kind : '');
+      }
+
+      function getRows() {
+        if (!state.boot) return [];
+        return Array.isArray(state.boot[MODES[state.tab].listKey]) ? state.boot[MODES[state.tab].listKey] : [];
+      }
+
+      function normalizeText(value) {
+        return String(value == null ? '' : value).trim();
+      }
+
+      function rowLabel(row) {
+        const name = normalizeText(row && row.nombreCliente) || normalizeText(row && row.asesor) || 'Sin nombre';
+        const unit = normalizeText(row && row.unidadReservada);
+        const recamaras = normalizeText(row && row.recamaras);
+        if (state.tab === 'kpi') {
+          return unit ? `${name} · ${unit}` : name;
+        }
+        return recamaras ? `${name} · ${recamaras}` : name;
+      }
+
+      function rowMeta(row) {
+        if (state.tab === 'kpi') {
+          const parts = [];
+          if (normalizeText(row.unidadReservada)) parts.push(`Unidad ${normalizeText(row.unidadReservada)}`);
+          if (normalizeText(row.pais)) parts.push(normalizeText(row.pais));
+          if (normalizeText(row.ciudad)) parts.push(normalizeText(row.ciudad));
+          return parts.join(' · ');
+        }
+        const parts = [];
+        if (normalizeText(row.recamaras)) parts.push(`${normalizeText(row.recamaras)} recámara(s)`);
+        if (normalizeText(row.canal)) parts.push(normalizeText(row.canal));
+        if (normalizeText(row.tipoVenta)) parts.push(normalizeText(row.tipoVenta));
+        return parts.join(' · ');
+      }
+
+      function isYes(value) {
+        return String(value || '').trim().toUpperCase() === 'SI';
+      }
+
+      function getFilteredRows() {
+        const rows = getRows();
+        const q = state.query.trim().toLowerCase();
+        if (!q) return rows;
+        return rows.filter((row) => {
+          const haystack = [
+            rowLabel(row),
+            rowMeta(row),
+            row.nombreCliente,
+            row.unidadReservada,
+            row.recamaras,
+            row.asesor,
+            row.pais,
+            row.ciudad
+          ].join(' ').toLowerCase();
+          return haystack.includes(q);
+        });
+      }
+
+      function getCurrentRow() {
+        const rows = getFilteredRows();
+        if (!rows.length) return null;
+        const index = Math.min(Math.max(state.indexByTab[state.tab] || 0, 0), rows.length - 1);
+        return rows[index] || null;
+      }
+
+      function ensureCurrentIndex() {
+        const rows = getFilteredRows();
+        if (!rows.length) {
+          state.indexByTab[state.tab] = 0;
+          state.currentRowId[state.tab] = '';
+          return;
+        }
+        const currentId = state.currentRowId[state.tab];
+        const found = rows.findIndex((row) => String(row.id || '') === String(currentId || ''));
+        if (found >= 0) {
+          state.indexByTab[state.tab] = found;
+        } else {
+          state.indexByTab[state.tab] = Math.min(state.indexByTab[state.tab] || 0, rows.length - 1);
+          state.currentRowId[state.tab] = String(rows[state.indexByTab[state.tab]].id || '');
+        }
+      }
+
+      function setTab(tab) {
+        if (!MODES[tab]) return;
+        state.tab = tab;
+        els.tabKpi.classList.toggle('active', tab === 'kpi');
+        els.tabHot.classList.toggle('active', tab === 'hot');
+        els.sideTitle.textContent = tab === 'kpi' ? 'Clientes KPI' : 'Hot Leads';
+        els.sideSub.textContent = MODES[tab].description;
+        els.hotAddSection.classList.toggle('hidden', tab !== 'hot');
+        ensureCurrentIndex();
+        renderAll();
+      }
+
+      function renderSummary() {
+        const kpiRows = Array.isArray(state.boot && state.boot.kpiRows) ? state.boot.kpiRows : [];
+        const hotRows = Array.isArray(state.boot && state.boot.hotRows) ? state.boot.hotRows : [];
+        els.kpiCountChip.textContent = `${kpiRows.length}`;
+        els.hotCountChip.textContent = `${hotRows.length}`;
+        els.userChip.textContent = `Usuario: ${state.boot && state.boot.currentEmail ? state.boot.currentEmail : '-'}`;
+        els.scopeChip.textContent = `Acceso: ${state.boot && state.boot.isGerente ? 'Gerente' : 'Usuario'}`;
+        els.rowsChip.textContent = `Registros: ${getFilteredRows().length}`;
+        const current = getCurrentRow();
+        els.selectedChip.textContent = current ? `Seleccionado: ${rowLabel(current)}` : 'Seleccionado: -';
+      }
+
+      function renderList() {
+        const rows = getFilteredRows();
+        els.list.innerHTML = rows.length
+          ? rows.map((row, index) => {
+              const active = index === (state.indexByTab[state.tab] || 0);
+              const statusChips = [];
+              if (state.tab === 'kpi') {
+                if (isYes(row.kpi && row.kpi.reservaPagada)) statusChips.push('<span class="chip good">Pagada</span>');
+                if (isYes(row.kpi && row.kpi.contratoFirmado)) statusChips.push('<span class="chip good">Firmado</span>');
+                if (isYes(row.kpi && row.kpi.contratoSolicitado)) statusChips.push('<span class="chip">Contrato solicitado</span>');
+              } else {
+                statusChips.push(`<span class="chip ${isYes(row.kpi && row.kpi.esHot) ? 'good' : 'bad'}">${isYes(row.kpi && row.kpi.esHot) ? 'HOT' : 'NO HOT'}</span>`);
+              }
+              return `
+                <button type="button" class="item ${active ? 'active' : ''}" data-index="${index}">
+                  <div class="item-top">
+                    <div>
+                      <div class="item-title">${escapeHtml(rowLabel(row))}</div>
+                      <div class="item-sub">${escapeHtml(rowMeta(row)) || 'Sin datos extra'}</div>
+                    </div>
+                    <div class="item-tags">${statusChips.join('')}</div>
+                  </div>
+                </button>`;
+            }).join('')
+          : '<div class="empty">No hay registros para mostrar.</div>';
+
+        els.list.querySelectorAll('.item').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const index = Number(btn.getAttribute('data-index'));
+            const saved = await commitIfDirty();
+            if (!saved) return;
+            state.indexByTab[state.tab] = index;
+            const current = getCurrentRow();
+            state.currentRowId[state.tab] = current ? String(current.id || '') : '';
+            renderAll();
+          });
+        });
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function fieldValue(row, key) {
+        if (!row) return '';
+        if (key in row) return row[key];
+        if (row.kpi && typeof row.kpi === 'object' && key in row.kpi) return row.kpi[key];
+        return '';
+      }
+
+      function renderField(def, row) {
+        const value = fieldValue(row, def.key);
+        const id = `${state.tab}-${def.key}`;
+        const label = escapeHtml(def.label);
+        const common = `data-field="${escapeHtml(def.key)}" id="${id}"`;
+        if (def.type === 'yesno') {
+          return `
+            <label class="field ${def.full ? 'full' : ''}">
+              <span class="label">${label}</span>
+              <select class="select" ${common}>
+                <option value="NO" ${String(value || 'NO') === 'NO' ? 'selected' : ''}>NO</option>
+                <option value="SI" ${String(value || '') === 'SI' ? 'selected' : ''}>SI</option>
+              </select>
+            </label>`;
+        }
+        if (def.type === 'rooms') {
+          const options = ['', '1', '2', '3', '2PH', '3PH'].map((opt) => `<option value="${opt}" ${String(value || '') === opt ? 'selected' : ''}>${opt || 'Selecciona'}</option>`).join('');
+          return `
+            <label class="field ${def.full ? 'full' : ''}">
+              <span class="label">${label}</span>
+              <select class="select" ${common}>${options}</select>
+            </label>`;
+        }
+        return `
+          <label class="field ${def.full ? 'full' : ''}">
+            <span class="label">${label}</span>
+            <input class="input" ${common} value="${escapeHtml(value || '')}" placeholder="${escapeHtml(def.placeholder || def.label)}" />
+          </label>`;
+      }
+
+      function renderEditor() {
+        const row = getCurrentRow();
+        const defs = fieldDefs[state.tab];
+        els.formGrid.innerHTML = row
+          ? defs.map((def) => renderField(def, row)).join('')
+          : '<div class="empty full">Selecciona un cliente para empezar.</div>';
+
+        const title = state.tab === 'kpi' ? 'KPI Reservas' : 'Hot Leads';
+        els.mainTitle.textContent = row ? rowLabel(row) : `Selecciona un cliente de ${title}`;
+        const count = getFilteredRows().length;
+        const index = row ? (state.indexByTab[state.tab] || 0) + 1 : 0;
+        els.mainMeta.innerHTML = row
+          ? `${escapeHtml(title)} · Cliente ${index} de ${count}. Guarda con frecuencia para no perder cambios.`
+          : 'Pulsa <strong>Iniciar</strong> o elige una fila del listado.';
+
+        els.prevBtn.disabled = !row || index <= 1;
+        els.nextBtn.disabled = !row || index >= count;
+        els.saveBtn.disabled = !row;
+        els.startBtn.disabled = !count;
+        els.selectedChip.textContent = row ? `Seleccionado: ${rowLabel(row)}` : 'Seleccionado: -';
+
+        els.formGrid.querySelectorAll('[data-field]').forEach((input) => {
+          input.addEventListener('input', () => {
+            state.dirty = true;
+            setNotice('Cambios pendientes por guardar.');
+          });
+          input.addEventListener('change', () => {
+            state.dirty = true;
+            setNotice('Cambios pendientes por guardar.');
+          });
+        });
+
+        if (!count) {
+          els.mainTitle.textContent = 'Sin registros';
+          els.mainMeta.textContent = `No hay datos en ${title} para tu usuario.`;
+        }
+      }
+
+      function readFormPayload() {
+        const payload = {};
+        const row = getCurrentRow();
+        if (!row) return payload;
+        fieldDefs[state.tab].forEach((def) => {
+          const input = document.getElementById(`${state.tab}-${def.key}`);
+          if (!input) return;
+          payload[def.key] = input.value;
+        });
+        return payload;
+      }
+
+      async function saveCurrentRow() {
+        const row = getCurrentRow();
+        if (!row) return true;
+        const payload = readFormPayload();
+        const endpoint = state.tab === 'kpi'
+          ? `/api/viceroy/one-to-one/kpi/${encodeURIComponent(row.id)}`
+          : `/api/viceroy/one-to-one/hot/${encodeURIComponent(row.id)}`;
+        const res = await fetch(endpoint, {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data && data.error ? data.error : 'No se pudo guardar');
+        }
+        return data.row || row;
+      }
+
+      async function commitIfDirty() {
+        if (!state.dirty) return true;
+        try {
+          setNotice('Guardando cambios...', '');
+          await saveCurrentRow();
+          state.dirty = false;
+          await reloadBootstrap(false);
+          setNotice('Cambios guardados.', 'ok');
+          return true;
+        } catch (err) {
+          setNotice(err.message || 'No se pudieron guardar los cambios.', 'error');
+          return false;
+        }
+      }
+
+      async function move(step) {
+        const rows = getFilteredRows();
+        if (!rows.length) return;
+        const currentIndex = Math.min(Math.max(state.indexByTab[state.tab] || 0, 0), rows.length - 1);
+        const nextIndex = Math.min(Math.max(currentIndex + step, 0), rows.length - 1);
+        if (nextIndex === currentIndex) return;
+        const saved = await commitIfDirty();
+        if (!saved) return;
+        state.indexByTab[state.tab] = nextIndex;
+        state.currentRowId[state.tab] = String(rows[nextIndex].id || '');
+        state.dirty = false;
+        renderAll();
+      }
+
+      async function reloadBootstrap(showMessage = true) {
+        try {
+          state.loading = true;
+          const res = await fetch('/api/viceroy/one-to-one/bootstrap', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo cargar el módulo');
+          }
+          state.boot = data;
+          if (showMessage) setNotice('Datos actualizados.', 'ok');
+          ensureCurrentIndex();
+          renderAll();
+        } catch (err) {
+          setNotice(err.message || 'No se pudo cargar el módulo', 'error');
+        } finally {
+          state.loading = false;
+        }
+      }
+
+      async function handleSave(event) {
+        event.preventDefault();
+        const row = getCurrentRow();
+        if (!row) return;
+        try {
+          setNotice('Guardando cambios...', '');
+          await saveCurrentRow();
+          state.dirty = false;
+          await reloadBootstrap(false);
+          setNotice('Cambios guardados.', 'ok');
+        } catch (err) {
+          setNotice(err.message || 'No se pudieron guardar los cambios', 'error');
+        }
+      }
+
+      async function handleAddHot(event) {
+        event.preventDefault();
+        const nombreCliente = normalizeText(els.hotAddName.value);
+        const recamaras = normalizeText(els.hotAddRecamaras.value);
+        const esHot = normalizeText(els.hotAddEsHot.value) || 'SI';
+        if (!nombreCliente) {
+          setNotice('Escribe el nombre del nuevo hot lead.', 'error');
+          return;
+        }
+        try {
+          setNotice('Agregando hot lead...', '');
+          const res = await fetch('/api/viceroy/one-to-one/hot', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              nombreCliente,
+              recamaras,
+              esHot
+            })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo agregar hot lead');
+          }
+          els.hotAddName.value = '';
+          els.hotAddRecamaras.value = '';
+          els.hotAddEsHot.value = 'SI';
+          await reloadBootstrap(false);
+          setTab('hot');
+          const rows = getFilteredRows();
+          const idx = rows.findIndex((item) => String(item.id || '') === String(data.row && data.row.id || ''));
+          state.indexByTab.hot = idx >= 0 ? idx : Math.max(getFilteredRows().length - 1, 0);
+          state.currentRowId.hot = String(data.row && data.row.id || '');
+          renderAll();
+          setNotice('Hot lead agregado correctamente.', 'ok');
+        } catch (err) {
+          setNotice(err.message || 'No se pudo agregar el hot lead', 'error');
+        }
+      }
+
+      function renderAll() {
+        renderSummary();
+        renderList();
+        renderEditor();
+        els.hotAddSection.classList.toggle('hidden', state.tab !== 'hot');
+      }
+
+      function wireEvents() {
+        els.tabKpi.addEventListener('click', () => setTab('kpi'));
+        els.tabHot.addEventListener('click', () => setTab('hot'));
+        els.searchInput.addEventListener('input', () => {
+          state.query = els.searchInput.value || '';
+          ensureCurrentIndex();
+          renderAll();
+        });
+        els.startBtn.addEventListener('click', () => {
+          const rows = getFilteredRows();
+          if (!rows.length) return;
+          state.indexByTab[state.tab] = 0;
+          state.currentRowId[state.tab] = String(rows[0].id || '');
+          renderAll();
+        });
+        els.prevBtn.addEventListener('click', () => move(-1));
+        els.nextBtn.addEventListener('click', () => move(1));
+        els.reloadBtn.addEventListener('click', () => reloadBootstrap(true));
+        els.refreshBtn.addEventListener('click', () => reloadBootstrap(true));
+        els.editorForm.addEventListener('submit', handleSave);
+        els.hotAddForm.addEventListener('submit', handleAddHot);
+      }
+
+      wireEvents();
+      reloadBootstrap(true);
+      setTab('kpi');
+    })();
+  </script>
+</body>
+</html>
