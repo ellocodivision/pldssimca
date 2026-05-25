@@ -383,7 +383,7 @@
       <div class="wizard-card">
         <div class="wizard-top">
           <div>
-            <p class="wizard-kicker">Inicio</p>
+            <p id="wizardKicker" class="wizard-kicker">1 to 1 KPI Reservas</p>
             <h2 id="wizardClient" class="wizard-client">Selecciona un cliente</h2>
             <div id="wizardUnits" class="wizard-units">Cliente actual</div>
           </div>
@@ -496,6 +496,7 @@
       const state = {
         view: 'inicio',
         tab: 'kpi',
+        wizardMode: 'kpi',
         boot: null,
         query: '',
         indexByTab: { kpi: 0, hot: 0 },
@@ -535,6 +536,7 @@
         notice: document.getElementById('notice'),
         wizard: document.getElementById('wizard'),
         wizardClient: document.getElementById('wizardClient'),
+        wizardKicker: document.getElementById('wizardKicker'),
         wizardUnits: document.getElementById('wizardUnits'),
         wizardStatus: document.getElementById('wizardStatus'),
         wizardStepChip: document.getElementById('wizardStepChip'),
@@ -586,6 +588,9 @@
         { key: 'contratoFirmado', label: 'Contrato firmado' },
         { key: 'enganchePagado', label: 'Enganche pagado' }
       ];
+      const hotWizardSteps = [
+        { key: 'esHot', label: '¿Confirma que este cliente es hot?' }
+      ];
 
       function setNotice(message, kind = '') {
         els.notice.textContent = message || '';
@@ -595,6 +600,24 @@
       function getRows() {
         if (!state.boot) return [];
         return Array.isArray(state.boot[MODES[state.tab].listKey]) ? state.boot[MODES[state.tab].listKey] : [];
+      }
+
+      function getWizardRowsForMode(mode) {
+        if (!state.boot) return [];
+        if (mode === 'hot') return Array.isArray(state.boot.hotRows) ? state.boot.hotRows : [];
+        return Array.isArray(state.boot.kpiRows) ? state.boot.kpiRows : [];
+      }
+
+      function getWizardStepsForMode(mode) {
+        return mode === 'hot' ? hotWizardSteps : wizardSteps;
+      }
+
+      function getWizardSectionLabel(mode = state.wizardMode) {
+        return mode === 'hot' ? 'Hot Leads' : 'KPI Reservas';
+      }
+
+      function getWizardFlowLabel(mode = state.wizardMode) {
+        return `1 to 1 ${getWizardSectionLabel(mode)}`;
       }
 
       function normalizeText(value) {
@@ -807,6 +830,7 @@
         const title = state.tab === 'kpi' ? 'KPI Reservas' : 'Hot Leads';
         const unit = row ? normalizeText(row.unidadReservada) : '';
         const clientName = row ? normalizeText(row.nombreCliente) : '';
+        const flowTitle = getWizardFlowLabel(state.tab);
         els.mainTitle.textContent = row
           ? (state.tab === 'kpi'
             ? (unit ? `Unidad ${unit}` : 'Cliente seleccionado')
@@ -814,7 +838,9 @@
           : `Selecciona un cliente de ${title}`;
         const count = getFilteredRows().length;
         const index = row ? (state.indexByTab[state.tab] || 0) + 1 : 0;
-        els.mainMeta.innerHTML = row ? '' : 'Pulsa <strong>Iniciar</strong> o elige una fila del listado.';
+        els.mainMeta.innerHTML = row
+          ? `<strong>${escapeHtml(flowTitle)}</strong> · Cliente ${index} de ${count}.`
+          : `Pulsa <strong>Iniciar</strong> o elige una fila del listado.`;
         els.wizardClient.textContent = row
           ? (unit ? `Unidad ${unit}` : 'Cliente seleccionado')
           : 'Selecciona un cliente';
@@ -846,7 +872,7 @@
       }
 
       function getWizardRows() {
-        return Array.isArray(state.boot && state.boot.kpiRows) ? state.boot.kpiRows : [];
+        return getWizardRowsForMode(state.wizardMode);
       }
 
       function getWizardCurrentRow() {
@@ -857,11 +883,13 @@
       }
 
       function getWizardCurrentStep() {
-        return wizardSteps[Math.min(Math.max(state.wizardStepIndex || 0, 0), wizardSteps.length - 1)] || null;
+        const steps = getWizardStepsForMode(state.wizardMode);
+        return steps[Math.min(Math.max(state.wizardStepIndex || 0, 0), steps.length - 1)] || null;
       }
 
       function ensureWizardBounds() {
         const rows = getWizardRows();
+        const steps = getWizardStepsForMode(state.wizardMode);
         if (!rows.length) {
           state.wizardIndex = 0;
           state.wizardStepIndex = 0;
@@ -869,7 +897,7 @@
           return;
         }
         state.wizardIndex = Math.min(Math.max(state.wizardIndex || 0, 0), rows.length - 1);
-        state.wizardStepIndex = Math.min(Math.max(state.wizardStepIndex || 0, 0), wizardSteps.length - 1);
+        state.wizardStepIndex = Math.min(Math.max(state.wizardStepIndex || 0, 0), steps.length - 1);
       }
 
       function getWizardStepLabel(step, row) {
@@ -888,6 +916,8 @@
         const totalClients = rows.length;
         const currentClientNumber = totalClients ? state.wizardIndex + 1 : 0;
         const stepNumber = step ? state.wizardStepIndex + 1 : 0;
+        const flowLabel = getWizardFlowLabel(state.wizardMode);
+        els.wizardKicker.textContent = state.wizardComplete ? `${flowLabel} · Completado` : flowLabel;
         els.wizardStatus.textContent = totalClients ? `Cliente ${currentClientNumber} / ${totalClients}` : 'Sin clientes';
         els.wizardClient.textContent = current ? rowLabel(current) : 'Sin cliente seleccionado';
         els.wizardUnits.textContent = current ? rowMeta(current) || 'Cliente actual' : 'Cliente actual';
@@ -897,10 +927,11 @@
           els.wizardSub.textContent = 'Ya no se repite la secuencia. Puedes pasar al siguiente cliente o cambiar a Actualización específica.';
           els.wizardButtons.classList.add('hidden');
         } else {
-          els.wizardStepChip.textContent = step ? `Pregunta ${stepNumber} / ${wizardSteps.length}` : 'Pregunta -';
+          const steps = getWizardStepsForMode(state.wizardMode);
+          els.wizardStepChip.textContent = step ? `Pregunta ${stepNumber} / ${steps.length}` : 'Pregunta -';
           els.wizardQuestion.textContent = step ? getWizardStepLabel(step, current) : 'Pulsa iniciar para comenzar';
           els.wizardSub.textContent = current
-            ? 'Responde y el sistema avanzará solo a la siguiente pregunta.'
+            ? `Sección actual: ${getWizardSectionLabel(state.wizardMode)}. Responde y el sistema avanzará solo a la siguiente pregunta.`
             : 'No hay clientes para mostrar.';
           els.wizardButtons.classList.toggle('hidden', !current || !step);
         }
@@ -915,7 +946,10 @@
         if (!current || !step) return;
         try {
           setNotice('Guardando respuesta...', '');
-          const res = await fetch(`/api/viceroy/one-to-one/kpi/${encodeURIComponent(current.id)}`, {
+          const endpoint = state.wizardMode === 'hot'
+            ? `/api/viceroy/one-to-one/hot/${encodeURIComponent(current.id)}`
+            : `/api/viceroy/one-to-one/kpi/${encodeURIComponent(current.id)}`;
+          const res = await fetch(endpoint, {
             method: 'PATCH',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
@@ -928,11 +962,25 @@
           const rows = getWizardRows();
           const idx = rows.findIndex((row) => String(row.id || '') === String(current.id || ''));
           if (idx >= 0) rows[idx] = data.row || rows[idx];
-          if (state.wizardStepIndex >= wizardSteps.length - 1) {
+          const steps = getWizardStepsForMode(state.wizardMode);
+          if (state.wizardStepIndex >= steps.length - 1) {
             const nextClient = Math.min((state.wizardIndex || 0) + 1, Math.max(rows.length - 1, 0));
             if (nextClient === state.wizardIndex || rows.length <= 1 && nextClient === state.wizardIndex) {
+              if (state.wizardMode === 'kpi') {
+                const hotRows = getWizardRowsForMode('hot');
+                if (hotRows.length) {
+                  state.wizardMode = 'hot';
+                  setTab('hot');
+                  state.wizardIndex = 0;
+                  state.wizardStepIndex = 0;
+                  state.wizardComplete = false;
+                  setNotice('Guardado. Inicia Hot Leads.', 'ok');
+                  renderAll();
+                  return;
+                }
+              }
               state.wizardComplete = true;
-              state.wizardStepIndex = wizardSteps.length - 1;
+              state.wizardStepIndex = steps.length - 1;
             } else {
               state.wizardComplete = false;
               state.wizardIndex = nextClient;
@@ -952,6 +1000,7 @@
       function setView(view) {
         state.view = view === 'specific' ? 'specific' : 'inicio';
         if (state.view === 'inicio') {
+          state.wizardMode = 'kpi';
           state.tab = 'kpi';
           state.wizardComplete = false;
         }
@@ -1126,6 +1175,7 @@
         els.startBtn.addEventListener('click', () => {
           const rows = getFilteredRows();
           if (!rows.length) return;
+          state.wizardMode = 'kpi';
           state.indexByTab[state.tab] = 0;
           state.currentRowId[state.tab] = String(rows[0].id || '');
           state.wizardComplete = false;

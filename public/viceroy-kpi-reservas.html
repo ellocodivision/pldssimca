@@ -336,9 +336,9 @@
           '<th>Contrato enviado</th>',
           '<th>Contrato firmado</th>',
           '<th>Enganche pagado</th>',
-          '<th>Última actualización</th>',
           '<th>Editar</th>',
-          '<th>Eliminar</th>'
+          '<th>Eliminar</th>',
+          '<th>Última actualización</th>'
         );
         els.tableHead.innerHTML = `<tr>${cols.join('')}</tr>`;
       }
@@ -359,7 +359,7 @@
             `<td>${yesNoChip(row.kpi && row.kpi.hojaReserva)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.reservaPagada)}</td>`,
             `<td>${yesNoChip(row.documentosCompletos)}</td>`,
-            `<td>${yesNoChip(row.kpi && row.kpi.contratoSolicitado)}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.contratoSolicitado)}</td>`,
           `<td>${yesNoChip(row.kpi && row.kpi.contratoEnviado)}</td>`,
           `<td>${yesNoChip(row.kpi && row.kpi.contratoFirmado)}</td>`,
           `<td>${yesNoChip(row.kpi && row.kpi.enganchePagado)}</td>`,
@@ -368,7 +368,7 @@
           `<td>${escapeText(formatUpdatedAt(row.updatedAt))}</td>`
         );
         return `<tr>${cells.join('')}</tr>`;
-        }).join('') || `<tr><td colspan="${state.isGerente ? 15 : 14}" class="small">No hay clientes con reserva pagada para mostrar.</td></tr>`;
+        }).join('') || `<tr><td colspan="${state.isGerente ? 15 : 14}" class="small">No hay clientes para mostrar.</td></tr>`;
       }
 
       function openModal(mode, row) {
@@ -484,7 +484,7 @@
           state.systemUsers = Array.isArray(usersData.users) ? usersData.users : [];
           renderTable();
           if (!silent) {
-            els.status.textContent = `Se cargaron ${state.rows.length} clientes con reserva pagada.`;
+            els.status.textContent = `Se cargaron ${state.rows.length} clientes.`;
             els.status.className = 'status ok';
           }
         } catch (err) {

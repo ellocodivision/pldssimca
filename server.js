@@ -14826,7 +14826,6 @@ function buildViceroyKpiReservasRows(rows, currentEmail, currentName, isGerente)
       return normalized;
     })
     .filter(Boolean)
-    .filter((row) => normalizeYesNo(row && row.kpi && row.kpi.reservaPagada) === 'SI')
     .sort((a, b) => {
       if (admin) {
         const asesorA = String(a.asesor || '').localeCompare(String(b.asesor || ''), 'es', { sensitivity: 'base' });
