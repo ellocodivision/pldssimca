@@ -601,6 +601,17 @@
         return String(value == null ? '' : value).trim();
       }
 
+      function formatUpdatedAt(value) {
+        const raw = normalizeText(value);
+        if (!raw) return 'Sin actualización';
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
+        return new Intl.DateTimeFormat('es-MX', {
+          dateStyle: 'medium',
+          timeStyle: 'short'
+        }).format(date);
+      }
+
       function rowLabel(row) {
         const name = normalizeText(row && row.nombreCliente) || normalizeText(row && row.asesor) || 'Sin nombre';
         const unit = normalizeText(row && row.unidadReservada);
@@ -617,6 +628,7 @@
           if (normalizeText(row.unidadReservada)) parts.push(`Unidad ${normalizeText(row.unidadReservada)}`);
           if (normalizeText(row.pais)) parts.push(normalizeText(row.pais));
           if (normalizeText(row.ciudad)) parts.push(normalizeText(row.ciudad));
+          if (normalizeText(row.updatedAt)) parts.push(`Actualizado ${formatUpdatedAt(row.updatedAt)}`);
           return parts.join(' · ');
         }
         const parts = [];
@@ -710,6 +722,7 @@
                 if (isYes(row.kpi && row.kpi.contratoSolicitado)) statusChips.push('<span class="chip">Contrato solicitado</span>');
                 if (isYes(row.kpi && row.kpi.contratoEnviado)) statusChips.push('<span class="chip">Enviado</span>');
                 if (isYes(row.kpi && row.kpi.contratoFirmado)) statusChips.push('<span class="chip good">Firmado</span>');
+                if (normalizeText(row.updatedAt)) statusChips.push(`<span class="chip">Última act. ${escapeHtml(formatUpdatedAt(row.updatedAt))}</span>`);
               } else {
                 statusChips.push(`<span class="chip ${isYes(row.kpi && row.kpi.esHot) ? 'good' : 'bad'}">${isYes(row.kpi && row.kpi.esHot) ? 'HOT' : 'NO HOT'}</span>`);
               }
@@ -796,8 +809,9 @@
         els.mainTitle.textContent = row ? rowLabel(row) : `Selecciona un cliente de ${title}`;
         const count = getFilteredRows().length;
         const index = row ? (state.indexByTab[state.tab] || 0) + 1 : 0;
+        const updatedAt = row ? formatUpdatedAt(row.updatedAt) : 'Sin actualización';
         els.mainMeta.innerHTML = row
-          ? `${escapeHtml(title)} · Cliente ${index} de ${count}. Guarda con frecuencia para no perder cambios.`
+          ? `${escapeHtml(title)} · Cliente ${index} de ${count}. Última actualización: ${escapeHtml(updatedAt)}. Guarda con frecuencia para no perder cambios.`
           : 'Pulsa <strong>Iniciar</strong> o elige una fila del listado.';
 
         els.prevBtn.disabled = !row || index <= 1;
