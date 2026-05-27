@@ -124,6 +124,7 @@
       border-radius:14px;
       background:#fff;
     }
+    .mobile-list{display:none}
     table{width:100%;border-collapse:collapse;min-width:1680px}
     th,td{padding:10px;border-bottom:1px solid #ece5d7;text-align:left;font-size:13px;vertical-align:top}
     th{
@@ -251,6 +252,68 @@
       gap:6px;
     }
     .audio-item audio{width:100%}
+    .mobile-card{
+      border:1px solid #e2d8c4;
+      border-radius:16px;
+      background:#fff;
+      padding:14px;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
+      display:grid;
+      gap:10px;
+    }
+    .mobile-card-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+    }
+    .mobile-card-title{
+      font-size:18px;
+      font-weight:900;
+      line-height:1.08;
+      margin:0;
+    }
+    .mobile-card-sub{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .mobile-kv{
+      display:grid;
+      gap:8px;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .mobile-kv .kv{
+      border:1px solid #ebe2d0;
+      border-radius:12px;
+      padding:8px 10px;
+      background:#fffdf8;
+    }
+    .mobile-kv .k{
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      color:var(--muted);
+      font-weight:700;
+      margin-bottom:4px;
+    }
+    .mobile-kv .v{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.3;
+      overflow-wrap:anywhere;
+    }
+    .mobile-card-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .mobile-card-actions .btn{
+      flex:1 1 30%;
+      min-height:40px;
+      padding:10px 12px;
+      font-size:13px;
+    }
     .hidden{display:none !important}
     @media (max-width: 1180px){
       .filters{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -266,6 +329,10 @@
       .actions{width:100%}
       .actions .btn{flex:1}
       .stats .stat .v{font-size:24px}
+      .table-wrap{display:none}
+      .mobile-list{display:grid;gap:12px}
+      .mobile-kv{grid-template-columns:1fr}
+      .mobile-card-actions .btn{flex:1 1 100%}
     }
   </style>
 </head>
@@ -373,6 +440,7 @@
           <tbody id="rowsTbody"></tbody>
         </table>
       </div>
+      <div id="mobileList" class="mobile-list"></div>
     </section>
 
     <section id="apiDocsCard" class="card hidden">
@@ -567,6 +635,7 @@
         interestFilter: document.getElementById('interestFilter'),
         clearFiltersBtn: document.getElementById('clearFiltersBtn'),
         rowsTbody: document.getElementById('rowsTbody'),
+        mobileList: document.getElementById('mobileList'),
         statTotal: document.getElementById('statTotal'),
         statContactados: document.getElementById('statContactados'),
         statSeguimiento: document.getElementById('statSeguimiento'),
@@ -751,6 +820,59 @@
           btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
         });
         els.rowsTbody.querySelectorAll('.js-delete').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            if (!confirm('¿Eliminar este lead?')) return;
+            await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
+              method: 'DELETE',
+              credentials: 'same-origin'
+            }).then((res) => res.json().catch(() => ({}))).then((data) => {
+              if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
+            }).catch((err) => setStatus(err.message || 'No se pudo eliminar', 'error'));
+            await reload();
+          });
+        });
+
+        els.mobileList.innerHTML = rows.length ? rows.map((row) => {
+          const canEdit = Boolean(state.isGerente) || Boolean(row.canEdit);
+          const statusClass = leadStatusClass(row.estatus);
+          return `
+            <article class="mobile-card">
+              <div class="mobile-card-head">
+                <div>
+                  <h3 class="mobile-card-title">${esc(row.nombre || '-')}</h3>
+                  <div class="mobile-card-sub">${esc(row.email || '-')} · ${esc(row.telefono || '-')}</div>
+                </div>
+                <span class="status-pill ${statusClass}">${esc(row.estatus || 'Sin contactar')}</span>
+              </div>
+              <div class="mobile-kv">
+                <div class="kv"><div class="k">Tipo</div><div class="v">${esc(row.tipoLead || '-')}</div></div>
+                <div class="kv"><div class="k">Interés</div><div class="v">${esc(row.interes || '-')}</div></div>
+                <div class="kv"><div class="k">Fuente</div><div class="v">${esc(row.fuente || '-')}</div></div>
+                <div class="kv"><div class="k">Asesor</div><div class="v">${esc(row.asesorAsignado || '-')}</div></div>
+                <div class="kv"><div class="k">Asignación</div><div class="v">${esc(formatDateTime(row.fechaAsignacion))}</div></div>
+                <div class="kv"><div class="k">Últ. act.</div><div class="v">${esc(formatDateTime(row.updatedAt || row.createdAt))}</div></div>
+              </div>
+              <div class="mobile-card-actions">
+                <button class="btn secondary js-edit" data-id="${esc(row.id)}" type="button">Editar</button>
+                <button class="btn secondary js-note" data-id="${esc(row.id)}" type="button">Notas</button>
+                <button class="btn secondary js-history" data-id="${esc(row.id)}" type="button">Historial</button>
+                ${state.isGerente ? '<button class="btn danger js-delete" data-id="' + esc(row.id) + '" type="button">Eliminar</button>' : ''}
+              </div>
+            </article>
+          `;
+        }).join('') : '<div class="mobile-card"><div class="mobile-card-title" style="font-size:16px">Sin leads para mostrar.</div></div>';
+
+        els.mobileList.querySelectorAll('.js-edit').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'edit'));
+        });
+        els.mobileList.querySelectorAll('.js-note').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'note'));
+        });
+        els.mobileList.querySelectorAll('.js-history').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
+        });
+        els.mobileList.querySelectorAll('.js-delete').forEach((btn) => {
           btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             if (!confirm('¿Eliminar este lead?')) return;
