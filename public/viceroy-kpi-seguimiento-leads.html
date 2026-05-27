@@ -354,6 +354,41 @@
     <input id="importInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
 
     <section class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">Leads asignados</div><div id="statTotal" class="v">0</div><div class="s">Total visibles en la vista actual.</div></div>
+        <div class="stat"><div class="k">Contactados</div><div id="statContactados" class="v">0</div><div class="s">Estatus contactado.</div></div>
+        <div class="stat"><div class="k">En seguimiento</div><div id="statSeguimiento" class="v">0</div><div class="s">Conversación activa.</div></div>
+        <div class="stat"><div class="k">Interesados</div><div id="statInteresados" class="v">0</div><div class="s">Leads con interés real.</div></div>
+        <div class="stat"><div class="k">Reservas / Ventas</div><div id="statCierre" class="v">0</div><div class="s">Cierres confirmados.</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Tipo</th>
+              <th>Interés</th>
+              <th>Fuente</th>
+              <th>Asignación</th>
+              <th>Estatus</th>
+              <th>Contacto</th>
+              <th>Asesor</th>
+              <th>Última actualización</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="rowsTbody"></tbody>
+        </table>
+      </div>
+      <div id="mobileList" class="mobile-list"></div>
+    </section>
+
+    <section class="card">
       <div class="toolbar">
         <div class="summary">
           <span id="metaUser" class="badge">Usuario: -</span>
@@ -366,11 +401,7 @@
           <span id="metaPending" class="badge warn">Sin contactar: 0</span>
         </div>
       </div>
-      <p id="status" class="status"></p>
-    </section>
-
-    <section class="card">
-      <div class="filters">
+      <div class="filters" style="margin-top:12px">
         <label class="field full">
           <span class="label">Buscar</span>
           <input id="searchInput" class="input" placeholder="Nombre, email, teléfono o notas" />
@@ -405,42 +436,6 @@
           <span class="badge">Admin ve todo</span>
         </div>
       </div>
-    </section>
-
-    <section class="card">
-      <div class="stats">
-        <div class="stat"><div class="k">Leads asignados</div><div id="statTotal" class="v">0</div><div class="s">Total visibles en la vista actual.</div></div>
-        <div class="stat"><div class="k">Contactados</div><div id="statContactados" class="v">0</div><div class="s">Estatus contactado.</div></div>
-        <div class="stat"><div class="k">En seguimiento</div><div id="statSeguimiento" class="v">0</div><div class="s">Conversación activa.</div></div>
-        <div class="stat"><div class="k">Interesados</div><div id="statInteresados" class="v">0</div><div class="s">Leads con interés real.</div></div>
-        <div class="stat"><div class="k">Reservas / Ventas</div><div id="statCierre" class="v">0</div><div class="s">Cierres confirmados.</div></div>
-        <div class="stat"><div class="k">Promedio primer contacto</div><div id="statPromedio" class="v">0h</div><div class="s">Tiempo promedio desde asignación al primer contacto.</div></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Teléfono</th>
-              <th>Tipo</th>
-              <th>Interés</th>
-              <th>Fuente</th>
-              <th>Asignación</th>
-              <th>Estatus</th>
-              <th>Contacto</th>
-              <th>Asesor</th>
-              <th>Última actualización</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="rowsTbody"></tbody>
-        </table>
-      </div>
-      <div id="mobileList" class="mobile-list"></div>
     </section>
 
     <section id="apiDocsCard" class="card hidden">
@@ -641,7 +636,6 @@
         statSeguimiento: document.getElementById('statSeguimiento'),
         statInteresados: document.getElementById('statInteresados'),
         statCierre: document.getElementById('statCierre'),
-        statPromedio: document.getElementById('statPromedio'),
         leadModal: document.getElementById('leadModal'),
         leadModalTitle: document.getElementById('leadModalTitle'),
         leadModalSub: document.getElementById('leadModalSub'),
@@ -765,14 +759,12 @@
             acc.contactTimeCount += 1;
           }
           return acc;
-        }, { contactados: 0, seguimiento: 0, interesados: 0, cierre: 0, pending: 0, contactTimeTotal: 0, contactTimeCount: 0 });
-        const avgHours = stats.contactTimeCount ? (stats.contactTimeTotal / stats.contactTimeCount) / (1000 * 60 * 60) : 0;
+        }, { contactados: 0, seguimiento: 0, interesados: 0, cierre: 0, pending: 0 });
         els.statTotal.textContent = String(rows.length);
         els.statContactados.textContent = String(stats.contactados);
         els.statSeguimiento.textContent = String(stats.seguimiento);
         els.statInteresados.textContent = String(stats.interesados);
         els.statCierre.textContent = String(stats.cierre);
-        els.statPromedio.textContent = `${avgHours ? avgHours.toFixed(1) : '0'}h`;
         els.metaRows.textContent = `Filas: ${rows.length}`;
         els.metaVisible.textContent = `Visibles: ${rows.length}`;
         els.metaPending.textContent = `Sin contactar: ${stats.pending}`;
