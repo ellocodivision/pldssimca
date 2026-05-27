@@ -6753,7 +6753,7 @@ function parseViceroyKpiSeguimientoLeadsWorkbook(workbook) {
       fechaAsignacion: normalizeLeadDateTime(leadImportCellValue(row, ['fechaAsignacion', 'fecha_asignacion', 'asigned_at', 'assigned_at', 'assigned', 'fecha'])),
       estatus: normalizeLeadStatus(leadImportCellValue(row, ['estatus', 'status', 'estado'])),
       fechaHoraContacto: normalizeLeadDateTime(leadImportCellValue(row, ['fechaHoraContacto', 'fecha_contacto', 'contacto', 'contacted_at', 'contact_date']), ''),
-      asesorAsignado: normalizeLeadAssigneeValue(leadImportCellValue(row, ['asesorAsignado', 'asesor', 'advisor', 'assigned_to', 'asignado_a'])),
+      asesorAsignado: normalizeLeadAssigneeValue(leadImportCellValue(row, ['asesorAsignado', 'asesor_asignado', 'asesor', 'advisor', 'assigned_to', 'asignado_a', 'responsable'])),
       notasAsesor: String(leadImportCellValue(row, ['notasAsesor', 'notas', 'notes', 'comentarios', 'observaciones']) || '').trim(),
       sourceRow: rawRow
     });
@@ -6789,7 +6789,7 @@ function normalizeImportedLeadDuplicatePatch(baseRow, importedRow, actor) {
 
   const importedAssignee = normalizeLeadAssigneeValue(importedRow.asesorAsignado);
   if (importedAssignee) {
-    const resolved = resolveLeadAssignee(importedAssignee, baseRow.asesorAsignadoEmail, baseRow.asesorAsignado);
+    const resolved = resolveLeadAssignee(importedAssignee, '', '');
     if (String(baseRow.asesorAsignado || '') !== String(resolved.asesorAsignado || '')) {
       patch.asesorAsignado = resolved.asesorAsignado;
       patch.asesorAsignadoEmail = resolved.asesorAsignadoEmail;
@@ -13298,7 +13298,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/import', requireBackendFeature('vic
         return;
       }
 
-      const assignee = resolveLeadAssignee(importedRow.asesorAsignado || '', currentEmail, currentName);
+    const assignee = resolveLeadAssignee(importedRow.asesorAsignado || '', '', '');
       const now = new Date().toISOString();
       const noteText = buildImportedLeadNote(safeName, index + 2);
       const newRow = normalizeViceroyKpiSeguimientoLeadRow({
@@ -13312,9 +13312,9 @@ app.post('/api/viceroy/kpi-seguimiento-leads/import', requireBackendFeature('vic
         fechaAsignacion: importedRow.fechaAsignacion || now,
         estatus: importedRow.estatus || 'Sin contactar',
         fechaHoraContacto: importedRow.fechaHoraContacto || '',
-        asesorAsignado: assignee.asesorAsignado,
-        asesorAsignadoEmail: assignee.asesorAsignadoEmail,
-        asesorAsignadoKey: assignee.asesorAsignadoKey,
+        asesorAsignado: String(assignee.asesorAsignado || importedRow.asesorAsignado || '').trim(),
+        asesorAsignadoEmail: String(assignee.asesorAsignadoEmail || '').trim().toLowerCase(),
+        asesorAsignadoKey: String(assignee.asesorAsignadoKey || leadUserKey(importedRow.asesorAsignado || '')).trim(),
         notasAsesor: importedRow.notasAsesor || noteText,
         history: [{
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

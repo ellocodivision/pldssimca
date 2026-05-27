@@ -907,6 +907,10 @@
         if (!res.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo guardar el lead');
         setStatus(data.message || 'Lead guardado', 'ok');
         await reload();
+        if (mode === 'create') {
+          closeLeadModal();
+          return;
+        }
         const nextId = String((data.row && data.row.id) || (row && row.id) || state.selectedLeadId || '');
         const next = (state.rows || []).find((item) => String(item.id || '') === nextId);
         if (next) {
