@@ -1270,6 +1270,27 @@
           state.isGerente = Boolean(data.isGerente);
           state.updatedAt = data.updatedAt || '';
           state.sourceFile = data.sourceFile || '';
+          if (!state.currentEmail) {
+            try {
+              const sessionRes = await fetch('/api/session', {
+                credentials: 'same-origin',
+                cache: 'no-store'
+              });
+              const sessionData = await sessionRes.json().catch(() => ({}));
+              if (sessionRes.ok && sessionData && sessionData.ok) {
+                state.currentEmail = String(sessionData.email || '').trim().toLowerCase();
+                state.currentName = String(sessionData.name || '').trim();
+                state.isGerente = Boolean(sessionData.isGerente || state.isGerente);
+              }
+            } catch {}
+          }
+          if (!state.isGerente && state.currentEmail) {
+            const normalizedEmail = String(state.currentEmail || '').trim().toLowerCase();
+            const normalizedName = String(state.currentName || '').trim().toLowerCase();
+            state.isGerente = normalizedEmail === 'martin@simca.mx'
+              || normalizedEmail === 'martin@zinca.mx'
+              || (normalizedName.includes('martin') && normalizedName.includes('barroso'));
+          }
           populateFormOptions();
           renderAll();
           setStatus('');
