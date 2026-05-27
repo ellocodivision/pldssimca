@@ -816,13 +816,21 @@
           btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             if (!confirm('¿Eliminar este lead?')) return;
-            await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
-              method: 'DELETE',
-              credentials: 'same-origin'
-            }).then((res) => res.json().catch(() => ({}))).then((data) => {
-              if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
-            }).catch((err) => setStatus(err.message || 'No se pudo eliminar', 'error'));
-            await reload();
+            try {
+              setStatus('Eliminando lead...', '');
+              const res = await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
+                method: 'DELETE',
+                credentials: 'same-origin'
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok || !data || !data.ok) {
+                throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
+              }
+              setStatus(data.message || 'Lead eliminado', 'ok');
+              await reload();
+            } catch (err) {
+              setStatus(err.message || 'No se pudo eliminar', 'error');
+            }
           });
         });
       }
@@ -880,13 +888,21 @@
           btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             if (!confirm('¿Eliminar este lead?')) return;
-            await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
-              method: 'DELETE',
-              credentials: 'same-origin'
-            }).then((res) => res.json().catch(() => ({}))).then((data) => {
-              if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
-            }).catch((err) => setStatus(err.message || 'No se pudo eliminar', 'error'));
-            await reload();
+            try {
+              setStatus('Eliminando lead...', '');
+              const res = await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
+                method: 'DELETE',
+                credentials: 'same-origin'
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok || !data || !data.ok) {
+                throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
+              }
+              setStatus(data.message || 'Lead eliminado', 'ok');
+              await reload();
+            } catch (err) {
+              setStatus(err.message || 'No se pudo eliminar', 'error');
+            }
           });
         });
       }
@@ -1041,6 +1057,24 @@
         const next = (state.rows || []).find((item) => String(item.id || '') === nextId);
         if (next) {
           await openLeadModal(next.id, state.modalMode);
+        }
+      }
+
+      async function loadIdentityFallbackFromKpiReservas() {
+        try {
+          const res = await fetch('/api/viceroy/kpi-reservas', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || typeof data !== 'object') return null;
+          return {
+            currentEmail: String(data.currentEmail || '').trim().toLowerCase(),
+            currentName: String(data.currentName || '').trim(),
+            isGerente: Boolean(data.isGerente)
+          };
+        } catch {
+          return null;
         }
       }
 
@@ -1301,6 +1335,14 @@
                 state.isGerente = Boolean(sessionData.isGerente || state.isGerente);
               }
             } catch {}
+          }
+          if (!state.currentEmail || !state.isGerente) {
+            const fallbackIdentity = await loadIdentityFallbackFromKpiReservas();
+            if (fallbackIdentity) {
+              state.currentEmail = state.currentEmail || fallbackIdentity.currentEmail || '';
+              state.currentName = state.currentName || fallbackIdentity.currentName || '';
+              state.isGerente = Boolean(state.isGerente || fallbackIdentity.isGerente);
+            }
           }
           if (!state.isGerente && state.currentEmail) {
             const normalizedEmail = String(state.currentEmail || '').trim().toLowerCase();
