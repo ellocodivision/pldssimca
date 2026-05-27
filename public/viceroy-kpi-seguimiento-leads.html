@@ -219,7 +219,7 @@
     }
     .history-grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1fr;
       gap:14px;
       margin-top:16px;
     }
@@ -535,7 +535,7 @@
           </label>
         </div>
         <div class="modal-actions">
-          <div class="voice-controls">
+          <div class="voice-controls hidden">
             <button id="voiceStartBtn" class="btn secondary" type="button">Grabar nota</button>
             <button id="voiceStopBtn" class="btn secondary" type="button" disabled>Detener</button>
             <button id="voiceSaveBtn" class="btn primary hidden" type="button">Guardar voz</button>
@@ -554,7 +554,7 @@
           <h3>Historial</h3>
           <div id="historyList" class="history-list"></div>
         </section>
-        <section class="history-box">
+        <section class="history-box hidden">
           <h3>Notas de voz</h3>
           <div id="voiceNotesList" class="audio-list"></div>
         </section>
