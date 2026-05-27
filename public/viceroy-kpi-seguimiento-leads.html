@@ -677,6 +677,14 @@
         return String(value == null ? '' : value).trim();
       }
 
+      function leadSortTimestamp(row) {
+        const createdAt = new Date(row && (row.fechaAsignacion || row.updatedAt || row.createdAt || 0));
+        const contactAt = new Date(row && row.fechaHoraContacto || 0);
+        const createdMs = Number.isNaN(createdAt.getTime()) ? 0 : createdAt.getTime();
+        const updatedMs = Number.isNaN(contactAt.getTime()) ? 0 : contactAt.getTime();
+        return Math.max(createdMs, updatedMs);
+      }
+
       function normalizeDateTimeInput(value) {
         const raw = normalizeText(value);
         if (!raw) return '';
@@ -712,7 +720,8 @@
 
       function getVisibleRows() {
         const q = state.filters.search.trim().toLowerCase();
-        return (state.rows || []).filter((row) => {
+        return (state.rows || [])
+          .filter((row) => {
           if (state.filters.status && normalizeText(row.estatus) !== state.filters.status) return false;
           if (state.filters.source && normalizeText(row.fuente) !== state.filters.source) return false;
           if (state.filters.type && normalizeText(row.tipoLead) !== state.filters.type) return false;
@@ -724,7 +733,8 @@
             row.estatus, row.asesorAsignado, row.notasAsesor
           ].join(' ').toLowerCase();
           return haystack.includes(q);
-        });
+          })
+          .sort((a, b) => leadSortTimestamp(b) - leadSortTimestamp(a));
       }
 
       function fillSelect(select, values, firstLabel = 'Todos') {

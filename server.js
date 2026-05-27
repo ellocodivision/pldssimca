@@ -6440,6 +6440,16 @@ function leadMatchesCurrentUser(row, currentEmail, currentName, isGerente = fals
   return false;
 }
 
+function isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName = '') {
+  const normalizedEmail = String(currentEmail || '').trim().toLowerCase();
+  const normalizedName = String(currentName || '').trim().toLowerCase();
+  if (!normalizedEmail) return false;
+  if (normalizedEmail === GERENTE_EMAIL) return true;
+  if (normalizedEmail === 'martin@zinca.mx') return true;
+  if (normalizedName.includes('martin') && normalizedName.includes('barroso')) return true;
+  return false;
+}
+
 function normalizeLeadHistoryEntry(raw, fallback = {}) {
   const source = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -12764,7 +12774,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/bootstrap', requireBackendFeature('v
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
     const advisors = getLeadAssigneeOptions();
@@ -12799,7 +12809,8 @@ app.get('/api/viceroy/kpi-seguimiento-leads/bootstrap', requireBackendFeature('v
 app.get('/api/viceroy/kpi-seguimiento-leads/stats', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
     return res.json({ ok: true, stats: buildLeadKpiStats(rows) });
@@ -12812,7 +12823,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature(
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
     const exportRows = rows.map((row) => ({
@@ -12846,7 +12857,8 @@ app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature(
 app.get('/api/viceroy/kpi-seguimiento-leads/template.xlsx', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     if (!isGerente) {
       return res.status(403).json({ error: 'Solo un administrador puede descargar el machote' });
     }
@@ -12921,7 +12933,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads', requireBackendFeature('vice
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const body = req.body || {};
     const nombre = normalizeLeadText(body.nombre || body.name);
     if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
@@ -12999,7 +13011,7 @@ app.patch('/api/viceroy/kpi-seguimiento-leads/leads/:id', requireBackendFeature(
     if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = Array.isArray(data.rows) ? [...data.rows] : [];
     const index = rows.findIndex((row) => String(row.id || '') === leadId);
@@ -13028,7 +13040,7 @@ app.delete('/api/viceroy/kpi-seguimiento-leads/leads/:id', requireBackendFeature
     if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     if (!isGerente) {
       return res.status(403).json({ error: 'Solo un administrador puede eliminar leads' });
     }
@@ -13063,7 +13075,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads/:id/notes', requireBackendFea
     if (!noteText) return res.status(400).json({ error: 'La nota no puede ir vacía' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = Array.isArray(data.rows) ? [...data.rows] : [];
     const index = rows.findIndex((row) => String(row.id || '') === leadId);
@@ -13097,7 +13109,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads/:id/voice-notes', requireBack
     if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const transcript = normalizeLeadText(req.body && (req.body.transcript || req.body.text || req.body.noteText));
     const audioDataUrl = String(req.body && req.body.audioDataUrl || '').trim();
     const audioMimeType = String(req.body && req.body.audioMimeType || req.body.mimeType || 'audio/webm').trim();
@@ -13154,7 +13166,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/leads/:id/voice-notes/:noteId/audio'
     if (!leadId || !noteId) return res.status(400).json({ error: 'Falta el id del lead o de la nota' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     const data = readViceroyKpiSeguimientoLeadsData();
     const row = (Array.isArray(data.rows) ? data.rows : []).find((item) => String(item.id || '') === leadId);
     if (!row) return res.status(404).json({ error: 'Lead no encontrado' });
@@ -13268,7 +13280,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/import', requireBackendFeature('vic
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
     if (!isGerente) {
       return res.status(403).json({ error: 'Solo un administrador puede importar leads' });
     }
