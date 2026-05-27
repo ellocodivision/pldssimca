@@ -238,6 +238,9 @@ const VICEROY_PRESENTATION_LAYOUT_EN_PATH = path.join(DATA_DIR, 'viceroy-present
 const VICEROY_PRESENTATION_MULTI_LAYOUT_ES_PATH = path.join(DATA_DIR, 'viceroy-presentacion-multi-layout.json');
 const VICEROY_PRESENTATION_MULTI_LAYOUT_EN_PATH = path.join(DATA_DIR, 'viceroy-presentacion-multi-layout-en.json');
 const VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON = 'imagen-related-mapeada-2026-05-07T18-03-04-537Z.json';
+const VICEROY_KPI_SEGUIMIENTO_LEADS_JSON_PATH = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads.json');
+const VICEROY_KPI_SEGUIMIENTO_LEADS_AUDIO_DIR = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads-audio');
+const VICEROY_LEADS_EXTERNAL_API_KEY = String(process.env.VICEROY_LEADS_API_KEY || process.env.LEADS_EXTERNAL_API_KEY || '').trim();
 const VICEROY_PRESENTATION_LAYOUT_PATH = VICEROY_PRESENTATION_LAYOUT_ES_PATH;
 const VICEROY_PRESENTATION_FONT_REGULAR_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-REGULAR-TRIAL.OTF');
 const VICEROY_PRESENTATION_FONT_MEDIUM_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-MEDIUM-TRIAL.OTF');
@@ -344,6 +347,7 @@ const BACKEND_SUBMODULES = {
     { key: 'inicio', label: 'Inicio' },
     { key: 'generadorPresentacion', label: 'Generador Presentación' },
     { key: 'kpiReservas', label: 'KPI Reservas' },
+    { key: 'kpiSeguimientoLeads', label: 'KPI Seguimiento de Leads' },
     { key: 'whisperlist', label: 'Hot Leads' },
     { key: 'mahekalLeads', label: 'Registros Leads Mahekal' },
     { key: 'registros', label: 'Viceroy Registros' },
@@ -365,7 +369,7 @@ const VISIBLE_BACKEND_SUBMODULES = Object.fromEntries(
   Object.entries(BACKEND_SUBMODULES).filter(([moduleKey]) => moduleKey !== 'viceroyPilot')
 );
 const SIMCA_BACKEND_SUBMODULE_KEYS = ['faes', 'forms', 'roi', 'hojaReserva', 'horarios', 'financiamiento', 'tablaPagos'];
-const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'generadorPresentacion', 'whisperlist', 'mahekalLeads', 'kpiReservas', 'reservas', 'horarios', 'registros', 'tablaPagos'];
+const VICEROY_BACKEND_SUBMODULE_KEYS = ['inicio', 'generadorPresentacion', 'whisperlist', 'mahekalLeads', 'kpiReservas', 'kpiSeguimientoLeads', 'reservas', 'horarios', 'registros', 'tablaPagos'];
 
 function getBackendAccessScope(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -2885,6 +2889,9 @@ function normalizeBackendUserSubmodules(rawSubmodules, email) {
     });
     if (moduleKey === 'viceroy' && moduleValue.mahekalLeads === undefined) {
       out[moduleKey].mahekalLeads = true;
+    }
+    if (moduleKey === 'viceroy' && moduleValue.kpiSeguimientoLeads === undefined) {
+      out[moduleKey].kpiSeguimientoLeads = true;
     }
   });
   return out;
@@ -6285,6 +6292,536 @@ async function ensureViceroyRegistrosStorageReady() {
   if (whisperlistPool) await ensureViceroyRegistrosDbSchema();
   await seedViceroyRegistrosFromExcelIfNeeded();
   viceroyRegistrosStorageReady = true;
+}
+
+function defaultViceroyKpiSeguimientoLeadsData() {
+  return {
+    rows: [],
+    updatedAt: null,
+    sourceFile: 'viceroy-kpi-seguimiento-leads.json'
+  };
+}
+
+function normalizeLeadOption(raw, allowed, fallback) {
+  const value = String(raw || '').trim();
+  if (!value) return fallback;
+  const found = (Array.isArray(allowed) ? allowed : []).find((item) => String(item || '').trim().toLowerCase() === value.toLowerCase());
+  return found || fallback;
+}
+
+function normalizeLeadText(raw) {
+  return String(raw == null ? '' : raw)
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function normalizeLeadEmail(raw) {
+  return normalizeClientEmail(raw);
+}
+
+function normalizeLeadPhone(raw) {
+  return normalizeClientPhone(raw);
+}
+
+function normalizeLeadDateTime(raw, fallback = '') {
+  const value = String(raw || '').trim();
+  if (!value) return fallback;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return fallback;
+  return parsed.toISOString();
+}
+
+function normalizeLeadStatus(raw) {
+  return normalizeLeadOption(raw, [
+    'Sin contactar',
+    'Contactado',
+    'En seguimiento',
+    'Interesado',
+    'No interesado',
+    'Reserva',
+    'Venta realizada',
+    'Perdido'
+  ], 'Sin contactar');
+}
+
+function normalizeLeadType(raw) {
+  return normalizeLeadOption(raw, ['Lead', 'Broker'], 'Lead');
+}
+
+function normalizeLeadSource(raw) {
+  return normalizeLeadOption(raw, [
+    'Social Media',
+    'Web Site',
+    'Walkin',
+    'Callin',
+    'Referidohotel'
+  ], 'Social Media');
+}
+
+function normalizeLeadInterest(raw) {
+  return normalizeLeadOption(raw, [
+    'Info del proyecto en general',
+    'Info para promover',
+    'Enviar info vía WhatsApp',
+    'Enviar info por email',
+    'Asistir al evento',
+    'Buscar opciones disponibles',
+    'Otro'
+  ], 'Info del proyecto en general');
+}
+
+function normalizeLeadAssigneeValue(raw) {
+  return String(raw || '').trim().replace(/\s+/g, ' ');
+}
+
+function leadUserKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^a-z0-9@._+\-ñáéíóúü]/g, '');
+}
+
+function getLeadAssigneeOptions() {
+  const users = readBackendUserAccessData().users || [];
+  return users
+    .filter((user) => Boolean(user && user.modules && user.modules.viceroy))
+    .map((user) => ({
+      email: String(user.email || '').trim().toLowerCase(),
+      name: String(user.name || '').trim() || String(user.email || '').trim().toLowerCase(),
+      key: leadUserKey(user.email || user.name || '')
+    }))
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), 'es', { numeric: true, sensitivity: 'base' }));
+}
+
+function resolveLeadAssignee(rawValue, fallbackEmail = '', fallbackName = '') {
+  const options = getLeadAssigneeOptions();
+  const value = normalizeLeadAssigneeValue(rawValue);
+  if (!value) {
+    return {
+      asesorAsignado: normalizeLeadAssigneeValue(fallbackName || fallbackEmail),
+      asesorAsignadoEmail: String(fallbackEmail || '').trim().toLowerCase(),
+      asesorAsignadoKey: leadUserKey(fallbackEmail || fallbackName)
+    };
+  }
+  const normalized = leadUserKey(value);
+  const byEmail = options.find((item) => leadUserKey(item.email) === normalized);
+  if (byEmail) {
+    return {
+      asesorAsignado: byEmail.name,
+      asesorAsignadoEmail: byEmail.email,
+      asesorAsignadoKey: byEmail.key
+    };
+  }
+  const byName = options.find((item) => leadUserKey(item.name) === normalized);
+  if (byName) {
+    return {
+      asesorAsignado: byName.name,
+      asesorAsignadoEmail: byName.email,
+      asesorAsignadoKey: byName.key
+    };
+  }
+  return {
+    asesorAsignado: value,
+    asesorAsignadoEmail: '',
+    asesorAsignadoKey: normalized
+  };
+}
+
+function leadMatchesCurrentUser(row, currentEmail, currentName, isGerente = false) {
+  if (isGerente) return true;
+  const rowEmail = String(row && row.asesorAsignadoEmail || '').trim().toLowerCase();
+  const rowAssignee = leadUserKey(row && (row.asesorAsignado || row.asesorAsignadoName || ''));
+  const emailKey = leadUserKey(currentEmail);
+  const nameKey = leadUserKey(currentName);
+  if (rowEmail && rowEmail === String(currentEmail || '').trim().toLowerCase()) return true;
+  if (rowAssignee && rowAssignee === emailKey) return true;
+  if (rowAssignee && rowAssignee === nameKey) return true;
+  return false;
+}
+
+function normalizeLeadHistoryEntry(raw, fallback = {}) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return {
+    id: String(source.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    createdAt: normalizeLeadDateTime(source.createdAt || source.at || new Date().toISOString(), new Date().toISOString()),
+    actorEmail: String(source.actorEmail || fallback.actorEmail || '').trim().toLowerCase(),
+    actorName: String(source.actorName || fallback.actorName || '').trim(),
+    action: String(source.action || fallback.action || 'update').trim(),
+    field: String(source.field || fallback.field || '').trim(),
+    before: source.before === undefined ? (fallback.before === undefined ? '' : fallback.before) : source.before,
+    after: source.after === undefined ? (fallback.after === undefined ? '' : fallback.after) : source.after,
+    note: String(source.note || fallback.note || '').trim(),
+    audioFile: String(source.audioFile || fallback.audioFile || '').trim(),
+    summary: String(source.summary || fallback.summary || '').trim()
+  };
+}
+
+function normalizeLeadVoiceNote(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return {
+    id: String(source.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    createdAt: normalizeLeadDateTime(source.createdAt || new Date().toISOString(), new Date().toISOString()),
+    transcript: String(source.transcript || '').trim(),
+    audioFile: String(source.audioFile || '').trim(),
+    audioMimeType: String(source.audioMimeType || 'audio/webm').trim(),
+    authorEmail: String(source.authorEmail || '').trim().toLowerCase(),
+    authorName: String(source.authorName || '').trim()
+  };
+}
+
+function normalizeViceroyKpiSeguimientoLeadRow(rawRow, fallbackId) {
+  const normalized = {};
+  Object.entries(rawRow || {}).forEach(([key, value]) => {
+    normalized[normalizeWhisperlistKey(key)] = value;
+  });
+
+  const createdAt = normalizeLeadDateTime(normalized.createdat || normalized.created_at || normalized.fechaalta || normalized.fechaasignacion || new Date().toISOString(), new Date().toISOString());
+  const updatedAt = normalizeLeadDateTime(normalized.updatedat || normalized.updated_at || createdAt, createdAt);
+  const assigned = resolveLeadAssignee(
+    normalized.asesorasignado || normalized.asesor || normalized.asignadoa || normalized.assignee,
+    normalized.asesorasignadoemail || normalized.asesoremail || normalized.asesor_email || '',
+    normalized.asesorasignadonombre || normalized.asesornombre || ''
+  );
+  const history = Array.isArray(normalized.history)
+    ? normalized.history.map((item) => normalizeLeadHistoryEntry(item)).filter(Boolean)
+    : [];
+  const voiceNotes = Array.isArray(normalized.voicenotes)
+    ? normalized.voicenotes.map((item) => normalizeLeadVoiceNote(item)).filter(Boolean)
+    : [];
+  const generatedId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${Math.random().toString(36).slice(2, 6)}`;
+  const providedId = String(normalized.id || '').trim();
+  const nombre = normalizeLeadText(normalized.nombre || normalized.nombrelead || normalized.name || normalized.cliente);
+  return {
+    id: providedId || String(fallbackId || generatedId),
+    nombre,
+    email: normalizeLeadEmail(normalized.email || normalized.correo || normalized.clientemail),
+    telefono: normalizeLeadPhone(normalized.telefono || normalized.phone || normalized.clientphone),
+    tipoLead: normalizeLeadType(normalized.tipolead || normalized.tipo || normalized.tipo_de_lead),
+    interes: normalizeLeadInterest(normalized.interes || normalized.interés || normalized.interesadoen),
+    fuente: normalizeLeadSource(normalized.fuente || normalized.source),
+    fechaAsignacion: normalizeLeadDateTime(normalized.fechaasignacion || normalized.assignedat || normalized.dateassigned || createdAt, createdAt),
+    estatus: normalizeLeadStatus(normalized.estatus || normalized.status),
+    fechaHoraContacto: normalizeLeadDateTime(normalized.fechahoracontacto || normalized.contactedat || normalized.fecha_contacto || '', ''),
+    asesorAsignado: assigned.asesorAsignado,
+    asesorAsignadoEmail: assigned.asesorAsignadoEmail,
+    asesorAsignadoKey: assigned.asesorAsignadoKey,
+    notasAsesor: String(normalized.notasasesor || normalized.notas || '').trim(),
+    history,
+    voiceNotes,
+    createdAt,
+    updatedAt,
+    createdByEmail: String(normalized.createdbyemail || '').trim().toLowerCase(),
+    createdByName: String(normalized.createdbyname || '').trim(),
+    updatedByEmail: String(normalized.updatedbyemail || '').trim().toLowerCase(),
+    updatedByName: String(normalized.updatedbyname || '').trim()
+  };
+}
+
+function normalizeViceroyKpiSeguimientoLeadRows(rows) {
+  return Array.isArray(rows)
+    ? rows.map((row, index) => normalizeViceroyKpiSeguimientoLeadRow(row, index + 1)).filter(Boolean)
+    : [];
+}
+
+function readViceroyKpiSeguimientoLeadsData() {
+  const raw = readJson(VICEROY_KPI_SEGUIMIENTO_LEADS_JSON_PATH, defaultViceroyKpiSeguimientoLeadsData());
+  const rows = normalizeViceroyKpiSeguimientoLeadRows(raw.rows);
+  return {
+    rows: rows.sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''))),
+    updatedAt: String(raw.updatedAt || null),
+    sourceFile: String(raw.sourceFile || '')
+  };
+}
+
+function saveViceroyKpiSeguimientoLeadsData(rows, sourceFile) {
+  const updatedAt = new Date().toISOString();
+  const normalizedRows = normalizeViceroyKpiSeguimientoLeadRows(rows).map((row) => ({
+    ...row,
+    updatedAt: row.updatedAt || updatedAt
+  }));
+  writeJson(VICEROY_KPI_SEGUIMIENTO_LEADS_JSON_PATH, {
+    rows: normalizedRows,
+    updatedAt,
+    sourceFile: String(sourceFile || 'viceroy-kpi-seguimiento-leads.json')
+  });
+  return {
+    rows: normalizedRows,
+    updatedAt,
+    sourceFile: String(sourceFile || 'viceroy-kpi-seguimiento-leads.json')
+  };
+}
+
+function ensureLeadVoiceNotesDir() {
+  fs.mkdirSync(VICEROY_KPI_SEGUIMIENTO_LEADS_AUDIO_DIR, { recursive: true });
+  return VICEROY_KPI_SEGUIMIENTO_LEADS_AUDIO_DIR;
+}
+
+function audioExtFromMime(mimeType) {
+  const mime = String(mimeType || '').toLowerCase();
+  if (mime.includes('mp4')) return 'mp4';
+  if (mime.includes('mpeg')) return 'mp3';
+  if (mime.includes('wav')) return 'wav';
+  if (mime.includes('ogg')) return 'ogg';
+  return 'webm';
+}
+
+function normalizeLeadHistorySummary(changes) {
+  const list = Array.isArray(changes) ? changes : [];
+  if (!list.length) return 'Actualización de lead';
+  return list.map((change) => {
+    const label = String(change.label || change.field || '').trim();
+    const before = String(change.before ?? '').trim();
+    const after = String(change.after ?? '').trim();
+    if (!label) return `${before} → ${after}`;
+    return `${label}: ${before} → ${after}`;
+  }).join(' | ');
+}
+
+function addLeadHistoryEntry(row, entry, patch = {}) {
+  const history = Array.isArray(row.history) ? [...row.history] : [];
+  history.unshift(normalizeLeadHistoryEntry(entry));
+  return {
+    ...row,
+    ...patch,
+    history,
+    updatedAt: new Date().toISOString(),
+    updatedByEmail: String(entry.actorEmail || patch.updatedByEmail || '').trim().toLowerCase(),
+    updatedByName: String(entry.actorName || patch.updatedByName || '').trim()
+  };
+}
+
+function leadKpiStatusColor(status) {
+  const key = normalizeLeadStatus(status);
+  if (key === 'Reserva' || key === 'Venta realizada') return 'success';
+  if (key === 'No interesado' || key === 'Perdido') return 'danger';
+  if (key === 'Interesado' || key === 'En seguimiento') return 'warning';
+  return 'neutral';
+}
+
+function buildLeadKpiStats(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  const byStatus = {};
+  const bySource = {};
+  const byAdvisor = {};
+  let contacted = 0;
+  let notContacted = 0;
+  let inFollowUp = 0;
+  let interested = 0;
+  let reservations = 0;
+  let sales = 0;
+  let firstContactTotalMs = 0;
+  let firstContactCount = 0;
+
+  items.forEach((row) => {
+    const status = normalizeLeadStatus(row.estatus);
+    const source = normalizeLeadSource(row.fuente);
+    const advisor = String(row.asesorAsignado || row.asesorAsignadoEmail || 'Sin asignar').trim() || 'Sin asignar';
+    byStatus[status] = (byStatus[status] || 0) + 1;
+    bySource[source] = (bySource[source] || 0) + 1;
+    byAdvisor[advisor] = byAdvisor[advisor] || {
+      total: 0,
+      contactados: 0,
+      noContactados: 0,
+      seguimiento: 0,
+      interesados: 0,
+      reservas: 0,
+      ventas: 0,
+      firstContactTotalMs: 0,
+      firstContactCount: 0
+    };
+    const target = byAdvisor[advisor];
+    target.total += 1;
+
+    if (status === 'Contactado') {
+      contacted += 1;
+      target.contactados += 1;
+    }
+    if (status === 'Sin contactar') {
+      notContacted += 1;
+      target.noContactados += 1;
+    }
+    if (status === 'En seguimiento') {
+      inFollowUp += 1;
+      target.seguimiento += 1;
+    }
+    if (status === 'Interesado') {
+      interested += 1;
+      target.interesados += 1;
+    }
+    if (status === 'Reserva') {
+      reservations += 1;
+      target.reservas += 1;
+    }
+    if (status === 'Venta realizada') {
+      sales += 1;
+      target.ventas += 1;
+    }
+
+    const createdAt = new Date(row.fechaAsignacion || row.createdAt || row.updatedAt || '');
+    const contactAt = new Date(row.fechaHoraContacto || '');
+    if (!Number.isNaN(createdAt.getTime()) && !Number.isNaN(contactAt.getTime()) && contactAt.getTime() >= createdAt.getTime()) {
+      const diff = contactAt.getTime() - createdAt.getTime();
+      firstContactTotalMs += diff;
+      firstContactCount += 1;
+      target.firstContactTotalMs += diff;
+      target.firstContactCount += 1;
+    }
+  });
+
+  const averageMs = firstContactCount ? firstContactTotalMs / firstContactCount : 0;
+  const averageHours = averageMs ? averageMs / (1000 * 60 * 60) : 0;
+
+  return {
+    total: items.length,
+    byStatus,
+    bySource,
+    byAdvisor,
+    contacted,
+    notContacted,
+    inFollowUp,
+    interested,
+    reservations,
+    sales,
+    averageFirstContactHours: Number(averageHours.toFixed(2)),
+    conversionRate: items.length ? Number(((sales / items.length) * 100).toFixed(2)) : 0
+  };
+}
+
+function filterVisibleViceroyKpiSeguimientoRows(rows, currentEmail, isGerente) {
+  const normalizedEmail = String(currentEmail || '').trim().toLowerCase();
+  return (Array.isArray(rows) ? rows : []).filter((row) => {
+    if (isGerente) return true;
+    return leadMatchesCurrentUser(row, normalizedEmail, '', false);
+  });
+}
+
+function findExistingLeadMatch(rows, rawLead) {
+  const email = normalizeLeadEmail(rawLead.email);
+  const phone = normalizeLeadPhone(rawLead.telefono);
+  const name = normalizeLeadText(rawLead.nombre);
+  const emailKey = email ? email.toLowerCase() : '';
+  const phoneKey = phone ? phone.replace(/\D/g, '') : '';
+  const nameKey = leadUserKey(name);
+  return (Array.isArray(rows) ? rows : []).find((row) => {
+    const rowEmail = normalizeLeadEmail(row.email);
+    const rowPhone = normalizeLeadPhone(row.telefono).replace(/\D/g, '');
+    const rowName = leadUserKey(row.nombre);
+    return (emailKey && rowEmail && rowEmail === emailKey)
+      || (phoneKey && rowPhone && rowPhone === phoneKey)
+      || (nameKey && rowName && rowName === nameKey);
+  }) || null;
+}
+
+function leadRowSnapshot(row) {
+  return {
+    nombre: row.nombre,
+    email: row.email,
+    telefono: row.telefono,
+    tipoLead: row.tipoLead,
+    interes: row.interes,
+    fuente: row.fuente,
+    fechaAsignacion: row.fechaAsignacion,
+    estatus: row.estatus,
+    fechaHoraContacto: row.fechaHoraContacto,
+    asesorAsignado: row.asesorAsignado,
+    notasAsesor: row.notasAsesor
+  };
+}
+
+function applyLeadPatch(target, body, actor) {
+  const isGerente = Boolean(actor && actor.isGerente);
+  const allowedFields = isGerente
+    ? ['nombre', 'email', 'telefono', 'tipoLead', 'interes', 'fuente', 'fechaAsignacion', 'estatus', 'fechaHoraContacto', 'asesorAsignado', 'notasAsesor']
+    : ['estatus', 'fechaHoraContacto', 'notasAsesor', 'interes'];
+  const next = { ...target };
+  const changes = [];
+
+  const setField = (key, nextValue, label, normalizer) => {
+    if (!allowedFields.includes(key)) return;
+    const before = next[key];
+    const value = normalizer ? normalizer(nextValue) : nextValue;
+    if (String(before || '') === String(value || '')) return;
+    next[key] = value;
+    changes.push({ field: key, label, before, after: value });
+  };
+
+  setField('nombre', body.nombre, 'Nombre', normalizeLeadText);
+  setField('email', body.email, 'Email', normalizeLeadEmail);
+  setField('telefono', body.telefono, 'Teléfono', normalizeLeadPhone);
+  setField('tipoLead', body.tipoLead, 'Tipo de lead', normalizeLeadType);
+  setField('interes', body.interes, 'Interés', normalizeLeadInterest);
+  setField('fuente', body.fuente, 'Fuente', normalizeLeadSource);
+  setField('fechaAsignacion', body.fechaAsignacion, 'Fecha de asignación', (value) => normalizeLeadDateTime(value, next.fechaAsignacion));
+  setField('estatus', body.estatus, 'Estatus', normalizeLeadStatus);
+  setField('fechaHoraContacto', body.fechaHoraContacto, 'Fecha y hora de contacto', (value) => normalizeLeadDateTime(value, ''));
+  if (allowedFields.includes('asesorAsignado') && body.asesorAsignado !== undefined) {
+    const resolved = resolveLeadAssignee(body.asesorAsignado, next.asesorAsignadoEmail, next.asesorAsignado);
+    const before = next.asesorAsignado || '';
+    if (String(before || '') !== String(resolved.asesorAsignado || '')) {
+      next.asesorAsignado = resolved.asesorAsignado;
+      next.asesorAsignadoEmail = resolved.asesorAsignadoEmail;
+      next.asesorAsignadoKey = resolved.asesorAsignadoKey;
+      changes.push({ field: 'asesorAsignado', label: 'Asesor asignado', before, after: resolved.asesorAsignado });
+    }
+  }
+  if (allowedFields.includes('notasAsesor') && body.notasAsesor !== undefined) {
+    const before = String(next.notasAsesor || '');
+    const after = String(body.notasAsesor || '').trim();
+    if (before !== after) {
+      next.notasAsesor = after;
+      changes.push({ field: 'notasAsesor', label: 'Notas del asesor', before, after });
+    }
+  }
+
+  if (changes.length) {
+    next.history = Array.isArray(next.history) ? [...next.history] : [];
+    next.history.unshift(normalizeLeadHistoryEntry({
+      action: isGerente ? 'update-admin' : 'update',
+      actorEmail: actor.email,
+      actorName: actor.name,
+      summary: normalizeLeadHistorySummary(changes),
+      note: String(body.note || '').trim(),
+      createdAt: new Date().toISOString()
+    }));
+    next.updatedAt = new Date().toISOString();
+    next.updatedByEmail = actor.email;
+    next.updatedByName = actor.name;
+  }
+  return { row: next, changes };
+}
+
+function noteTextToHistoryEntry(noteText, actor, audioFile = '', audioMimeType = '') {
+  return normalizeLeadHistoryEntry({
+    action: 'note',
+    actorEmail: actor.email,
+    actorName: actor.name,
+    note: noteText,
+    audioFile,
+    summary: noteText || 'Nota agregada',
+    createdAt: new Date().toISOString()
+  }, {
+    audioFile,
+    summary: noteText || 'Nota agregada',
+    note: noteText,
+    actorEmail: actor.email,
+    actorName: actor.name
+  });
+}
+
+function externalLeadAuthorized(req) {
+  const provided = String(
+    req.get('x-api-key')
+    || req.get('x-leads-api-key')
+    || (req.get('authorization') || '').replace(/^Bearer\s+/i, '')
+    || ''
+  ).trim();
+  return Boolean(VICEROY_LEADS_EXTERNAL_API_KEY && provided && provided === VICEROY_LEADS_EXTERNAL_API_KEY);
+}
+
+function sanitizeLeadAudioName(id, noteId, mimeType) {
+  const ext = audioExtFromMime(mimeType);
+  return `${String(id || 'lead').replace(/[^a-z0-9_-]/gi, '_')}-${String(noteId || Date.now()).replace(/[^a-z0-9_-]/gi, '_')}.${ext}`;
 }
 
 function ownerServicesDefaultData() {
@@ -11995,6 +12532,12 @@ app.get('/viceroy', (req, res) => {
           <h2 class="name">KPI Reservas</h2>
           <p class="desc">Clientes de Hot Leads con reserva pagada.</p>
         </a>` : '';
+  const seguimientoLeadsCard = canAccessBackendFeature(currentEmail, 'viceroy', 'kpiSeguimientoLeads') ? `
+        <a class="card" href="/viceroy/kpi-seguimiento-leads">
+          <span class="tag">Módulo</span>
+          <h2 class="name">KPI Seguimiento de Leads</h2>
+          <p class="desc">CRM de leads por asesor, historial, notas y métricas.</p>
+        </a>` : '';
   const oneToOneCard = canAccessBackendModule(currentEmail, 'viceroy') ? `
         <a class="card" href="/viceroy/one-to-one">
           <span class="tag">Módulo</span>
@@ -12059,6 +12602,7 @@ app.get('/viceroy', (req, res) => {
         ${bienvenidaClienteCard}
         ${generadorPresentacionCard}
         ${kpiReservasCard}
+        ${seguimientoLeadsCard}
         ${oneToOneCard}
         ${whisperlistCard}
         ${mahekalCard}
@@ -12115,6 +12659,407 @@ app.get('/viceroy/reservas', (req, res) => {
 
 app.get('/viceroy/kpi-reservas', requireViceroyPresentAccess, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'viceroy-kpi-reservas.html'));
+});
+
+app.get('/viceroy/kpi-seguimiento-leads', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'viceroy-kpi-seguimiento-leads.html'));
+});
+
+app.get('/api/viceroy/kpi-seguimiento-leads/bootstrap', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
+    const advisors = getLeadAssigneeOptions();
+    return res.json({
+      ok: true,
+      currentEmail,
+      currentName,
+      isGerente,
+      updatedAt: data.updatedAt,
+      sourceFile: data.sourceFile,
+      rows: rows.map((row) => ({
+        ...row,
+        canEdit: isGerente || leadMatchesCurrentUser(row, currentEmail, currentName, isGerente)
+      })),
+      totalRows: Array.isArray(data.rows) ? data.rows.length : 0,
+      visibleRows: rows.length,
+      advisors,
+      enums: {
+        tiposLead: ['Lead', 'Broker'],
+        fuentes: ['Social Media', 'Web Site', 'Walkin', 'Callin', 'Referidohotel'],
+        estatuses: ['Sin contactar', 'Contactado', 'En seguimiento', 'Interesado', 'No interesado', 'Reserva', 'Venta realizada', 'Perdido'],
+        intereses: ['Info del proyecto en general', 'Info para promover', 'Enviar info vía WhatsApp', 'Enviar info por email', 'Asistir al evento', 'Buscar opciones disponibles', 'Otro']
+      },
+      stats: buildLeadKpiStats(rows)
+    });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-seguimiento-leads/bootstrap: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo cargar KPI Seguimiento de Leads' });
+  }
+});
+
+app.get('/api/viceroy/kpi-seguimiento-leads/stats', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
+    return res.json({ ok: true, stats: buildLeadKpiStats(rows) });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudieron cargar las métricas de leads' });
+  }
+});
+
+app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
+    const exportRows = rows.map((row) => ({
+      NOMBRE: row.nombre,
+      EMAIL: row.email,
+      TELEFONO: row.telefono,
+      TIPO_LEAD: row.tipoLead,
+      INTERES: row.interes,
+      FUENTE: row.fuente,
+      FECHA_ASIGNACION: row.fechaAsignacion,
+      ESTATUS: row.estatus,
+      FECHA_HORA_CONTACTO: row.fechaHoraContacto,
+      ASESOR_ASIGNADO: row.asesorAsignado,
+      NOTAS_DEL_ASESOR: row.notasAsesor,
+      ULTIMA_ACTUALIZACION: row.updatedAt,
+      HISTORIAL: Array.isArray(row.history) ? row.history.map((item) => item.summary || item.note || '').filter(Boolean).join(' | ') : ''
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads');
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const fileName = `viceroy-kpi-seguimiento-leads-${String(currentName || currentEmail || 'export').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'export'}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(buffer);
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo exportar KPI Seguimiento de Leads' });
+  }
+});
+
+app.post('/api/viceroy/kpi-seguimiento-leads/leads', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const body = req.body || {};
+    const nombre = normalizeLeadText(body.nombre || body.name);
+    if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = Array.isArray(data.rows) ? [...data.rows] : [];
+    const duplicate = findExistingLeadMatch(rows, body);
+    if (duplicate) {
+      const index = rows.findIndex((row) => String(row.id || '') === String(duplicate.id || ''));
+      const actor = { email: currentEmail, name: currentName || currentEmail, isGerente };
+      const patch = applyLeadPatch(duplicate, body, actor);
+      const noteText = `Lead recibido nuevamente desde captura interna${String(body.notas || body.notasAsesor || '').trim() ? `: ${String(body.notas || body.notasAsesor || '').trim()}` : ''}`;
+      const nextRow = addLeadHistoryEntry(patch.row, {
+        action: 'external-reentry',
+        actorEmail: currentEmail,
+        actorName: currentName || currentEmail,
+        summary: noteText,
+        note: noteText
+      }, {
+        notasAsesor: [String(patch.row.notasAsesor || '').trim(), noteText].filter(Boolean).join('\n\n')
+      });
+      rows[index] = nextRow;
+      const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+      return res.status(200).json({ ok: true, message: 'Lead actualizado', row: nextRow, duplicate: true, updatedAt: saved.updatedAt });
+    }
+
+    const assignee = isGerente
+      ? resolveLeadAssignee(body.asesorAsignado || body.asesor || currentEmail || currentName, currentEmail, currentName)
+      : resolveLeadAssignee(currentEmail, currentEmail, currentName);
+
+    const now = new Date().toISOString();
+    const newRow = normalizeViceroyKpiSeguimientoLeadRow({
+      ...body,
+      nombre,
+      email: normalizeLeadEmail(body.email || body.correo),
+      telefono: normalizeLeadPhone(body.telefono || body.phone),
+      tipoLead: normalizeLeadType(body.tipoLead || body.tipoLead),
+      interes: normalizeLeadInterest(body.interes),
+      fuente: normalizeLeadSource(body.fuente),
+      fechaAsignacion: body.fechaAsignacion || now,
+      estatus: normalizeLeadStatus(body.estatus || 'Sin contactar'),
+      fechaHoraContacto: body.fechaHoraContacto || '',
+      asesorAsignado: assignee.asesorAsignado,
+      asesorAsignadoEmail: assignee.asesorAsignadoEmail,
+      asesorAsignadoKey: assignee.asesorAsignadoKey,
+      notasAsesor: String(body.notasAsesor || body.notas || '').trim(),
+      history: [{
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: now,
+        actorEmail: currentEmail,
+        actorName: currentName || currentEmail,
+        action: 'create',
+        summary: 'Lead creado',
+        note: String(body.notasAsesor || body.notas || '').trim()
+      }],
+      createdAt: now,
+      updatedAt: now,
+      createdByEmail: currentEmail,
+      createdByName: currentName || currentEmail,
+      updatedByEmail: currentEmail,
+      updatedByName: currentName || currentEmail
+    });
+    rows.unshift(newRow);
+    const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+    return res.status(201).json({ ok: true, message: 'Lead creado correctamente', row: newRow, updatedAt: saved.updatedAt });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-seguimiento-leads/leads: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo crear el lead' });
+  }
+});
+
+app.patch('/api/viceroy/kpi-seguimiento-leads/leads/:id', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const leadId = String(req.params.id || '').trim();
+    if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = Array.isArray(data.rows) ? [...data.rows] : [];
+    const index = rows.findIndex((row) => String(row.id || '') === leadId);
+    if (index < 0) return res.status(404).json({ error: 'Lead no encontrado' });
+    const target = rows[index];
+    if (!leadMatchesCurrentUser(target, currentEmail, currentName, isGerente)) {
+      return res.status(403).json({ error: 'Solo puedes editar leads asignados a tu usuario' });
+    }
+    const actor = { email: currentEmail, name: currentName || currentEmail, isGerente };
+    const patch = applyLeadPatch(target, req.body || {}, actor);
+    if (!patch.changes.length) {
+      return res.json({ ok: true, message: 'Sin cambios', row: target });
+    }
+    rows[index] = patch.row;
+    const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+    return res.json({ ok: true, message: 'Lead actualizado', row: patch.row, updatedAt: saved.updatedAt });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-seguimiento-leads/leads/:id: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo actualizar el lead' });
+  }
+});
+
+app.post('/api/viceroy/kpi-seguimiento-leads/leads/:id/notes', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const leadId = String(req.params.id || '').trim();
+    const noteText = normalizeLeadText(req.body && (req.body.noteText || req.body.note || req.body.text));
+    if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
+    if (!noteText) return res.status(400).json({ error: 'La nota no puede ir vacía' });
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = Array.isArray(data.rows) ? [...data.rows] : [];
+    const index = rows.findIndex((row) => String(row.id || '') === leadId);
+    if (index < 0) return res.status(404).json({ error: 'Lead no encontrado' });
+    const target = rows[index];
+    if (!leadMatchesCurrentUser(target, currentEmail, currentName, isGerente)) {
+      return res.status(403).json({ error: 'Solo puedes notar leads asignados a tu usuario' });
+    }
+    const noteLine = `[${new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}] ${currentName || currentEmail}: ${noteText}`;
+    const nextRow = addLeadHistoryEntry(target, {
+      action: 'note',
+      actorEmail: currentEmail,
+      actorName: currentName || currentEmail,
+      summary: noteText,
+      note: noteText
+    }, {
+      notasAsesor: [String(target.notasAsesor || '').trim(), noteLine].filter(Boolean).join('\n\n')
+    });
+    rows[index] = nextRow;
+    const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+    return res.json({ ok: true, message: 'Nota agregada', row: nextRow, updatedAt: saved.updatedAt });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-seguimiento-leads/leads/:id/notes: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo guardar la nota' });
+  }
+});
+
+app.post('/api/viceroy/kpi-seguimiento-leads/leads/:id/voice-notes', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const leadId = String(req.params.id || '').trim();
+    if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const transcript = normalizeLeadText(req.body && (req.body.transcript || req.body.text || req.body.noteText));
+    const audioDataUrl = String(req.body && req.body.audioDataUrl || '').trim();
+    const audioMimeType = String(req.body && req.body.audioMimeType || req.body.mimeType || 'audio/webm').trim();
+    if (!audioDataUrl) return res.status(400).json({ error: 'Falta el audio grabado' });
+
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = Array.isArray(data.rows) ? [...data.rows] : [];
+    const index = rows.findIndex((row) => String(row.id || '') === leadId);
+    if (index < 0) return res.status(404).json({ error: 'Lead no encontrado' });
+    const target = rows[index];
+    if (!leadMatchesCurrentUser(target, currentEmail, currentName, isGerente)) {
+      return res.status(403).json({ error: 'Solo puedes grabar notas de leads asignados a tu usuario' });
+    }
+
+    const noteId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const fileName = sanitizeLeadAudioName(leadId, noteId, audioMimeType);
+    const dir = ensureLeadVoiceNotesDir();
+    const payload = audioDataUrl.includes(',') ? audioDataUrl.split(',').pop() : audioDataUrl;
+    fs.writeFileSync(path.join(dir, fileName), Buffer.from(payload, 'base64'));
+
+    const noteText = transcript || 'Nota de voz sin transcripción';
+    const voiceNote = normalizeLeadVoiceNote({
+      id: noteId,
+      createdAt: new Date().toISOString(),
+      transcript: noteText,
+      audioFile: fileName,
+      audioMimeType,
+      authorEmail: currentEmail,
+      authorName: currentName || currentEmail
+    });
+    const historyEntry = noteTextToHistoryEntry(noteText, { email: currentEmail, name: currentName || currentEmail }, fileName, audioMimeType);
+    const nextRow = {
+      ...target,
+      voiceNotes: [voiceNote, ...(Array.isArray(target.voiceNotes) ? target.voiceNotes : [])],
+      history: [historyEntry, ...(Array.isArray(target.history) ? target.history : [])],
+      notasAsesor: [String(target.notasAsesor || '').trim(), `[${new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}] ${currentName || currentEmail}: ${noteText}`].filter(Boolean).join('\n\n'),
+      updatedAt: new Date().toISOString(),
+      updatedByEmail: currentEmail,
+      updatedByName: currentName || currentEmail
+    };
+    rows[index] = nextRow;
+    const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+    return res.json({ ok: true, message: 'Nota de voz guardada', row: nextRow, voiceNote, updatedAt: saved.updatedAt });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-seguimiento-leads/leads/:id/voice-notes: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo guardar la nota de voz' });
+  }
+});
+
+app.get('/api/viceroy/kpi-seguimiento-leads/leads/:id/voice-notes/:noteId/audio', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const leadId = String(req.params.id || '').trim();
+    const noteId = String(req.params.noteId || '').trim();
+    if (!leadId || !noteId) return res.status(400).json({ error: 'Falta el id del lead o de la nota' });
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const row = (Array.isArray(data.rows) ? data.rows : []).find((item) => String(item.id || '') === leadId);
+    if (!row) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!leadMatchesCurrentUser(row, currentEmail, currentName, isGerente)) {
+      return res.status(403).json({ error: 'No autorizado para ver este audio' });
+    }
+    const note = Array.isArray(row.voiceNotes) ? row.voiceNotes.find((item) => String(item.id || '') === noteId) : null;
+    if (!note || !note.audioFile) return res.status(404).json({ error: 'Audio no encontrado' });
+    const audioPath = path.join(ensureLeadVoiceNotesDir(), path.basename(note.audioFile));
+    if (!fs.existsSync(audioPath)) return res.status(404).json({ error: 'Audio no disponible' });
+    res.setHeader('Content-Type', note.audioMimeType || 'audio/webm');
+    return fs.createReadStream(audioPath).pipe(res);
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo leer el audio de la nota' });
+  }
+});
+
+app.post('/api/leads/external', async (req, res) => {
+  try {
+    if (!externalLeadAuthorized(req)) {
+      return res.status(401).json({ error: 'API Key inválida' });
+    }
+    const body = req.body || {};
+    const nombre = normalizeLeadText(body.nombre || body.name);
+    const email = normalizeLeadEmail(body.email || body.correo);
+    const telefono = normalizeLeadPhone(body.telefono || body.phone);
+    if (!nombre || (!email && !telefono)) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios: nombre y al menos email o teléfono' });
+    }
+
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = Array.isArray(data.rows) ? [...data.rows] : [];
+    const duplicate = findExistingLeadMatch(rows, { nombre, email, telefono });
+    const externalNote = `Lead recibido desde fuente externa${String(body.notas || '').trim() ? `: ${String(body.notas || '').trim()}` : ''}`;
+    if (duplicate) {
+      const index = rows.findIndex((row) => String(row.id || '') === String(duplicate.id || ''));
+      const nextRow = {
+        ...duplicate,
+        nombre,
+        email,
+        telefono,
+        tipoLead: normalizeLeadType(body.tipoLead || body.tipo || duplicate.tipoLead),
+        interes: normalizeLeadInterest(body.interes || duplicate.interes),
+        fuente: normalizeLeadSource(body.fuente || duplicate.fuente),
+        fechaAsignacion: normalizeLeadDateTime(body.fechaAsignacion || duplicate.fechaAsignacion || new Date().toISOString(), duplicate.fechaAsignacion),
+        estatus: normalizeLeadStatus(body.estatus || duplicate.estatus),
+        fechaHoraContacto: normalizeLeadDateTime(body.fechaHoraContacto || duplicate.fechaHoraContacto || '', duplicate.fechaHoraContacto || ''),
+        notasAsesor: [String(duplicate.notasAsesor || '').trim(), externalNote].filter(Boolean).join('\n\n'),
+        history: [
+          normalizeLeadHistoryEntry({
+            action: 'external-import',
+            actorEmail: 'external-api',
+            actorName: 'External API',
+            summary: externalNote,
+            note: externalNote
+          }),
+          ...(Array.isArray(duplicate.history) ? duplicate.history : [])
+        ],
+        updatedAt: new Date().toISOString(),
+        updatedByEmail: 'external-api',
+        updatedByName: 'External API'
+      };
+      rows[index] = nextRow;
+      const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+      return res.status(200).json({ ok: true, message: 'Lead actualizado', row: nextRow, updatedAt: saved.updatedAt });
+    }
+
+    const assignee = resolveLeadAssignee(body.asesor || body.asesorAsignado || '', '', '');
+    const now = new Date().toISOString();
+    const newRow = normalizeViceroyKpiSeguimientoLeadRow({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      nombre,
+      email,
+      telefono,
+      tipoLead: body.tipoLead || body.tipo || 'Lead',
+      interes: body.interes || 'Info del proyecto en general',
+      fuente: body.fuente || 'Social Media',
+      fechaAsignacion: body.fechaAsignacion || now,
+      estatus: body.estatus || 'Sin contactar',
+      fechaHoraContacto: body.fechaHoraContacto || '',
+      asesorAsignado: assignee.asesorAsignado || String(body.asesor || '').trim(),
+      asesorAsignadoEmail: assignee.asesorAsignadoEmail || '',
+      asesorAsignadoKey: assignee.asesorAsignadoKey || leadUserKey(body.asesor || ''),
+      notasAsesor: externalNote,
+      history: [{
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: now,
+        actorEmail: 'external-api',
+        actorName: 'External API',
+        action: 'external-import',
+        summary: externalNote,
+        note: externalNote
+      }],
+      createdAt: now,
+      updatedAt: now,
+      createdByEmail: 'external-api',
+      createdByName: 'External API',
+      updatedByEmail: 'external-api',
+      updatedByName: 'External API'
+    });
+    rows.unshift(newRow);
+    const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+    return res.status(201).json({ ok: true, message: 'Lead creado correctamente', row: newRow, updatedAt: saved.updatedAt });
+  } catch (err) {
+    log(`Error en /api/leads/external: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo procesar el lead externo' });
+  }
 });
 
 app.get('/viceroy/one-to-one', requireViceroyPresentAccess, (req, res) => {

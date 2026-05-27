@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viceroy KPI Seguimiento de Leads</title>
+  <style>
+    :root{
+      --bg:#f4f1e8;
+      --card:#ffffff;
+      --ink:#191a1f;
+      --muted:#666b75;
+      --line:#d8d1c1;
+      --accent:#f3df2b;
+      --accent-ink:#252525;
+      --ok:#1e8c3a;
+      --warn:#b76b00;
+      --bad:#c43d2d;
+      --chip:#ece7d8;
+      --blue:#2563eb;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+    }
+    .wrap{max-width:1480px;margin:0 auto;padding:24px 16px 40px}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .title{margin:0;font-size:32px;line-height:1.02}
+    .sub{margin:8px 0 0;color:var(--muted);max-width:880px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .btn{
+      border:1px solid #bfb8a5;
+      background:#fff;
+      border-radius:10px;
+      padding:10px 14px;
+      font-weight:700;
+      cursor:pointer;
+      color:#202225;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .btn.primary{background:var(--accent);border-color:#111}
+    .btn.secondary{background:#fff}
+    .btn.danger{background:#fff2ef;border-color:#d06a5a;color:#8b1f16}
+    .btn.ghost{background:transparent}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .card{
+      margin-top:16px;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
+    }
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .status{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:13px;
+      min-height:18px;
+    }
+    .status.ok{color:var(--ok)}
+    .status.error{color:var(--bad)}
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:4px 10px;
+      border-radius:999px;
+      background:var(--chip);
+      font-size:12px;
+      font-weight:700;
+      min-height:26px;
+    }
+    .badge.good{background:#e3f4e7;color:#1f6f34}
+    .badge.warn{background:#fff4dd;color:#8a5200}
+    .badge.bad{background:#ffe7e2;color:#8b1f16}
+    .badge.blue{background:#e6edff;color:#173a93}
+    .filters{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      gap:10px;
+      align-items:end;
+    }
+    .field{display:flex;flex-direction:column;gap:6px}
+    .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+    .input,.select,.textarea{
+      width:100%;
+      border:1px solid #cec7b8;
+      border-radius:10px;
+      background:#fff;
+      color:var(--ink);
+      font:inherit;
+      padding:10px 12px;
+      min-height:42px;
+    }
+    .textarea{min-height:110px;resize:vertical}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+    .summary{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      gap:10px;
+    }
+    .stat{
+      border:1px solid #e1d9c8;
+      border-radius:14px;
+      padding:12px;
+      background:linear-gradient(180deg,#fff, #fffdf8);
+      min-height:96px;
+    }
+    .stat .k{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+    .stat .v{font-size:28px;line-height:1.05;margin-top:8px;font-weight:800}
+    .stat .s{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.35}
+    .table-wrap{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+    }
+    table{width:100%;border-collapse:collapse;min-width:1680px}
+    th,td{padding:10px;border-bottom:1px solid #ece5d7;text-align:left;font-size:13px;vertical-align:top}
+    th{
+      background:#faf7f0;
+      position:sticky;
+      top:0;
+      z-index:1;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+    tbody tr:hover{background:#fbf8ef}
+    .lead-name{font-weight:800;font-size:14px}
+    .lead-small{font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap}
+    .chips{display:flex;gap:6px;flex-wrap:wrap}
+    .status-pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;font-weight:800;font-size:12px;min-width:96px}
+    .status-pill.neutral{background:#f0ecdf;color:#5f5b4f}
+    .status-pill.warning{background:#fff1cf;color:#8a5a00}
+    .status-pill.success{background:#e3f4e7;color:#1f6f34}
+    .status-pill.danger{background:#ffe4de;color:#8b1f16}
+    .status-pill.blue{background:#e4ecff;color:#1d4fb8}
+    .actions-cell{display:flex;gap:6px;flex-wrap:wrap}
+    .actions-cell .btn{padding:7px 10px;font-size:12px}
+    .docs-grid{
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:14px;
+    }
+    .code{
+      background:#111827;
+      color:#e8eefc;
+      border-radius:12px;
+      padding:14px;
+      overflow:auto;
+      font-size:12px;
+      line-height:1.5;
+      margin:0;
+    }
+    .code code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
+    .doc-list{display:grid;gap:10px}
+    .doc-item{
+      border:1px solid #e3dbc9;
+      border-radius:12px;
+      padding:12px;
+      background:#fffefb;
+    }
+    .doc-item h3{margin:0 0 6px;font-size:15px}
+    .doc-item p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.46);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:50;
+    }
+    .modal.open{display:flex}
+    .modal-card{
+      width:min(1180px,100%);
+      max-height:min(94vh,1100px);
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px;
+    }
+    .modal-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .modal-head h2{margin:0;font-size:24px;line-height:1.1}
+    .modal-head p{margin:6px 0 0;color:var(--muted);font-size:13px}
+    .modal-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+    .modal-grid .full{grid-column:1 / -1}
+    .modal-actions{
+      margin-top:14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .history-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+      margin-top:16px;
+    }
+    .history-box{
+      border:1px solid #e2d8c4;
+      border-radius:14px;
+      padding:12px;
+      background:#fffdf8;
+    }
+    .history-box h3{margin:0 0 10px;font-size:16px}
+    .history-list{display:grid;gap:10px;max-height:380px;overflow:auto}
+    .history-item{
+      border:1px solid #e4dac6;
+      border-radius:12px;
+      background:#fff;
+      padding:10px;
+    }
+    .history-item .t{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .history-item .s{font-weight:700;font-size:13px;margin-bottom:4px}
+    .history-item .b{font-size:13px;line-height:1.45;white-space:pre-wrap}
+    .voice-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .voice-status{font-size:12px;color:var(--muted)}
+    .audio-list{display:grid;gap:10px}
+    .audio-item{
+      border:1px solid #e4dac6;
+      border-radius:10px;
+      padding:10px;
+      background:#fff;
+      display:grid;
+      gap:6px;
+    }
+    .audio-item audio{width:100%}
+    .hidden{display:none !important}
+    @media (max-width: 1180px){
+      .filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .docs-grid{grid-template-columns:1fr}
+      .history-grid{grid-template-columns:1fr}
+    }
+    @media (max-width: 760px){
+      .title{font-size:26px}
+      .filters{grid-template-columns:1fr}
+      .stats{grid-template-columns:1fr 1fr}
+      .modal-grid{grid-template-columns:1fr}
+      .actions{width:100%}
+      .actions .btn{flex:1}
+      .stats .stat .v{font-size:24px}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1 class="title">KPI Seguimiento de Leads</h1>
+        <p class="sub">CRM interno para seguimiento por asesor, con historial, notas por voz, importación externa y métricas por estatus, fuente y asesor.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/viceroy">Volver a Viceroy</a>
+        <button id="reloadBtn" class="btn secondary" type="button">Actualizar</button>
+        <button id="newBtn" class="btn primary hidden" type="button">Nuevo lead</button>
+        <a id="exportBtn" class="btn secondary" href="#">Exportar Excel</a>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="toolbar">
+        <div class="summary">
+          <span id="metaUser" class="badge">Usuario: -</span>
+          <span id="metaScope" class="badge">Acceso: -</span>
+          <span id="metaRows" class="badge">Filas: 0</span>
+          <span id="metaUpdated" class="badge">Actualizado: -</span>
+        </div>
+        <div class="summary">
+          <span id="metaVisible" class="badge blue">Visibles: 0</span>
+          <span id="metaPending" class="badge warn">Sin contactar: 0</span>
+        </div>
+      </div>
+      <p id="status" class="status"></p>
+    </section>
+
+    <section class="card">
+      <div class="filters">
+        <label class="field full">
+          <span class="label">Buscar</span>
+          <input id="searchInput" class="input" placeholder="Nombre, email, teléfono o notas" />
+        </label>
+        <label class="field">
+          <span class="label">Estatus</span>
+          <select id="statusFilter" class="select"></select>
+        </label>
+        <label class="field">
+          <span class="label">Fuente</span>
+          <select id="sourceFilter" class="select"></select>
+        </label>
+        <label class="field">
+          <span class="label">Tipo</span>
+          <select id="typeFilter" class="select"></select>
+        </label>
+        <label class="field">
+          <span class="label">Asesor</span>
+          <select id="advisorFilter" class="select"></select>
+        </label>
+        <label class="field">
+          <span class="label">Interés</span>
+          <select id="interestFilter" class="select"></select>
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px;justify-content:space-between">
+        <div class="summary">
+          <button id="clearFiltersBtn" class="btn secondary" type="button">Limpiar filtros</button>
+        </div>
+        <div class="summary">
+          <span class="badge">Solo asesor ve los suyos</span>
+          <span class="badge">Admin ve todo</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">Leads asignados</div><div id="statTotal" class="v">0</div><div class="s">Total visibles en la vista actual.</div></div>
+        <div class="stat"><div class="k">Contactados</div><div id="statContactados" class="v">0</div><div class="s">Estatus contactado.</div></div>
+        <div class="stat"><div class="k">En seguimiento</div><div id="statSeguimiento" class="v">0</div><div class="s">Conversación activa.</div></div>
+        <div class="stat"><div class="k">Interesados</div><div id="statInteresados" class="v">0</div><div class="s">Leads con interés real.</div></div>
+        <div class="stat"><div class="k">Reservas / Ventas</div><div id="statCierre" class="v">0</div><div class="s">Cierres confirmados.</div></div>
+        <div class="stat"><div class="k">Promedio primer contacto</div><div id="statPromedio" class="v">0h</div><div class="s">Tiempo promedio desde asignación al primer contacto.</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Tipo</th>
+              <th>Interés</th>
+              <th>Fuente</th>
+              <th>Asignación</th>
+              <th>Estatus</th>
+              <th>Contacto</th>
+              <th>Asesor</th>
+              <th>Última actualización</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="rowsTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="docs-grid">
+        <div>
+          <div class="toolbar" style="margin-bottom:10px">
+            <div class="summary">
+              <span class="badge">API externa</span>
+              <span class="badge blue">POST /api/leads/external</span>
+            </div>
+            <span class="badge">Protegida por `x-api-key`</span>
+          </div>
+          <pre class="code"><code>{
+  "nombre": "Juan Pérez",
+  "email": "juan@email.com",
+  "telefono": "529841234567",
+  "tipoLead": "Lead",
+  "interes": "Info del proyecto en general",
+  "fuente": "Social Media",
+  "fechaAsignacion": "2026-05-27T10:00:00",
+  "estatus": "Sin contactar",
+  "asesor": "Marion",
+  "notas": "Lead generado desde campaña externa"
+}</code></pre>
+        </div>
+        <div class="doc-list">
+          <div class="doc-item">
+            <h3>Headers necesarios</h3>
+            <p><strong>x-api-key</strong>: clave de integración.<br /><strong>Content-Type</strong>: application/json.</p>
+          </div>
+          <div class="doc-item">
+            <h3>Respuesta esperada</h3>
+            <p>Lead creado correctamente, lead actualizado, error por datos faltantes o API key inválida.</p>
+          </div>
+          <div class="doc-item">
+            <h3>Campos requeridos</h3>
+            <p>Nombre y al menos email o teléfono. El resto se normaliza con valores por defecto.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="leadModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="leadModalTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="leadModalTitle">Lead</h2>
+          <p id="leadModalSub">Edita los campos permitidos, agrega notas o graba una nota de voz.</p>
+        </div>
+        <span id="leadModalBadge" class="badge">-</span>
+      </div>
+      <form id="leadForm">
+        <div class="modal-grid">
+          <label class="field full">
+            <span class="label">Nombre</span>
+            <input id="leadNombre" class="input" placeholder="Nombre" />
+          </label>
+          <label class="field">
+            <span class="label">Email</span>
+            <input id="leadEmail" class="input" placeholder="email@ejemplo.com" />
+          </label>
+          <label class="field">
+            <span class="label">Teléfono</span>
+            <input id="leadTelefono" class="input" placeholder="529841234567" />
+          </label>
+          <label class="field">
+            <span class="label">Tipo de lead</span>
+            <select id="leadTipo" class="select"></select>
+          </label>
+          <label class="field">
+            <span class="label">Interés</span>
+            <select id="leadInteres" class="select"></select>
+          </label>
+          <label class="field">
+            <span class="label">Fuente</span>
+            <select id="leadFuente" class="select"></select>
+          </label>
+          <label class="field">
+            <span class="label">Fecha asignación</span>
+            <input id="leadFechaAsignacion" class="input" type="datetime-local" />
+          </label>
+          <label class="field">
+            <span class="label">Estatus</span>
+            <select id="leadEstatus" class="select"></select>
+          </label>
+          <label class="field">
+            <span class="label">Fecha y hora de contacto</span>
+            <input id="leadFechaContacto" class="input" type="datetime-local" />
+          </label>
+          <label class="field full" id="advisorWrap">
+            <span class="label">Asesor asignado</span>
+            <select id="leadAsesor" class="select"></select>
+          </label>
+          <label class="field full">
+            <span class="label">Notas del asesor</span>
+            <textarea id="leadNotas" class="textarea" placeholder="Agrega notas del asesor..."></textarea>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <div class="voice-controls">
+            <button id="voiceStartBtn" class="btn secondary" type="button">Grabar nota</button>
+            <button id="voiceStopBtn" class="btn secondary" type="button" disabled>Detener</button>
+            <button id="voiceSaveBtn" class="btn primary" type="button" disabled>Guardar voz</button>
+            <span id="voiceStatus" class="voice-status">Sin grabación activa</span>
+          </div>
+          <div class="row">
+            <button id="closeModalBtn" class="btn" type="button">Cerrar</button>
+            <button id="saveNoteBtn" class="btn secondary" type="button">Agregar nota</button>
+            <button id="saveLeadBtn" class="btn primary" type="submit">Guardar lead</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="history-grid">
+        <section class="history-box">
+          <h3>Historial</h3>
+          <div id="historyList" class="history-list"></div>
+        </section>
+        <section class="history-box">
+          <h3>Notas de voz</h3>
+          <div id="voiceNotesList" class="audio-list"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const ENUMS_DEFAULT = {
+        tiposLead: ['Lead', 'Broker'],
+        fuentes: ['Social Media', 'Web Site', 'Walkin', 'Callin', 'Referidohotel'],
+        estatuses: ['Sin contactar', 'Contactado', 'En seguimiento', 'Interesado', 'No interesado', 'Reserva', 'Venta realizada', 'Perdido'],
+        intereses: ['Info del proyecto en general', 'Info para promover', 'Enviar info vía WhatsApp', 'Enviar info por email', 'Asistir al evento', 'Buscar opciones disponibles', 'Otro']
+      };
+
+      const state = {
+        rows: [],
+        advisors: [],
+        enums: ENUMS_DEFAULT,
+        currentEmail: '',
+        currentName: '',
+        isGerente: false,
+        updatedAt: '',
+        sourceFile: '',
+        filters: {
+          search: '',
+          status: '',
+          source: '',
+          type: '',
+          advisor: '',
+          interest: ''
+        },
+        selectedLeadId: '',
+        modalMode: 'edit',
+        loading: false,
+        recording: false,
+        recorded: false,
+        mediaStream: null,
+        mediaRecorder: null,
+        audioChunks: [],
+        voiceBlob: null,
+        voiceMimeType: '',
+        voiceTranscript: '',
+        speechRecognition: null
+      };
+
+      const els = {
+        reloadBtn: document.getElementById('reloadBtn'),
+        exportBtn: document.getElementById('exportBtn'),
+        newBtn: document.getElementById('newBtn'),
+        status: document.getElementById('status'),
+        metaUser: document.getElementById('metaUser'),
+        metaScope: document.getElementById('metaScope'),
+        metaRows: document.getElementById('metaRows'),
+        metaUpdated: document.getElementById('metaUpdated'),
+        metaVisible: document.getElementById('metaVisible'),
+        metaPending: document.getElementById('metaPending'),
+        searchInput: document.getElementById('searchInput'),
+        statusFilter: document.getElementById('statusFilter'),
+        sourceFilter: document.getElementById('sourceFilter'),
+        typeFilter: document.getElementById('typeFilter'),
+        advisorFilter: document.getElementById('advisorFilter'),
+        interestFilter: document.getElementById('interestFilter'),
+        clearFiltersBtn: document.getElementById('clearFiltersBtn'),
+        rowsTbody: document.getElementById('rowsTbody'),
+        statTotal: document.getElementById('statTotal'),
+        statContactados: document.getElementById('statContactados'),
+        statSeguimiento: document.getElementById('statSeguimiento'),
+        statInteresados: document.getElementById('statInteresados'),
+        statCierre: document.getElementById('statCierre'),
+        statPromedio: document.getElementById('statPromedio'),
+        leadModal: document.getElementById('leadModal'),
+        leadModalTitle: document.getElementById('leadModalTitle'),
+        leadModalSub: document.getElementById('leadModalSub'),
+        leadModalBadge: document.getElementById('leadModalBadge'),
+        leadForm: document.getElementById('leadForm'),
+        leadNombre: document.getElementById('leadNombre'),
+        leadEmail: document.getElementById('leadEmail'),
+        leadTelefono: document.getElementById('leadTelefono'),
+        leadTipo: document.getElementById('leadTipo'),
+        leadInteres: document.getElementById('leadInteres'),
+        leadFuente: document.getElementById('leadFuente'),
+        leadFechaAsignacion: document.getElementById('leadFechaAsignacion'),
+        leadEstatus: document.getElementById('leadEstatus'),
+        leadFechaContacto: document.getElementById('leadFechaContacto'),
+        leadAsesor: document.getElementById('leadAsesor'),
+        advisorWrap: document.getElementById('advisorWrap'),
+        leadNotas: document.getElementById('leadNotas'),
+        closeModalBtn: document.getElementById('closeModalBtn'),
+        saveLeadBtn: document.getElementById('saveLeadBtn'),
+        saveNoteBtn: document.getElementById('saveNoteBtn'),
+        voiceStartBtn: document.getElementById('voiceStartBtn'),
+        voiceStopBtn: document.getElementById('voiceStopBtn'),
+        voiceSaveBtn: document.getElementById('voiceSaveBtn'),
+        voiceStatus: document.getElementById('voiceStatus'),
+        historyList: document.getElementById('historyList'),
+        voiceNotesList: document.getElementById('voiceNotesList')
+      };
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function normalizeText(value) {
+        return String(value == null ? '' : value).trim();
+      }
+
+      function normalizeDateTimeInput(value) {
+        const raw = normalizeText(value);
+        if (!raw) return '';
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return [
+          date.getFullYear(),
+          pad(date.getMonth() + 1),
+          pad(date.getDate())
+        ].join('-') + 'T' + [pad(date.getHours()), pad(date.getMinutes())].join(':');
+      }
+
+      function formatDateTime(value) {
+        const raw = normalizeText(value);
+        if (!raw) return '-';
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
+        return new Intl.DateTimeFormat('es-MX', {
+          dateStyle: 'medium',
+          timeStyle: 'short'
+        }).format(date);
+      }
+
+      function leadStatusClass(value) {
+        const status = normalizeText(value);
+        if (status === 'Reserva' || status === 'Venta realizada') return 'success';
+        if (status === 'No interesado' || status === 'Perdido') return 'danger';
+        if (status === 'Interesado' || status === 'En seguimiento') return 'warning';
+        if (status === 'Contactado') return 'blue';
+        return 'neutral';
+      }
+
+      function getVisibleRows() {
+        const q = state.filters.search.trim().toLowerCase();
+        return (state.rows || []).filter((row) => {
+          if (state.filters.status && normalizeText(row.estatus) !== state.filters.status) return false;
+          if (state.filters.source && normalizeText(row.fuente) !== state.filters.source) return false;
+          if (state.filters.type && normalizeText(row.tipoLead) !== state.filters.type) return false;
+          if (state.filters.advisor && normalizeText(row.asesorAsignado) !== state.filters.advisor) return false;
+          if (state.filters.interest && normalizeText(row.interes) !== state.filters.interest) return false;
+          if (!q) return true;
+          const haystack = [
+            row.nombre, row.email, row.telefono, row.tipoLead, row.interes, row.fuente,
+            row.estatus, row.asesorAsignado, row.notasAsesor
+          ].join(' ').toLowerCase();
+          return haystack.includes(q);
+        });
+      }
+
+      function fillSelect(select, values, firstLabel = 'Todos') {
+        const current = select.value;
+        const unique = Array.from(new Set((Array.isArray(values) ? values : []).filter(Boolean)));
+        select.innerHTML = `<option value="">${firstLabel}</option>` + unique.map((value) => `<option value="${esc(value)}">${esc(value)}</option>`).join('');
+        if (current) select.value = current;
+      }
+
+      function renderFilters() {
+        fillSelect(els.statusFilter, state.enums.estatuses, 'Todos los estatus');
+        fillSelect(els.sourceFilter, state.enums.fuentes, 'Todas las fuentes');
+        fillSelect(els.typeFilter, state.enums.tiposLead, 'Todos los tipos');
+        fillSelect(els.interestFilter, state.enums.intereses, 'Todos los intereses');
+        fillSelect(els.advisorFilter, (state.advisors || []).map((item) => item.name || item.email), 'Todos los asesores');
+        els.advisorFilter.disabled = !state.isGerente;
+      }
+
+      function renderStats() {
+        const rows = getVisibleRows();
+        const stats = rows.reduce((acc, row) => {
+          const status = normalizeText(row.estatus);
+          if (status === 'Sin contactar') acc.pending += 1;
+          if (status === 'Contactado') acc.contactados += 1;
+          if (status === 'En seguimiento') acc.seguimiento += 1;
+          if (status === 'Interesado') acc.interesados += 1;
+          if (status === 'Reserva' || status === 'Venta realizada') acc.cierre += 1;
+          const createdAt = new Date(row.fechaAsignacion || row.createdAt || '');
+          const contactAt = new Date(row.fechaHoraContacto || '');
+          if (!Number.isNaN(createdAt.getTime()) && !Number.isNaN(contactAt.getTime()) && contactAt >= createdAt) {
+            acc.contactTimeTotal += (contactAt.getTime() - createdAt.getTime());
+            acc.contactTimeCount += 1;
+          }
+          return acc;
+        }, { contactados: 0, seguimiento: 0, interesados: 0, cierre: 0, pending: 0, contactTimeTotal: 0, contactTimeCount: 0 });
+        const avgHours = stats.contactTimeCount ? (stats.contactTimeTotal / stats.contactTimeCount) / (1000 * 60 * 60) : 0;
+        els.statTotal.textContent = String(rows.length);
+        els.statContactados.textContent = String(stats.contactados);
+        els.statSeguimiento.textContent = String(stats.seguimiento);
+        els.statInteresados.textContent = String(stats.interesados);
+        els.statCierre.textContent = String(stats.cierre);
+        els.statPromedio.textContent = `${avgHours ? avgHours.toFixed(1) : '0'}h`;
+        els.metaRows.textContent = `Filas: ${rows.length}`;
+        els.metaVisible.textContent = `Visibles: ${rows.length}`;
+        els.metaPending.textContent = `Sin contactar: ${stats.pending}`;
+      }
+
+      function renderTable() {
+        const rows = getVisibleRows();
+        els.rowsTbody.innerHTML = rows.length ? rows.map((row) => {
+          const canEdit = Boolean(state.isGerente) || Boolean(row.canEdit);
+          const statusClass = leadStatusClass(row.estatus);
+          return `
+            <tr>
+              <td>
+                <div class="lead-name">${esc(row.nombre || '-')}</div>
+                <div class="lead-small">ID: ${esc(row.id || '-')}</div>
+              </td>
+              <td>${esc(row.email || '-')}</td>
+              <td>${esc(row.telefono || '-')}</td>
+              <td>${esc(row.tipoLead || '-')}</td>
+              <td>${esc(row.interes || '-')}</td>
+              <td>${esc(row.fuente || '-')}</td>
+              <td>${esc(formatDateTime(row.fechaAsignacion))}</td>
+              <td><span class="status-pill ${statusClass}">${esc(row.estatus || 'Sin contactar')}</span></td>
+              <td>${esc(formatDateTime(row.fechaHoraContacto))}</td>
+              <td>${esc(row.asesorAsignado || '-')}</td>
+              <td>${esc(formatDateTime(row.updatedAt || row.createdAt))}</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn secondary js-edit" data-id="${esc(row.id)}" type="button">Editar</button>
+                  <button class="btn secondary js-note" data-id="${esc(row.id)}" type="button">Notas</button>
+                  <button class="btn secondary js-history" data-id="${esc(row.id)}" type="button">Historial</button>
+                  ${state.isGerente ? '<button class="btn danger js-delete" data-id="' + esc(row.id) + '" type="button">Eliminar</button>' : ''}
+                </div>
+              </td>
+            </tr>`;
+        }).join('') : '<tr><td colspan="12" style="padding:20px;text-align:center;color:#666b75">Sin leads para mostrar.</td></tr>';
+
+        els.rowsTbody.querySelectorAll('.js-edit').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'edit'));
+        });
+        els.rowsTbody.querySelectorAll('.js-note').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'note'));
+        });
+        els.rowsTbody.querySelectorAll('.js-history').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
+        });
+        els.rowsTbody.querySelectorAll('.js-delete').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            if (!confirm('¿Eliminar este lead?')) return;
+            await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
+              method: 'DELETE',
+              credentials: 'same-origin'
+            }).then((res) => res.json().catch(() => ({}))).then((data) => {
+              if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
+            }).catch((err) => setStatus(err.message || 'No se pudo eliminar', 'error'));
+            await reload();
+          });
+        });
+      }
+
+      function setStatus(message, kind = '') {
+        els.status.textContent = message || '';
+        els.status.className = 'status' + (kind ? ' ' + kind : '');
+      }
+
+      function selectedLead() {
+        return (state.rows || []).find((row) => String(row.id || '') === String(state.selectedLeadId || '')) || null;
+      }
+
+      function buildHistoryHtml(row) {
+        const history = Array.isArray(row && row.history) ? row.history : [];
+        if (!history.length) return '<div class="history-item"><div class="b">Sin historial todavía.</div></div>';
+        return history.map((item) => `
+          <div class="history-item">
+            <div class="t">${esc(formatDateTime(item.createdAt))} · ${esc(item.actorName || item.actorEmail || 'Sistema')}</div>
+            <div class="s">${esc(item.summary || item.action || 'Movimiento')}</div>
+            <div class="b">${esc(item.note || '')}</div>
+          </div>
+        `).join('');
+      }
+
+      function buildVoiceNotesHtml(row) {
+        const notes = Array.isArray(row && row.voiceNotes) ? row.voiceNotes : [];
+        if (!notes.length) return '<div class="history-item"><div class="b">Sin notas de voz todavía.</div></div>';
+        return notes.map((item) => `
+          <div class="audio-item">
+            <div><strong>${esc(formatDateTime(item.createdAt))}</strong> · ${esc(item.authorName || item.authorEmail || 'Asesor')}</div>
+            <div>${esc(item.transcript || 'Sin transcripción')}</div>
+            <audio controls src="/api/viceroy/kpi-seguimiento-leads/leads/${encodeURIComponent(row.id)}/voice-notes/${encodeURIComponent(item.id)}/audio"></audio>
+          </div>
+        `).join('');
+      }
+
+      function fillLeadModalSelect(select, values, placeholder = 'Selecciona') {
+        const options = Array.isArray(values) ? values : [];
+        select.innerHTML = `<option value="">${esc(placeholder)}</option>` + options.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('');
+      }
+
+      function currentLeadFormPayload() {
+        return {
+          nombre: els.leadNombre.value,
+          email: els.leadEmail.value,
+          telefono: els.leadTelefono.value,
+          tipoLead: els.leadTipo.value,
+          interes: els.leadInteres.value,
+          fuente: els.leadFuente.value,
+          fechaAsignacion: els.leadFechaAsignacion.value,
+          estatus: els.leadEstatus.value,
+          fechaHoraContacto: els.leadFechaContacto.value,
+          asesorAsignado: els.leadAsesor.value,
+          notasAsesor: els.leadNotas.value
+        };
+      }
+
+      async function openLeadModal(id, mode = 'edit') {
+        const row = (state.rows || []).find((item) => String(item.id || '') === String(id || ''));
+        if (!row) return;
+        state.selectedLeadId = row.id;
+        state.modalMode = mode === 'note' ? 'note' : (mode === 'history' ? 'history' : 'edit');
+        els.leadModalTitle.textContent = row.nombre || 'Lead';
+        els.leadModalSub.textContent = state.modalMode === 'note'
+          ? 'Agrega una nota al historial del lead.'
+          : (state.modalMode === 'history'
+            ? 'Revisa el historial y las notas de voz.'
+            : 'Edita los campos permitidos del lead.');
+        els.leadModalBadge.textContent = `${row.estatus || 'Sin contactar'} · ${row.asesorAsignado || 'Sin asignar'}`;
+        els.leadNombre.value = row.nombre || '';
+        els.leadEmail.value = row.email || '';
+        els.leadTelefono.value = row.telefono || '';
+        fillLeadModalSelect(els.leadTipo, state.enums.tiposLead, 'Tipo de lead');
+        fillLeadModalSelect(els.leadInteres, state.enums.intereses, 'Interés');
+        fillLeadModalSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
+        fillLeadModalSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
+        fillLeadModalSelect(els.leadAsesor, (state.advisors || []).map((item) => item.name), 'Asignar a');
+        els.leadTipo.value = row.tipoLead || 'Lead';
+        els.leadInteres.value = row.interes || state.enums.intereses[0];
+        els.leadFuente.value = row.fuente || state.enums.fuentes[0];
+        els.leadEstatus.value = row.estatus || 'Sin contactar';
+        els.leadFechaAsignacion.value = normalizeDateTimeInput(row.fechaAsignacion || row.createdAt || new Date().toISOString());
+        els.leadFechaContacto.value = normalizeDateTimeInput(row.fechaHoraContacto || '');
+        els.leadAsesor.value = row.asesorAsignado || '';
+        els.leadNotas.value = row.notasAsesor || '';
+        const advisorVisible = Boolean(state.isGerente);
+        els.advisorWrap.classList.toggle('hidden', !advisorVisible);
+        const editable = state.modalMode !== 'history';
+        [els.leadNombre, els.leadEmail, els.leadTelefono, els.leadTipo, els.leadInteres, els.leadFuente, els.leadFechaAsignacion, els.leadEstatus, els.leadFechaContacto, els.leadAsesor, els.leadNotas].forEach((field) => {
+          if (!field) return;
+          const key = field.id;
+          const isReadOnly = state.modalMode === 'history'
+            || (!state.isGerente && ['leadNombre', 'leadEmail', 'leadTelefono', 'leadTipo', 'leadFuente', 'leadFechaAsignacion', 'leadAsesor'].includes(key));
+          field.disabled = isReadOnly || !editable;
+        });
+        if (!state.isGerente) {
+          els.leadAsesor.disabled = true;
+        }
+        if (state.modalMode === 'note') {
+          els.leadNombre.disabled = true;
+          els.leadEmail.disabled = true;
+          els.leadTelefono.disabled = true;
+          els.leadTipo.disabled = true;
+          els.leadInteres.disabled = false;
+          els.leadFuente.disabled = true;
+          els.leadFechaAsignacion.disabled = true;
+          els.leadEstatus.disabled = false;
+          els.leadFechaContacto.disabled = false;
+          els.leadAsesor.disabled = true;
+          els.leadNotas.disabled = false;
+        }
+        els.historyList.innerHTML = buildHistoryHtml(row);
+        els.voiceNotesList.innerHTML = buildVoiceNotesHtml(row);
+        els.voiceStatus.textContent = 'Sin grabación activa';
+        els.voiceSaveBtn.disabled = true;
+        els.voiceStopBtn.disabled = true;
+        els.voiceStartBtn.disabled = false;
+        els.leadModal.classList.add('open');
+        els.leadModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeLeadModal() {
+        state.selectedLeadId = '';
+        stopVoiceRecording(true);
+        els.leadModal.classList.remove('open');
+        els.leadModal.setAttribute('aria-hidden', 'true');
+      }
+
+      async function saveLead(mode = 'edit') {
+        const row = selectedLead();
+        if (!row) return;
+        const payload = currentLeadFormPayload();
+        const endpoint = mode === 'create'
+          ? '/api/viceroy/kpi-seguimiento-leads/leads'
+          : '/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(row.id);
+        const method = mode === 'create' ? 'POST' : 'PATCH';
+        const res = await fetch(endpoint, {
+          method,
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo guardar el lead');
+        setStatus(data.message || 'Lead guardado', 'ok');
+        await reload();
+        const next = (state.rows || []).find((item) => String(item.id || '') === String((data.row && data.row.id) || row.id));
+        if (next) {
+          await openLeadModal(next.id, state.modalMode);
+        }
+      }
+
+      async function addLeadNote() {
+        const row = selectedLead();
+        if (!row) return;
+        const noteText = normalizeText(els.leadNotas.value);
+        if (!noteText) {
+          setStatus('Escribe una nota antes de guardar.', 'error');
+          return;
+        }
+        const res = await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(row.id) + '/notes', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteText })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo guardar la nota');
+        els.leadNotas.value = '';
+        setStatus(data.message || 'Nota guardada', 'ok');
+        await reload();
+        await openLeadModal(row.id, 'note');
+      }
+
+      async function loadVoiceBlobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error || new Error('No se pudo leer el audio'));
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      async function saveVoiceNote() {
+        const row = selectedLead();
+        if (!row) return;
+        if (!state.voiceBlob) {
+          setStatus('Primero graba una nota de voz.', 'error');
+          return;
+        }
+        const audioDataUrl = await loadVoiceBlobToBase64(state.voiceBlob);
+        const res = await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(row.id) + '/voice-notes', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transcript: state.voiceTranscript || els.leadNotas.value || '',
+            audioDataUrl,
+            audioMimeType: state.voiceMimeType || state.voiceBlob.type || 'audio/webm'
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo guardar la nota de voz');
+        state.voiceBlob = null;
+        state.voiceTranscript = '';
+        state.voiceMimeType = '';
+        els.voiceStatus.textContent = 'Nota de voz guardada';
+        els.voiceSaveBtn.disabled = true;
+        await reload();
+        await openLeadModal(row.id, 'note');
+      }
+
+      function stopVoiceRecording(silent = false) {
+        if (state.speechRecognition) {
+          try { state.speechRecognition.stop(); } catch {}
+          state.speechRecognition = null;
+        }
+        if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+          try { state.mediaRecorder.stop(); } catch {}
+        }
+        if (state.mediaStream) {
+          state.mediaStream.getTracks().forEach((track) => {
+            try { track.stop(); } catch {}
+          });
+        }
+        state.mediaStream = null;
+        state.recording = false;
+        els.voiceStartBtn.disabled = false;
+        els.voiceStopBtn.disabled = true;
+        if (!silent && state.voiceBlob) {
+          els.voiceStatus.textContent = 'Audio listo para guardar';
+          els.voiceSaveBtn.disabled = false;
+        }
+      }
+
+      async function startVoiceRecording() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setStatus('Tu navegador no soporta grabación de voz.', 'error');
+          return;
+        }
+        state.voiceBlob = null;
+        state.voiceTranscript = '';
+        state.voiceMimeType = '';
+        state.audioChunks = [];
+        els.voiceStatus.textContent = 'Grabando...';
+        els.voiceStartBtn.disabled = true;
+        els.voiceStopBtn.disabled = false;
+        els.voiceSaveBtn.disabled = true;
+        state.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(state.mediaStream);
+        state.mediaRecorder = recorder;
+        state.voiceMimeType = recorder.mimeType || 'audio/webm';
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size) state.audioChunks.push(event.data);
+        };
+        recorder.onstop = async () => {
+          state.voiceBlob = new Blob(state.audioChunks, { type: state.voiceMimeType || 'audio/webm' });
+          state.audioChunks = [];
+          if (!state.voiceTranscript) {
+            els.voiceStatus.textContent = 'Audio listo para guardar';
+          } else {
+            els.voiceStatus.textContent = 'Audio y transcripción listos para guardar';
+          }
+          els.voiceSaveBtn.disabled = false;
+          stopVoiceRecording(true);
+          state.recording = false;
+        };
+        recorder.start();
+        state.recording = true;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          try {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'es-MX';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.onresult = (event) => {
+              let transcript = '';
+              for (let i = 0; i < event.results.length; i += 1) {
+                transcript += event.results[i][0].transcript;
+              }
+              state.voiceTranscript = transcript.trim();
+              els.leadNotas.value = state.voiceTranscript;
+            };
+            recognition.onend = () => {};
+            recognition.start();
+            state.speechRecognition = recognition;
+          } catch (err) {
+            els.voiceStatus.textContent = 'Grabando audio. Transcripción no disponible en este navegador.';
+          }
+        } else {
+          els.voiceStatus.textContent = 'Grabando audio. Transcripción no disponible en este navegador.';
+        }
+      }
+
+      function populateFormOptions() {
+        fillSelect(els.statusFilter, state.enums.estatuses, 'Todos los estatus');
+        fillSelect(els.sourceFilter, state.enums.fuentes, 'Todas las fuentes');
+        fillSelect(els.typeFilter, state.enums.tiposLead, 'Todos los tipos');
+        fillSelect(els.interestFilter, state.enums.intereses, 'Todos los intereses');
+        fillSelect(els.leadTipo, state.enums.tiposLead, 'Tipo de lead');
+        fillSelect(els.leadInteres, state.enums.intereses, 'Interés');
+        fillSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
+        fillSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
+      }
+
+      function renderAll() {
+        const visibleRows = getVisibleRows();
+        renderFilters();
+        populateFormOptions();
+        renderStats();
+        renderTable();
+        els.metaUser.textContent = `Usuario: ${state.currentName || state.currentEmail || '-'}`;
+        els.metaScope.textContent = `Acceso: ${state.isGerente ? 'Gerente' : 'Asesor'}`;
+        els.metaRows.textContent = `Filas: ${state.rows.length}`;
+        els.metaUpdated.textContent = `Actualizado: ${state.updatedAt ? formatDateTime(state.updatedAt) : '-'}`;
+        els.metaVisible.textContent = `Visibles: ${visibleRows.length}`;
+        els.metaPending.textContent = `Sin contactar: ${visibleRows.filter((row) => normalizeText(row.estatus) === 'Sin contactar').length}`;
+        els.exportBtn.href = '/api/viceroy/kpi-seguimiento-leads/export.xlsx';
+        els.newBtn.classList.toggle('hidden', !state.isGerente);
+      }
+
+      async function reload() {
+        try {
+          state.loading = true;
+          setStatus('Cargando leads...', '');
+          const res = await fetch('/api/viceroy/kpi-seguimiento-leads/bootstrap', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || !data.ok) {
+            throw new Error(data && data.error ? data.error : 'No se pudo cargar el módulo');
+          }
+          state.rows = Array.isArray(data.rows) ? data.rows : [];
+          state.advisors = Array.isArray(data.advisors) ? data.advisors : [];
+          state.enums = data.enums || ENUMS_DEFAULT;
+          state.currentEmail = data.currentEmail || '';
+          state.currentName = data.currentName || '';
+          state.isGerente = Boolean(data.isGerente);
+          state.updatedAt = data.updatedAt || '';
+          state.sourceFile = data.sourceFile || '';
+          populateFormOptions();
+          renderAll();
+          setStatus('');
+        } catch (err) {
+          setStatus(err.message || 'No se pudo cargar el módulo', 'error');
+        } finally {
+          state.loading = false;
+        }
+      }
+
+      function wireEvents() {
+        els.reloadBtn.addEventListener('click', () => reload());
+        els.clearFiltersBtn.addEventListener('click', () => {
+          state.filters = { search: '', status: '', source: '', type: '', advisor: '', interest: '' };
+          els.searchInput.value = '';
+          els.statusFilter.value = '';
+          els.sourceFilter.value = '';
+          els.typeFilter.value = '';
+          els.advisorFilter.value = '';
+          els.interestFilter.value = '';
+          renderAll();
+        });
+        [els.searchInput, els.statusFilter, els.sourceFilter, els.typeFilter, els.advisorFilter, els.interestFilter].forEach((el) => {
+          el.addEventListener('input', () => {
+            state.filters.search = els.searchInput.value || '';
+            state.filters.status = els.statusFilter.value || '';
+            state.filters.source = els.sourceFilter.value || '';
+            state.filters.type = els.typeFilter.value || '';
+            state.filters.advisor = els.advisorFilter.value || '';
+            state.filters.interest = els.interestFilter.value || '';
+            renderAll();
+          });
+          el.addEventListener('change', () => {
+            state.filters.search = els.searchInput.value || '';
+            state.filters.status = els.statusFilter.value || '';
+            state.filters.source = els.sourceFilter.value || '';
+            state.filters.type = els.typeFilter.value || '';
+            state.filters.advisor = els.advisorFilter.value || '';
+            state.filters.interest = els.interestFilter.value || '';
+            renderAll();
+          });
+        });
+        els.newBtn.addEventListener('click', async () => {
+          state.modalMode = 'create';
+          state.selectedLeadId = '';
+          els.leadModalTitle.textContent = 'Nuevo lead';
+          els.leadModalSub.textContent = 'Crea un lead para seguimiento interno.';
+          els.leadModalBadge.textContent = 'Nuevo';
+          els.leadNombre.value = '';
+          els.leadEmail.value = '';
+          els.leadTelefono.value = '';
+          fillLeadModalSelect(els.leadTipo, state.enums.tiposLead, 'Tipo de lead');
+          fillLeadModalSelect(els.leadInteres, state.enums.intereses, 'Interés');
+          fillLeadModalSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
+          fillLeadModalSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
+          fillLeadModalSelect(els.leadAsesor, (state.advisors || []).map((item) => item.name), 'Asignar a');
+          const now = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          const nowValue = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+          els.leadFechaAsignacion.value = nowValue;
+          els.leadFechaContacto.value = '';
+          els.leadAsesor.value = '';
+          els.leadNotas.value = '';
+          els.advisorWrap.classList.toggle('hidden', !state.isGerente);
+          [els.leadNombre, els.leadEmail, els.leadTelefono, els.leadTipo, els.leadInteres, els.leadFuente, els.leadFechaAsignacion, els.leadEstatus, els.leadFechaContacto, els.leadAsesor, els.leadNotas].forEach((field) => field.disabled = false);
+          if (!state.isGerente) {
+            els.leadAsesor.disabled = true;
+          }
+          els.historyList.innerHTML = '<div class="history-item"><div class="b">Aún no hay historial.</div></div>';
+          els.voiceNotesList.innerHTML = '<div class="history-item"><div class="b">Aún no hay notas de voz.</div></div>';
+          els.voiceStatus.textContent = 'Sin grabación activa';
+          els.voiceSaveBtn.disabled = true;
+          els.voiceStopBtn.disabled = true;
+          els.voiceStartBtn.disabled = false;
+          els.leadModal.classList.add('open');
+          els.leadModal.setAttribute('aria-hidden', 'false');
+        });
+        els.exportBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          window.location.href = '/api/viceroy/kpi-seguimiento-leads/export.xlsx';
+        });
+        els.closeModalBtn.addEventListener('click', () => closeLeadModal());
+        els.leadModal.addEventListener('click', (event) => {
+          if (event.target === els.leadModal) closeLeadModal();
+        });
+        els.leadForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            await saveLead(state.modalMode === 'create' ? 'create' : 'edit');
+          } catch (err) {
+            setStatus(err.message || 'No se pudo guardar', 'error');
+          }
+        });
+        els.saveNoteBtn.addEventListener('click', async () => {
+          try {
+            await addLeadNote();
+          } catch (err) {
+            setStatus(err.message || 'No se pudo guardar la nota', 'error');
+          }
+        });
+        els.voiceStartBtn.addEventListener('click', async () => {
+          try {
+            await startVoiceRecording();
+          } catch (err) {
+            setStatus(err.message || 'No se pudo iniciar la grabación', 'error');
+            els.voiceStatus.textContent = err.message || 'No se pudo iniciar la grabación';
+            els.voiceStartBtn.disabled = false;
+            els.voiceStopBtn.disabled = true;
+          }
+        });
+        els.voiceStopBtn.addEventListener('click', () => stopVoiceRecording(false));
+        els.voiceSaveBtn.addEventListener('click', async () => {
+          try {
+            await saveVoiceNote();
+          } catch (err) {
+            setStatus(err.message || 'No se pudo guardar la nota de voz', 'error');
+          }
+        });
+      }
+
+      wireEvents();
+      reload();
+    })();
+  </script>
+</body>
+</html>
