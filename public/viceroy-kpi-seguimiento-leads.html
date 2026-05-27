@@ -124,7 +124,6 @@
       border-radius:14px;
       background:#fff;
     }
-    .mobile-list{display:none}
     table{width:100%;border-collapse:collapse;min-width:1680px}
     th,td{padding:10px;border-bottom:1px solid #ece5d7;text-align:left;font-size:13px;vertical-align:top}
     th{
@@ -252,68 +251,6 @@
       gap:6px;
     }
     .audio-item audio{width:100%}
-    .mobile-card{
-      border:1px solid #e2d8c4;
-      border-radius:16px;
-      background:#fff;
-      padding:14px;
-      box-shadow:0 1px 0 rgba(0,0,0,.02);
-      display:grid;
-      gap:10px;
-    }
-    .mobile-card-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:10px;
-    }
-    .mobile-card-title{
-      font-size:18px;
-      font-weight:900;
-      line-height:1.08;
-      margin:0;
-    }
-    .mobile-card-sub{
-      margin-top:4px;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .mobile-kv{
-      display:grid;
-      gap:8px;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-    }
-    .mobile-kv .kv{
-      border:1px solid #ebe2d0;
-      border-radius:12px;
-      padding:8px 10px;
-      background:#fffdf8;
-    }
-    .mobile-kv .k{
-      font-size:10px;
-      text-transform:uppercase;
-      letter-spacing:.04em;
-      color:var(--muted);
-      font-weight:700;
-      margin-bottom:4px;
-    }
-    .mobile-kv .v{
-      font-size:13px;
-      font-weight:800;
-      line-height:1.3;
-      overflow-wrap:anywhere;
-    }
-    .mobile-card-actions{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .mobile-card-actions .btn{
-      flex:1 1 30%;
-      min-height:40px;
-      padding:10px 12px;
-      font-size:13px;
-    }
     .hidden{display:none !important}
     @media (max-width: 1180px){
       .filters{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -329,10 +266,6 @@
       .actions{width:100%}
       .actions .btn{flex:1}
       .stats .stat .v{font-size:24px}
-      .table-wrap{display:none}
-      .mobile-list{display:grid;gap:12px}
-      .mobile-kv{grid-template-columns:1fr}
-      .mobile-card-actions .btn{flex:1 1 100%}
     }
   </style>
 </head>
@@ -345,48 +278,13 @@
       <div class="actions">
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
         <button id="reloadBtn" class="btn secondary" type="button">Actualizar</button>
-        <button id="newBtn" class="btn primary" type="button">Nuevo lead</button>
-        <button id="importBtn" class="btn secondary" type="button">Importar Excel / CSV</button>
-        <button id="templateBtn" class="btn secondary" type="button">Descargar machote</button>
+        <button id="newBtn" class="btn primary hidden" type="button">Nuevo lead</button>
+        <button id="importBtn" class="btn secondary hidden" type="button">Importar Excel / CSV</button>
+        <button id="templateBtn" class="btn secondary hidden" type="button">Descargar machote</button>
         <a id="exportBtn" class="btn secondary" href="#">Exportar Excel</a>
       </div>
     </div>
     <input id="importInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
-
-    <section class="card">
-      <div class="stats">
-        <div class="stat"><div class="k">Leads asignados</div><div id="statTotal" class="v">0</div><div class="s">Total visibles en la vista actual.</div></div>
-        <div class="stat"><div class="k">Contactados</div><div id="statContactados" class="v">0</div><div class="s">Estatus contactado.</div></div>
-        <div class="stat"><div class="k">En seguimiento</div><div id="statSeguimiento" class="v">0</div><div class="s">Conversación activa.</div></div>
-        <div class="stat"><div class="k">Interesados</div><div id="statInteresados" class="v">0</div><div class="s">Leads con interés real.</div></div>
-        <div class="stat"><div class="k">Reservas / Ventas</div><div id="statCierre" class="v">0</div><div class="s">Cierres confirmados.</div></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Teléfono</th>
-              <th>Tipo</th>
-              <th>Interés</th>
-              <th>Fuente</th>
-              <th>Asignación</th>
-              <th>Estatus</th>
-              <th>Contacto</th>
-              <th>Asesor</th>
-              <th>Última actualización</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="rowsTbody"></tbody>
-        </table>
-      </div>
-      <div id="mobileList" class="mobile-list"></div>
-    </section>
 
     <section class="card">
       <div class="toolbar">
@@ -401,7 +299,11 @@
           <span id="metaPending" class="badge warn">Sin contactar: 0</span>
         </div>
       </div>
-      <div class="filters" style="margin-top:12px">
+      <p id="status" class="status"></p>
+    </section>
+
+    <section class="card">
+      <div class="filters">
         <label class="field full">
           <span class="label">Buscar</span>
           <input id="searchInput" class="input" placeholder="Nombre, email, teléfono o notas" />
@@ -435,6 +337,41 @@
           <span class="badge">Solo asesor ve los suyos</span>
           <span class="badge">Admin ve todo</span>
         </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">Leads asignados</div><div id="statTotal" class="v">0</div><div class="s">Total visibles en la vista actual.</div></div>
+        <div class="stat"><div class="k">Contactados</div><div id="statContactados" class="v">0</div><div class="s">Estatus contactado.</div></div>
+        <div class="stat"><div class="k">En seguimiento</div><div id="statSeguimiento" class="v">0</div><div class="s">Conversación activa.</div></div>
+        <div class="stat"><div class="k">Interesados</div><div id="statInteresados" class="v">0</div><div class="s">Leads con interés real.</div></div>
+        <div class="stat"><div class="k">Reservas / Ventas</div><div id="statCierre" class="v">0</div><div class="s">Cierres confirmados.</div></div>
+        <div class="stat"><div class="k">Promedio primer contacto</div><div id="statPromedio" class="v">0h</div><div class="s">Tiempo promedio desde asignación al primer contacto.</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Tipo</th>
+              <th>Interés</th>
+              <th>Fuente</th>
+              <th>Asignación</th>
+              <th>Estatus</th>
+              <th>Contacto</th>
+              <th>Asesor</th>
+              <th>Última actualización</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="rowsTbody"></tbody>
+        </table>
       </div>
     </section>
 
@@ -630,12 +567,12 @@
         interestFilter: document.getElementById('interestFilter'),
         clearFiltersBtn: document.getElementById('clearFiltersBtn'),
         rowsTbody: document.getElementById('rowsTbody'),
-        mobileList: document.getElementById('mobileList'),
         statTotal: document.getElementById('statTotal'),
         statContactados: document.getElementById('statContactados'),
         statSeguimiento: document.getElementById('statSeguimiento'),
         statInteresados: document.getElementById('statInteresados'),
         statCierre: document.getElementById('statCierre'),
+        statPromedio: document.getElementById('statPromedio'),
         leadModal: document.getElementById('leadModal'),
         leadModalTitle: document.getElementById('leadModalTitle'),
         leadModalSub: document.getElementById('leadModalSub'),
@@ -677,14 +614,6 @@
         return String(value == null ? '' : value).trim();
       }
 
-      function leadSortTimestamp(row) {
-        const createdAt = new Date(row && (row.fechaAsignacion || row.updatedAt || row.createdAt || 0));
-        const contactAt = new Date(row && row.fechaHoraContacto || 0);
-        const createdMs = Number.isNaN(createdAt.getTime()) ? 0 : createdAt.getTime();
-        const updatedMs = Number.isNaN(contactAt.getTime()) ? 0 : contactAt.getTime();
-        return Math.max(createdMs, updatedMs);
-      }
-
       function normalizeDateTimeInput(value) {
         const raw = normalizeText(value);
         if (!raw) return '';
@@ -720,8 +649,7 @@
 
       function getVisibleRows() {
         const q = state.filters.search.trim().toLowerCase();
-        return (state.rows || [])
-          .filter((row) => {
+        return (state.rows || []).filter((row) => {
           if (state.filters.status && normalizeText(row.estatus) !== state.filters.status) return false;
           if (state.filters.source && normalizeText(row.fuente) !== state.filters.source) return false;
           if (state.filters.type && normalizeText(row.tipoLead) !== state.filters.type) return false;
@@ -733,8 +661,7 @@
             row.estatus, row.asesorAsignado, row.notasAsesor
           ].join(' ').toLowerCase();
           return haystack.includes(q);
-          })
-          .sort((a, b) => leadSortTimestamp(b) - leadSortTimestamp(a));
+        });
       }
 
       function fillSelect(select, values, firstLabel = 'Todos') {
@@ -750,8 +677,7 @@
         fillSelect(els.typeFilter, state.enums.tiposLead, 'Todos los tipos');
         fillSelect(els.interestFilter, state.enums.intereses, 'Todos los intereses');
         fillSelect(els.advisorFilter, (state.advisors || []).map((item) => item.name || item.email), 'Todos los asesores');
-        const canManageLeadTools = state.isGerente || !state.currentEmail;
-        els.advisorFilter.disabled = !canManageLeadTools;
+        els.advisorFilter.disabled = !state.isGerente;
       }
 
       function renderStats() {
@@ -770,12 +696,14 @@
             acc.contactTimeCount += 1;
           }
           return acc;
-        }, { contactados: 0, seguimiento: 0, interesados: 0, cierre: 0, pending: 0 });
+        }, { contactados: 0, seguimiento: 0, interesados: 0, cierre: 0, pending: 0, contactTimeTotal: 0, contactTimeCount: 0 });
+        const avgHours = stats.contactTimeCount ? (stats.contactTimeTotal / stats.contactTimeCount) / (1000 * 60 * 60) : 0;
         els.statTotal.textContent = String(rows.length);
         els.statContactados.textContent = String(stats.contactados);
         els.statSeguimiento.textContent = String(stats.seguimiento);
         els.statInteresados.textContent = String(stats.interesados);
         els.statCierre.textContent = String(stats.cierre);
+        els.statPromedio.textContent = `${avgHours ? avgHours.toFixed(1) : '0'}h`;
         els.metaRows.textContent = `Filas: ${rows.length}`;
         els.metaVisible.textContent = `Visibles: ${rows.length}`;
         els.metaPending.textContent = `Sin contactar: ${stats.pending}`;
@@ -823,59 +751,6 @@
           btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
         });
         els.rowsTbody.querySelectorAll('.js-delete').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const id = btn.getAttribute('data-id');
-            if (!confirm('¿Eliminar este lead?')) return;
-            await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
-              method: 'DELETE',
-              credentials: 'same-origin'
-            }).then((res) => res.json().catch(() => ({}))).then((data) => {
-              if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
-            }).catch((err) => setStatus(err.message || 'No se pudo eliminar', 'error'));
-            await reload();
-          });
-        });
-
-        els.mobileList.innerHTML = rows.length ? rows.map((row) => {
-          const canEdit = Boolean(state.isGerente) || Boolean(row.canEdit);
-          const statusClass = leadStatusClass(row.estatus);
-          return `
-            <article class="mobile-card">
-              <div class="mobile-card-head">
-                <div>
-                  <h3 class="mobile-card-title">${esc(row.nombre || '-')}</h3>
-                  <div class="mobile-card-sub">${esc(row.email || '-')} · ${esc(row.telefono || '-')}</div>
-                </div>
-                <span class="status-pill ${statusClass}">${esc(row.estatus || 'Sin contactar')}</span>
-              </div>
-              <div class="mobile-kv">
-                <div class="kv"><div class="k">Tipo</div><div class="v">${esc(row.tipoLead || '-')}</div></div>
-                <div class="kv"><div class="k">Interés</div><div class="v">${esc(row.interes || '-')}</div></div>
-                <div class="kv"><div class="k">Fuente</div><div class="v">${esc(row.fuente || '-')}</div></div>
-                <div class="kv"><div class="k">Asesor</div><div class="v">${esc(row.asesorAsignado || '-')}</div></div>
-                <div class="kv"><div class="k">Asignación</div><div class="v">${esc(formatDateTime(row.fechaAsignacion))}</div></div>
-                <div class="kv"><div class="k">Últ. act.</div><div class="v">${esc(formatDateTime(row.updatedAt || row.createdAt))}</div></div>
-              </div>
-              <div class="mobile-card-actions">
-                <button class="btn secondary js-edit" data-id="${esc(row.id)}" type="button">Editar</button>
-                <button class="btn secondary js-note" data-id="${esc(row.id)}" type="button">Notas</button>
-                <button class="btn secondary js-history" data-id="${esc(row.id)}" type="button">Historial</button>
-                ${state.isGerente ? '<button class="btn danger js-delete" data-id="' + esc(row.id) + '" type="button">Eliminar</button>' : ''}
-              </div>
-            </article>
-          `;
-        }).join('') : '<div class="mobile-card"><div class="mobile-card-title" style="font-size:16px">Sin leads para mostrar.</div></div>';
-
-        els.mobileList.querySelectorAll('.js-edit').forEach((btn) => {
-          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'edit'));
-        });
-        els.mobileList.querySelectorAll('.js-note').forEach((btn) => {
-          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'note'));
-        });
-        els.mobileList.querySelectorAll('.js-history').forEach((btn) => {
-          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
-        });
-        els.mobileList.querySelectorAll('.js-delete').forEach((btn) => {
           btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             if (!confirm('¿Eliminar este lead?')) return;
@@ -1234,7 +1109,6 @@
 
       function renderAll() {
         const visibleRows = getVisibleRows();
-        const canManageLeadTools = state.isGerente || !state.currentEmail;
         renderFilters();
         populateFormOptions();
         renderStats();
@@ -1246,9 +1120,9 @@
         els.metaVisible.textContent = `Visibles: ${visibleRows.length}`;
         els.metaPending.textContent = `Sin contactar: ${visibleRows.filter((row) => normalizeText(row.estatus) === 'Sin contactar').length}`;
         els.exportBtn.href = '/api/viceroy/kpi-seguimiento-leads/export.xlsx';
-        els.newBtn.classList.toggle('hidden', !canManageLeadTools);
-        els.importBtn.classList.toggle('hidden', !canManageLeadTools);
-        els.templateBtn.classList.toggle('hidden', !canManageLeadTools);
+        els.newBtn.classList.toggle('hidden', !state.isGerente);
+        els.importBtn.classList.toggle('hidden', !state.isGerente);
+        els.templateBtn.classList.toggle('hidden', !state.isGerente);
         els.apiDocsCard.classList.toggle('hidden', !state.isGerente);
       }
 
@@ -1256,21 +1130,6 @@
         try {
           state.loading = true;
           setStatus('Cargando leads...', '');
-          let sessionEmail = '';
-          let sessionName = '';
-          let sessionGerente = false;
-          try {
-            const sessionRes = await fetch('/api/session-info', {
-              credentials: 'same-origin',
-              cache: 'no-store'
-            });
-            const sessionData = await sessionRes.json().catch(() => ({}));
-            if (sessionRes.ok && sessionData && sessionData.ok) {
-              sessionEmail = String(sessionData.email || '').trim().toLowerCase();
-              sessionName = String(sessionData.name || '').trim();
-              sessionGerente = Boolean(sessionData.isGerente || false);
-            }
-          } catch {}
           const res = await fetch('/api/viceroy/kpi-seguimiento-leads/bootstrap', {
             credentials: 'same-origin',
             cache: 'no-store'
@@ -1282,32 +1141,11 @@
           state.rows = Array.isArray(data.rows) ? data.rows : [];
           state.advisors = Array.isArray(data.advisors) ? data.advisors : [];
           state.enums = data.enums || ENUMS_DEFAULT;
-          state.currentEmail = data.currentEmail || sessionEmail || '';
-          state.currentName = data.currentName || sessionName || '';
-          state.isGerente = Boolean(data.isGerente || sessionGerente);
+          state.currentEmail = data.currentEmail || '';
+          state.currentName = data.currentName || '';
+          state.isGerente = Boolean(data.isGerente);
           state.updatedAt = data.updatedAt || '';
           state.sourceFile = data.sourceFile || '';
-          if (!state.currentEmail) {
-            try {
-              const sessionRes = await fetch('/api/session', {
-                credentials: 'same-origin',
-                cache: 'no-store'
-              });
-              const sessionData = await sessionRes.json().catch(() => ({}));
-              if (sessionRes.ok && sessionData && sessionData.ok) {
-                state.currentEmail = String(sessionData.email || '').trim().toLowerCase();
-                state.currentName = String(sessionData.name || '').trim();
-                state.isGerente = Boolean(sessionData.isGerente || state.isGerente);
-              }
-            } catch {}
-          }
-          if (!state.isGerente && state.currentEmail) {
-            const normalizedEmail = String(state.currentEmail || '').trim().toLowerCase();
-            const normalizedName = String(state.currentName || '').trim().toLowerCase();
-            state.isGerente = normalizedEmail === 'martin@simca.mx'
-              || normalizedEmail === 'martin@zinca.mx'
-              || (normalizedName.includes('martin') && normalizedName.includes('barroso'));
-          }
           populateFormOptions();
           renderAll();
           setStatus('');
