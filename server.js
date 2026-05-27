@@ -6440,6 +6440,19 @@ function leadMatchesCurrentUser(row, currentEmail, currentName, isGerente = fals
   return false;
 }
 
+function isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName) {
+  const normalizedEmail = String(currentEmail || '').trim().toLowerCase();
+  const normalizedName = leadUserKey(currentName);
+  return Boolean(
+    normalizedEmail &&
+    (
+      normalizedEmail === GERENTE_EMAIL ||
+      normalizedEmail === 'martin@zinca.mx' ||
+      (normalizedName.includes('martin') && normalizedName.includes('barroso'))
+    )
+  );
+}
+
 function normalizeLeadHistoryEntry(raw, fallback = {}) {
   const source = raw && typeof raw === 'object' ? raw : {};
   return {

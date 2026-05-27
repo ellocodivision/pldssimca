@@ -528,7 +528,7 @@
           <div class="voice-controls">
             <button id="voiceStartBtn" class="btn secondary" type="button">Grabar nota</button>
             <button id="voiceStopBtn" class="btn secondary" type="button" disabled>Detener</button>
-            <button id="voiceSaveBtn" class="btn primary" type="button" disabled>Guardar voz</button>
+            <button id="voiceSaveBtn" class="btn primary" type="button">Guardar voz</button>
             <span id="voiceStatus" class="voice-status">Sin grabación activa</span>
           </div>
           <div class="row">
@@ -1018,7 +1018,7 @@
         els.historyList.innerHTML = buildHistoryHtml(row);
         els.voiceNotesList.innerHTML = buildVoiceNotesHtml(row);
         els.voiceStatus.textContent = 'Sin grabación activa';
-        els.voiceSaveBtn.disabled = true;
+        els.voiceSaveBtn.disabled = false;
         els.voiceStopBtn.disabled = true;
         els.voiceStartBtn.disabled = false;
         els.leadModal.classList.add('open');
@@ -1423,7 +1423,7 @@
           els.historyList.innerHTML = '<div class="history-item"><div class="b">Aún no hay historial.</div></div>';
           els.voiceNotesList.innerHTML = '<div class="history-item"><div class="b">Aún no hay notas de voz.</div></div>';
           els.voiceStatus.textContent = 'Sin grabación activa';
-          els.voiceSaveBtn.disabled = true;
+          els.voiceSaveBtn.disabled = false;
           els.voiceStopBtn.disabled = true;
           els.voiceStartBtn.disabled = false;
           els.leadModal.classList.add('open');
