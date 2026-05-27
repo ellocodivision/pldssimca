@@ -274,7 +274,6 @@
     <div class="top">
       <div>
         <h1 class="title">KPI Seguimiento de Leads</h1>
-        <p class="sub">CRM interno para seguimiento por asesor, con historial, notas por voz, importación externa y métricas por estatus, fuente y asesor.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
@@ -376,7 +375,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section id="apiDocsCard" class="card hidden">
       <div class="docs-grid">
         <div>
           <div class="toolbar" style="margin-bottom:10px">
@@ -552,6 +551,7 @@
         importBtn: document.getElementById('importBtn'),
         templateBtn: document.getElementById('templateBtn'),
         importInput: document.getElementById('importInput'),
+        apiDocsCard: document.getElementById('apiDocsCard'),
         status: document.getElementById('status'),
         metaUser: document.getElementById('metaUser'),
         metaScope: document.getElementById('metaScope'),
@@ -1123,6 +1123,7 @@
         els.newBtn.classList.toggle('hidden', !state.isGerente);
         els.importBtn.classList.toggle('hidden', !state.isGerente);
         els.templateBtn.classList.toggle('hidden', !state.isGerente);
+        els.apiDocsCard.classList.toggle('hidden', !state.isGerente);
       }
 
       async function reload() {
