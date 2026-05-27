@@ -251,6 +251,41 @@
       gap:6px;
     }
     .audio-item audio{width:100%}
+    .mobile-leads{display:none}
+    .mobile-lead-list{display:grid;gap:12px}
+    .lead-card{
+      border:1px solid #e2d8c4;
+      border-radius:16px;
+      background:#fff;
+      padding:14px;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
+    }
+    .lead-card-head{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .lead-card-title{font-size:18px;font-weight:800;line-height:1.1}
+    .lead-card-meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.35}
+    .lead-card-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px 12px;
+      margin-top:10px;
+    }
+    .lead-card-item{
+      border:1px solid #ece3d0;
+      border-radius:12px;
+      padding:8px 10px;
+      background:#fffdf9;
+    }
+    .lead-card-item .k{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+    .lead-card-item .v{font-size:13px;font-weight:700;margin-top:4px;word-break:break-word}
+    .lead-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .lead-card-actions .btn{padding:8px 10px;font-size:12px}
     .hidden{display:none !important}
     @media (max-width: 1180px){
       .filters{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -266,6 +301,9 @@
       .actions{width:100%}
       .actions .btn{flex:1}
       .stats .stat .v{font-size:24px}
+      .mobile-leads{display:block}
+      .table-wrap{display:none}
+      .lead-card-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -300,6 +338,16 @@
         </div>
       </div>
       <p id="status" class="status"></p>
+    </section>
+
+    <section id="mobileLeadSection" class="card mobile-leads hidden">
+      <div class="toolbar" style="margin-bottom:10px">
+        <div class="summary">
+          <span class="badge blue">Vista móvil</span>
+          <span class="badge">Orden ascendente por fecha de asignación</span>
+        </div>
+      </div>
+      <div id="mobileLeadList" class="mobile-lead-list"></div>
     </section>
 
     <section class="card">
@@ -573,6 +621,8 @@
         statInteresados: document.getElementById('statInteresados'),
         statCierre: document.getElementById('statCierre'),
         statPromedio: document.getElementById('statPromedio'),
+        mobileLeadSection: document.getElementById('mobileLeadSection'),
+        mobileLeadList: document.getElementById('mobileLeadList'),
         leadModal: document.getElementById('leadModal'),
         leadModalTitle: document.getElementById('leadModalTitle'),
         leadModalSub: document.getElementById('leadModalSub'),
@@ -664,6 +714,18 @@
         });
       }
 
+      function leadSortTimestamp(row) {
+        const date = new Date(row && (row.fechaAsignacion || row.updatedAt || row.createdAt || 0));
+        const value = date.getTime();
+        return Number.isFinite(value) ? value : 0;
+      }
+
+      function getMobileVisibleRows() {
+        return getVisibleRows()
+          .slice()
+          .sort((a, b) => leadSortTimestamp(a) - leadSortTimestamp(b));
+      }
+
       function fillSelect(select, values, firstLabel = 'Todos') {
         const current = select.value;
         const unique = Array.from(new Set((Array.isArray(values) ? values : []).filter(Boolean)));
@@ -751,6 +813,70 @@
           btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
         });
         els.rowsTbody.querySelectorAll('.js-delete').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            if (!confirm('¿Eliminar este lead?')) return;
+            await fetch('/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(id), {
+              method: 'DELETE',
+              credentials: 'same-origin'
+            }).then((res) => res.json().catch(() => ({}))).then((data) => {
+              if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo eliminar');
+            }).catch((err) => setStatus(err.message || 'No se pudo eliminar', 'error'));
+            await reload();
+          });
+        });
+      }
+
+      function renderMobileCards() {
+        const rows = getMobileVisibleRows();
+        if (!els.mobileLeadList || !els.mobileLeadSection) return;
+        const mobileMode = window.matchMedia('(max-width: 760px)').matches;
+        els.mobileLeadSection.classList.toggle('hidden', !mobileMode);
+        if (!mobileMode) {
+          els.mobileLeadList.innerHTML = '';
+          return;
+        }
+        if (!rows.length) {
+          els.mobileLeadList.innerHTML = '<div class="lead-card"><div class="lead-card-title">Sin leads para mostrar.</div><div class="lead-card-meta">Ajusta filtros o recarga la vista.</div></div>';
+          return;
+        }
+        els.mobileLeadList.innerHTML = rows.map((row) => {
+          const statusClass = leadStatusClass(row.estatus);
+          return `
+            <article class="lead-card" data-id="${esc(row.id)}">
+              <div class="lead-card-head">
+                <div>
+                  <div class="lead-card-title">${esc(row.nombre || '-')}</div>
+                  <div class="lead-card-meta">${esc(row.email || '-')} · ${esc(row.telefono || '-')}</div>
+                </div>
+                <span class="status-pill ${statusClass}">${esc(row.estatus || 'Sin contactar')}</span>
+              </div>
+              <div class="lead-card-grid">
+                <div class="lead-card-item"><div class="k">Fecha asignación</div><div class="v">${esc(formatDateTime(row.fechaAsignacion))}</div></div>
+                <div class="lead-card-item"><div class="k">Última actualización</div><div class="v">${esc(formatDateTime(row.updatedAt || row.createdAt))}</div></div>
+                <div class="lead-card-item"><div class="k">Tipo</div><div class="v">${esc(row.tipoLead || '-')}</div></div>
+                <div class="lead-card-item"><div class="k">Interés</div><div class="v">${esc(row.interes || '-')}</div></div>
+                <div class="lead-card-item"><div class="k">Fuente</div><div class="v">${esc(row.fuente || '-')}</div></div>
+                <div class="lead-card-item"><div class="k">Asesor</div><div class="v">${esc(row.asesorAsignado || '-')}</div></div>
+              </div>
+              <div class="lead-card-actions">
+                <button class="btn secondary js-edit" data-id="${esc(row.id)}" type="button">Editar</button>
+                <button class="btn secondary js-note" data-id="${esc(row.id)}" type="button">Notas</button>
+                <button class="btn secondary js-history" data-id="${esc(row.id)}" type="button">Historial</button>
+                ${state.isGerente ? '<button class="btn danger js-delete" data-id="' + esc(row.id) + '" type="button">Eliminar</button>' : ''}
+              </div>
+            </article>`;
+        }).join('');
+        els.mobileLeadList.querySelectorAll('.js-edit').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'edit'));
+        });
+        els.mobileLeadList.querySelectorAll('.js-note').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'note'));
+        });
+        els.mobileLeadList.querySelectorAll('.js-history').forEach((btn) => {
+          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
+        });
+        els.mobileLeadList.querySelectorAll('.js-delete').forEach((btn) => {
           btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
             if (!confirm('¿Eliminar este lead?')) return;
@@ -1113,6 +1239,7 @@
         populateFormOptions();
         renderStats();
         renderTable();
+        renderMobileCards();
         els.metaUser.textContent = `Usuario: ${state.currentName || state.currentEmail || '-'}`;
         els.metaScope.textContent = `Acceso: ${state.isGerente ? 'Gerente' : 'Asesor'}`;
         els.metaRows.textContent = `Filas: ${state.rows.length}`;
@@ -1158,6 +1285,7 @@
 
       function wireEvents() {
         els.reloadBtn.addEventListener('click', () => reload());
+        window.addEventListener('resize', () => renderMobileCards());
         els.clearFiltersBtn.addEventListener('click', () => {
           state.filters = { search: '', status: '', source: '', type: '', advisor: '', interest: '' };
           els.searchInput.value = '';
