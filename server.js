@@ -6513,7 +6513,7 @@ function normalizeViceroyKpiSeguimientoLeadRow(rawRow, fallbackId) {
     telefono: normalizeLeadPhone(normalized.telefono || normalized.phone || normalized.clientphone),
     fechaAsignacion: normalizeLeadDateTime(normalized.fechaasignacion || normalized.assignedat || normalized.dateassigned || createdAt, createdAt),
     estatus: normalizeLeadStatus(normalized.estatus || normalized.status),
-    contextoLead: normalizeLeadYesNo(normalized.contextolead || normalized.contexto_lead || normalized.contexto || normalized.context, 'No'),
+    contextoLead: normalizeLeadYesNo(normalized.contestolead || normalized.contextolead || normalized.contexto_lead || normalized.contexto || normalized.context, 'No'),
     sqlLead: normalizeLeadYesNo(normalized.sqllead || normalized.sql_lead || normalized.sql, 'No'),
     fechaHoraContacto: normalizeLeadDateTime(normalized.fechahoracontacto || normalized.contactedat || normalized.fecha_contacto || '', ''),
     tipoLead: normalizeLeadType(normalized.tipolead || normalized.tipo || normalized.tipo_de_lead),
@@ -6765,7 +6765,7 @@ function parseViceroyKpiSeguimientoLeadsWorkbook(workbook) {
       telefono,
       fechaAsignacion: normalizeLeadDateTime(leadImportCellValue(row, ['fechaAsignacion', 'fecha_asignacion', 'asigned_at', 'assigned_at', 'assigned', 'fecha'])),
       estatus: normalizeLeadStatus(leadImportCellValue(row, ['estatus', 'status', 'estado'])),
-      contextoLead: normalizeLeadYesNo(leadImportCellValue(row, ['contextoLead', 'contexto_lead', 'contexto lead', 'contexto', 'context', 'lead_context']), 'No'),
+    contextoLead: normalizeLeadYesNo(leadImportCellValue(row, ['contestoLead', 'contestolead', 'contextoLead', 'contexto_lead', 'contexto lead', 'contexto', 'context', 'lead_context']), 'No'),
       sqlLead: normalizeLeadYesNo(leadImportCellValue(row, ['sqlLead', 'sql_lead', 'sql lead', 'sql']), 'No'),
       fechaHoraContacto: normalizeLeadDateTime(leadImportCellValue(row, ['fechaHoraContacto', 'fecha_contacto', 'contacto', 'contacted_at', 'contact_date']), ''),
       tipoLead: normalizeLeadType(leadImportCellValue(row, ['tipoLead', 'tipo', 'tipo_de_lead', 'lead_type'])),
@@ -6847,8 +6847,8 @@ function leadRowSnapshot(row) {
 function applyLeadPatch(target, body, actor) {
   const isGerente = Boolean(actor && actor.isGerente);
   const allowedFields = isGerente
-    ? ['nombre', 'email', 'telefono', 'tipoLead', 'interes', 'fuente', 'fechaAsignacion', 'estatus', 'contextoLead', 'sqlLead', 'fechaHoraContacto', 'asesorAsignado', 'notasAsesor']
-    : ['estatus', 'contextoLead', 'sqlLead', 'fechaHoraContacto', 'notasAsesor', 'interes'];
+    ? ['nombre', 'email', 'telefono', 'tipoLead', 'interes', 'fuente', 'fechaAsignacion', 'estatus', 'contextoLead', 'contestoLead', 'sqlLead', 'fechaHoraContacto', 'asesorAsignado', 'notasAsesor']
+    : ['estatus', 'contextoLead', 'contestoLead', 'sqlLead', 'fechaHoraContacto', 'notasAsesor', 'interes'];
   const next = { ...target };
   const changes = [];
 
@@ -6869,7 +6869,8 @@ function applyLeadPatch(target, body, actor) {
   setField('fuente', body.fuente, 'Fuente', normalizeLeadSource);
   setField('fechaAsignacion', body.fechaAsignacion, 'Fecha de asignación', (value) => normalizeLeadDateTime(value, next.fechaAsignacion));
   setField('estatus', body.estatus, 'Estatus', normalizeLeadStatus);
-  setField('contextoLead', body.contextoLead, 'Contexto lead', normalizeLeadYesNo);
+  setField('contextoLead', body.contextoLead ?? body.contestoLead, 'Contesto lead', normalizeLeadYesNo);
+  setField('contestoLead', body.contestoLead ?? body.contextoLead, 'Contesto lead', normalizeLeadYesNo);
   setField('sqlLead', body.sqlLead, 'SQL', normalizeLeadYesNo);
   setField('fechaHoraContacto', body.fechaHoraContacto, 'Fecha y hora de contacto', (value) => normalizeLeadDateTime(value, ''));
   if (allowedFields.includes('asesorAsignado') && body.asesorAsignado !== undefined) {

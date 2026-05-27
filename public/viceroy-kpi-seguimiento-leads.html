@@ -242,16 +242,6 @@
     .history-item .b{font-size:13px;line-height:1.45;white-space:pre-wrap}
     .voice-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     .voice-status{font-size:12px;color:var(--muted)}
-    .audio-list{display:grid;gap:10px}
-    .audio-item{
-      border:1px solid #e4dac6;
-      border-radius:10px;
-      padding:10px;
-      background:#fff;
-      display:grid;
-      gap:6px;
-    }
-    .audio-item audio{width:100%}
     .mobile-leads{display:none}
     .mobile-lead-list{display:grid;gap:12px}
     .lead-card{
@@ -514,7 +504,7 @@
             <select id="leadEstatus" class="select"></select>
           </label>
           <label class="field">
-            <span class="label">Contexto lead</span>
+            <span class="label">Contesto lead</span>
             <select id="leadContextoLead" class="select"></select>
           </label>
           <label class="field">
@@ -553,10 +543,6 @@
         <section class="history-box">
           <h3>Historial</h3>
           <div id="historyList" class="history-list"></div>
-        </section>
-        <section class="history-box hidden">
-          <h3>Notas de voz</h3>
-          <div id="voiceNotesList" class="audio-list"></div>
         </section>
       </div>
     </div>
@@ -660,8 +646,7 @@
         voiceStopBtn: document.getElementById('voiceStopBtn'),
         voiceSaveBtn: document.getElementById('voiceSaveBtn'),
         voiceStatus: document.getElementById('voiceStatus'),
-        historyList: document.getElementById('historyList'),
-        voiceNotesList: document.getElementById('voiceNotesList')
+        historyList: document.getElementById('historyList')
       };
 
       function esc(value) {
@@ -931,21 +916,8 @@
         if (!history.length) return '<div class="history-item"><div class="b">Sin historial todavía.</div></div>';
         return history.map((item) => `
           <div class="history-item">
-            <div class="t">${esc(formatDateTime(item.createdAt))} · ${esc(item.actorName || item.actorEmail || 'Sistema')}</div>
-            <div class="s">${esc(item.summary || item.action || 'Movimiento')}</div>
-            <div class="b">${esc(item.note || '')}</div>
-          </div>
-        `).join('');
-      }
-
-      function buildVoiceNotesHtml(row) {
-        const notes = Array.isArray(row && row.voiceNotes) ? row.voiceNotes : [];
-        if (!notes.length) return '<div class="history-item"><div class="b">Sin notas de voz todavía.</div></div>';
-        return notes.map((item) => `
-          <div class="audio-item">
-            <div><strong>${esc(formatDateTime(item.createdAt))}</strong> · ${esc(item.authorName || item.authorEmail || 'Asesor')}</div>
-            <div>${esc(item.transcript || 'Sin transcripción')}</div>
-            <audio controls src="/api/viceroy/kpi-seguimiento-leads/leads/${encodeURIComponent(row.id)}/voice-notes/${encodeURIComponent(item.id)}/audio"></audio>
+            <div class="t">${esc(formatDateTime(item.createdAt))}</div>
+            <div class="b">${esc(String(item.note || item.summary || 'Actualización').trim())}</div>
           </div>
         `).join('');
       }
@@ -962,6 +934,7 @@
           telefono: els.leadTelefono.value,
           fechaAsignacion: els.leadFechaAsignacion.value,
           estatus: els.leadEstatus.value,
+          contestoLead: els.leadContextoLead.value,
           contextoLead: els.leadContextoLead.value,
           sqlLead: els.leadSqlLead.value,
           fechaHoraContacto: els.leadFechaContacto.value,
@@ -999,7 +972,7 @@
         els.leadInteres.value = row.interes || state.enums.intereses[0];
         els.leadFuente.value = row.fuente || state.enums.fuentes[0];
         els.leadEstatus.value = row.estatus || 'Sin contactar';
-        els.leadContextoLead.value = row.contextoLead || 'No';
+        els.leadContextoLead.value = row.contestoLead || row.contextoLead || 'No';
         els.leadSqlLead.value = row.sqlLead || 'No';
         els.leadFechaAsignacion.value = normalizeDateTimeInput(row.fechaAsignacion || row.createdAt || new Date().toISOString());
         els.leadFechaContacto.value = normalizeDateTimeInput(row.fechaHoraContacto || '');
@@ -1034,7 +1007,6 @@
           els.leadNotas.disabled = false;
         }
         els.historyList.innerHTML = buildHistoryHtml(row);
-        els.voiceNotesList.innerHTML = buildVoiceNotesHtml(row);
         els.voiceStatus.textContent = 'Sin grabación activa. Graba y detén para transcribir en notas.';
         els.voiceSaveBtn.disabled = false;
         els.voiceStopBtn.disabled = true;
@@ -1441,8 +1413,7 @@
             els.leadAsesor.disabled = true;
           }
           els.historyList.innerHTML = '<div class="history-item"><div class="b">Aún no hay historial.</div></div>';
-          els.voiceNotesList.innerHTML = '<div class="history-item"><div class="b">Aún no hay notas de voz.</div></div>';
-          els.voiceStatus.textContent = 'Sin grabación activa. Graba y detén para transcribir en notas.';
+        els.voiceStatus.textContent = 'Sin grabación activa. Graba y detén para transcribir en notas.';
           els.voiceSaveBtn.disabled = false;
           els.voiceStopBtn.disabled = true;
           els.voiceStartBtn.disabled = false;
