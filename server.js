@@ -6713,6 +6713,101 @@ function findExistingLeadMatch(rows, rawLead) {
   }) || null;
 }
 
+function leadImportCellValue(row, aliases) {
+  for (const alias of Array.isArray(aliases) ? aliases : []) {
+    const key = normalizeHeaderKey(alias);
+    if (!key) continue;
+    if (Object.prototype.hasOwnProperty.call(row, key)) {
+      const value = row[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+    }
+  }
+  return '';
+}
+
+function parseViceroyKpiSeguimientoLeadsWorkbook(workbook) {
+  const sheetName = Array.isArray(workbook && workbook.SheetNames) && workbook.SheetNames.length
+    ? workbook.SheetNames[0]
+    : '';
+  if (!sheetName || !workbook.Sheets || !workbook.Sheets[sheetName]) {
+    return { sheetName: '', rows: [] };
+  }
+  const rowsRaw = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', blankrows: false, raw: false });
+  const rows = [];
+  for (const rawRow of rowsRaw) {
+    const row = {};
+    Object.entries(rawRow || {}).forEach(([key, value]) => {
+      row[normalizeHeaderKey(key)] = value;
+    });
+    const nombre = normalizeLeadText(leadImportCellValue(row, ['nombre', 'name', 'cliente', 'lead', 'contacto']));
+    const email = normalizeLeadEmail(leadImportCellValue(row, ['email', 'correo', 'mail', 'correo_electronico']));
+    const telefono = normalizeLeadPhone(leadImportCellValue(row, ['telefono', 'teléfono', 'phone', 'celular', 'movil', 'whatsapp']));
+    if (!nombre || (!email && !telefono)) continue;
+    rows.push({
+      nombre,
+      email,
+      telefono,
+      tipoLead: normalizeLeadType(leadImportCellValue(row, ['tipoLead', 'tipo', 'tipo_de_lead', 'lead_type'])),
+      interes: normalizeLeadInterest(leadImportCellValue(row, ['interes', 'interés', 'interest', 'interesado_en'])),
+      fuente: normalizeLeadSource(leadImportCellValue(row, ['fuente', 'source', 'origen'])),
+      fechaAsignacion: normalizeLeadDateTime(leadImportCellValue(row, ['fechaAsignacion', 'fecha_asignacion', 'asigned_at', 'assigned_at', 'assigned', 'fecha'])),
+      estatus: normalizeLeadStatus(leadImportCellValue(row, ['estatus', 'status', 'estado'])),
+      fechaHoraContacto: normalizeLeadDateTime(leadImportCellValue(row, ['fechaHoraContacto', 'fecha_contacto', 'contacto', 'contacted_at', 'contact_date']), ''),
+      asesorAsignado: normalizeLeadAssigneeValue(leadImportCellValue(row, ['asesorAsignado', 'asesor', 'advisor', 'assigned_to', 'asignado_a'])),
+      notasAsesor: String(leadImportCellValue(row, ['notasAsesor', 'notas', 'notes', 'comentarios', 'observaciones']) || '').trim(),
+      sourceRow: rawRow
+    });
+  }
+  return { sheetName, rows };
+}
+
+function buildImportedLeadNote(fileName, rowIndex) {
+  const fileLabel = String(fileName || 'archivo').trim();
+  return `Lead importado desde ${fileLabel}${Number.isFinite(Number(rowIndex)) ? ` (fila ${rowIndex})` : ''}`;
+}
+
+function normalizeImportedLeadDuplicatePatch(baseRow, importedRow, actor) {
+  const patch = {};
+  const changes = [];
+  const trySet = (key, value, label, normalizer) => {
+    if (value === undefined || value === null || String(value).trim() === '') return;
+    const nextValue = normalizer ? normalizer(value) : value;
+    if (String(baseRow[key] || '') === String(nextValue || '')) return;
+    patch[key] = nextValue;
+    changes.push({ field: key, label, before: baseRow[key], after: nextValue });
+  };
+
+  trySet('nombre', importedRow.nombre, 'Nombre', normalizeLeadText);
+  trySet('email', importedRow.email, 'Email', normalizeLeadEmail);
+  trySet('telefono', importedRow.telefono, 'Teléfono', normalizeLeadPhone);
+  trySet('tipoLead', importedRow.tipoLead, 'Tipo de lead', normalizeLeadType);
+  trySet('interes', importedRow.interes, 'Interés', normalizeLeadInterest);
+  trySet('fuente', importedRow.fuente, 'Fuente', normalizeLeadSource);
+  trySet('fechaAsignacion', importedRow.fechaAsignacion, 'Fecha de asignación', (value) => normalizeLeadDateTime(value, baseRow.fechaAsignacion));
+  trySet('estatus', importedRow.estatus, 'Estatus', normalizeLeadStatus);
+  trySet('fechaHoraContacto', importedRow.fechaHoraContacto, 'Fecha y hora de contacto', (value) => normalizeLeadDateTime(value, ''));
+
+  const importedAssignee = normalizeLeadAssigneeValue(importedRow.asesorAsignado);
+  if (importedAssignee) {
+    const resolved = resolveLeadAssignee(importedAssignee, baseRow.asesorAsignadoEmail, baseRow.asesorAsignado);
+    if (String(baseRow.asesorAsignado || '') !== String(resolved.asesorAsignado || '')) {
+      patch.asesorAsignado = resolved.asesorAsignado;
+      patch.asesorAsignadoEmail = resolved.asesorAsignadoEmail;
+      patch.asesorAsignadoKey = resolved.asesorAsignadoKey;
+      changes.push({ field: 'asesorAsignado', label: 'Asesor asignado', before: baseRow.asesorAsignado, after: resolved.asesorAsignado });
+    }
+  }
+
+  const importedNotes = String(importedRow.notasAsesor || '').trim();
+  if (importedNotes) {
+    const noteLine = `[${new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}] ${actor.name || actor.email}: ${importedNotes}`;
+    patch.notasAsesor = [String(baseRow.notasAsesor || '').trim(), noteLine].filter(Boolean).join('\n\n');
+    changes.push({ field: 'notasAsesor', label: 'Notas del asesor', before: baseRow.notasAsesor, after: patch.notasAsesor });
+  }
+
+  return { patch, changes };
+}
+
 function leadRowSnapshot(row) {
   return {
     nombre: row.nombre,
@@ -13059,6 +13154,129 @@ app.post('/api/leads/external', async (req, res) => {
   } catch (err) {
     log(`Error en /api/leads/external: ${err && err.stack ? err.stack : err}`);
     return res.status(500).json({ error: 'No se pudo procesar el lead externo' });
+  }
+});
+
+app.post('/api/viceroy/kpi-seguimiento-leads/import', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    if (!isGerente) {
+      return res.status(403).json({ error: 'Solo un administrador puede importar leads' });
+    }
+
+    const { fileName, base64, replaceExisting } = req.body || {};
+    const safeName = sanitizeExcelFileName(fileName) || 'leads-import.xlsx';
+    if (!base64) {
+      return res.status(400).json({ error: 'Falta el contenido del archivo' });
+    }
+
+    const payload = String(base64).includes(',') ? String(base64).split(',').pop() : String(base64);
+    const buffer = Buffer.from(payload || '', 'base64');
+    let workbook;
+    const fileLower = String(fileName || '').toLowerCase();
+    try {
+      if (fileLower.endsWith('.csv')) {
+        workbook = XLSX.read(buffer.toString('utf8'), { type: 'string', cellDates: true });
+      } else {
+        workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+      }
+    } catch (err) {
+      return res.status(400).json({ error: 'No se pudo leer el archivo Excel/CSV' });
+    }
+
+    const parsed = parseViceroyKpiSeguimientoLeadsWorkbook(workbook);
+    if (!parsed.sheetName || !parsed.rows.length) {
+      return res.status(400).json({ error: 'No se encontraron filas válidas para importar' });
+    }
+
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const nextRows = Boolean(replaceExisting) ? [] : [...(Array.isArray(data.rows) ? data.rows : [])];
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const actor = { email: currentEmail || 'importador', name: currentName || currentEmail || 'Importador', isGerente: true };
+
+    parsed.rows.forEach((importedRow, index) => {
+      const duplicate = findExistingLeadMatch(nextRows, importedRow);
+      if (duplicate) {
+        const rowIndex = nextRows.findIndex((row) => String(row.id || '') === String(duplicate.id || ''));
+        if (rowIndex < 0) {
+          skipped += 1;
+          return;
+        }
+        const { patch, changes } = normalizeImportedLeadDuplicatePatch(nextRows[rowIndex], importedRow, actor);
+        const noteText = buildImportedLeadNote(safeName, index + 2);
+        const next = addLeadHistoryEntry(nextRows[rowIndex], {
+          action: 'import-file-update',
+          actorEmail: actor.email,
+          actorName: actor.name,
+          summary: noteText,
+          note: noteText
+        }, {
+          ...patch,
+          notasAsesor: patch.notasAsesor || [String(nextRows[rowIndex].notasAsesor || '').trim(), `[${new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}] ${actor.name}: ${noteText}`].filter(Boolean).join('\n\n')
+        });
+        nextRows[rowIndex] = next;
+        if (changes.length || Object.keys(patch).length) updated += 1;
+        else skipped += 1;
+        return;
+      }
+
+      const assignee = resolveLeadAssignee(importedRow.asesorAsignado || '', currentEmail, currentName);
+      const now = new Date().toISOString();
+      const noteText = buildImportedLeadNote(safeName, index + 2);
+      const newRow = normalizeViceroyKpiSeguimientoLeadRow({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${index}`,
+        nombre: importedRow.nombre,
+        email: importedRow.email,
+        telefono: importedRow.telefono,
+        tipoLead: importedRow.tipoLead,
+        interes: importedRow.interes,
+        fuente: importedRow.fuente,
+        fechaAsignacion: importedRow.fechaAsignacion || now,
+        estatus: importedRow.estatus || 'Sin contactar',
+        fechaHoraContacto: importedRow.fechaHoraContacto || '',
+        asesorAsignado: assignee.asesorAsignado,
+        asesorAsignadoEmail: assignee.asesorAsignadoEmail,
+        asesorAsignadoKey: assignee.asesorAsignadoKey,
+        notasAsesor: importedRow.notasAsesor || noteText,
+        history: [{
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          createdAt: now,
+          actorEmail: actor.email,
+          actorName: actor.name,
+          action: 'import-file',
+          summary: noteText,
+          note: importedRow.notasAsesor || noteText
+        }],
+        createdAt: now,
+        updatedAt: now,
+        createdByEmail: actor.email,
+        createdByName: actor.name,
+        updatedByEmail: actor.email,
+        updatedByName: actor.name
+      });
+      nextRows.unshift(newRow);
+      created += 1;
+    });
+
+    const saved = saveViceroyKpiSeguimientoLeadsData(nextRows, safeName);
+    return res.json({
+      ok: true,
+      message: 'Importación completada',
+      fileName: safeName,
+      sheetName: parsed.sheetName,
+      created,
+      updated,
+      skipped,
+      totalRows: nextRows.length,
+      updatedAt: saved.updatedAt
+    });
+  } catch (err) {
+    log(`Error en /api/viceroy/kpi-seguimiento-leads/import: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo importar el archivo' });
   }
 });
 

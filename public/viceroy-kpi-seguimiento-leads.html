@@ -280,9 +280,11 @@
         <a class="btn" href="/viceroy">Volver a Viceroy</a>
         <button id="reloadBtn" class="btn secondary" type="button">Actualizar</button>
         <button id="newBtn" class="btn primary hidden" type="button">Nuevo lead</button>
+        <button id="importBtn" class="btn secondary hidden" type="button">Importar Excel / CSV</button>
         <a id="exportBtn" class="btn secondary" href="#">Exportar Excel</a>
       </div>
     </div>
+    <input id="importInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
 
     <section class="card">
       <div class="toolbar">
@@ -408,6 +410,10 @@
           <div class="doc-item">
             <h3>Campos requeridos</h3>
             <p>Nombre y al menos email o teléfono. El resto se normaliza con valores por defecto.</p>
+          </div>
+          <div class="doc-item">
+            <h3>Importación rápida</h3>
+            <p>Solo administradores pueden subir un Excel o CSV. El sistema detecta columnas comunes y hace upsert por email, teléfono o nombre.</p>
           </div>
         </div>
       </div>
@@ -542,6 +548,8 @@
         reloadBtn: document.getElementById('reloadBtn'),
         exportBtn: document.getElementById('exportBtn'),
         newBtn: document.getElementById('newBtn'),
+        importBtn: document.getElementById('importBtn'),
+        importInput: document.getElementById('importInput'),
         status: document.getElementById('status'),
         metaUser: document.getElementById('metaUser'),
         metaScope: document.getElementById('metaScope'),
@@ -964,6 +972,40 @@
         await openLeadModal(row.id, 'note');
       }
 
+      async function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error || new Error('No se pudo leer el archivo'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function importLeadsFile(file) {
+        if (!file) return;
+        const fileName = String(file.name || '').toLowerCase();
+        if (!(/\.(xlsx|xls|csv)$/i.test(fileName))) {
+          throw new Error('Selecciona un archivo Excel (.xlsx/.xls) o CSV');
+        }
+        if (!window.confirm('¿Importar este archivo y completar o actualizar leads existentes?')) return;
+        setStatus('Leyendo archivo...', '');
+        const base64 = await fileToBase64(file);
+        setStatus('Importando leads...', '');
+        const res = await fetch('/api/viceroy/kpi-seguimiento-leads/import', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            base64
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo importar el archivo');
+        setStatus(`${data.message || 'Importación completada'} · Creados: ${data.created || 0}, actualizados: ${data.updated || 0}, omitidos: ${data.skipped || 0}.`, 'ok');
+        await reload();
+      }
+
       function stopVoiceRecording(silent = false) {
         if (state.speechRecognition) {
           try { state.speechRecognition.stop(); } catch {}
@@ -1073,6 +1115,7 @@
         els.metaPending.textContent = `Sin contactar: ${visibleRows.filter((row) => normalizeText(row.estatus) === 'Sin contactar').length}`;
         els.exportBtn.href = '/api/viceroy/kpi-seguimiento-leads/export.xlsx';
         els.newBtn.classList.toggle('hidden', !state.isGerente);
+        els.importBtn.classList.toggle('hidden', !state.isGerente);
       }
 
       async function reload() {
@@ -1171,6 +1214,19 @@
           els.voiceStartBtn.disabled = false;
           els.leadModal.classList.add('open');
           els.leadModal.setAttribute('aria-hidden', 'false');
+        });
+        els.importBtn.addEventListener('click', () => {
+          els.importInput.value = '';
+          els.importInput.click();
+        });
+        els.importInput.addEventListener('change', async () => {
+          const file = els.importInput.files && els.importInput.files[0];
+          if (!file) return;
+          try {
+            await importLeadsFile(file);
+          } catch (err) {
+            setStatus(err.message || 'No se pudo importar el archivo', 'error');
+          }
         });
         els.exportBtn.addEventListener('click', (event) => {
           event.preventDefault();
