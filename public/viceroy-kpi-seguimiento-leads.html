@@ -399,11 +399,11 @@
               <th>Email</th>
               <th>Teléfono</th>
               <th>Asignación</th>
-              <th>Estatus</th>
-              <th>Contexto lead</th>
-              <th>SQL</th>
               <th>Contacto</th>
-              <th>Asesor</th>
+              <th>Estatus</th>
+              <th>Contesto lead</th>
+              <th>SQL</th>
+              <th id="advisorHeader">Asesor</th>
               <th>Última actualización</th>
               <th>Acciones</th>
             </tr>
@@ -662,6 +662,22 @@
         return String(value == null ? '' : value).trim();
       }
 
+      function simplifyHistoryText(value) {
+        let text = normalizeText(value);
+        if (!text) return 'Actualización';
+        if (text.includes('|')) {
+          const parts = text.split('|').map((part) => part.trim()).filter(Boolean);
+          if (parts.length) text = parts[parts.length - 1];
+        }
+        const lines = text.split(/\r?\n+/).map((line) => line.trim()).filter(Boolean);
+        if (!lines.length) return 'Actualización';
+        const deduped = [];
+        lines.forEach((line) => {
+          if (deduped[deduped.length - 1] !== line) deduped.push(line);
+        });
+        return deduped.join('\n');
+      }
+
       function normalizeDateTimeInput(value) {
         const raw = normalizeText(value);
         if (!raw) return '';
@@ -771,9 +787,11 @@
 
       function renderTable() {
         const rows = getVisibleRows();
+        const advisorHeader = document.getElementById('advisorHeader');
+        if (advisorHeader) advisorHeader.classList.toggle('hidden', !state.isGerente);
         els.rowsTbody.innerHTML = rows.length ? rows.map((row) => {
-          const canEdit = Boolean(state.isGerente) || Boolean(row.canEdit);
           const statusClass = leadStatusClass(row.estatus);
+          const showAdvisor = Boolean(state.isGerente);
           return `
             <tr>
               <td>
@@ -782,31 +800,23 @@
               <td>${esc(row.email || '-')}</td>
               <td>${esc(row.telefono || '-')}</td>
               <td>${esc(formatDateTime(row.fechaAsignacion))}</td>
+              <td>${esc(formatDateTime(row.fechaHoraContacto))}</td>
               <td><span class="status-pill ${statusClass}">${esc(row.estatus || 'Sin contactar')}</span></td>
               <td><span class="status-pill ${normalizeText(row.contextoLead) === 'Sí' ? 'success' : 'neutral'}">${esc(row.contextoLead || 'No')}</span></td>
               <td><span class="status-pill ${normalizeText(row.sqlLead) === 'Sí' ? 'warning' : 'neutral'}">${esc(row.sqlLead || 'No')}</span></td>
-              <td>${esc(formatDateTime(row.fechaHoraContacto))}</td>
-              <td>${esc(row.asesorAsignado || '-')}</td>
+              ${showAdvisor ? `<td>${esc(row.asesorAsignado || '-')}</td>` : ''}
               <td>${esc(formatDateTime(row.updatedAt || row.createdAt))}</td>
               <td>
                 <div class="actions-cell">
                   <button class="btn secondary js-edit" data-id="${esc(row.id)}" type="button">Editar</button>
-                  <button class="btn secondary js-note" data-id="${esc(row.id)}" type="button">Notas</button>
-                  <button class="btn secondary js-history" data-id="${esc(row.id)}" type="button">Historial</button>
                   ${state.isGerente ? '<button class="btn danger js-delete" data-id="' + esc(row.id) + '" type="button">Eliminar</button>' : ''}
                 </div>
               </td>
             </tr>`;
-        }).join('') : '<tr><td colspan="11" style="padding:20px;text-align:center;color:#666b75">Sin leads para mostrar.</td></tr>';
+        }).join('') : `<tr><td colspan="${state.isGerente ? 11 : 10}" style="padding:20px;text-align:center;color:#666b75">Sin leads para mostrar.</td></tr>`;
 
         els.rowsTbody.querySelectorAll('.js-edit').forEach((btn) => {
           btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'edit'));
-        });
-        els.rowsTbody.querySelectorAll('.js-note').forEach((btn) => {
-          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'note'));
-        });
-        els.rowsTbody.querySelectorAll('.js-history').forEach((btn) => {
-          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
         });
         els.rowsTbody.querySelectorAll('.js-delete').forEach((btn) => {
           btn.addEventListener('click', async () => {
@@ -846,6 +856,7 @@
         }
         els.mobileLeadList.innerHTML = rows.map((row) => {
           const statusClass = leadStatusClass(row.estatus);
+          const showAdvisor = Boolean(state.isGerente);
           return `
             <article class="lead-card" data-id="${esc(row.id)}">
               <div class="lead-card-head">
@@ -857,27 +868,20 @@
               </div>
               <div class="lead-card-grid">
                 <div class="lead-card-item"><div class="k">Fecha asignación</div><div class="v">${esc(formatDateTime(row.fechaAsignacion))}</div></div>
+                <div class="lead-card-item"><div class="k">Contacto</div><div class="v">${esc(formatDateTime(row.fechaHoraContacto))}</div></div>
                 <div class="lead-card-item"><div class="k">Última actualización</div><div class="v">${esc(formatDateTime(row.updatedAt || row.createdAt))}</div></div>
-                <div class="lead-card-item"><div class="k">Asesor</div><div class="v">${esc(row.asesorAsignado || '-')}</div></div>
-                <div class="lead-card-item"><div class="k">Contexto lead</div><div class="v">${esc(row.contextoLead || 'No')}</div></div>
+                <div class="lead-card-item"><div class="k">Contesto lead</div><div class="v">${esc(row.contextoLead || 'No')}</div></div>
                 <div class="lead-card-item"><div class="k">SQL</div><div class="v">${esc(row.sqlLead || 'No')}</div></div>
+                ${showAdvisor ? `<div class="lead-card-item"><div class="k">Asesor</div><div class="v">${esc(row.asesorAsignado || '-')}</div></div>` : ''}
               </div>
               <div class="lead-card-actions">
                 <button class="btn secondary js-edit" data-id="${esc(row.id)}" type="button">Editar</button>
-                <button class="btn secondary js-note" data-id="${esc(row.id)}" type="button">Notas</button>
-                <button class="btn secondary js-history" data-id="${esc(row.id)}" type="button">Historial</button>
                 ${state.isGerente ? '<button class="btn danger js-delete" data-id="' + esc(row.id) + '" type="button">Eliminar</button>' : ''}
               </div>
             </article>`;
         }).join('');
         els.mobileLeadList.querySelectorAll('.js-edit').forEach((btn) => {
           btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'edit'));
-        });
-        els.mobileLeadList.querySelectorAll('.js-note').forEach((btn) => {
-          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'note'));
-        });
-        els.mobileLeadList.querySelectorAll('.js-history').forEach((btn) => {
-          btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'history'));
         });
         els.mobileLeadList.querySelectorAll('.js-delete').forEach((btn) => {
           btn.addEventListener('click', async () => {
@@ -917,7 +921,7 @@
         return history.map((item) => `
           <div class="history-item">
             <div class="t">${esc(formatDateTime(item.createdAt))}</div>
-            <div class="b">${esc(String(item.note || item.summary || 'Actualización').trim())}</div>
+            <div class="b">${esc(simplifyHistoryText(item.note || item.summary || 'Actualización'))}</div>
           </div>
         `).join('');
       }
@@ -941,8 +945,7 @@
           tipoLead: els.leadTipo.value,
           interes: els.leadInteres.value,
           fuente: els.leadFuente.value,
-          asesorAsignado: els.leadAsesor.value,
-          notasAsesor: els.leadNotas.value
+          asesorAsignado: els.leadAsesor.value
         };
       }
 
@@ -950,13 +953,9 @@
         const row = (state.rows || []).find((item) => String(item.id || '') === String(id || ''));
         if (!row) return;
         state.selectedLeadId = row.id;
-        state.modalMode = mode === 'note' ? 'note' : (mode === 'history' ? 'history' : 'edit');
+        state.modalMode = 'edit';
         els.leadModalTitle.textContent = row.nombre || 'Lead';
-        els.leadModalSub.textContent = state.modalMode === 'note'
-          ? 'Agrega una nota al historial del lead.'
-          : (state.modalMode === 'history'
-            ? 'Revisa el historial y las notas de voz.'
-            : 'Edita los campos permitidos del lead.');
+        els.leadModalSub.textContent = 'Edita los campos permitidos del lead.';
         els.leadModalBadge.textContent = `${row.estatus || 'Sin contactar'} · ${row.asesorAsignado || 'Sin asignar'}`;
         els.leadNombre.value = row.nombre || '';
         els.leadEmail.value = row.email || '';
@@ -965,7 +964,7 @@
         fillLeadModalSelect(els.leadInteres, state.enums.intereses, 'Interés');
         fillLeadModalSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
         fillLeadModalSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
-        fillLeadModalSelect(els.leadContextoLead, ['Sí', 'No'], 'Contexto lead');
+        fillLeadModalSelect(els.leadContextoLead, ['Sí', 'No'], 'Contesto lead');
         fillLeadModalSelect(els.leadSqlLead, ['Sí', 'No'], 'SQL');
         fillLeadModalSelect(els.leadAsesor, (state.advisors || []).map((item) => item.name), 'Asignar a');
         els.leadTipo.value = row.tipoLead || 'Lead';
@@ -977,34 +976,18 @@
         els.leadFechaAsignacion.value = normalizeDateTimeInput(row.fechaAsignacion || row.createdAt || new Date().toISOString());
         els.leadFechaContacto.value = normalizeDateTimeInput(row.fechaHoraContacto || '');
         els.leadAsesor.value = row.asesorAsignado || '';
-        els.leadNotas.value = row.notasAsesor || '';
+        els.leadNotas.value = '';
         const advisorVisible = Boolean(state.isGerente);
         els.advisorWrap.classList.toggle('hidden', !advisorVisible);
-        const editable = state.modalMode !== 'history';
+        const editable = true;
         [els.leadNombre, els.leadEmail, els.leadTelefono, els.leadTipo, els.leadInteres, els.leadFuente, els.leadFechaAsignacion, els.leadEstatus, els.leadContextoLead, els.leadSqlLead, els.leadFechaContacto, els.leadAsesor, els.leadNotas].forEach((field) => {
           if (!field) return;
           const key = field.id;
-          const isReadOnly = state.modalMode === 'history'
-            || (!state.isGerente && ['leadNombre', 'leadEmail', 'leadTelefono', 'leadTipo', 'leadFuente', 'leadFechaAsignacion', 'leadAsesor'].includes(key));
+          const isReadOnly = (!state.isGerente && ['leadNombre', 'leadEmail', 'leadTelefono', 'leadTipo', 'leadFuente', 'leadFechaAsignacion', 'leadAsesor'].includes(key));
           field.disabled = isReadOnly || !editable;
         });
         if (!state.isGerente) {
           els.leadAsesor.disabled = true;
-        }
-        if (state.modalMode === 'note') {
-          els.leadNombre.disabled = true;
-          els.leadEmail.disabled = true;
-          els.leadTelefono.disabled = true;
-          els.leadTipo.disabled = true;
-          els.leadInteres.disabled = false;
-          els.leadFuente.disabled = true;
-          els.leadFechaAsignacion.disabled = true;
-          els.leadEstatus.disabled = false;
-          els.leadContextoLead.disabled = false;
-          els.leadSqlLead.disabled = false;
-          els.leadFechaContacto.disabled = false;
-          els.leadAsesor.disabled = true;
-          els.leadNotas.disabled = false;
         }
         els.historyList.innerHTML = buildHistoryHtml(row);
         els.voiceStatus.textContent = 'Sin grabación activa. Graba y detén para transcribir en notas.';
@@ -1255,7 +1238,7 @@
         fillSelect(els.leadInteres, state.enums.intereses, 'Interés');
         fillSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
         fillSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
-        fillSelect(els.leadContextoLead, ['Sí', 'No'], 'Contexto lead');
+        fillSelect(els.leadContextoLead, ['Sí', 'No'], 'Contesto lead');
         fillSelect(els.leadSqlLead, ['Sí', 'No'], 'SQL');
       }
 
@@ -1395,7 +1378,7 @@
         fillLeadModalSelect(els.leadInteres, state.enums.intereses, 'Interés');
         fillLeadModalSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
         fillLeadModalSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
-        fillLeadModalSelect(els.leadContextoLead, ['Sí', 'No'], 'Contexto lead');
+        fillLeadModalSelect(els.leadContextoLead, ['Sí', 'No'], 'Contesto lead');
         fillLeadModalSelect(els.leadSqlLead, ['Sí', 'No'], 'SQL');
           fillLeadModalSelect(els.leadAsesor, (state.advisors || []).map((item) => item.name), 'Asignar a');
           const now = new Date();
