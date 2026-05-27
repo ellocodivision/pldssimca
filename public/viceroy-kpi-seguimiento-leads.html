@@ -404,15 +404,14 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>
+          <tr>
               <th>Nombre</th>
               <th>Email</th>
               <th>Teléfono</th>
-              <th>Tipo</th>
-              <th>Interés</th>
-              <th>Fuente</th>
               <th>Asignación</th>
               <th>Estatus</th>
+              <th>Contexto lead</th>
+              <th>SQL</th>
               <th>Contacto</th>
               <th>Asesor</th>
               <th>Última actualización</th>
@@ -438,11 +437,13 @@
   "nombre": "Juan Pérez",
   "email": "juan@email.com",
   "telefono": "529841234567",
+  "fechaAsignacion": "2026-05-27T10:00:00",
+  "estatus": "Sin contactar",
+  "contextoLead": "Sí",
+  "sqlLead": "No",
   "tipoLead": "Lead",
   "interes": "Info del proyecto en general",
   "fuente": "Social Media",
-  "fechaAsignacion": "2026-05-27T10:00:00",
-  "estatus": "Sin contactar",
   "asesor": "Marion",
   "notas": "Lead generado desde campaña externa"
 }</code></pre>
@@ -511,6 +512,14 @@
           <label class="field">
             <span class="label">Estatus</span>
             <select id="leadEstatus" class="select"></select>
+          </label>
+          <label class="field">
+            <span class="label">Contexto lead</span>
+            <select id="leadContextoLead" class="select"></select>
+          </label>
+          <label class="field">
+            <span class="label">SQL</span>
+            <select id="leadSqlLead" class="select"></select>
           </label>
           <label class="field">
             <span class="label">Fecha y hora de contacto</span>
@@ -638,6 +647,8 @@
         leadFuente: document.getElementById('leadFuente'),
         leadFechaAsignacion: document.getElementById('leadFechaAsignacion'),
         leadEstatus: document.getElementById('leadEstatus'),
+        leadContextoLead: document.getElementById('leadContextoLead'),
+        leadSqlLead: document.getElementById('leadSqlLead'),
         leadFechaContacto: document.getElementById('leadFechaContacto'),
         leadAsesor: document.getElementById('leadAsesor'),
         advisorWrap: document.getElementById('advisorWrap'),
@@ -782,15 +793,13 @@
             <tr>
               <td>
                 <div class="lead-name">${esc(row.nombre || '-')}</div>
-                <div class="lead-small">ID: ${esc(row.id || '-')}</div>
               </td>
               <td>${esc(row.email || '-')}</td>
               <td>${esc(row.telefono || '-')}</td>
-              <td>${esc(row.tipoLead || '-')}</td>
-              <td>${esc(row.interes || '-')}</td>
-              <td>${esc(row.fuente || '-')}</td>
               <td>${esc(formatDateTime(row.fechaAsignacion))}</td>
               <td><span class="status-pill ${statusClass}">${esc(row.estatus || 'Sin contactar')}</span></td>
+              <td><span class="status-pill ${normalizeText(row.contextoLead) === 'Sí' ? 'success' : 'neutral'}">${esc(row.contextoLead || 'No')}</span></td>
+              <td><span class="status-pill ${normalizeText(row.sqlLead) === 'Sí' ? 'warning' : 'neutral'}">${esc(row.sqlLead || 'No')}</span></td>
               <td>${esc(formatDateTime(row.fechaHoraContacto))}</td>
               <td>${esc(row.asesorAsignado || '-')}</td>
               <td>${esc(formatDateTime(row.updatedAt || row.createdAt))}</td>
@@ -803,7 +812,7 @@
                 </div>
               </td>
             </tr>`;
-        }).join('') : '<tr><td colspan="12" style="padding:20px;text-align:center;color:#666b75">Sin leads para mostrar.</td></tr>';
+        }).join('') : '<tr><td colspan="11" style="padding:20px;text-align:center;color:#666b75">Sin leads para mostrar.</td></tr>';
 
         els.rowsTbody.querySelectorAll('.js-edit').forEach((btn) => {
           btn.addEventListener('click', () => openLeadModal(btn.getAttribute('data-id'), 'edit'));
@@ -864,10 +873,9 @@
               <div class="lead-card-grid">
                 <div class="lead-card-item"><div class="k">Fecha asignación</div><div class="v">${esc(formatDateTime(row.fechaAsignacion))}</div></div>
                 <div class="lead-card-item"><div class="k">Última actualización</div><div class="v">${esc(formatDateTime(row.updatedAt || row.createdAt))}</div></div>
-                <div class="lead-card-item"><div class="k">Tipo</div><div class="v">${esc(row.tipoLead || '-')}</div></div>
-                <div class="lead-card-item"><div class="k">Interés</div><div class="v">${esc(row.interes || '-')}</div></div>
-                <div class="lead-card-item"><div class="k">Fuente</div><div class="v">${esc(row.fuente || '-')}</div></div>
                 <div class="lead-card-item"><div class="k">Asesor</div><div class="v">${esc(row.asesorAsignado || '-')}</div></div>
+                <div class="lead-card-item"><div class="k">Contexto lead</div><div class="v">${esc(row.contextoLead || 'No')}</div></div>
+                <div class="lead-card-item"><div class="k">SQL</div><div class="v">${esc(row.sqlLead || 'No')}</div></div>
               </div>
               <div class="lead-card-actions">
                 <button class="btn secondary js-edit" data-id="${esc(row.id)}" type="button">Editar</button>
@@ -952,12 +960,14 @@
           nombre: els.leadNombre.value,
           email: els.leadEmail.value,
           telefono: els.leadTelefono.value,
+          fechaAsignacion: els.leadFechaAsignacion.value,
+          estatus: els.leadEstatus.value,
+          contextoLead: els.leadContextoLead.value,
+          sqlLead: els.leadSqlLead.value,
+          fechaHoraContacto: els.leadFechaContacto.value,
           tipoLead: els.leadTipo.value,
           interes: els.leadInteres.value,
           fuente: els.leadFuente.value,
-          fechaAsignacion: els.leadFechaAsignacion.value,
-          estatus: els.leadEstatus.value,
-          fechaHoraContacto: els.leadFechaContacto.value,
           asesorAsignado: els.leadAsesor.value,
           notasAsesor: els.leadNotas.value
         };
@@ -982,11 +992,15 @@
         fillLeadModalSelect(els.leadInteres, state.enums.intereses, 'Interés');
         fillLeadModalSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
         fillLeadModalSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
+        fillLeadModalSelect(els.leadContextoLead, ['Sí', 'No'], 'Contexto lead');
+        fillLeadModalSelect(els.leadSqlLead, ['Sí', 'No'], 'SQL');
         fillLeadModalSelect(els.leadAsesor, (state.advisors || []).map((item) => item.name), 'Asignar a');
         els.leadTipo.value = row.tipoLead || 'Lead';
         els.leadInteres.value = row.interes || state.enums.intereses[0];
         els.leadFuente.value = row.fuente || state.enums.fuentes[0];
         els.leadEstatus.value = row.estatus || 'Sin contactar';
+        els.leadContextoLead.value = row.contextoLead || 'No';
+        els.leadSqlLead.value = row.sqlLead || 'No';
         els.leadFechaAsignacion.value = normalizeDateTimeInput(row.fechaAsignacion || row.createdAt || new Date().toISOString());
         els.leadFechaContacto.value = normalizeDateTimeInput(row.fechaHoraContacto || '');
         els.leadAsesor.value = row.asesorAsignado || '';
@@ -994,7 +1008,7 @@
         const advisorVisible = Boolean(state.isGerente);
         els.advisorWrap.classList.toggle('hidden', !advisorVisible);
         const editable = state.modalMode !== 'history';
-        [els.leadNombre, els.leadEmail, els.leadTelefono, els.leadTipo, els.leadInteres, els.leadFuente, els.leadFechaAsignacion, els.leadEstatus, els.leadFechaContacto, els.leadAsesor, els.leadNotas].forEach((field) => {
+        [els.leadNombre, els.leadEmail, els.leadTelefono, els.leadTipo, els.leadInteres, els.leadFuente, els.leadFechaAsignacion, els.leadEstatus, els.leadContextoLead, els.leadSqlLead, els.leadFechaContacto, els.leadAsesor, els.leadNotas].forEach((field) => {
           if (!field) return;
           const key = field.id;
           const isReadOnly = state.modalMode === 'history'
@@ -1013,6 +1027,8 @@
           els.leadFuente.disabled = true;
           els.leadFechaAsignacion.disabled = true;
           els.leadEstatus.disabled = false;
+          els.leadContextoLead.disabled = false;
+          els.leadSqlLead.disabled = false;
           els.leadFechaContacto.disabled = false;
           els.leadAsesor.disabled = true;
           els.leadNotas.disabled = false;
@@ -1267,6 +1283,8 @@
         fillSelect(els.leadInteres, state.enums.intereses, 'Interés');
         fillSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
         fillSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
+        fillSelect(els.leadContextoLead, ['Sí', 'No'], 'Contexto lead');
+        fillSelect(els.leadSqlLead, ['Sí', 'No'], 'SQL');
       }
 
       function renderAll() {
@@ -1401,16 +1419,20 @@
           els.leadNombre.value = '';
           els.leadEmail.value = '';
           els.leadTelefono.value = '';
-          fillLeadModalSelect(els.leadTipo, state.enums.tiposLead, 'Tipo de lead');
-          fillLeadModalSelect(els.leadInteres, state.enums.intereses, 'Interés');
-          fillLeadModalSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
-          fillLeadModalSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
+        fillLeadModalSelect(els.leadTipo, state.enums.tiposLead, 'Tipo de lead');
+        fillLeadModalSelect(els.leadInteres, state.enums.intereses, 'Interés');
+        fillLeadModalSelect(els.leadFuente, state.enums.fuentes, 'Fuente');
+        fillLeadModalSelect(els.leadEstatus, state.enums.estatuses, 'Estatus');
+        fillLeadModalSelect(els.leadContextoLead, ['Sí', 'No'], 'Contexto lead');
+        fillLeadModalSelect(els.leadSqlLead, ['Sí', 'No'], 'SQL');
           fillLeadModalSelect(els.leadAsesor, (state.advisors || []).map((item) => item.name), 'Asignar a');
           const now = new Date();
           const pad = (n) => String(n).padStart(2, '0');
           const nowValue = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
           els.leadFechaAsignacion.value = nowValue;
           els.leadFechaContacto.value = '';
+          els.leadContextoLead.value = 'No';
+          els.leadSqlLead.value = 'No';
           els.leadAsesor.value = '';
           els.leadNotas.value = '';
           els.advisorWrap.classList.toggle('hidden', !state.isGerente);

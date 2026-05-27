@@ -6358,6 +6358,16 @@ function normalizeLeadSource(raw) {
   ], 'Social Media');
 }
 
+function normalizeLeadYesNo(raw, fallback = 'No') {
+  const normalizedFallback = String(fallback || 'No').trim().toLowerCase() === 'sí' ? 'Sí' : 'No';
+  const value = String(raw == null ? '' : raw).trim().toLowerCase();
+  if (!value) return normalizedFallback;
+  if (['sí', 'si', 'yes', 'y', 'true', '1'].includes(value)) return 'Sí';
+  if (['no', 'n', 'false', '0'].includes(value)) return 'No';
+  const found = normalizeLeadOption(raw, ['Sí', 'No'], normalizedFallback);
+  return found === 'Sí' ? 'Sí' : 'No';
+}
+
 function normalizeLeadInterest(raw) {
   return normalizeLeadOption(raw, [
     'Info del proyecto en general',
@@ -6501,12 +6511,14 @@ function normalizeViceroyKpiSeguimientoLeadRow(rawRow, fallbackId) {
     nombre,
     email: normalizeLeadEmail(normalized.email || normalized.correo || normalized.clientemail),
     telefono: normalizeLeadPhone(normalized.telefono || normalized.phone || normalized.clientphone),
+    fechaAsignacion: normalizeLeadDateTime(normalized.fechaasignacion || normalized.assignedat || normalized.dateassigned || createdAt, createdAt),
+    estatus: normalizeLeadStatus(normalized.estatus || normalized.status),
+    contextoLead: normalizeLeadYesNo(normalized.contextolead || normalized.contexto_lead || normalized.contexto || normalized.context, 'No'),
+    sqlLead: normalizeLeadYesNo(normalized.sqllead || normalized.sql_lead || normalized.sql, 'No'),
+    fechaHoraContacto: normalizeLeadDateTime(normalized.fechahoracontacto || normalized.contactedat || normalized.fecha_contacto || '', ''),
     tipoLead: normalizeLeadType(normalized.tipolead || normalized.tipo || normalized.tipo_de_lead),
     interes: normalizeLeadInterest(normalized.interes || normalized.interés || normalized.interesadoen),
     fuente: normalizeLeadSource(normalized.fuente || normalized.source),
-    fechaAsignacion: normalizeLeadDateTime(normalized.fechaasignacion || normalized.assignedat || normalized.dateassigned || createdAt, createdAt),
-    estatus: normalizeLeadStatus(normalized.estatus || normalized.status),
-    fechaHoraContacto: normalizeLeadDateTime(normalized.fechahoracontacto || normalized.contactedat || normalized.fecha_contacto || '', ''),
     asesorAsignado: assigned.asesorAsignado,
     asesorAsignadoEmail: assigned.asesorAsignadoEmail,
     asesorAsignadoKey: assigned.asesorAsignadoKey,
@@ -6751,12 +6763,14 @@ function parseViceroyKpiSeguimientoLeadsWorkbook(workbook) {
       nombre,
       email,
       telefono,
+      fechaAsignacion: normalizeLeadDateTime(leadImportCellValue(row, ['fechaAsignacion', 'fecha_asignacion', 'asigned_at', 'assigned_at', 'assigned', 'fecha'])),
+      estatus: normalizeLeadStatus(leadImportCellValue(row, ['estatus', 'status', 'estado'])),
+      contextoLead: normalizeLeadYesNo(leadImportCellValue(row, ['contextoLead', 'contexto_lead', 'contexto lead', 'contexto', 'context', 'lead_context']), 'No'),
+      sqlLead: normalizeLeadYesNo(leadImportCellValue(row, ['sqlLead', 'sql_lead', 'sql lead', 'sql']), 'No'),
+      fechaHoraContacto: normalizeLeadDateTime(leadImportCellValue(row, ['fechaHoraContacto', 'fecha_contacto', 'contacto', 'contacted_at', 'contact_date']), ''),
       tipoLead: normalizeLeadType(leadImportCellValue(row, ['tipoLead', 'tipo', 'tipo_de_lead', 'lead_type'])),
       interes: normalizeLeadInterest(leadImportCellValue(row, ['interes', 'interés', 'interest', 'interesado_en'])),
       fuente: normalizeLeadSource(leadImportCellValue(row, ['fuente', 'source', 'origen'])),
-      fechaAsignacion: normalizeLeadDateTime(leadImportCellValue(row, ['fechaAsignacion', 'fecha_asignacion', 'asigned_at', 'assigned_at', 'assigned', 'fecha'])),
-      estatus: normalizeLeadStatus(leadImportCellValue(row, ['estatus', 'status', 'estado'])),
-      fechaHoraContacto: normalizeLeadDateTime(leadImportCellValue(row, ['fechaHoraContacto', 'fecha_contacto', 'contacto', 'contacted_at', 'contact_date']), ''),
       asesorAsignado: normalizeLeadAssigneeValue(leadImportCellValue(row, ['asesorAsignado', 'asesor_asignado', 'asesor', 'advisor', 'assigned_to', 'asignado_a', 'responsable'])),
       notasAsesor: String(leadImportCellValue(row, ['notasAsesor', 'notas', 'notes', 'comentarios', 'observaciones']) || '').trim(),
       sourceRow: rawRow
@@ -6817,12 +6831,14 @@ function leadRowSnapshot(row) {
     nombre: row.nombre,
     email: row.email,
     telefono: row.telefono,
+    fechaAsignacion: row.fechaAsignacion,
+    estatus: row.estatus,
+    contextoLead: row.contextoLead,
+    sqlLead: row.sqlLead,
+    fechaHoraContacto: row.fechaHoraContacto,
     tipoLead: row.tipoLead,
     interes: row.interes,
     fuente: row.fuente,
-    fechaAsignacion: row.fechaAsignacion,
-    estatus: row.estatus,
-    fechaHoraContacto: row.fechaHoraContacto,
     asesorAsignado: row.asesorAsignado,
     notasAsesor: row.notasAsesor
   };
@@ -6831,8 +6847,8 @@ function leadRowSnapshot(row) {
 function applyLeadPatch(target, body, actor) {
   const isGerente = Boolean(actor && actor.isGerente);
   const allowedFields = isGerente
-    ? ['nombre', 'email', 'telefono', 'tipoLead', 'interes', 'fuente', 'fechaAsignacion', 'estatus', 'fechaHoraContacto', 'asesorAsignado', 'notasAsesor']
-    : ['estatus', 'fechaHoraContacto', 'notasAsesor', 'interes'];
+    ? ['nombre', 'email', 'telefono', 'tipoLead', 'interes', 'fuente', 'fechaAsignacion', 'estatus', 'contextoLead', 'sqlLead', 'fechaHoraContacto', 'asesorAsignado', 'notasAsesor']
+    : ['estatus', 'contextoLead', 'sqlLead', 'fechaHoraContacto', 'notasAsesor', 'interes'];
   const next = { ...target };
   const changes = [];
 
@@ -6853,6 +6869,8 @@ function applyLeadPatch(target, body, actor) {
   setField('fuente', body.fuente, 'Fuente', normalizeLeadSource);
   setField('fechaAsignacion', body.fechaAsignacion, 'Fecha de asignación', (value) => normalizeLeadDateTime(value, next.fechaAsignacion));
   setField('estatus', body.estatus, 'Estatus', normalizeLeadStatus);
+  setField('contextoLead', body.contextoLead, 'Contexto lead', normalizeLeadYesNo);
+  setField('sqlLead', body.sqlLead, 'SQL', normalizeLeadYesNo);
   setField('fechaHoraContacto', body.fechaHoraContacto, 'Fecha y hora de contacto', (value) => normalizeLeadDateTime(value, ''));
   if (allowedFields.includes('asesorAsignado') && body.asesorAsignado !== undefined) {
     const resolved = resolveLeadAssignee(body.asesorAsignado, next.asesorAsignadoEmail, next.asesorAsignado);
@@ -12826,12 +12844,14 @@ app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature(
       NOMBRE: row.nombre,
       EMAIL: row.email,
       TELEFONO: row.telefono,
+      FECHA_ASIGNACION: row.fechaAsignacion,
+      ESTATUS: row.estatus,
+      CONTEXTO_LEAD: row.contextoLead,
+      SQL: row.sqlLead,
+      FECHA_HORA_CONTACTO: row.fechaHoraContacto,
       TIPO_LEAD: row.tipoLead,
       INTERES: row.interes,
       FUENTE: row.fuente,
-      FECHA_ASIGNACION: row.fechaAsignacion,
-      ESTATUS: row.estatus,
-      FECHA_HORA_CONTACTO: row.fechaHoraContacto,
       ASESOR_ASIGNADO: row.asesorAsignado,
       NOTAS_DEL_ASESOR: row.notasAsesor,
       ULTIMA_ACTUALIZACION: row.updatedAt,
@@ -12862,28 +12882,32 @@ app.get('/api/viceroy/kpi-seguimiento-leads/template.xlsx', requireBackendFeatur
       'NOMBRE',
       'EMAIL',
       'TELEFONO',
+      'FECHA_ASIGNACION',
+      'ESTATUS',
+      'CONTEXTO_LEAD',
+      'SQL',
+      'FECHA_HORA_CONTACTO',
       'TIPO_LEAD',
       'INTERES',
       'FUENTE',
-      'FECHA_ASIGNACION',
-      'ESTATUS',
-      'FECHA_HORA_CONTACTO',
       'ASESOR_ASIGNADO',
       'NOTAS_DEL_ASESOR'
     ];
 
     const sheet = XLSX.utils.aoa_to_sheet([
       headers,
-      ['', '', '', '', '', '', '', '', '', '', '']
+      ['', '', '', '', '', '', '', '', '', '', '', '', '']
     ]);
     sheet['!cols'] = [
       { wch: 28 },
       { wch: 32 },
       { wch: 18 },
-      { wch: 14 },
-      { wch: 28 },
+      { wch: 22 },
       { wch: 18 },
       { wch: 22 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 28 },
       { wch: 18 },
       { wch: 22 },
       { wch: 24 },
@@ -12896,12 +12920,14 @@ app.get('/api/viceroy/kpi-seguimiento-leads/template.xlsx', requireBackendFeatur
       ['NOMBRE', 'Juan Pérez', 'Obligatorio'],
       ['EMAIL', 'juan@email.com', 'Obligatorio si no mandas teléfono'],
       ['TELEFONO', '529841234567', 'Obligatorio si no mandas email'],
+      ['FECHA_ASIGNACION', '2026-05-27T10:00:00', 'Formato fecha/hora recomendado'],
+      ['ESTATUS', 'Sin contactar', 'Valores: Sin contactar, Contactado, En seguimiento, Interesado, No interesado, Reserva, Venta realizada, Perdido'],
+      ['CONTEXTO_LEAD', 'Sí', 'Valores: Sí, No'],
+      ['SQL', 'No', 'Valores: Sí, No'],
+      ['FECHA_HORA_CONTACTO', '2026-05-27T10:15:00', 'Opcional'],
       ['TIPO_LEAD', 'Lead', 'Valores: Lead, Broker'],
       ['INTERES', 'Info del proyecto en general', 'Puedes usar los valores del sistema'],
       ['FUENTE', 'Social Media', 'Valores: Social Media, Web Site, Walkin, Callin, Referidohotel'],
-      ['FECHA_ASIGNACION', '2026-05-27T10:00:00', 'Formato fecha/hora recomendado'],
-      ['ESTATUS', 'Sin contactar', 'Valores: Sin contactar, Contactado, En seguimiento, Interesado, No interesado, Reserva, Venta realizada, Perdido'],
-      ['FECHA_HORA_CONTACTO', '2026-05-27T10:15:00', 'Opcional'],
       ['ASESOR_ASIGNADO', 'Marion', 'Nombre o email del asesor'],
       ['NOTAS_DEL_ASESOR', 'Lead generado desde campaña externa', 'Opcional']
     ]);
@@ -12973,6 +12999,8 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads', requireBackendFeature('vice
       fuente: normalizeLeadSource(body.fuente),
       fechaAsignacion: body.fechaAsignacion || now,
       estatus: normalizeLeadStatus(body.estatus || 'Sin contactar'),
+      contextoLead: normalizeLeadYesNo(body.contextoLead, 'No'),
+      sqlLead: normalizeLeadYesNo(body.sqlLead, 'No'),
       fechaHoraContacto: body.fechaHoraContacto || '',
       asesorAsignado: assignee.asesorAsignado,
       asesorAsignadoEmail: assignee.asesorAsignadoEmail,
