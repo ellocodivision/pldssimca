@@ -750,7 +750,8 @@
         fillSelect(els.typeFilter, state.enums.tiposLead, 'Todos los tipos');
         fillSelect(els.interestFilter, state.enums.intereses, 'Todos los intereses');
         fillSelect(els.advisorFilter, (state.advisors || []).map((item) => item.name || item.email), 'Todos los asesores');
-        els.advisorFilter.disabled = !state.isGerente;
+        const canManageLeadTools = state.isGerente || !state.currentEmail;
+        els.advisorFilter.disabled = !canManageLeadTools;
       }
 
       function renderStats() {
@@ -1233,6 +1234,7 @@
 
       function renderAll() {
         const visibleRows = getVisibleRows();
+        const canManageLeadTools = state.isGerente || !state.currentEmail;
         renderFilters();
         populateFormOptions();
         renderStats();
@@ -1244,9 +1246,9 @@
         els.metaVisible.textContent = `Visibles: ${visibleRows.length}`;
         els.metaPending.textContent = `Sin contactar: ${visibleRows.filter((row) => normalizeText(row.estatus) === 'Sin contactar').length}`;
         els.exportBtn.href = '/api/viceroy/kpi-seguimiento-leads/export.xlsx';
-        els.newBtn.classList.toggle('hidden', !state.isGerente);
-        els.importBtn.classList.toggle('hidden', !state.isGerente);
-        els.templateBtn.classList.toggle('hidden', !state.isGerente);
+        els.newBtn.classList.toggle('hidden', !canManageLeadTools);
+        els.importBtn.classList.toggle('hidden', !canManageLeadTools);
+        els.templateBtn.classList.toggle('hidden', !canManageLeadTools);
         els.apiDocsCard.classList.toggle('hidden', !state.isGerente);
       }
 
