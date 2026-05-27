@@ -6441,16 +6441,7 @@ function leadMatchesCurrentUser(row, currentEmail, currentName, isGerente = fals
 }
 
 function isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName) {
-  const normalizedEmail = String(currentEmail || '').trim().toLowerCase();
-  const normalizedName = leadUserKey(currentName);
-  return Boolean(
-    normalizedEmail &&
-    (
-      normalizedEmail === GERENTE_EMAIL ||
-      normalizedEmail === 'martin@zinca.mx' ||
-      (normalizedName.includes('martin') && normalizedName.includes('barroso'))
-    )
-  );
+  return String(currentEmail || '').trim().toLowerCase() === GERENTE_EMAIL;
 }
 
 function normalizeLeadHistoryEntry(raw, fallback = {}) {
@@ -12826,6 +12817,9 @@ app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature(
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
     const isGerente = currentEmail === GERENTE_EMAIL;
+    if (!isGerente) {
+      return res.status(403).json({ error: 'Solo martin@simca.mx puede exportar leads' });
+    }
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
     const exportRows = rows.map((row) => ({
@@ -12935,6 +12929,9 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads', requireBackendFeature('vice
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
     const isGerente = currentEmail === GERENTE_EMAIL;
+    if (!isGerente) {
+      return res.status(403).json({ error: 'Solo martin@simca.mx puede crear leads' });
+    }
     const body = req.body || {};
     const nombre = normalizeLeadText(body.nombre || body.name);
     if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });

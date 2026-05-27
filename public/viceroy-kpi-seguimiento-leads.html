@@ -19,6 +19,7 @@
       --chip:#ece7d8;
       --blue:#2563eb;
     }
+    .hidden{display:none !important;}
     *{box-sizing:border-box}
     body{
       margin:0;
@@ -319,7 +320,7 @@
         <button id="newBtn" class="btn primary hidden" type="button">Nuevo lead</button>
         <button id="importBtn" class="btn secondary hidden" type="button">Importar Excel / CSV</button>
         <button id="templateBtn" class="btn secondary hidden" type="button">Descargar machote</button>
-        <a id="exportBtn" class="btn secondary" href="#">Exportar Excel</a>
+        <a id="exportBtn" class="btn secondary hidden" href="#">Exportar Excel</a>
       </div>
     </div>
     <input id="importInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
@@ -560,6 +561,7 @@
         estatuses: ['Sin contactar', 'Contactado', 'En seguimiento', 'Interesado', 'No interesado', 'Reserva', 'Venta realizada', 'Perdido'],
         intereses: ['Info del proyecto en general', 'Info para promover', 'Enviar info vía WhatsApp', 'Enviar info por email', 'Asistir al evento', 'Buscar opciones disponibles', 'Otro']
       };
+      const ADMIN_EMAIL = 'martin@simca.mx';
 
       const state = {
         rows: [],
@@ -1269,6 +1271,8 @@
 
       function renderAll() {
         const visibleRows = getVisibleRows();
+        const canManage = String(state.currentEmail || '').trim().toLowerCase() === ADMIN_EMAIL;
+        state.isGerente = canManage;
         renderFilters();
         populateFormOptions();
         renderStats();
@@ -1281,10 +1285,11 @@
         els.metaVisible.textContent = `Visibles: ${visibleRows.length}`;
         els.metaPending.textContent = `Sin contactar: ${visibleRows.filter((row) => normalizeText(row.estatus) === 'Sin contactar').length}`;
         els.exportBtn.href = '/api/viceroy/kpi-seguimiento-leads/export.xlsx';
-        els.newBtn.classList.toggle('hidden', !state.isGerente);
-        els.importBtn.classList.toggle('hidden', !state.isGerente);
-        els.templateBtn.classList.toggle('hidden', !state.isGerente);
-        els.apiDocsCard.classList.toggle('hidden', !state.isGerente);
+        els.exportBtn.classList.toggle('hidden', !canManage);
+        els.newBtn.classList.toggle('hidden', !canManage);
+        els.importBtn.classList.toggle('hidden', !canManage);
+        els.templateBtn.classList.toggle('hidden', !canManage);
+        els.apiDocsCard.classList.toggle('hidden', !canManage);
       }
 
       async function reload() {
@@ -1343,13 +1348,6 @@
               state.currentName = state.currentName || fallbackIdentity.currentName || '';
               state.isGerente = Boolean(state.isGerente || fallbackIdentity.isGerente);
             }
-          }
-          if (!state.isGerente && state.currentEmail) {
-            const normalizedEmail = String(state.currentEmail || '').trim().toLowerCase();
-            const normalizedName = String(state.currentName || '').trim().toLowerCase();
-            state.isGerente = normalizedEmail === 'martin@simca.mx'
-              || normalizedEmail === 'martin@zinca.mx'
-              || (normalizedName.includes('martin') && normalizedName.includes('barroso'));
           }
           populateFormOptions();
           renderAll();
