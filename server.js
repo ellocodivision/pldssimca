@@ -13022,6 +13022,39 @@ app.patch('/api/viceroy/kpi-seguimiento-leads/leads/:id', requireBackendFeature(
   }
 });
 
+app.delete('/api/viceroy/kpi-seguimiento-leads/leads/:id', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const leadId = String(req.params.id || '').trim();
+    if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
+    const isGerente = isViceroyKpiSeguimientoLeadsManager(currentEmail, currentName);
+    if (!isGerente) {
+      return res.status(403).json({ error: 'Solo un administrador puede eliminar leads' });
+    }
+    const data = readViceroyKpiSeguimientoLeadsData();
+    const rows = Array.isArray(data.rows) ? [...data.rows] : [];
+    const index = rows.findIndex((row) => String(row.id || '') === leadId);
+    if (index < 0) return res.status(404).json({ error: 'Lead no encontrado' });
+    const target = rows[index];
+    rows.splice(index, 1);
+    const saved = saveViceroyKpiSeguimientoLeadsData(rows, data.sourceFile || 'viceroy-kpi-seguimiento-leads.json');
+    return res.json({
+      ok: true,
+      message: 'Lead eliminado',
+      deleted: {
+        id: target.id,
+        nombre: target.nombre,
+        email: target.email
+      },
+      updatedAt: saved.updatedAt
+    });
+  } catch (err) {
+    log(`Error en DELETE /api/viceroy/kpi-seguimiento-leads/leads/:id: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo eliminar el lead' });
+  }
+});
+
 app.post('/api/viceroy/kpi-seguimiento-leads/leads/:id/notes', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
   try {
     const leadId = String(req.params.id || '').trim();

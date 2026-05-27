@@ -1257,6 +1257,21 @@
         try {
           state.loading = true;
           setStatus('Cargando leads...', '');
+          let sessionEmail = '';
+          let sessionName = '';
+          let sessionGerente = false;
+          try {
+            const sessionInfoRes = await fetch('/api/session-info', {
+              credentials: 'same-origin',
+              cache: 'no-store'
+            });
+            const sessionInfo = await sessionInfoRes.json().catch(() => ({}));
+            if (sessionInfoRes.ok && sessionInfo && sessionInfo.ok) {
+              sessionEmail = String(sessionInfo.email || '').trim().toLowerCase();
+              sessionName = String(sessionInfo.name || '').trim();
+              sessionGerente = Boolean(sessionInfo.isGerente || false);
+            }
+          } catch {}
           const res = await fetch('/api/viceroy/kpi-seguimiento-leads/bootstrap', {
             credentials: 'same-origin',
             cache: 'no-store'
@@ -1268,11 +1283,32 @@
           state.rows = Array.isArray(data.rows) ? data.rows : [];
           state.advisors = Array.isArray(data.advisors) ? data.advisors : [];
           state.enums = data.enums || ENUMS_DEFAULT;
-          state.currentEmail = data.currentEmail || '';
-          state.currentName = data.currentName || '';
-          state.isGerente = Boolean(data.isGerente);
+          state.currentEmail = data.currentEmail || sessionEmail || '';
+          state.currentName = data.currentName || sessionName || '';
+          state.isGerente = Boolean(data.isGerente || sessionGerente);
           state.updatedAt = data.updatedAt || '';
           state.sourceFile = data.sourceFile || '';
+          if (!state.currentEmail) {
+            try {
+              const sessionRes = await fetch('/api/session', {
+                credentials: 'same-origin',
+                cache: 'no-store'
+              });
+              const sessionData = await sessionRes.json().catch(() => ({}));
+              if (sessionRes.ok && sessionData && sessionData.ok) {
+                state.currentEmail = String(sessionData.email || '').trim().toLowerCase();
+                state.currentName = String(sessionData.name || '').trim();
+                state.isGerente = Boolean(sessionData.isGerente || state.isGerente);
+              }
+            } catch {}
+          }
+          if (!state.isGerente && state.currentEmail) {
+            const normalizedEmail = String(state.currentEmail || '').trim().toLowerCase();
+            const normalizedName = String(state.currentName || '').trim().toLowerCase();
+            state.isGerente = normalizedEmail === 'martin@simca.mx'
+              || normalizedEmail === 'martin@zinca.mx'
+              || (normalizedName.includes('martin') && normalizedName.includes('barroso'));
+          }
           populateFormOptions();
           renderAll();
           setStatus('');
