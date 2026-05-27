@@ -12843,6 +12843,80 @@ app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature(
   }
 });
 
+app.get('/api/viceroy/kpi-seguimiento-leads/template.xlsx', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
+  try {
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const isGerente = currentEmail === GERENTE_EMAIL;
+    if (!isGerente) {
+      return res.status(403).json({ error: 'Solo un administrador puede descargar el machote' });
+    }
+
+    const headers = [
+      'NOMBRE',
+      'EMAIL',
+      'TELEFONO',
+      'TIPO_LEAD',
+      'INTERES',
+      'FUENTE',
+      'FECHA_ASIGNACION',
+      'ESTATUS',
+      'FECHA_HORA_CONTACTO',
+      'ASESOR_ASIGNADO',
+      'NOTAS_DEL_ASESOR'
+    ];
+
+    const sheet = XLSX.utils.aoa_to_sheet([
+      headers,
+      ['', '', '', '', '', '', '', '', '', '', '']
+    ]);
+    sheet['!cols'] = [
+      { wch: 28 },
+      { wch: 32 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 28 },
+      { wch: 18 },
+      { wch: 22 },
+      { wch: 18 },
+      { wch: 22 },
+      { wch: 24 },
+      { wch: 42 }
+    ];
+    sheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+    const guide = XLSX.utils.aoa_to_sheet([
+      ['Campo', 'Ejemplo', 'Notas'],
+      ['NOMBRE', 'Juan Pérez', 'Obligatorio'],
+      ['EMAIL', 'juan@email.com', 'Obligatorio si no mandas teléfono'],
+      ['TELEFONO', '529841234567', 'Obligatorio si no mandas email'],
+      ['TIPO_LEAD', 'Lead', 'Valores: Lead, Broker'],
+      ['INTERES', 'Info del proyecto en general', 'Puedes usar los valores del sistema'],
+      ['FUENTE', 'Social Media', 'Valores: Social Media, Web Site, Walkin, Callin, Referidohotel'],
+      ['FECHA_ASIGNACION', '2026-05-27T10:00:00', 'Formato fecha/hora recomendado'],
+      ['ESTATUS', 'Sin contactar', 'Valores: Sin contactar, Contactado, En seguimiento, Interesado, No interesado, Reserva, Venta realizada, Perdido'],
+      ['FECHA_HORA_CONTACTO', '2026-05-27T10:15:00', 'Opcional'],
+      ['ASESOR_ASIGNADO', 'Marion', 'Nombre o email del asesor'],
+      ['NOTAS_DEL_ASESOR', 'Lead generado desde campaña externa', 'Opcional']
+    ]);
+    guide['!cols'] = [
+      { wch: 22 },
+      { wch: 36 },
+      { wch: 60 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Leads');
+    XLSX.utils.book_append_sheet(workbook, guide, 'Guia');
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const fileName = `viceroy-kpi-seguimiento-leads-machote.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(buffer);
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo generar el machote' });
+  }
+});
+
 app.post('/api/viceroy/kpi-seguimiento-leads/leads', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();

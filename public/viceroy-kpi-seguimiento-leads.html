@@ -281,6 +281,7 @@
         <button id="reloadBtn" class="btn secondary" type="button">Actualizar</button>
         <button id="newBtn" class="btn primary hidden" type="button">Nuevo lead</button>
         <button id="importBtn" class="btn secondary hidden" type="button">Importar Excel / CSV</button>
+        <button id="templateBtn" class="btn secondary hidden" type="button">Descargar machote</button>
         <a id="exportBtn" class="btn secondary" href="#">Exportar Excel</a>
       </div>
     </div>
@@ -549,6 +550,7 @@
         exportBtn: document.getElementById('exportBtn'),
         newBtn: document.getElementById('newBtn'),
         importBtn: document.getElementById('importBtn'),
+        templateBtn: document.getElementById('templateBtn'),
         importInput: document.getElementById('importInput'),
         status: document.getElementById('status'),
         metaUser: document.getElementById('metaUser'),
@@ -890,11 +892,10 @@
 
       async function saveLead(mode = 'edit') {
         const row = selectedLead();
-        if (!row) return;
         const payload = currentLeadFormPayload();
         const endpoint = mode === 'create'
           ? '/api/viceroy/kpi-seguimiento-leads/leads'
-          : '/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(row.id);
+          : '/api/viceroy/kpi-seguimiento-leads/leads/' + encodeURIComponent(row && row.id ? row.id : state.selectedLeadId);
         const method = mode === 'create' ? 'POST' : 'PATCH';
         const res = await fetch(endpoint, {
           method,
@@ -906,7 +907,8 @@
         if (!res.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'No se pudo guardar el lead');
         setStatus(data.message || 'Lead guardado', 'ok');
         await reload();
-        const next = (state.rows || []).find((item) => String(item.id || '') === String((data.row && data.row.id) || row.id));
+        const nextId = String((data.row && data.row.id) || (row && row.id) || state.selectedLeadId || '');
+        const next = (state.rows || []).find((item) => String(item.id || '') === nextId);
         if (next) {
           await openLeadModal(next.id, state.modalMode);
         }
@@ -1116,6 +1118,7 @@
         els.exportBtn.href = '/api/viceroy/kpi-seguimiento-leads/export.xlsx';
         els.newBtn.classList.toggle('hidden', !state.isGerente);
         els.importBtn.classList.toggle('hidden', !state.isGerente);
+        els.templateBtn.classList.toggle('hidden', !state.isGerente);
       }
 
       async function reload() {
@@ -1227,6 +1230,9 @@
           } catch (err) {
             setStatus(err.message || 'No se pudo importar el archivo', 'error');
           }
+        });
+        els.templateBtn.addEventListener('click', () => {
+          window.location.href = '/api/viceroy/kpi-seguimiento-leads/template.xlsx';
         });
         els.exportBtn.addEventListener('click', (event) => {
           event.preventDefault();
