@@ -5714,8 +5714,7 @@ function buildWhisperlistSelectionPdfHtml(context) {
   const row = context && context.row ? context.row : {};
   const selectedUnits = Array.isArray(context && context.selectedUnits) ? context.selectedUnits : [];
   const selectedFloors = Array.isArray(context && context.selectedFloors) ? context.selectedFloors : [];
-  const moduleLabel = String(context && context.requester && context.requester.moduleLabel || 'Whisperlist').trim() || 'Whisperlist';
-  const title = selectedUnits.length ? `Impresión de opciones · ${escapeHtml(String(row.nombreCliente || moduleLabel))}` : 'Impresión de opciones';
+  const title = selectedUnits.length ? `Impresión de opciones · ${escapeHtml(String(row.nombreCliente || 'Whisperlist'))}` : 'Impresión de opciones';
   const adviserLine = [String(row.asesor || '').trim(), String(row.correo || '').trim()].filter(Boolean).join(' · ');
   const clientLine = [String(row.nombreCliente || '').trim(), String(row.clientEmail || '').trim(), String(row.clientPhone || '').trim()].filter(Boolean).join(' · ');
   const selectedOptionsLine = selectedUnits.map((item) => `Opción ${item.optionLabels.join('/')}: ${item.unit}`).join(' · ');
@@ -5849,7 +5848,7 @@ function buildWhisperlistSelectionPdfHtml(context) {
     <section class="page cover-page">
       <div class="cover-top">
         <div>
-          <div class="eyebrow">${escapeHtml(moduleLabel)} · Imprimir opciones</div>
+          <div class="eyebrow">Whisperlist · Imprimir opciones</div>
           <h1>Selección de unidades</h1>
           <p class="muted">${escapeHtml(adviserLine || 'Sin asesor')}<br>${escapeHtml(clientLine || 'Sin cliente')}</p>
         </div>
@@ -14848,7 +14847,6 @@ app.post('/api/viceroy/registros/rows/:id/options-pdf', async (req, res) => {
         currentEmail,
         currentName,
         isGerente,
-        moduleLabel: 'Viceroy Registros',
         sourceFile: data.sourceFile || ''
       });
     } catch (firstErr) {
@@ -14865,7 +14863,6 @@ app.post('/api/viceroy/registros/rows/:id/options-pdf', async (req, res) => {
         currentEmail,
         currentName,
         isGerente,
-        moduleLabel: 'Viceroy Registros',
         sourceFile: data.sourceFile || ''
       }, retryBrowser);
     }
