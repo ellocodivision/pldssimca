@@ -296,7 +296,7 @@
             <td>${paisSelect}</td>
             <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
-              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn move-btn" type="button">Mover a Hot Leads</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
+              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn print-options-btn" type="button">Imprimir opciones</button> <button class="btn save-btn move-btn" type="button">Mover a Hot Leads</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
             </td>
           </tr>
@@ -659,6 +659,42 @@
         }
       }
 
+      async function printOptionsPdf(tr) {
+        const id = tr.getAttribute('data-id');
+        if (!id) return;
+        const btn = tr.querySelector('.print-options-btn');
+        if (btn) btn.disabled = true;
+        setStatus(els.globalStatus, 'Generando PDF de opciones...', null);
+        try {
+          const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(id) + '/options-pdf', {
+            method: 'POST',
+            credentials: 'same-origin'
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(function () { return {}; });
+            throw new Error(data.error || 'No se pudo generar el PDF');
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const disposition = String(res.headers.get('content-disposition') || '');
+          const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+          const fileName = match && match[1] ? match[1] : 'viceroy-registros-opciones.pdf';
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+          setStatus(els.globalStatus, 'PDF generado.', 'ok');
+        } catch (err) {
+          setStatus(els.globalStatus, err.message || 'Error al generar PDF', 'error');
+          window.alert(err.message || 'Error al generar PDF');
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
       async function importExcel() {
         const file = els.excelInput.files && els.excelInput.files[0];
         if (!file) {
@@ -740,18 +776,23 @@
         const btn = ev.target.closest('.save-btn');
         const deleteBtn = ev.target.closest('.delete-btn');
         const moveBtn = ev.target.closest('.move-btn');
+        const printOptionsBtn = ev.target.closest('.print-options-btn');
         const clientDataBtn = ev.target.closest('.client-data-btn');
-        if (!btn && !deleteBtn && !moveBtn && !clientDataBtn) return;
+        if (!btn && !deleteBtn && !moveBtn && !printOptionsBtn && !clientDataBtn) return;
         if (clientDataBtn) {
           const trForData = clientDataBtn.closest('tr');
           if (trForData) showClientData(trForData);
           return;
         }
-        const sourceBtn = moveBtn || deleteBtn || btn;
+        const sourceBtn = moveBtn || deleteBtn || printOptionsBtn || btn;
         const tr = sourceBtn.closest('tr');
         if (!tr) return;
         if (moveBtn) {
           moveToWhisperlist(tr);
+          return;
+        }
+        if (printOptionsBtn) {
+          printOptionsPdf(tr);
           return;
         }
         if (deleteBtn) {
