@@ -56,11 +56,13 @@
     .modal.open{display:flex}
     .modal-card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
     .modal-grid{display:grid;grid-template-columns:1fr;gap:8px}
+    .options-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .modal-field{font-size:13px}
     .modal-label{font-size:11px;color:var(--muted);display:block}
     @media (max-width:700px){
       .title{font-size:26px}
       .stats-grid{grid-template-columns:1fr}
+      .options-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -213,13 +215,32 @@
     </section>
   </div>
 
+  <div id="optionsModal" class="modal" aria-hidden="true">
+    <section class="modal-card">
+      <h3 style="margin:0 0 10px">Opciones de cliente</h3>
+      <p class="hint" style="margin-top:0">Estas opciones se usan para imprimir la hoja de opciones.</p>
+      <div class="options-grid">
+        <label class="modal-field"><span class="modal-label">OPCIÓN A</span><input id="optA" class="cell-input" /></label>
+        <label class="modal-field"><span class="modal-label">OPCIÓN B</span><input id="optB" class="cell-input" /></label>
+        <label class="modal-field"><span class="modal-label">OPCIÓN C</span><input id="optC" class="cell-input" /></label>
+        <label class="modal-field"><span class="modal-label">OPCIÓN D</span><input id="optD" class="cell-input" /></label>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+        <button id="closeOptionsBtn" class="btn" type="button">Cerrar</button>
+        <button id="saveOptionsBtn" class="btn primary" type="button">Guardar opciones</button>
+      </div>
+      <p id="optionsStatus" class="status"></p>
+    </section>
+  </div>
+
   <script>
     (function () {
       const state = {
         rows: [],
         currentEmail: '',
         isGerente: false,
-        appBuildId: ''
+        appBuildId: '',
+        optionsRowId: ''
       };
 
       const els = {
@@ -247,6 +268,14 @@
         modalNombre: document.getElementById('modalNombre'),
         modalCorreo: document.getElementById('modalCorreo'),
         modalTelefono: document.getElementById('modalTelefono'),
+        optionsModal: document.getElementById('optionsModal'),
+        closeOptionsBtn: document.getElementById('closeOptionsBtn'),
+        saveOptionsBtn: document.getElementById('saveOptionsBtn'),
+        optionsStatus: document.getElementById('optionsStatus'),
+        optA: document.getElementById('optA'),
+        optB: document.getElementById('optB'),
+        optC: document.getElementById('optC'),
+        optD: document.getElementById('optD'),
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
@@ -296,7 +325,7 @@
             <td>${paisSelect}</td>
             <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
-              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn print-options-btn" type="button">Imprimir opciones</button> <button class="btn save-btn move-btn" type="button">Mover a Hot Leads</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
+              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn options-btn" type="button">Opciones</button> <button class="btn save-btn print-options-btn" type="button">Imprimir opciones</button> <button class="btn save-btn move-btn" type="button">Mover a Hot Leads</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
             </td>
           </tr>
@@ -328,8 +357,27 @@
         els.clientModal.classList.add('open');
       }
 
+      function showOptionsModal(tr) {
+        const id = tr.getAttribute('data-id');
+        const row = state.rows.find(function (item) { return String(item.id) === String(id); });
+        if (!row) return;
+        const kpi = row.kpi || {};
+        state.optionsRowId = String(id || '');
+        els.optA.value = String(kpi.opcionA || '');
+        els.optB.value = String(kpi.opcionB || '');
+        els.optC.value = String(kpi.opcionC || '');
+        els.optD.value = String(kpi.opcionD || '');
+        setStatus(els.optionsStatus, '', null);
+        els.optionsModal.classList.add('open');
+      }
+
       function closeClientData() {
         els.clientModal.classList.remove('open');
+      }
+
+      function closeOptionsModal() {
+        state.optionsRowId = '';
+        els.optionsModal.classList.remove('open');
       }
 
       function mapCounts(rows, getKey) {
@@ -659,6 +707,42 @@
         }
       }
 
+      async function saveOptions() {
+        if (!state.optionsRowId) return;
+        const btn = els.saveOptionsBtn;
+        if (btn) btn.disabled = true;
+        setStatus(els.optionsStatus, 'Guardando opciones...', null);
+        try {
+          const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(state.optionsRowId), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              opcionA: els.optA.value,
+              opcionB: els.optB.value,
+              opcionC: els.optC.value,
+              opcionD: els.optD.value
+            })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudieron guardar las opciones');
+          const row = state.rows.find(function (item) { return String(item.id) === String(state.optionsRowId); });
+          if (row) {
+            row.kpi = row.kpi || {};
+            row.kpi.opcionA = els.optA.value;
+            row.kpi.opcionB = els.optB.value;
+            row.kpi.opcionC = els.optC.value;
+            row.kpi.opcionD = els.optD.value;
+          }
+          setStatus(els.optionsStatus, 'Opciones guardadas.', 'ok');
+          renderListAndStats();
+        } catch (err) {
+          setStatus(els.optionsStatus, err.message || 'Error al guardar opciones', 'error');
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
       async function printOptionsPdf(tr) {
         const id = tr.getAttribute('data-id');
         if (!id) return;
@@ -776,19 +860,24 @@
         const btn = ev.target.closest('.save-btn');
         const deleteBtn = ev.target.closest('.delete-btn');
         const moveBtn = ev.target.closest('.move-btn');
+        const optionsBtn = ev.target.closest('.options-btn');
         const printOptionsBtn = ev.target.closest('.print-options-btn');
         const clientDataBtn = ev.target.closest('.client-data-btn');
-        if (!btn && !deleteBtn && !moveBtn && !printOptionsBtn && !clientDataBtn) return;
+        if (!btn && !deleteBtn && !moveBtn && !optionsBtn && !printOptionsBtn && !clientDataBtn) return;
         if (clientDataBtn) {
           const trForData = clientDataBtn.closest('tr');
           if (trForData) showClientData(trForData);
           return;
         }
-        const sourceBtn = moveBtn || deleteBtn || printOptionsBtn || btn;
+        const sourceBtn = moveBtn || deleteBtn || optionsBtn || printOptionsBtn || btn;
         const tr = sourceBtn.closest('tr');
         if (!tr) return;
         if (moveBtn) {
           moveToWhisperlist(tr);
+          return;
+        }
+        if (optionsBtn) {
+          showOptionsModal(tr);
           return;
         }
         if (printOptionsBtn) {
@@ -808,6 +897,18 @@
 
       els.clientModal.addEventListener('click', function (ev) {
         if (ev.target === els.clientModal) closeClientData();
+      });
+
+      els.closeOptionsBtn.addEventListener('click', function () {
+        closeOptionsModal();
+      });
+
+      els.saveOptionsBtn.addEventListener('click', function () {
+        saveOptions();
+      });
+
+      els.optionsModal.addEventListener('click', function (ev) {
+        if (ev.target === els.optionsModal) closeOptionsModal();
       });
 
       fetchData().catch(function (err) {
