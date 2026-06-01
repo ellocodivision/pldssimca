@@ -606,10 +606,11 @@
         }
       }
 
-      async function saveKpiForLead() {
+      async function saveKpiForLead(opts) {
+        const silent = Boolean(opts && opts.silent);
         if (!kpiModalLeadId) return;
         els.saveKpiBtn.disabled = true;
-        setStatus(els.kpiModalStatus, 'Guardando KPI...', null);
+        if (!silent) setStatus(els.kpiModalStatus, 'Guardando KPI...', null);
         try {
           const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(kpiModalLeadId), {
             method: 'PATCH',
@@ -626,10 +627,12 @@
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) throw new Error(data.error || 'No se pudo guardar KPI');
-          setStatus(els.kpiModalStatus, 'KPI guardado.', 'ok');
+          if (!silent) setStatus(els.kpiModalStatus, 'KPI guardado.', 'ok');
           await fetchData();
+          return data.row || null;
         } catch (err) {
-          setStatus(els.kpiModalStatus, err.message || 'Error al guardar KPI', 'error');
+          if (!silent) setStatus(els.kpiModalStatus, err.message || 'Error al guardar KPI', 'error');
+          throw err;
         } finally {
           els.saveKpiBtn.disabled = false;
         }
@@ -638,15 +641,32 @@
       async function printKpiOpciones() {
         if (!kpiModalLeadId) return;
         const row = state.rows.find(function (item) { return String(item.id) === String(kpiModalLeadId); });
-        const kpi = row && row.kpi ? row.kpi : {};
+        const rowKpi = row && row.kpi ? row.kpi : {};
+        const kpi = {
+          opcionA: String(els.kpiOpcionA.value || rowKpi.opcionA || '').trim(),
+          opcionB: String(els.kpiOpcionB.value || rowKpi.opcionB || '').trim(),
+          opcionC: String(els.kpiOpcionC.value || rowKpi.opcionC || '').trim(),
+          opcionD: String(els.kpiOpcionD.value || rowKpi.opcionD || '').trim()
+        };
         if (!kpi.opcionA && !kpi.opcionB && !kpi.opcionC && !kpi.opcionD) {
           window.alert('Este cliente no tiene opciones guardadas en KPI.\nAbre KPI → completa Opción A, B, C o D → Guardar KPI primero.');
+          return;
+        }
+        els.kpiOpcionA.value = kpi.opcionA;
+        els.kpiOpcionB.value = kpi.opcionB;
+        els.kpiOpcionC.value = kpi.opcionC;
+        els.kpiOpcionD.value = kpi.opcionD;
+        try {
+          await saveKpiForLead({ silent: true });
+        } catch (err) {
+          window.alert(err.message || 'No se pudo guardar KPI');
           return;
         }
         els.printOpcionesBtn.disabled = true;
         els.printOpcionesBtn.textContent = 'Generando PDF...';
         try {
           const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(kpiModalLeadId) + '/opciones-pdf', {
+            method: 'POST',
             credentials: 'same-origin'
           });
           if (!res.ok) {
