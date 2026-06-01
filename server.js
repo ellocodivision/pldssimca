@@ -14770,65 +14770,6 @@ app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res)
   }
 });
 
-app.post('/api/viceroy/registros/rows/:id/options-pdf', async (req, res) => {
-  try {
-    const id = String(req.params && req.params.id || '').trim();
-    if (!id) return res.status(400).json({ error: 'Falta el id de la fila' });
-
-    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = isViceroyHotLeadsManager(currentEmail);
-
-    const data = await readViceroyRegistrosData();
-    const row = (Array.isArray(data.rows) ? data.rows : []).find((item) => String(item && item.id || '') === id);
-    if (!row) return res.status(404).json({ error: 'No se encontró la fila solicitada' });
-
-    const ownerEmail = String(row.correo || '').trim().toLowerCase();
-    if (!isGerente && ownerEmail !== currentEmail) {
-      return res.status(403).json({ error: 'Solo puedes imprimir opciones de filas asignadas a tu correo' });
-    }
-
-    let pdfBuffer;
-    try {
-      pdfBuffer = await buildWhisperlistSelectionPdfBuffer(row, {
-        currentEmail,
-        currentName,
-        isGerente,
-        sourceFile: data.sourceFile || ''
-      });
-    } catch (firstErr) {
-      if (firstErr && firstErr.code === 'NO_SELECTIONS') {
-        return res.status(400).json({ error: 'No hay opciones seleccionadas en KPI' });
-      }
-      if (!isRetryablePdfError(firstErr)) throw firstErr;
-      try {
-        if (sharedPdfBrowser) await sharedPdfBrowser.close();
-      } catch {}
-      sharedPdfBrowser = null;
-      const retryBrowser = await getSharedPdfBrowser();
-      pdfBuffer = await buildWhisperlistSelectionPdfBuffer(row, {
-        currentEmail,
-        currentName,
-        isGerente,
-        sourceFile: data.sourceFile || ''
-      }, retryBrowser);
-    }
-
-    const sellerPart = slugifyFilePart(String(row.asesor || '').trim(), 'asesor');
-    const clientPart = slugifyFilePart(String(row.nombreCliente || '').trim(), 'cliente');
-    const fileName = `viceroy-registros-opciones-${sellerPart}-${clientPart || 'cliente'}.pdf`;
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    return res.send(pdfBuffer);
-  } catch (err) {
-    log(`Error en /api/viceroy/registros/rows/:id/options-pdf: ${err && err.stack ? err.stack : err}`);
-    return res.status(500).json({
-      error: 'No se pudo generar el PDF de opciones.',
-      details: err && err.message ? err.message : 'error desconocido'
-    });
-  }
-});
-
 app.post('/api/viceroy/registros/import-excel', requireGerente, async (req, res) => {
   const { fileName, base64, sheetName, replaceExisting } = req.body || {};
   if (!base64) {
