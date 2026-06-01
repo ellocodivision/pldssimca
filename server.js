@@ -6079,6 +6079,12 @@ function normalizeViceroyRegistrosRow(rawRow, fallbackId) {
     ciudad: normalizeWhisperlistCity(normalized.ciudad || normalized.city || normalized.ciudad_cliente),
     clientEmail: normalizeClientEmail(normalized.correo_cliente || normalized.email_cliente || normalized.client_email),
     clientPhone: normalizeClientPhone(normalized.telefono_cliente || normalized.telefono || normalized.client_phone),
+    kpi: normalizeWhisperlistKpi({
+      opcionA: normalized.opcion_a || normalized.opciona || normalized.kpi_opcion_a || normalized.kpiopciona,
+      opcionB: normalized.opcion_b || normalized.opcionb || normalized.kpi_opcion_b || normalized.kpiopcionb,
+      opcionC: normalized.opcion_c || normalized.opcionc || normalized.kpi_opcion_c || normalized.kpiopcionc,
+      opcionD: normalized.opcion_d || normalized.opciond || normalized.kpi_opcion_d || normalized.kpiopciond
+    }),
     updatedAt: new Date().toISOString()
   };
 }
@@ -6111,6 +6117,7 @@ async function ensureViceroyRegistrosDbSchema() {
       ciudad TEXT NOT NULL DEFAULT '',
       client_email TEXT NOT NULL DEFAULT '',
       client_phone TEXT NOT NULL DEFAULT '',
+      kpi_json TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -6120,6 +6127,7 @@ async function ensureViceroyRegistrosDbSchema() {
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS client_email TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS client_phone TEXT NOT NULL DEFAULT ''`);
+  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS kpi_json TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`
     CREATE TABLE IF NOT EXISTS viceroy_registros_meta (
       key TEXT PRIMARY KEY,
@@ -6133,7 +6141,10 @@ async function readViceroyRegistrosData() {
   if (!whisperlistPool) {
     const raw = readJson(VICEROY_REGISTROS_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
     return {
-      rows: sortWhisperlistRows(Array.isArray(raw.rows) ? raw.rows : []),
+      rows: sortWhisperlistRows(Array.isArray(raw.rows) ? raw.rows : []).map((row) => ({
+        ...row,
+        kpi: normalizeWhisperlistKpi(row && row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
+      })),
       updatedAt: raw.updatedAt || null,
       sourceFile: String(raw.sourceFile || '')
     };
@@ -6141,7 +6152,7 @@ async function readViceroyRegistrosData() {
 
   const [rowsRes, metaRes] = await Promise.all([
     whisperlistPool.query(`
-      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at
+      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, kpi_json, updated_at
       FROM viceroy_registros_rows
       ORDER BY updated_at DESC, id ASC
     `),
@@ -6170,6 +6181,13 @@ async function readViceroyRegistrosData() {
       ciudad: String(row.ciudad || ''),
       clientEmail: String(row.client_email || ''),
       clientPhone: String(row.client_phone || ''),
+      kpi: (() => {
+        try {
+          return normalizeWhisperlistKpi(row.kpi_json ? JSON.parse(String(row.kpi_json)) : {});
+        } catch {
+          return normalizeWhisperlistKpi({});
+        }
+      })(),
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
     }))),
     updatedAt: meta.updatedAt || null,
@@ -6186,6 +6204,7 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
     correo: String(row.correo || '').trim().toLowerCase(),
     clientEmail: normalizeClientEmail(row.clientEmail),
     clientPhone: normalizeClientPhone(row.clientPhone),
+    kpi: normalizeWhisperlistKpi(row.kpi),
     recamaras: normalizeWhisperlistRecamaras(row.recamaras),
     pais: normalizeWhisperlistCountry(row.pais),
     ciudad: normalizeWhisperlistCity(row.ciudad),
@@ -6208,8 +6227,8 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
     await client.query('DELETE FROM viceroy_registros_rows');
     for (const row of normalizedRows) {
       await client.query(
-        `INSERT INTO viceroy_registros_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        `INSERT INTO viceroy_registros_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, kpi_json, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
           normalizeWhisperlistAsesor(row.asesor),
@@ -6222,6 +6241,7 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
           normalizeWhisperlistCity(row.ciudad),
           normalizeClientEmail(row.clientEmail),
           normalizeClientPhone(row.clientPhone),
+          JSON.stringify(normalizeWhisperlistKpi(row.kpi)),
           String(row.updatedAt || updatedAt)
         ]
       );
@@ -6260,6 +6280,17 @@ function viceroyRegistrosExportRows(rows) {
     CIUDAD: normalizeWhisperlistCity(row.ciudad),
     CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
     TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
+    KPI_OPCION_A: String(row && row.kpi && row.kpi.opcionA || ''),
+    KPI_OPCION_B: String(row && row.kpi && row.kpi.opcionB || ''),
+    KPI_OPCION_C: String(row && row.kpi && row.kpi.opcionC || ''),
+    KPI_OPCION_D: String(row && row.kpi && row.kpi.opcionD || ''),
+    KPI_HOJA_DE_RESERVA: normalizeYesNo(row && row.kpi && row.kpi.hojaReserva),
+    KPI_RESERVA_PAGADA: normalizeYesNo(row && row.kpi && row.kpi.reservaPagada),
+    KPI_UNIDAD_ASIGNADA: normalizeYesNo(row && row.kpi && row.kpi.unidadAsignada),
+    KPI_CONTRATO_SOLICITADO: normalizeYesNo(row && row.kpi && row.kpi.contratoSolicitado),
+    KPI_CONTRATO_ENVIADO: normalizeYesNo(row && row.kpi && row.kpi.contratoEnviado),
+    KPI_CONTRATO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.contratoFirmado),
+    KPI_ENGANCHE_PAGADO: normalizeYesNo(row && row.kpi && row.kpi.enganchePagado),
     UPDATED_AT: String(row.updatedAt || '')
   }));
 }
@@ -14629,6 +14660,14 @@ app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail !== undefined ? body.clientEmail : target.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone !== undefined ? body.clientPhone : target.clientPhone),
+      kpi: normalizeWhisperlistKpi({
+        ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
+        ...(body.kpi && typeof body.kpi === 'object' ? body.kpi : {}),
+        opcionA: body.opcionA !== undefined ? body.opcionA : body.kpi && body.kpi.opcionA !== undefined ? body.kpi.opcionA : target.kpi && target.kpi.opcionA,
+        opcionB: body.opcionB !== undefined ? body.opcionB : body.kpi && body.kpi.opcionB !== undefined ? body.kpi.opcionB : target.kpi && target.kpi.opcionB,
+        opcionC: body.opcionC !== undefined ? body.opcionC : body.kpi && body.kpi.opcionC !== undefined ? body.kpi.opcionC : target.kpi && target.kpi.opcionC,
+        opcionD: body.opcionD !== undefined ? body.opcionD : body.kpi && body.kpi.opcionD !== undefined ? body.kpi.opcionD : target.kpi && target.kpi.opcionD
+      }),
       updatedAt: new Date().toISOString()
     };
     data.rows[index] = nextRow;
@@ -14663,7 +14702,13 @@ app.post('/api/viceroy/registros/rows', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone),
-      kpi: normalizeWhisperlistKpi(body.kpi),
+      kpi: normalizeWhisperlistKpi({
+        ...(body.kpi && typeof body.kpi === 'object' ? body.kpi : {}),
+        opcionA: body.opcionA,
+        opcionB: body.opcionB,
+        opcionC: body.opcionC,
+        opcionD: body.opcionD
+      }),
       updatedAt: new Date().toISOString()
     };
     data.rows.push(newRow);
@@ -14767,6 +14812,43 @@ app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res)
     return res.json({ ok: true, row: movedRow });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo mover a Whisperlist' });
+  }
+});
+
+app.post('/api/viceroy/registros/rows/:id/opciones-pdf', async (req, res) => {
+  try {
+    const rowId = String(req.params.id || '').trim();
+    if (!rowId) return res.status(400).json({ error: 'Falta el id de la fila' });
+
+    const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
+    const currentName = String(req.user && req.user.name || '').trim();
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
+    const data = await readViceroyRegistrosData();
+    const row = (Array.isArray(data.rows) ? data.rows : []).find((item) => String(item && item.id || '') === rowId);
+    if (!row) return res.status(404).json({ error: 'No se encontró la fila solicitada' });
+    const ownerEmail = String(row.correo || '').trim().toLowerCase();
+    if (!isGerente && ownerEmail !== currentEmail) {
+      return res.status(403).json({ error: 'Solo puedes imprimir opciones de filas asignadas a tu correo' });
+    }
+
+    const kpi = row.kpi || {};
+    if (!kpi.opcionA && !kpi.opcionB && !kpi.opcionC && !kpi.opcionD) {
+      return res.status(400).json({ error: 'No hay opciones seleccionadas en KPI' });
+    }
+
+    const pdfBuffer = await buildViceroyFinalOptionsPdfBuffer(row, 'registros');
+    const sellerPart = slugifyFilePart(String(row.asesor || '').trim(), 'asesor');
+    const clientPart = slugifyFilePart(String(row.nombreCliente || '').trim(), 'cliente');
+    const fileName = `viceroy-registros-opciones-${sellerPart}-${clientPart || 'cliente'}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    log(`Error en /api/viceroy/registros/rows/:id/opciones-pdf: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({
+      error: 'No se pudo generar el PDF de opciones.',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
   }
 });
 
@@ -14978,6 +15060,300 @@ app.post('/api/whisperlist/rows/:id/options-pdf', async (req, res) => {
     });
   }
 });
+
+async function buildViceroyFinalOptionsPdfBuffer(row, sourceLabel = 'whisperlist') {
+  const PAGE_W = 1400;
+  const PAD = 48;
+  const BG = '#ffffff';
+  const { PDFDocument: PdfLib } = require('pdf-lib');
+
+  async function buildExactPage(browser, html, widthPx, heightPx) {
+    const pg = await browser.newPage();
+    try {
+      pg.setDefaultTimeout(120000);
+      await pg.setViewport({ width: Math.ceil(widthPx), height: Math.ceil(heightPx), deviceScaleFactor: 2 });
+      await pg.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await pg.emulateMediaType('print');
+      try {
+        const hasReady = await pg.evaluate(() => Object.prototype.hasOwnProperty.call(window, '__pdfReady'));
+        if (hasReady) await pg.waitForFunction(() => window.__pdfReady === true, { timeout: 90000 });
+      } catch {}
+      return await pg.pdf({ printBackground: true, width: widthPx + 'px', height: heightPx + 'px' });
+    } finally { try { await pg.close(); } catch {} }
+  }
+
+  async function measureScrollHeight(browser, html, widthPx) {
+    const pg = await browser.newPage();
+    try {
+      pg.setDefaultTimeout(45000);
+      await pg.setViewport({ width: widthPx, height: 2000, deviceScaleFactor: 1 });
+      await pg.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      return await pg.evaluate(() => document.documentElement.scrollHeight);
+    } finally { try { await pg.close(); } catch {} }
+  }
+
+  const kpi = row.kpi || {};
+  const LABELS = ['A', 'B', 'C', 'D'];
+  const KEYS = ['opcionA', 'opcionB', 'opcionC', 'opcionD'];
+  const opciones = LABELS.map((label, i) => ({ label, unidad: String(kpi[KEYS[i]] || '').trim() }))
+    .filter((o) => o.unidad);
+
+  const invData = buildViceroyExcelViewData({ includeHidden: true });
+  const invRows = Array.isArray(invData.rows) ? invData.rows : [];
+
+  const config = readViceroyPilotoConfig();
+  const selectedName = String(config.selectedFloorJsonName || '').trim();
+  const floorsData = selectedName
+    ? readNamedFloorsByDevelopment('viceroy-piloto', selectedName)
+    : readMergedFloorsByDevelopment('viceroy-piloto');
+  const floors = Array.isArray(floorsData.floors) ? floorsData.floors : [];
+
+  function unitKey(s) {
+    const raw = String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!raw) return '';
+    const nc = raw.replace(/([0-9])[IL]([0-9]|$)/g, '$11$2').replace(/(^|0)[IL]([0-9])/g, '$11$2');
+    if (/^\d+$/.test(nc)) {
+      const n = String(Number(nc));
+      return n === 'NaN' ? nc : n;
+    }
+    const m = nc.match(/^0*(\d+)([A-Z]+)?$/);
+    if (m) {
+      const n = String(Number(m[1]));
+      return n === 'NaN' ? nc : (n + (m[2] || ''));
+    }
+    return nc;
+  }
+
+  const matched = opciones.map((o) => {
+    const uk = unitKey(o.unidad);
+    const inv = invRows.find((r) => unitKey(r.unidad) === uk) || null;
+    return { label: o.label, unidad: o.unidad, uk, inv };
+  });
+
+  const COLORS = {
+    A: { fill: 'rgba(243,223,43,0.7)', stroke: '#998500' },
+    B: { fill: 'rgba(66,133,244,0.7)', stroke: '#1a56b0' },
+    C: { fill: 'rgba(52,168,83,0.7)', stroke: '#1b6b35' },
+    D: { fill: 'rgba(251,140,0,0.7)', stroke: '#a85200' },
+  };
+  const HEX = { A: '#f3df2b', B: '#90caf9', C: '#a5d6a7', D: '#ffcc80' };
+
+  const floorPages = floors.map((floor) => {
+    const selectedMap = {};
+    matched.forEach((o) => {
+      const hit = (floor.zones || []).some((z) => unitKey(z.label) === o.uk);
+      if (hit) selectedMap[o.uk] = { label: o.label };
+    });
+    return { floor, selectedMap };
+  }).filter((fp) => Object.keys(fp.selectedMap).length > 0);
+
+  const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+  const fmtUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  const tcCache = readBanxicoTipoCambioCache();
+  const tc = tcCache && Number.isFinite(Number(tcCache.value)) && Number(tcCache.value) > 0 ? Number(tcCache.value) : null;
+
+  const tableRows = matched.map((o) => {
+    const inv = o.inv;
+    const m2 = inv ? (Number(inv.totalM2 || inv.m2) || '') : '';
+    const sqft = m2 ? Math.round(Number(m2) * 10.7639) : '';
+    const priceMXN = inv && inv.price ? Number(inv.price) : null;
+    const priceUSD = priceMXN && tc ? priceMXN / tc : null;
+    const rec = inv ? String(inv.recamaras || '').replace('B', '') : '—';
+    const den = inv ? String(inv.den || '—') : '—';
+    const ban = inv ? String(inv.banos || '—') : '—';
+    const badge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:12px">${o.label}</span>`;
+    const precioCell = priceMXN
+      ? `${fmt.format(priceMXN)}<br><span style="font-size:10px;color:#888">${priceUSD ? fmtUSD.format(priceUSD) + ' USD' : ''}</span>`
+      : '—';
+    return `<tr>
+      <td style="text-align:center">${badge}</td>
+      <td><strong>${o.unidad}</strong></td>
+      <td>${rec}</td><td>${den}</td><td>${ban}</td>
+      <td>${m2 ? Number(m2).toLocaleString('es-MX', { maximumFractionDigits: 2 }) + ' m²' : '—'}</td>
+      <td>${sqft ? Number(sqft).toLocaleString('es-MX') + ' ft²' : '—'}</td>
+      <td>${precioCell}</td>
+    </tr>`;
+  }).join('');
+
+  const firstName = String(row.nombreCliente || '').trim().split(/\s+/)[0];
+  const clientFirst = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase() : 'there';
+
+  const LOGO_PATH = path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png');
+  const logoBase64 = fs.existsSync(LOGO_PATH) ? 'data:image/png;base64,' + fs.readFileSync(LOGO_PATH).toString('base64') : null;
+
+  const planRows = [
+    { label: 'ENGANCHE / DOWN PAYMENT', pct: 0.30, note: '30% — Firma / Signing' },
+    { label: 'PAGO 1 / PAYMENT 1', pct: 0.10, note: '10% — Mes 8 / Month 8' },
+    { label: 'PAGO 2 / PAYMENT 2', pct: 0.10, note: '10% — Mes 16 / Month 16' },
+    { label: 'PAGO 3 / PAYMENT 3', pct: 0.10, note: '10% — Mes 24 / Month 24' },
+    { label: 'CONTRA ENTREGA / AT DELIVERY', pct: 0.40, note: '40%' },
+  ];
+
+  const paymentTableRows = matched.map((o) => {
+    const price = o.inv && o.inv.price ? Number(o.inv.price) : 0;
+    const badge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:11px">${o.label}</span>`;
+    const cells = planRows.map((p) => {
+      const mxn = price ? fmt.format(Math.round(price * p.pct)) : '—';
+      const usd = price && tc ? `<br><span style="font-size:10px;color:#888">${fmtUSD.format(Math.round(price * p.pct / tc))} USD</span>` : '';
+      return `<td style="text-align:right">${mxn}${usd}</td>`;
+    }).join('');
+    const totalUsd = price && tc ? `<br><span style="font-size:10px;color:#888">${fmtUSD.format(Math.round(price / tc))} USD</span>` : '';
+    return `<tr>
+      <td style="text-align:center">${badge}</td>
+      <td><strong>${o.unidad}</strong></td>
+      <td style="text-align:right"><strong>${price ? fmt.format(price) : '—'}</strong>${totalUsd}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  const tableHtml = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><style>
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:Arial,sans-serif; font-size:14px; color:#111; background:#fff; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; }
+    .logo-wrap{ text-align:center; padding:24px 0 40px; border-bottom:1px solid #ddd; margin-bottom:52px; }
+    .logo-wrap img{ height:170px; width:auto; display:inline-block; }
+    .letter{ font-family:Georgia,'Times New Roman',serif; font-size:17px; line-height:2.1; color:#222; margin-bottom:52px; max-width:800px; }
+    .letter p{ margin-bottom:4px; }
+    .letter br{ display:block; margin:14px 0; content:''; }
+    .section-label{ font-size:12px; font-weight:700; letter-spacing:0.14em; color:#888; text-transform:uppercase; margin-bottom:14px; }
+    h3{ font-size:15px; font-weight:700; margin:44px 0 12px; color:#333; }
+    .advisor{ font-size:12px; color:#777; margin-top:28px; margin-bottom:20px; }
+    .disclaimer{ margin-top:28px; padding-top:18px; border-top:1px solid #e0e0e0; font-size:11px; color:#999; line-height:1.7; }
+    .disclaimer p{ margin-bottom:6px; }
+    table{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:4px; }
+    th,td{ border:1px solid #ddd; padding:12px 13px; font-size:13px; text-align:left; word-break:break-word; vertical-align:middle; }
+    th{ background:#f5f5f5; font-weight:700; color:#333; }
+    tr:nth-child(even) td{ background:#fafafa; }
+    .note{ font-size:11px; font-weight:400; color:#888; display:block; margin-top:3px; }
+    .t1 colgroup col:nth-child(1){ width:5%; } .t1 colgroup col:nth-child(2){ width:8%; } .t1 colgroup col:nth-child(3){ width:11%; } .t1 colgroup col:nth-child(4){ width:6%; } .t1 colgroup col:nth-child(5){ width:6%; } .t1 colgroup col:nth-child(6){ width:12%; } .t1 colgroup col:nth-child(7){ width:12%; } .t1 colgroup col:nth-child(8){ width:40%; }
+    .t2 colgroup col:nth-child(1){ width:5%; } .t2 colgroup col:nth-child(2){ width:8%; } .t2 colgroup col:nth-child(3){ width:17%; } .t2 colgroup col:nth-child(4){ width:14%; } .t2 colgroup col:nth-child(5){ width:14%; } .t2 colgroup col:nth-child(6){ width:14%; } .t2 colgroup col:nth-child(7){ width:14%; } .t2 colgroup col:nth-child(8){ width:14%; }
+  </style></head><body>
+  <div class="logo-wrap">${logoBase64 ? `<img src="${logoBase64}" alt="Viceroy Residences Playa del Carmen">` : '<strong style="font-size:28px">VICEROY RESIDENCES PLAYA DEL CARMEN</strong>'}</div>
+  <div class="letter">
+    <p>Estimado/a ${clientFirst},</p><p>Te envío las unidades que seleccionamos juntos.</p><p>Confío en que podremos asegurar alguna de estas opciones para ti.</p><br>
+    <p>Dear ${clientFirst},</p><p>I'm sharing the units we selected together.</p><p>I'm confident we'll be able to secure one of these options for you.</p>
+  </div>
+  <div class="section-label">Opciones de unidades / Unit Options</div>
+  <table class="t1"><colgroup><col/><col/><col/><col/><col/><col/><col/><col/></colgroup>
+    <thead><tr><th>OPC.</th><th>UNIDAD / UNIT</th><th>RECÁMARAS / BEDROOMS</th><th>DEN</th><th>BAÑOS / BATHS</th><th>M² TOTAL</th><th>SQFT TOTAL</th><th>PRECIO / PRICE</th></tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+  <h3>Forma de pago / Payment Plan &nbsp;<span style="font-size:12px;font-weight:400;color:#888">30 / 10 / 10 / 10 / 40</span></h3>
+  <table class="t2"><colgroup><col/><col/><col/><col/><col/><col/><col/><col/></colgroup>
+    <thead><tr><th>OPC.</th><th>UNIDAD / UNIT</th><th>PRECIO TOTAL / TOTAL PRICE</th>${planRows.map(p => `<th>${p.label}<span class="note">${p.note}</span></th>`).join('')}</tr></thead>
+    <tbody>${paymentTableRows}</tbody>
+  </table>
+  <p class="advisor" style="margin-top:20px">Asesor / Advisor: ${String(row.asesor || '').replace(/</g,'&lt;')}</p>
+  ${tc ? `<div class="disclaimer"><p>1. El precio oficial es en Pesos Mexicanos / Official pricing is in Mexican Pesos.</p><p>2. Los precios en USD se calculan utilizando el Tipo de Cambio para Pagos de Banxico del ${tcCache.asOfDate || new Date().toISOString().slice(0,10)} a $${tc.toFixed(4)} MXN/USD, únicamente con fines ilustrativos. / USD prices are calculated using the Banxico Exchange Rate for Payments of ${tcCache.asOfDate || new Date().toISOString().slice(0,10)} at $${tc.toFixed(4)} MXN/USD, for illustrative purposes only.</p></div>` : ''}
+  </body></html>`;
+
+  function buildFloorHtml(fp, idx) {
+    const rawW = fp.floor.imageWidth || 1200;
+    const rawH = fp.floor.imageHeight || 900;
+    const avail = PAGE_W - PAD * 2;
+    const dscale = Math.min(1, avail / rawW);
+    const dispW = Math.round(rawW * dscale);
+    const dispH = Math.round(rawH * dscale);
+    const legendItems = Object.entries(fp.selectedMap).map(([uk, sel]) => {
+      const m = matched.find((o) => o.uk === uk);
+      return `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;border:1px solid #555;background:${HEX[sel.label]};flex-shrink:0"></span>Opción / Option ${sel.label} – Unidad / Unit ${m ? m.unidad : uk}</span>`;
+    }).join('');
+    const colorsJson = JSON.stringify(COLORS);
+    const invKeySet = new Set(invRows.map((r) => unitKey(r.unidad)));
+    const floorJson = JSON.stringify({
+      imageDataUrl: fp.floor.imageDataUrl || fp.floor.imageRawDataUrl || '',
+      imageWidth: rawW, imageHeight: rawH,
+      zones: (fp.floor.zones || []).map((z) => ({ label: z.label, points: z.points })),
+      selectedMap: fp.selectedMap,
+      invKeys: Array.from(invKeySet),
+    });
+    return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><style>*{ box-sizing:border-box; margin:0; padding:0; } body{ font-family:Arial,sans-serif; font-size:13px; color:#111; background:${BG}; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; overflow:hidden; } .ftitle{ font-size:15px; font-weight:700; margin-bottom:7px; } .flegend{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; margin-bottom:12px; } canvas{ display:block; width:${dispW}px; height:${dispH}px; }</style></head><body><div class="ftitle">Plano General / General Floor Plan &nbsp;&mdash;&nbsp; Nivel / Level: ${(()=>{ const unitKeys=Object.keys(fp.selectedMap); if(unitKeys.length){ const num=parseInt(unitKeys[0],10); if(Number.isFinite(num)&&num>=100) return String(Math.floor(num/100)); if(Number.isFinite(num)) return String(num);} return String(idx+1); })()}</div><div class="flegend">${legendItems}</div><canvas id="c" width="${rawW}" height="${rawH}"></canvas><script>(function(){window.__pdfReady=false;const fp=${floorJson};const COLORS=${colorsJson};function unitKey(s){const raw=String(s||'').trim().toUpperCase().replace(/\\s+/g,'');if(!raw)return'';const nc=raw.replace(/([0-9])[IL]([0-9]|$)/g,'$11$2').replace(/(^|0)[IL]([0-9])/g,'$11$2');if(/^\\d+$/.test(nc)){const n=String(Number(nc));return n==='NaN'?nc:n;}const m=nc.match(/^0*(\\d+)([A-Z]+)?$/);if(m){const n=String(Number(m[1]));return n==='NaN'?nc:(n+(m[2]||''));}return nc;}const img=new Image();img.onload=function(){const c=document.getElementById('c');const ctx=c.getContext('2d');ctx.fillStyle='${BG}';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);const imgData=ctx.getImageData(0,0,c.width,c.height);const d=imgData.data;for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];if(r>=195&&g>=188&&b>=170&&(r-b)<=30&&r>=g-5){d[i]=d[i+1]=d[i+2]=255;}}ctx.putImageData(imgData,0,0);const invSet={};(fp.invKeys||[]).forEach(function(k){invSet[k]=true;});fp.zones.forEach(function(z){const uk=unitKey(z.label);const sel=fp.selectedMap[uk];const inInv=invSet[uk];const pts=Array.isArray(z.points)?z.points:[];if(pts.length<3)return;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();if(sel){const col=COLORS[sel.label]||COLORS.A;ctx.fillStyle=col.fill;ctx.fill();ctx.strokeStyle=col.stroke;ctx.lineWidth=Math.max(2,c.width/400);ctx.stroke();const cx=pts.reduce(function(s,p){return s+p[0];},0)/pts.length;const cy=pts.reduce(function(s,p){return s+p[1];},0)/pts.length;const fs=Math.max(14,Math.min(40,Math.round(c.width/30)));ctx.font='bold '+fs+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=fs*0.35;ctx.strokeText(sel.label,cx,cy);ctx.fillStyle='#111';ctx.fillText(sel.label,cx,cy);}else if(!inInv){ctx.fillStyle='rgba(20,20,20,0.82)';ctx.fill();}else{ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fill();}});window.__pdfReady=true;};img.onerror=function(){window.__pdfReady=true;};img.src=fp.imageDataUrl;})();<\/script></body></html>`;
+  }
+
+  const browser = await getSharedPdfBrowser();
+  const pdfParts = [];
+  let tableH;
+  try { tableH = await measureScrollHeight(browser, tableHtml, PAGE_W); } catch { tableH = 500; }
+  tableH = Math.max(tableH, 200) + 4;
+  pdfParts.push(await buildExactPage(browser, tableHtml, PAGE_W, tableH));
+  for (let i = 0; i < floorPages.length; i++) {
+    const fp = floorPages[i];
+    const rawW = fp.floor.imageWidth || 1200;
+    const rawH = fp.floor.imageHeight || 900;
+    const avail = PAGE_W - PAD * 2;
+    const dscale = Math.min(1, avail / rawW);
+    const dispH = Math.round(rawH * dscale);
+    const pageH = dispH + PAD * 2 + 80;
+    pdfParts.push(await buildExactPage(browser, buildFloorHtml(fp, i), PAGE_W, pageH));
+  }
+
+  function fetchImageBuffer(url) {
+    return new Promise((resolve, reject) => {
+      const mod = url.startsWith('https') ? require('https') : require('http');
+      const req = mod.get(url, { timeout: 20000 }, (res) => {
+        if (res.statusCode === 301 || res.statusCode === 302) {
+          return fetchImageBuffer(res.headers.location).then(resolve).catch(reject);
+        }
+        if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => resolve(Buffer.concat(chunks)));
+        res.on('error', reject);
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    });
+  }
+  function readImgDimensions(buf) {
+    if (!buf || buf.length < 24) return null;
+    if (buf[0] === 0xFF && buf[1] === 0xD8) {
+      let i = 2;
+      while (i < buf.length - 8) {
+        if (buf[i] !== 0xFF) break;
+        const m = buf[i + 1];
+        if (m === 0xC0 || m === 0xC1 || m === 0xC2) {
+          return { w: (buf[i + 7] << 8) | buf[i + 8], h: (buf[i + 5] << 8) | buf[i + 6] };
+        }
+        const segLen = (buf[i + 2] << 8) | buf[i + 3];
+        if (segLen < 2) break;
+        i += 2 + segLen;
+      }
+    }
+    if (buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 && buf.length >= 24) {
+      return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+    }
+    return null;
+  }
+  for (const o of matched) {
+    const planLink = String(o.inv && o.inv.planLink || '').trim();
+    if (!planLink) continue;
+    try {
+      const imgBuf = await fetchImageBuffer(planLink);
+      const dims = readImgDimensions(imgBuf);
+      const imgW = dims ? dims.w : 800;
+      const imgH = dims ? dims.h : 1000;
+      const avail = PAGE_W - PAD * 2;
+      const scale = Math.min(1, avail / imgW);
+      const dispW = Math.round(imgW * scale);
+      const dispH = Math.round(imgH * scale);
+      const pageH = dispH + PAD * 2 + 60;
+      const mime = planLink.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      const dataUrl = `data:${mime};base64,${imgBuf.toString('base64')}`;
+      const badge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${HEX[o.label]};font-weight:700;font-size:14px;flex-shrink:0">${o.label}</span>`;
+      const unitHtml = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><style>*{ box-sizing:border-box; margin:0; padding:0; } body{ font-family:Arial,sans-serif; background:${BG}; padding:${PAD}px; width:${PAGE_W - PAD * 2}px; overflow:hidden; } .hdr{ display:flex; align-items:center; gap:10px; margin-bottom:14px; font-size:15px; font-weight:700; } img{ display:block; }</style></head><body><div class="hdr">${badge}<span>Plano / Floor Plan &nbsp;&mdash;&nbsp; Opción / Option ${o.label} &ndash; Unidad / Unit ${o.unidad}</span></div><img src="${dataUrl}" width="${dispW}" height="${dispH}" alt="Plano ${o.unidad}"></body></html>`;
+      pdfParts.push(await buildExactPage(browser, unitHtml, PAGE_W, pageH));
+    } catch (imgErr) {
+      log(`opciones-pdf (${sourceLabel}): imagen tipología no disponible para unidad ${o.unidad}: ${imgErr && imgErr.message}`);
+    }
+  }
+
+  const merged = await PdfLib.create();
+  for (const buf of pdfParts) {
+    const doc = await PdfLib.load(buf);
+    const pages = await merged.copyPages(doc, doc.getPageIndices());
+    pages.forEach((p) => merged.addPage(p));
+  }
+  return Buffer.from(await merged.save());
+}
 
 app.patch('/api/whisperlist/rows/:id', async (req, res) => {
   try {

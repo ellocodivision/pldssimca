@@ -56,6 +56,7 @@
     .modal.open{display:flex}
     .modal-card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
     .modal-grid{display:grid;grid-template-columns:1fr;gap:8px}
+    .modal-grid.two{grid-template-columns:1fr 1fr}
     .modal-field{font-size:13px}
     .modal-label{font-size:11px;color:var(--muted);display:block}
     @media (max-width:700px){
@@ -213,6 +214,24 @@
     </section>
   </div>
 
+  <div id="kpiModal" class="modal" aria-hidden="true">
+    <section class="modal-card">
+      <h3 style="margin:0 0 10px">KPI Registros</h3>
+      <div class="modal-grid two">
+        <div class="modal-field"><span class="modal-label">OPCIÓN A</span><input id="kpiOpcionA" class="cell-input" type="text" placeholder="Ej. 123" /></div>
+        <div class="modal-field"><span class="modal-label">OPCIÓN B</span><input id="kpiOpcionB" class="cell-input" type="text" placeholder="Ej. 124" /></div>
+        <div class="modal-field"><span class="modal-label">OPCIÓN C</span><input id="kpiOpcionC" class="cell-input" type="text" placeholder="Ej. 125" /></div>
+        <div class="modal-field"><span class="modal-label">OPCIÓN D</span><input id="kpiOpcionD" class="cell-input" type="text" placeholder="Ej. 126" /></div>
+      </div>
+      <p id="kpiModalStatus" class="status"></p>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+        <button id="closeKpiModalBtn" class="btn" type="button">Cerrar</button>
+        <button id="saveKpiBtn" class="btn primary" type="button">Guardar KPI</button>
+        <button id="printOpcionesBtn" class="btn" type="button">Imprimir opciones</button>
+      </div>
+    </section>
+  </div>
+
   <script>
     (function () {
       const state = {
@@ -247,6 +266,15 @@
         modalNombre: document.getElementById('modalNombre'),
         modalCorreo: document.getElementById('modalCorreo'),
         modalTelefono: document.getElementById('modalTelefono'),
+        kpiModal: document.getElementById('kpiModal'),
+        closeKpiModalBtn: document.getElementById('closeKpiModalBtn'),
+        kpiModalStatus: document.getElementById('kpiModalStatus'),
+        kpiOpcionA: document.getElementById('kpiOpcionA'),
+        kpiOpcionB: document.getElementById('kpiOpcionB'),
+        kpiOpcionC: document.getElementById('kpiOpcionC'),
+        kpiOpcionD: document.getElementById('kpiOpcionD'),
+        saveKpiBtn: document.getElementById('saveKpiBtn'),
+        printOpcionesBtn: document.getElementById('printOpcionesBtn'),
         newCanal: document.getElementById('newCanal'),
         newTipoVenta: document.getElementById('newTipoVenta'),
         newNombreCliente: document.getElementById('newNombreCliente'),
@@ -258,6 +286,7 @@
       };
       const COUNTRY_OPTIONS = ['MEXICO', 'CANADA', 'USA', 'RESTO AMERICA', 'EUROPA', 'ASIA', 'AFRICA', 'OCEANIA'];
       const duplicateNameSet = new Set();
+      let kpiModalLeadId = '';
 
       function setStatus(el, text, level) {
         el.textContent = text || '';
@@ -296,7 +325,7 @@
             <td>${paisSelect}</td>
             <td><input class="cell-input" data-field="ciudad" value="${escapeHtml(row.ciudad || '')}" ${disabled}></td>
             <td>
-              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn move-btn" type="button">Mover a Hot Leads</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
+              ${canEdit ? '<button class="btn save-btn primary" type="button">Guardar</button> <button class="btn save-btn kpi-btn" type="button">KPI</button> <button class="btn save-btn print-opciones-btn" type="button">Imprimir opciones</button> <button class="btn save-btn move-btn" type="button">Mover a Hot Leads</button> <button class="btn save-btn danger delete-btn" type="button">Eliminar</button>' : lockText}
               ${row.canViewClientData ? '<button class="btn save-btn client-data-btn" type="button">Datos cliente</button>' : ''}
             </td>
           </tr>
@@ -330,6 +359,25 @@
 
       function closeClientData() {
         els.clientModal.classList.remove('open');
+      }
+
+      function openKpiModal(tr) {
+        const id = tr.getAttribute('data-id');
+        const row = state.rows.find(function (item) { return String(item.id) === String(id); });
+        if (!row) return;
+        kpiModalLeadId = String(id);
+        const kpi = row.kpi && typeof row.kpi === 'object' ? row.kpi : {};
+        els.kpiOpcionA.value = String(kpi.opcionA || '');
+        els.kpiOpcionB.value = String(kpi.opcionB || '');
+        els.kpiOpcionC.value = String(kpi.opcionC || '');
+        els.kpiOpcionD.value = String(kpi.opcionD || '');
+        setStatus(els.kpiModalStatus, '', null);
+        els.kpiModal.classList.add('open');
+      }
+
+      function closeKpiModal() {
+        kpiModalLeadId = '';
+        els.kpiModal.classList.remove('open');
       }
 
       function mapCounts(rows, getKey) {
@@ -558,6 +606,72 @@
         }
       }
 
+      async function saveKpiForLead() {
+        if (!kpiModalLeadId) return;
+        els.saveKpiBtn.disabled = true;
+        setStatus(els.kpiModalStatus, 'Guardando KPI...', null);
+        try {
+          const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(kpiModalLeadId), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              kpi: {
+                opcionA: els.kpiOpcionA.value,
+                opcionB: els.kpiOpcionB.value,
+                opcionC: els.kpiOpcionC.value,
+                opcionD: els.kpiOpcionD.value
+              }
+            })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'No se pudo guardar KPI');
+          setStatus(els.kpiModalStatus, 'KPI guardado.', 'ok');
+          await fetchData();
+        } catch (err) {
+          setStatus(els.kpiModalStatus, err.message || 'Error al guardar KPI', 'error');
+        } finally {
+          els.saveKpiBtn.disabled = false;
+        }
+      }
+
+      async function printKpiOpciones() {
+        if (!kpiModalLeadId) return;
+        const row = state.rows.find(function (item) { return String(item.id) === String(kpiModalLeadId); });
+        const kpi = row && row.kpi ? row.kpi : {};
+        if (!kpi.opcionA && !kpi.opcionB && !kpi.opcionC && !kpi.opcionD) {
+          window.alert('Este cliente no tiene opciones guardadas en KPI.\nAbre KPI → completa Opción A, B, C o D → Guardar KPI primero.');
+          return;
+        }
+        els.printOpcionesBtn.disabled = true;
+        els.printOpcionesBtn.textContent = 'Generando PDF...';
+        try {
+          const res = await fetch('/api/viceroy/registros/rows/' + encodeURIComponent(kpiModalLeadId) + '/opciones-pdf', {
+            credentials: 'same-origin'
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(function () { return {}; });
+            throw new Error(data.error || 'Error al generar PDF');
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const disposition = String(res.headers.get('content-disposition') || '');
+          const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+          a.href = url;
+          a.download = match && match[1] ? match[1] : 'viceroy-registros-opciones.pdf';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        } catch (err) {
+          window.alert(err.message || 'Error al generar PDF');
+        } finally {
+          els.printOpcionesBtn.disabled = false;
+          els.printOpcionesBtn.textContent = 'Imprimir opciones';
+        }
+      }
+
       async function addRow() {
         const payload = {
           canal: els.newCanal.value,
@@ -740,16 +854,34 @@
         const btn = ev.target.closest('.save-btn');
         const deleteBtn = ev.target.closest('.delete-btn');
         const moveBtn = ev.target.closest('.move-btn');
+        const kpiBtn = ev.target.closest('.kpi-btn');
+        const printOptionsBtn = ev.target.closest('.print-opciones-btn');
         const clientDataBtn = ev.target.closest('.client-data-btn');
-        if (!btn && !deleteBtn && !moveBtn && !clientDataBtn) return;
+        if (!btn && !deleteBtn && !moveBtn && !kpiBtn && !printOptionsBtn && !clientDataBtn) return;
         if (clientDataBtn) {
           const trForData = clientDataBtn.closest('tr');
           if (trForData) showClientData(trForData);
           return;
         }
-        const sourceBtn = moveBtn || deleteBtn || btn;
+        const sourceBtn = moveBtn || deleteBtn || kpiBtn || printOptionsBtn || btn;
         const tr = sourceBtn.closest('tr');
         if (!tr) return;
+        if (kpiBtn) {
+          openKpiModal(tr);
+          return;
+        }
+        if (printOptionsBtn) {
+          const id = tr.getAttribute('data-id');
+          const row = state.rows.find(function (item) { return String(item.id) === String(id); });
+          const kpi = row && row.kpi ? row.kpi : {};
+          if (!kpi.opcionA && !kpi.opcionB && !kpi.opcionC && !kpi.opcionD) {
+            window.alert('Este cliente no tiene opciones guardadas en KPI.\nAbre KPI → completa Opción A, B, C o D → Guardar KPI primero.');
+            return;
+          }
+          kpiModalLeadId = String(id);
+          printKpiOpciones();
+          return;
+        }
         if (moveBtn) {
           moveToWhisperlist(tr);
           return;
@@ -767,6 +899,22 @@
 
       els.clientModal.addEventListener('click', function (ev) {
         if (ev.target === els.clientModal) closeClientData();
+      });
+
+      els.closeKpiModalBtn.addEventListener('click', function () {
+        closeKpiModal();
+      });
+
+      els.kpiModal.addEventListener('click', function (ev) {
+        if (ev.target === els.kpiModal) closeKpiModal();
+      });
+
+      els.saveKpiBtn.addEventListener('click', function () {
+        saveKpiForLead();
+      });
+
+      els.printOpcionesBtn.addEventListener('click', function () {
+        printKpiOpciones();
       });
 
       fetchData().catch(function (err) {
