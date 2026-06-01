@@ -4423,6 +4423,7 @@ function normalizeWhisperlistAsesor(raw) {
 }
 
 function whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente = false) {
+  if (isViceroyHotLeadsManager(currentEmail)) return true;
   if (isGerente) return true;
   const email = String(currentEmail || '').trim().toLowerCase();
   const ownerEmail = String(row && row.correo || '').trim().toLowerCase();
@@ -5046,6 +5047,11 @@ function getMahekalLeadStats(rows) {
 }
 
 function isViceroyKpiReservasManager(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return normalized === GERENTE_EMAIL || normalized === 'chris@simca.mx';
+}
+
+function isViceroyHotLeadsManager(email) {
   const normalized = String(email || '').trim().toLowerCase();
   return normalized === GERENTE_EMAIL || normalized === 'chris@simca.mx';
 }
@@ -12787,7 +12793,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/bootstrap', requireBackendFeature('v
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
     const advisors = getLeadAssigneeOptions();
@@ -12822,7 +12828,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/bootstrap', requireBackendFeature('v
 app.get('/api/viceroy/kpi-seguimiento-leads/stats', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = filterVisibleViceroyKpiSeguimientoRows(data.rows, currentEmail, isGerente);
     return res.json({ ok: true, stats: buildLeadKpiStats(rows) });
@@ -12835,7 +12841,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature(
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     if (!isGerente) {
       return res.status(403).json({ error: 'Solo martin@simca.mx puede exportar leads' });
     }
@@ -12874,7 +12880,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/export.xlsx', requireBackendFeature(
 app.get('/api/viceroy/kpi-seguimiento-leads/template.xlsx', requireBackendFeature('viceroy', 'kpiSeguimientoLeads'), async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     if (!isGerente) {
       return res.status(403).json({ error: 'Solo un administrador puede descargar el machote' });
     }
@@ -12955,7 +12961,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads', requireBackendFeature('vice
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     if (!isGerente) {
       return res.status(403).json({ error: 'Solo martin@simca.mx puede crear leads' });
     }
@@ -13038,7 +13044,7 @@ app.patch('/api/viceroy/kpi-seguimiento-leads/leads/:id', requireBackendFeature(
     if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = Array.isArray(data.rows) ? [...data.rows] : [];
     const index = rows.findIndex((row) => String(row.id || '') === leadId);
@@ -13102,7 +13108,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads/:id/notes', requireBackendFea
     if (!noteText) return res.status(400).json({ error: 'La nota no puede ir vacía' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = readViceroyKpiSeguimientoLeadsData();
     const rows = Array.isArray(data.rows) ? [...data.rows] : [];
     const index = rows.findIndex((row) => String(row.id || '') === leadId);
@@ -13136,7 +13142,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/leads/:id/voice-notes', requireBack
     if (!leadId) return res.status(400).json({ error: 'Falta el id del lead' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const transcript = normalizeLeadText(req.body && (req.body.transcript || req.body.text || req.body.noteText));
     const audioDataUrl = String(req.body && req.body.audioDataUrl || '').trim();
     const audioMimeType = String(req.body && req.body.audioMimeType || req.body.mimeType || 'audio/webm').trim();
@@ -13193,7 +13199,7 @@ app.get('/api/viceroy/kpi-seguimiento-leads/leads/:id/voice-notes/:noteId/audio'
     if (!leadId || !noteId) return res.status(400).json({ error: 'Falta el id del lead o de la nota' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = readViceroyKpiSeguimientoLeadsData();
     const row = (Array.isArray(data.rows) ? data.rows : []).find((item) => String(item.id || '') === leadId);
     if (!row) return res.status(404).json({ error: 'Lead no encontrado' });
@@ -13307,7 +13313,7 @@ app.post('/api/viceroy/kpi-seguimiento-leads/import', requireBackendFeature('vic
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && (req.user.displayName || req.user.name || '') || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     if (!isGerente) {
       return res.status(403).json({ error: 'Solo un administrador puede importar leads' });
     }
@@ -13569,7 +13575,7 @@ app.patch('/api/viceroy/one-to-one/hot/:id', requireViceroyPresentAccess, async 
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const body = req.body || {};
     const data = await readWhisperlistData();
     const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
@@ -14528,7 +14534,7 @@ app.get('/viceroy/registros/qr', (req, res) => {
 app.get('/api/viceroy/registros', async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readViceroyRegistrosData();
     const rows = data.rows.map((row) => ({
       ...row,
@@ -14601,7 +14607,7 @@ app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readViceroyRegistrosData();
     const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
@@ -14674,7 +14680,7 @@ app.delete('/api/viceroy/registros/rows/:id', async (req, res) => {
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readViceroyRegistrosData();
     const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
@@ -14699,7 +14705,7 @@ app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res)
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
 
     const registrosData = await readViceroyRegistrosData();
     const index = registrosData.rows.findIndex((row) => String(row.id || '') === rowId);
@@ -14850,7 +14856,7 @@ app.get('/api/whisperlist', async (req, res) => {
   try {
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readWhisperlistData();
     const rows = data.rows.map((row) => ({
       ...row,
@@ -14934,7 +14940,7 @@ app.post('/api/whisperlist/rows/:id/options-pdf', async (req, res) => {
     if (!id) return res.status(400).json({ error: 'Falta el id de la fila' });
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readWhisperlistData();
     const row = (Array.isArray(data.rows) ? data.rows : []).find((item) => String(item && item.id || '') === id);
     if (!row) return res.status(404).json({ error: 'No se encontró la fila solicitada' });
@@ -14979,7 +14985,7 @@ app.patch('/api/whisperlist/rows/:id', async (req, res) => {
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readWhisperlistData();
     const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
@@ -15018,7 +15024,7 @@ app.post('/api/whisperlist/rows/:id/kpi', async (req, res) => {
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readWhisperlistData();
     const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
@@ -15092,7 +15098,7 @@ app.delete('/api/whisperlist/rows/:id', async (req, res) => {
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const data = await readWhisperlistData();
     const index = data.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
@@ -15117,7 +15123,7 @@ app.post('/api/whisperlist/rows/:id/send-to-registros', async (req, res) => {
     if (!rowId) return res.status(400).json({ error: 'id de fila inválido' });
 
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
-    const isGerente = currentEmail === GERENTE_EMAIL;
+    const isGerente = isViceroyHotLeadsManager(currentEmail);
     const whisperData = await readWhisperlistData();
     const index = whisperData.rows.findIndex((row) => String(row.id || '') === rowId);
     if (index < 0) return res.status(404).json({ error: 'Fila no encontrada' });
