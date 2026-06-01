@@ -6079,19 +6079,6 @@ function normalizeViceroyRegistrosRow(rawRow, fallbackId) {
     ciudad: normalizeWhisperlistCity(normalized.ciudad || normalized.city || normalized.ciudad_cliente),
     clientEmail: normalizeClientEmail(normalized.correo_cliente || normalized.email_cliente || normalized.client_email),
     clientPhone: normalizeClientPhone(normalized.telefono_cliente || normalized.telefono || normalized.client_phone),
-    kpi: normalizeWhisperlistKpi({
-      opcionA: normalized.opcion_a || normalized.opciona || normalized.opcion_1 || normalized.opcion1 || '',
-      opcionB: normalized.opcion_b || normalized.opcionb || normalized.opcion_2 || normalized.opcion2 || '',
-      opcionC: normalized.opcion_c || normalized.opcionc || normalized.opcion_3 || normalized.opcion3 || '',
-      opcionD: normalized.opcion_d || normalized.opciond || normalized.opcion_4 || normalized.opcion4 || '',
-      hojaReserva: normalized.hoja_reserva || normalized.hojareserva,
-      reservaPagada: normalized.reserva_pagada || normalized.reservapagada,
-      contratoSolicitado: normalized.contrato_solicitado || normalized.contratosolicitado,
-      contratoEnviado: normalized.contrato_enviado || normalized.contratoenviado,
-      contratoFirmado: normalized.contrato_firmado || normalized.contratofirmado,
-      enganchePagado: normalized.enganche_pagado || normalized.enganchepagado,
-      esHot: normalized.es_hot || normalized.eshot
-    }),
     updatedAt: new Date().toISOString()
   };
 }
@@ -6124,7 +6111,6 @@ async function ensureViceroyRegistrosDbSchema() {
       ciudad TEXT NOT NULL DEFAULT '',
       client_email TEXT NOT NULL DEFAULT '',
       client_phone TEXT NOT NULL DEFAULT '',
-      kpi JSONB NOT NULL DEFAULT '{}'::jsonb,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -6134,7 +6120,6 @@ async function ensureViceroyRegistrosDbSchema() {
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS client_email TEXT NOT NULL DEFAULT ''`);
   await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS client_phone TEXT NOT NULL DEFAULT ''`);
-  await whisperlistPool.query(`ALTER TABLE viceroy_registros_rows ADD COLUMN IF NOT EXISTS kpi JSONB NOT NULL DEFAULT '{}'::jsonb`);
   await whisperlistPool.query(`
     CREATE TABLE IF NOT EXISTS viceroy_registros_meta (
       key TEXT PRIMARY KEY,
@@ -6148,10 +6133,7 @@ async function readViceroyRegistrosData() {
   if (!whisperlistPool) {
     const raw = readJson(VICEROY_REGISTROS_JSON_PATH, { rows: [], updatedAt: null, sourceFile: '' });
     return {
-      rows: sortWhisperlistRows((Array.isArray(raw.rows) ? raw.rows : []).map((row) => ({
-        ...row,
-        kpi: normalizeWhisperlistKpi(row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
-      }))),
+      rows: sortWhisperlistRows(Array.isArray(raw.rows) ? raw.rows : []),
       updatedAt: raw.updatedAt || null,
       sourceFile: String(raw.sourceFile || '')
     };
@@ -6159,7 +6141,7 @@ async function readViceroyRegistrosData() {
 
   const [rowsRes, metaRes] = await Promise.all([
     whisperlistPool.query(`
-      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, kpi, updated_at
+      SELECT id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at
       FROM viceroy_registros_rows
       ORDER BY updated_at DESC, id ASC
     `),
@@ -6188,7 +6170,6 @@ async function readViceroyRegistrosData() {
       ciudad: String(row.ciudad || ''),
       clientEmail: String(row.client_email || ''),
       clientPhone: String(row.client_phone || ''),
-      kpi: normalizeWhisperlistKpi(row.kpi && typeof row.kpi === 'object' ? row.kpi : {}),
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
     }))),
     updatedAt: meta.updatedAt || null,
@@ -6209,8 +6190,7 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
     pais: normalizeWhisperlistCountry(row.pais),
     ciudad: normalizeWhisperlistCity(row.ciudad),
     canal: normalizeWhisperlistCanal(row.canal),
-    tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta),
-    kpi: normalizeWhisperlistKpi(row.kpi && typeof row.kpi === 'object' ? row.kpi : {})
+    tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta)
   }));
   const updatedAt = new Date().toISOString();
   if (!whisperlistPool) {
@@ -6228,8 +6208,8 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
     await client.query('DELETE FROM viceroy_registros_rows');
     for (const row of normalizedRows) {
       await client.query(
-        `INSERT INTO viceroy_registros_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, kpi, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        `INSERT INTO viceroy_registros_rows (id, asesor, correo, canal, tipo_venta, nombre_cliente, recamaras, pais, ciudad, client_email, client_phone, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           String(row.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
           normalizeWhisperlistAsesor(row.asesor),
@@ -6242,7 +6222,6 @@ async function saveViceroyRegistrosRows(rows, sourceFile) {
           normalizeWhisperlistCity(row.ciudad),
           normalizeClientEmail(row.clientEmail),
           normalizeClientPhone(row.clientPhone),
-          JSON.stringify(normalizeWhisperlistKpi(row.kpi && typeof row.kpi === 'object' ? row.kpi : {})),
           String(row.updatedAt || updatedAt)
         ]
       );
@@ -6281,10 +6260,6 @@ function viceroyRegistrosExportRows(rows) {
     CIUDAD: normalizeWhisperlistCity(row.ciudad),
     CORREO_CLIENTE: normalizeClientEmail(row.clientEmail),
     TELEFONO_CLIENTE: normalizeClientPhone(row.clientPhone),
-    OPCION_A: String(row.kpi && row.kpi.opcionA || ''),
-    OPCION_B: String(row.kpi && row.kpi.opcionB || ''),
-    OPCION_C: String(row.kpi && row.kpi.opcionC || ''),
-    OPCION_D: String(row.kpi && row.kpi.opcionD || ''),
     UPDATED_AT: String(row.updatedAt || '')
   }));
 }
@@ -14654,21 +14629,6 @@ app.patch('/api/viceroy/registros/rows/:id', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad !== undefined ? body.ciudad : target.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail !== undefined ? body.clientEmail : target.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone !== undefined ? body.clientPhone : target.clientPhone),
-      kpi: normalizeWhisperlistKpi({
-        ...(target.kpi && typeof target.kpi === 'object' ? target.kpi : {}),
-        ...(body.kpi && typeof body.kpi === 'object' ? body.kpi : {}),
-        opcionA: body.opcionA !== undefined ? body.opcionA : target.kpi && target.kpi.opcionA,
-        opcionB: body.opcionB !== undefined ? body.opcionB : target.kpi && target.kpi.opcionB,
-        opcionC: body.opcionC !== undefined ? body.opcionC : target.kpi && target.kpi.opcionC,
-        opcionD: body.opcionD !== undefined ? body.opcionD : target.kpi && target.kpi.opcionD,
-        hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : target.kpi && target.kpi.hojaReserva,
-        reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : target.kpi && target.kpi.reservaPagada,
-        contratoSolicitado: body.contratoSolicitado !== undefined ? body.contratoSolicitado : target.kpi && target.kpi.contratoSolicitado,
-        contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : target.kpi && target.kpi.contratoEnviado,
-        contratoFirmado: body.contratoFirmado !== undefined ? body.contratoFirmado : target.kpi && target.kpi.contratoFirmado,
-        enganchePagado: body.enganchePagado !== undefined ? body.enganchePagado : target.kpi && target.kpi.enganchePagado,
-        esHot: body.esHot !== undefined ? body.esHot : target.kpi && target.kpi.esHot
-      }),
       updatedAt: new Date().toISOString()
     };
     data.rows[index] = nextRow;
@@ -14703,20 +14663,7 @@ app.post('/api/viceroy/registros/rows', async (req, res) => {
       ciudad: normalizeWhisperlistCity(body.ciudad),
       clientEmail: normalizeClientEmail(body.clientEmail),
       clientPhone: normalizeClientPhone(body.clientPhone),
-      kpi: normalizeWhisperlistKpi({
-        ...(body.kpi && typeof body.kpi === 'object' ? body.kpi : {}),
-        opcionA: body.opcionA,
-        opcionB: body.opcionB,
-        opcionC: body.opcionC,
-        opcionD: body.opcionD,
-        hojaReserva: body.hojaReserva,
-        reservaPagada: body.reservaPagada,
-        contratoSolicitado: body.contratoSolicitado,
-        contratoEnviado: body.contratoEnviado,
-        contratoFirmado: body.contratoFirmado,
-        enganchePagado: body.enganchePagado,
-        esHot: body.esHot
-      }),
+      kpi: normalizeWhisperlistKpi(body.kpi),
       updatedAt: new Date().toISOString()
     };
     data.rows.push(newRow);
@@ -14808,7 +14755,7 @@ app.post('/api/viceroy/registros/rows/:id/move-to-whisperlist', async (req, res)
       ciudad: required.ciudad,
       clientEmail: normalizeClientEmail(source.clientEmail),
       clientPhone: normalizeClientPhone(source.clientPhone),
-      kpi: normalizeWhisperlistKpi(source.kpi && typeof source.kpi === 'object' ? source.kpi : {}),
+      kpi: normalizeWhisperlistKpi(source.kpi),
       updatedAt: new Date().toISOString()
     };
 
