@@ -241,6 +241,12 @@ const VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON = 'imagen-related-mapeada
 const VICEROY_KPI_SEGUIMIENTO_LEADS_JSON_PATH = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads.json');
 const VICEROY_KPI_SEGUIMIENTO_LEADS_AUDIO_DIR = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads-audio');
 const VICEROY_LEADS_EXTERNAL_API_KEY = String(process.env.VICEROY_LEADS_API_KEY || process.env.LEADS_EXTERNAL_API_KEY || '').trim();
+const VICEROY_KPI_RESERVAS_EXTERNAL_API_KEY = String(
+  process.env.VICEROY_KPI_RESERVAS_API_KEY
+  || process.env.KPI_RESERVAS_EXTERNAL_API_KEY
+  || process.env.CRM_RELATED_API_KEY
+  || ''
+).trim();
 const VICEROY_PRESENTATION_LAYOUT_PATH = VICEROY_PRESENTATION_LAYOUT_ES_PATH;
 const VICEROY_PRESENTATION_FONT_REGULAR_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-REGULAR-TRIAL.OTF');
 const VICEROY_PRESENTATION_FONT_MEDIUM_PATH = path.join(PUBLIC_DIR, 'assets', 'fonts', 'abc-rom', 'ABCROM-MEDIUM-TRIAL.OTF');
@@ -6972,6 +6978,16 @@ function externalLeadAuthorized(req) {
     || ''
   ).trim();
   return Boolean(VICEROY_LEADS_EXTERNAL_API_KEY && provided && provided === VICEROY_LEADS_EXTERNAL_API_KEY);
+}
+
+function externalKpiReservasAuthorized(req) {
+  const provided = String(
+    req.get('x-api-key')
+    || req.get('x-kpi-reservas-api-key')
+    || (req.get('authorization') || '').replace(/^Bearer\s+/i, '')
+    || ''
+  ).trim();
+  return Boolean(VICEROY_KPI_RESERVAS_EXTERNAL_API_KEY && provided && provided === VICEROY_KPI_RESERVAS_EXTERNAL_API_KEY);
 }
 
 function sanitizeLeadAudioName(id, noteId, mimeType) {
@@ -13854,6 +13870,57 @@ app.get('/api/viceroy/kpi-reservas/users', requireViceroyPresentAccess, async (r
   } catch (err) {
     log(`Error en /api/viceroy/kpi-reservas/users: ${err && err.stack ? err.stack : err}`);
     return res.status(500).json({ error: 'No se pudo leer el listado de usuarios' });
+  }
+});
+
+app.get('/api/integrations/crm-related/kpi-reservas', async (req, res) => {
+  try {
+    if (!externalKpiReservasAuthorized(req)) {
+      return res.status(401).json({ error: 'API Key inválida' });
+    }
+
+    const store = readViceroyKpiReservasData();
+    if (!store.seededFromWhisperlist) {
+      const whisperData = await readWhisperlistData();
+      const seededRows = mergeViceroyKpiReservasRows(
+        Array.isArray(whisperData.rows) ? whisperData.rows : [],
+        Array.isArray(store.rows) ? store.rows : []
+      );
+      saveViceroyKpiReservasData(seededRows, 'viceroy-kpi-reservas.json', true);
+      store.rows = seededRows;
+      store.updatedAt = new Date().toISOString();
+      store.sourceFile = 'viceroy-kpi-reservas.json';
+      store.seededFromWhisperlist = true;
+    }
+
+    const rows = (Array.isArray(store.rows) ? store.rows : []).map((row) => ({
+      id: String(row.id || ''),
+      unidadReservada: normalizeWhisperlistPersonText(row.unidadReservada),
+      nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+      asesor: normalizeWhisperlistAsesor(row.asesor),
+      correo: String(row.correo || '').trim().toLowerCase(),
+      canal: String(row.canal || '').trim(),
+      tipoVenta: String(row.tipoVenta || '').trim(),
+      documentosCompletos: normalizeYesNo(row.documentosCompletos) || 'NO',
+      pais: normalizeWhisperlistCountry(row.pais),
+      ciudad: normalizeWhisperlistCity(row.ciudad),
+      clientEmail: normalizeClientEmail(row.clientEmail),
+      clientPhone: normalizeClientPhone(row.clientPhone),
+      recamaras: String(row.recamaras || '').trim(),
+      kpi: normalizeWhisperlistKpi(row.kpi),
+      updatedAt: row.updatedAt || ''
+    }));
+
+    return res.json({
+      ok: true,
+      updatedAt: store.updatedAt,
+      sourceFile: store.sourceFile,
+      totalRows: rows.length,
+      rows
+    });
+  } catch (err) {
+    log(`Error en /api/integrations/crm-related/kpi-reservas: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo exportar KPI Reservas para CRM Related' });
   }
 });
 
