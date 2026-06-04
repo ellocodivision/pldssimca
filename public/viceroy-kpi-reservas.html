@@ -134,6 +134,10 @@
             <input id="cityInput" class="modal-input" placeholder="Ciudad" />
           </label>
           <label class="modal-field">
+            <span class="modal-label">Tipo de venta</span>
+            <input id="tipoVentaInput" class="modal-input" placeholder="Tipo de venta" />
+          </label>
+          <label class="modal-field">
             <span class="modal-label">Hoja de reserva</span>
             <select id="hojaReservaInput" class="modal-select">
               <option value="NO">NO</option>
@@ -229,6 +233,7 @@
         nameInput: document.getElementById('nameInput'),
         countryInput: document.getElementById('countryInput'),
         cityInput: document.getElementById('cityInput'),
+        tipoVentaInput: document.getElementById('tipoVentaInput'),
         hojaReservaInput: document.getElementById('hojaReservaInput'),
         reservaPagadaInput: document.getElementById('reservaPagadaInput'),
         documentosCompletosInput: document.getElementById('documentosCompletosInput'),
@@ -308,6 +313,7 @@
           row.asesor,
           row.nombreCliente,
           row.unidadReservada,
+          row.tipoVenta,
           row.pais,
           row.ciudad,
           row.kpi && row.kpi.hojaReserva,
@@ -327,6 +333,7 @@
         cols.push(
           '<th>Unidad reservada</th>',
           '<th>Cliente</th>',
+          '<th>Tipo de venta</th>',
           '<th>País</th>',
           '<th>Ciudad</th>',
           '<th>Hoja reserva</th>',
@@ -354,6 +361,7 @@
           cells.push(
             `<td><strong>${escapeText(row.unidadReservada || '—')}</strong></td>`,
             `<td><strong>${escapeText(row.nombreCliente || '—')}</strong></td>`,
+            `<td>${escapeText(row.tipoVenta || '—')}</td>`,
           `<td>${escapeText(row.pais || '—')}</td>`,
             `<td>${escapeText(row.ciudad || '—')}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.hojaReserva)}</td>`,
@@ -368,7 +376,7 @@
           `<td>${escapeText(formatUpdatedAt(row.updatedAt))}</td>`
         );
         return `<tr>${cells.join('')}</tr>`;
-        }).join('') || `<tr><td colspan="${state.isGerente ? 15 : 14}" class="small">No hay clientes para mostrar.</td></tr>`;
+        }).join('') || `<tr><td colspan="${state.isGerente ? 16 : 15}" class="small">No hay clientes para mostrar.</td></tr>`;
       }
 
       function openModal(mode, row) {
@@ -391,6 +399,7 @@
         els.nameInput.value = row ? String(row.nombreCliente || '') : '';
         els.countryInput.value = row ? String(row.pais || '') : '';
         els.cityInput.value = row ? String(row.ciudad || '') : '';
+        els.tipoVentaInput.value = row ? String(row.tipoVenta || '') : '';
         els.hojaReservaInput.value = row && row.kpi ? String(row.kpi.hojaReserva || 'NO').toUpperCase() : 'NO';
         els.reservaPagadaInput.value = row && row.kpi ? String(row.kpi.reservaPagada || 'SI').toUpperCase() : 'SI';
         els.documentosCompletosInput.value = row ? String(row.documentosCompletos || 'NO').toUpperCase() : 'NO';
@@ -413,6 +422,7 @@
           nombreCliente: els.nameInput.value,
           pais: els.countryInput.value,
           ciudad: els.cityInput.value,
+          tipoVenta: els.tipoVentaInput.value,
           hojaReserva: els.hojaReservaInput.value,
           reservaPagada: els.reservaPagadaInput.value,
           documentosCompletos: els.documentosCompletosInput.value,
