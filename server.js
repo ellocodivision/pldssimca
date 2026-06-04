@@ -4428,6 +4428,40 @@ function normalizeWhisperlistAsesor(raw) {
   return normalized;
 }
 
+function buildBackendUserDisplayNameMap() {
+  const map = new Map();
+  const users = readBackendUserAccessData().users || [];
+  users.forEach((user) => {
+    const email = String(user && user.email || '').trim().toLowerCase();
+    if (!email) return;
+    const name = normalizeWhisperlistAsesor(String(user && user.name || '').trim() || email.split('@')[0] || email);
+    map.set(email, name);
+  });
+  return map;
+}
+
+function resolveBackendUserDisplayName(email, fallbackName, userMap) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (normalizedEmail) {
+    const fromMap = userMap && typeof userMap.get === 'function' ? userMap.get(normalizedEmail) : '';
+    if (fromMap) return normalizeWhisperlistAsesor(fromMap);
+  }
+  const fallback = String(fallbackName || '').trim();
+  if (fallback) return normalizeWhisperlistAsesor(fallback);
+  if (normalizedEmail) {
+    const localPart = String(normalizedEmail.split('@')[0] || '').trim();
+    if (localPart) return normalizeWhisperlistAsesor(localPart);
+    return normalizedEmail;
+  }
+  return '';
+}
+
+function resolveViceroyKpiReservasAsesor(row, userMap) {
+  const correo = String(row && row.correo || '').trim().toLowerCase();
+  const asesor = normalizeWhisperlistAsesor(row && row.asesor || '');
+  return resolveBackendUserDisplayName(correo, asesor, userMap);
+}
+
 function whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente = false) {
   if (isViceroyHotLeadsManager(currentEmail)) return true;
   if (isGerente) return true;
@@ -13749,6 +13783,7 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = isViceroyKpiReservasManager(currentEmail);
+    const userMap = buildBackendUserDisplayNameMap();
     const store = readViceroyKpiReservasData();
     if (!store.seededFromWhisperlist) {
       const whisperData = await readWhisperlistData();
@@ -13766,9 +13801,10 @@ app.get('/api/viceroy/kpi-reservas', requireViceroyPresentAccess, async (req, re
       Array.isArray(store.rows) ? store.rows : [],
       currentEmail,
       currentName,
-      isGerente
+      isGerente,
+      userMap
     )
-      .map((row) => normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, isGerente))
+      .map((row) => normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, isGerente, userMap))
       .filter(Boolean)
       .sort((a, b) => {
         if (isGerente) {
@@ -13798,6 +13834,7 @@ app.get('/api/viceroy/kpi-reservas/export.xlsx', requireViceroyPresentAccess, as
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = isViceroyKpiReservasManager(currentEmail);
+    const userMap = buildBackendUserDisplayNameMap();
     const store = readViceroyKpiReservasData();
     if (!store.seededFromWhisperlist) {
       const whisperData = await readWhisperlistData();
@@ -13812,7 +13849,7 @@ app.get('/api/viceroy/kpi-reservas/export.xlsx', requireViceroyPresentAccess, as
       store.seededFromWhisperlist = true;
     }
     const rows = (Array.isArray(store.rows) ? store.rows : [])
-      .map((row) => sanitizeViceroyKpiReservasRowForUser(row, currentEmail, currentName, isGerente))
+      .map((row) => sanitizeViceroyKpiReservasRowForUser(row, currentEmail, currentName, isGerente, userMap))
       .filter(Boolean)
       .sort((a, b) => {
         if (isGerente) {
@@ -13821,7 +13858,7 @@ app.get('/api/viceroy/kpi-reservas/export.xlsx', requireViceroyPresentAccess, as
         }
         return String(a.nombreCliente || '').localeCompare(String(b.nombreCliente || ''), 'es', { sensitivity: 'base' });
       });
-    const exportRows = viceroyKpiReservasExportRows(rows);
+    const exportRows = viceroyKpiReservasExportRows(rows, userMap);
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     worksheet['!cols'] = [
       { wch: 18 },
@@ -13879,6 +13916,7 @@ app.get('/api/integrations/crm-related/kpi-reservas', async (req, res) => {
       return res.status(401).json({ error: 'API Key inválida' });
     }
 
+    const userMap = buildBackendUserDisplayNameMap();
     const store = readViceroyKpiReservasData();
     if (!store.seededFromWhisperlist) {
       const whisperData = await readWhisperlistData();
@@ -13897,7 +13935,7 @@ app.get('/api/integrations/crm-related/kpi-reservas', async (req, res) => {
       id: String(row.id || ''),
       unidadReservada: normalizeWhisperlistPersonText(row.unidadReservada),
       nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
-      asesor: normalizeWhisperlistAsesor(row.asesor),
+      asesor: resolveViceroyKpiReservasAsesor(row, userMap),
       correo: String(row.correo || '').trim().toLowerCase(),
       canal: String(row.canal || '').trim(),
       tipoVenta: String(row.tipoVenta || '').trim(),
@@ -13929,15 +13967,14 @@ app.post('/api/viceroy/kpi-reservas/rows', requireViceroyPresentAccess, async (r
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = isViceroyKpiReservasManager(currentEmail);
+    const userMap = buildBackendUserDisplayNameMap();
     const body = req.body || {};
     const nombreCliente = normalizeWhisperlistPersonText(body.nombreCliente);
     if (!nombreCliente) return res.status(400).json({ error: 'nombreCliente es obligatorio' });
 
-    const asesor = normalizeWhisperlistAsesor(
-      isGerente && body.asesor !== undefined
-        ? body.asesor
-        : (currentName || currentEmail.split('@')[0] || '')
-    );
+    const asesor = isGerente && body.asesor !== undefined
+      ? resolveBackendUserDisplayName(body.asesor, body.asesor, userMap)
+      : resolveBackendUserDisplayName(currentEmail, currentName || currentEmail.split('@')[0] || '', userMap);
     const newRow = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       asesor,
@@ -13965,7 +14002,7 @@ app.post('/api/viceroy/kpi-reservas/rows', requireViceroyPresentAccess, async (r
     const store = readViceroyKpiReservasData();
     store.rows.push(newRow);
     saveViceroyKpiReservasData(store.rows, 'viceroy-kpi-reservas.json');
-    const visibleRow = normalizeViceroyKpiReservasVisibleRow(newRow, currentEmail, currentName, isGerente);
+    const visibleRow = normalizeViceroyKpiReservasVisibleRow(newRow, currentEmail, currentName, isGerente, userMap);
     return res.status(201).json({ ok: true, row: visibleRow });
   } catch (err) {
     log(`Error en POST /api/viceroy/kpi-reservas/rows: ${err && err.stack ? err.stack : err}`);
@@ -13981,6 +14018,7 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
     const currentEmail = String(req.user && req.user.email || '').trim().toLowerCase();
     const currentName = String(req.user && req.user.name || '').trim();
     const isGerente = isViceroyKpiReservasManager(currentEmail);
+    const userMap = buildBackendUserDisplayNameMap();
     const body = req.body || {};
     const store = readViceroyKpiReservasData();
     const index = store.rows.findIndex((row) => String(row.id || '') === rowId);
@@ -14044,7 +14082,7 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
       store.rows.push(nextRow);
     }
     saveViceroyKpiReservasData(store.rows, 'viceroy-kpi-reservas.json');
-    const visibleRow = normalizeViceroyKpiReservasVisibleRow(nextRow, currentEmail, currentName, isGerente);
+    const visibleRow = normalizeViceroyKpiReservasVisibleRow(nextRow, currentEmail, currentName, isGerente, userMap);
     return res.json({ ok: true, row: visibleRow });
   } catch (err) {
     log(`Error en PATCH /api/viceroy/kpi-reservas/rows/:id: ${err && err.stack ? err.stack : err}`);
@@ -16559,7 +16597,7 @@ function buildViceroyExcelViewData(options = {}) {
   };
 }
 
-function buildViceroyKpiReservasRows(rows, currentEmail, currentName, isGerente) {
+function buildViceroyKpiReservasRows(rows, currentEmail, currentName, isGerente, userMap) {
   const ownerEmail = String(currentEmail || '').trim().toLowerCase();
   const ownerName = String(currentName || '').trim();
   const admin = Boolean(isGerente);
@@ -16567,7 +16605,7 @@ function buildViceroyKpiReservasRows(rows, currentEmail, currentName, isGerente)
     .map((row) => {
       const normalized = {
         ...row,
-        asesor: normalizeWhisperlistAsesor(row.asesor),
+        asesor: resolveViceroyKpiReservasAsesor(row, userMap),
         nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
         unidadReservada: normalizeWhisperlistPersonText(row.unidadReservada),
         documentosCompletos: normalizeYesNo(row.documentosCompletos) || 'NO',
@@ -16593,10 +16631,10 @@ function buildViceroyKpiReservasRows(rows, currentEmail, currentName, isGerente)
     });
 }
 
-function sanitizeViceroyKpiReservasRowForUser(row, currentEmail, currentName, isGerente) {
+function sanitizeViceroyKpiReservasRowForUser(row, currentEmail, currentName, isGerente, userMap) {
   const normalized = {
     ...row,
-    asesor: normalizeWhisperlistAsesor(row.asesor),
+    asesor: resolveViceroyKpiReservasAsesor(row, userMap),
     nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
     unidadReservada: normalizeWhisperlistPersonText(row.unidadReservada),
     documentosCompletos: normalizeYesNo(row.documentosCompletos) || 'NO',
@@ -16613,12 +16651,12 @@ function sanitizeViceroyKpiReservasRowForUser(row, currentEmail, currentName, is
   return normalized;
 }
 
-function normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, isGerente) {
+function normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, isGerente, userMap) {
   if (!row) return null;
   const visibleKpi = normalizeWhisperlistKpi(row.kpi && typeof row.kpi === 'object' ? row.kpi : {});
   const visibleRow = {
     id: String(row.id || ''),
-    asesor: normalizeWhisperlistAsesor(row.asesor),
+    asesor: resolveViceroyKpiReservasAsesor(row, userMap),
     nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
     unidadReservada: normalizeWhisperlistPersonText(row.unidadReservada),
     documentosCompletos: normalizeYesNo(row.documentosCompletos) || 'NO',
@@ -16639,11 +16677,11 @@ function normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, i
   return visibleRow;
 }
 
-function viceroyKpiReservasExportRows(rows) {
+function viceroyKpiReservasExportRows(rows, userMap) {
   const items = Array.isArray(rows) ? rows : [];
   return items.map((row) => ({
     ID: String(row.id || ''),
-    ASESOR: normalizeWhisperlistAsesor(row.asesor),
+    ASESOR: resolveViceroyKpiReservasAsesor(row, userMap),
     CORREO_ASESOR: String(row.correo || '').trim().toLowerCase(),
     UNIDAD_RESERVADA: normalizeWhisperlistPersonText(row.unidadReservada),
     NOMBRE_CLIENTE: normalizeWhisperlistPersonText(row.nombreCliente),
