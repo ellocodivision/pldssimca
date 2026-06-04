@@ -4457,9 +4457,11 @@ function resolveBackendUserDisplayName(email, fallbackName, userMap) {
 }
 
 function resolveViceroyKpiReservasAsesor(row, userMap) {
+  const asesor = String(row && row.asesor || '').trim();
   const correo = String(row && row.correo || '').trim().toLowerCase();
-  const asesor = normalizeWhisperlistAsesor(row && row.asesor || '');
-  return resolveBackendUserDisplayName(correo, asesor, userMap);
+  const resolvedAsesor = resolveBackendUserDisplayName(asesor, asesor, userMap);
+  if (resolvedAsesor) return resolvedAsesor;
+  return resolveBackendUserDisplayName(correo, correo, userMap);
 }
 
 function whisperlistRowMatchesUser(row, currentEmail, currentName, isGerente = false) {
