@@ -241,6 +241,12 @@ const VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON = 'imagen-related-mapeada
 const VICEROY_KPI_SEGUIMIENTO_LEADS_JSON_PATH = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads.json');
 const VICEROY_KPI_SEGUIMIENTO_LEADS_AUDIO_DIR = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads-audio');
 const VICEROY_LEADS_EXTERNAL_API_KEY = String(process.env.VICEROY_LEADS_API_KEY || process.env.LEADS_EXTERNAL_API_KEY || '').trim();
+const VICEROY_WHISPERLIST_EXTERNAL_API_KEY = String(
+  process.env.VICEROY_WHISPERLIST_API_KEY
+  || process.env.WHISPERLIST_EXTERNAL_API_KEY
+  || process.env.CRM_RELATED_API_KEY
+  || ''
+).trim();
 const VICEROY_KPI_RESERVAS_EXTERNAL_API_KEY = String(
   process.env.VICEROY_KPI_RESERVAS_API_KEY
   || process.env.KPI_RESERVAS_EXTERNAL_API_KEY
@@ -7015,6 +7021,16 @@ function externalLeadAuthorized(req) {
     || ''
   ).trim();
   return Boolean(VICEROY_LEADS_EXTERNAL_API_KEY && provided && provided === VICEROY_LEADS_EXTERNAL_API_KEY);
+}
+
+function externalWhisperlistAuthorized(req) {
+  const provided = String(
+    req.get('x-api-key')
+    || req.get('x-whisperlist-api-key')
+    || (req.get('authorization') || '').replace(/^Bearer\s+/i, '')
+    || ''
+  ).trim();
+  return Boolean(VICEROY_WHISPERLIST_EXTERNAL_API_KEY && provided && provided === VICEROY_WHISPERLIST_EXTERNAL_API_KEY);
 }
 
 function externalKpiReservasAuthorized(req) {
@@ -15075,6 +15091,53 @@ app.get('/api/whisperlist', async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo leer whisperlist' });
+  }
+});
+
+app.get('/api/integrations/crm-related/whisperlist', async (req, res) => {
+  try {
+    if (!externalWhisperlistAuthorized(req)) {
+      return res.status(401).json({ error: 'API Key inválida' });
+    }
+
+    const data = await readWhisperlistData();
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    const payload = rows.map((row) => ({
+      id: String(row.id || ''),
+      nombre: normalizeWhisperlistPersonText(row.nombreCliente),
+      nombreCliente: normalizeWhisperlistPersonText(row.nombreCliente),
+      email: String(row.clientEmail || '').trim().toLowerCase() || String(row.correo || '').trim().toLowerCase(),
+      clientEmail: String(row.clientEmail || '').trim().toLowerCase(),
+      telefono: normalizeClientPhone(row.clientPhone),
+      clientPhone: normalizeClientPhone(row.clientPhone),
+      asesor: normalizeWhisperlistAsesor(row.asesor),
+      estatus: String(row.kpi && row.kpi.estatus || row.status || '').trim(),
+      tipoLead: String(row.tipoLead || row.tipo_lead || row.tipoVenta || row.tipo_venta || '').trim(),
+      fuente: String(row.fuente || row.source || row.canal || '').trim(),
+      interes: String(row.interes || row.interest || row.kpi && row.kpi.interes || '').trim(),
+      notas: String(row.notasAsesor || row.notas || row.notes || '').trim(),
+      historial: Array.isArray(row.history) ? row.history : (Array.isArray(row.historial) ? row.historial : []),
+      fechaAsignacion: String(row.fechaAsignacion || row.fecha_asignacion || row.updatedAt || '').trim(),
+      fechaActualizacion: String(row.updatedAt || row.fechaActualizacion || '').trim(),
+      updatedAt: String(row.updatedAt || '').trim(),
+      canal: normalizeWhisperlistCanal(row.canal),
+      tipoVenta: normalizeWhisperlistTipoVenta(row.tipoVenta),
+      recamaras: normalizeWhisperlistRecamaras(row.recamaras),
+      pais: normalizeWhisperlistCountry(row.pais),
+      ciudad: normalizeWhisperlistCity(row.ciudad),
+      kpi: normalizeWhisperlistKpi(row.kpi)
+    }));
+
+    return res.json({
+      ok: true,
+      updatedAt: data.updatedAt,
+      sourceFile: data.sourceFile,
+      totalRows: payload.length,
+      rows: payload
+    });
+  } catch (err) {
+    log(`Error en /api/integrations/crm-related/whisperlist: ${err && err.stack ? err.stack : err}`);
+    return res.status(500).json({ error: 'No se pudo exportar whisperlist para CRM Related' });
   }
 });
 
