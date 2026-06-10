@@ -1067,8 +1067,18 @@
       let viceroyInventoryByUnit = new Map();
 
       function sanitizeNumber(value) {
-        const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
-        const parsed = Number(cleaned);
+        const raw = String(value == null ? '' : value).trim();
+        if (!raw) return 0;
+        const cleaned = raw.replace(/[^\d.,-]/g, '');
+        const hasComma = cleaned.includes(',');
+        const hasDot = cleaned.includes('.');
+        let normalized = cleaned;
+        if (hasComma && hasDot) {
+          normalized = cleaned.replace(/,/g, '');
+        } else if (hasComma && !hasDot) {
+          normalized = cleaned.replace(/,/g, '.');
+        }
+        const parsed = Number(normalized);
         return Number.isFinite(parsed) ? parsed : 0;
       }
 

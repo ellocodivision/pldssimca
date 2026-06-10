@@ -1430,8 +1430,18 @@
       }
 
       function sanitizeNumber(value) {
-        const cleaned = String(value || '').replace(/[^\d.,-]/g, '').replace(/,/g, '');
-        const parsed = Number(cleaned);
+        const raw = String(value == null ? '' : value).trim();
+        if (!raw) return 0;
+        const cleaned = raw.replace(/[^\d.,-]/g, '');
+        const hasComma = cleaned.includes(',');
+        const hasDot = cleaned.includes('.');
+        let normalized = cleaned;
+        if (hasComma && hasDot) {
+          normalized = cleaned.replace(/,/g, '');
+        } else if (hasComma && !hasDot) {
+          normalized = cleaned.replace(/,/g, '.');
+        }
+        const parsed = Number(normalized);
         return Number.isFinite(parsed) ? parsed : 0;
       }
 
@@ -1639,7 +1649,7 @@
           var nextInput = els.specialPayments.querySelector(restoreSelector);
           if (nextInput) {
             nextInput.focus({ preventScroll: true });
-            if (activeAmountIndex != null && activeValue != null && document.activeElement === nextInput) {
+            if (activeValue != null && document.activeElement === nextInput && (activeAmountIndex != null || activePercentIndex != null)) {
               nextInput.value = activeValue;
             }
             if (activeSelectionStart != null && activeSelectionEnd != null && typeof nextInput.setSelectionRange === 'function') {
@@ -1836,8 +1846,12 @@
         const planLabel = isSpecialPlan ? ('Especial ' + planParts.join('/')) : planKey;
         const t = translations[currentLang];
 
-        els.discount.value = getPercentFormatter().format(discountPercent);
-        els.promoPrice.value = String(Math.round(promoPrice * 100) / 100);
+        if (document.activeElement !== els.discount) {
+          els.discount.value = String(roundToTwoDecimals(discountPercent));
+        }
+        if (document.activeElement !== els.promoPrice) {
+          els.promoPrice.value = String(Math.round(promoPrice * 100) / 100);
+        }
         renderSpecialPaymentInputs();
         els.summaryPlan.textContent = planLabel;
         els.summaryDiscountPercent.textContent = formatPercent(discountPercent);
