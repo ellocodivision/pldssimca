@@ -241,6 +241,25 @@ const VICEROY_PILOTO_PREFERRED_PRESENTATION_FLOOR_JSON = 'imagen-related-mapeada
 const VICEROY_KPI_SEGUIMIENTO_LEADS_JSON_PATH = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads.json');
 const VICEROY_KPI_SEGUIMIENTO_LEADS_AUDIO_DIR = path.join(DATA_DIR, 'viceroy-kpi-seguimiento-leads-audio');
 const VICEROY_LEADS_EXTERNAL_API_KEY = String(process.env.VICEROY_LEADS_API_KEY || process.env.LEADS_EXTERNAL_API_KEY || '').trim();
+const BROKERS_REGISTRATION_LEADS_EMAILS = new Set(
+  String(process.env.BROKERS_REGISTRATION_LEADS_EMAILS || [
+    'michelle@viceroyplayadelcarmen.com',
+    'marion@viceroyplayadelcarmen.com',
+    'manuel@viceroyplayadelcarmen.com',
+    'karla@viceroyplayadelcarmen.com',
+    'daniela@viceroyplayadelcarmen.com',
+    'martin@viceroyplayadelcarmen.com',
+    'reception@viceroyplayadelcarmen.com',
+    'abigail@simca.mx',
+    'ayrton@simca.mx',
+    'lucia@simca.mx',
+    'rafael@simca.mx',
+    'rodrigobalmes@simca.mx'
+  ].join(','))
+    .split(',')
+    .map((item) => String(item || '').trim().toLowerCase())
+    .filter(Boolean)
+);
 const VICEROY_WHISPERLIST_EXTERNAL_API_KEY = String(
   process.env.VICEROY_WHISPERLIST_API_KEY
   || process.env.WHISPERLIST_EXTERNAL_API_KEY
@@ -387,6 +406,7 @@ function getBackendAccessScope(email) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return 'none';
   if (normalized === GERENTE_EMAIL) return 'gerente';
+  if (BROKERS_REGISTRATION_LEADS_EMAILS.has(normalized)) return 'brokers';
   if (isInternalUserEmail(normalized)) return 'simca';
   return 'viceroy';
 }
@@ -2820,6 +2840,18 @@ async function buildViceroyCloneBackupZip() {
 
 function defaultBackendUserAccessData() {
   const now = new Date().toISOString();
+  const brokersOnlyModules = {
+    simca: true,
+    viceroy: false,
+    viceroyPilot: false,
+    usersAdmin: false
+  };
+  const brokersOnlySubmodules = {
+    simca: Object.fromEntries(BACKEND_SUBMODULES.simca.map((item) => [item.key, item.key === 'brokers'])),
+    viceroy: Object.fromEntries(BACKEND_SUBMODULES.viceroy.map((item) => [item.key, false])),
+    viceroyPilot: Object.fromEntries(BACKEND_SUBMODULES.viceroyPilot.map((item) => [item.key, false])),
+    usersAdmin: { access: false }
+  };
   return {
     updatedAt: now,
     deletedEmails: [],
@@ -2842,7 +2874,16 @@ function defaultBackendUserAccessData() {
         },
         createdAt: now,
         updatedAt: now
-      }
+      },
+      ...Array.from(BROKERS_REGISTRATION_LEADS_EMAILS).map((email) => ({
+        email,
+        name: email,
+        role: 'viewer',
+        modules: brokersOnlyModules,
+        submodules: brokersOnlySubmodules,
+        createdAt: now,
+        updatedAt: now
+      }))
     ]
   };
 }
@@ -2860,6 +2901,13 @@ function normalizeBackendUserModules(rawModules, email) {
     out.viceroy = true;
     out.viceroyPilot = true;
     out.usersAdmin = true;
+    return out;
+  }
+  if (scope === 'brokers') {
+    out.simca = true;
+    out.viceroy = false;
+    out.viceroyPilot = false;
+    out.usersAdmin = false;
     return out;
   }
   if (scope === 'simca') {
@@ -2891,11 +2939,13 @@ function normalizeBackendUserSubmodules(rawSubmodules, email) {
     out[moduleKey] = defaultBackendSubmoduleAccess(moduleKey);
     const allowedKeys = scope === 'gerente'
       ? Object.keys(out[moduleKey])
+      : (scope === 'brokers'
+        ? (moduleKey === 'simca' ? ['brokers'] : [])
       : (moduleKey === 'simca'
         ? (scope === 'simca' ? SIMCA_BACKEND_SUBMODULE_KEYS : [])
         : (moduleKey === 'viceroy'
           ? VICEROY_BACKEND_SUBMODULE_KEYS
-          : []));
+          : [])));
     Object.keys(out[moduleKey]).forEach((featureKey) => {
       out[moduleKey][featureKey] = allowedKeys.includes(featureKey) && Boolean(moduleValue[featureKey]);
     });
@@ -3024,6 +3074,27 @@ async function buildBackendLegacyUserSeeds() {
     }
   });
 
+  for (const email of Array.from(BROKERS_REGISTRATION_LEADS_EMAILS || [])) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized || normalized === GERENTE_EMAIL) continue;
+    add(normalized, {
+      name: normalized,
+      role: 'viewer',
+      modules: {
+        simca: true,
+        viceroy: false,
+        viceroyPilot: false,
+        usersAdmin: false
+      },
+      submodules: {
+        simca: Object.fromEntries(BACKEND_SUBMODULES.simca.map((item) => [item.key, item.key === 'brokers'])),
+        viceroy: Object.fromEntries(BACKEND_SUBMODULES.viceroy.map((item) => [item.key, false])),
+        viceroyPilot: Object.fromEntries(BACKEND_SUBMODULES.viceroyPilot.map((item) => [item.key, false])),
+        usersAdmin: { access: false }
+      }
+    });
+  }
+
   for (const email of Array.from(EXTRA_ALLOWED_EMAILS || [])) {
     const normalized = String(email || '').trim().toLowerCase();
     if (!normalized || normalized === GERENTE_EMAIL) continue;
@@ -3124,6 +3195,9 @@ function legacyModuleAccessFallback(email, moduleKey) {
   if (!normalized) return false;
   if (normalized === GERENTE_EMAIL) return true;
   const scope = getBackendAccessScope(normalized);
+  if (scope === 'brokers') {
+    return moduleKey === 'simca';
+  }
   if (scope === 'simca') {
     return moduleKey === 'simca' || moduleKey === 'viceroy';
   }
@@ -3174,6 +3248,9 @@ function canAccessBackendFeature(email, moduleKey, featureKey) {
       : moduleKey === 'viceroy'
         ? VICEROY_BACKEND_SUBMODULE_KEYS.includes(featureKey)
         : false;
+  }
+  if (scope === 'brokers') {
+    return moduleKey === 'simca' && featureKey === 'brokers';
   }
   if (scope === 'viceroy') {
     return moduleKey === 'viceroy' && VICEROY_BACKEND_SUBMODULE_KEYS.includes(featureKey);
@@ -5454,6 +5531,7 @@ async function isAllowedLoginEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return false;
   if (normalized === GERENTE_EMAIL) return true;
+  if (BROKERS_REGISTRATION_LEADS_EMAILS.has(normalized)) return true;
   if (normalized.endsWith(`@${ALLOWED_DOMAIN}`)) return true;
   if (EXTRA_ALLOWED_EMAILS.has(normalized)) return true;
   if (backendAllowedLoginEmails().has(normalized)) return true;
