@@ -4531,6 +4531,8 @@ function normalizeWhisperlistKpi(raw) {
     unidadAsignada: normalizeYesNo(item.unidadAsignada) || 'NO',
     contratoSolicitado: normalizeYesNo(item.contratoSolicitado) || 'NO',
     contratoEnviado: normalizeYesNo(item.contratoEnviado) || 'NO',
+    docusignSolicitado: normalizeYesNo(item.docusignSolicitado) || 'NO',
+    docusignEnviado: normalizeYesNo(item.docusignEnviado) || 'NO',
     contratoFirmado: normalizeYesNo(item.contratoFirmado) || 'NO',
     enganchePagado: normalizeYesNo(item.enganchePagado) || 'NO',
     esHot: normalizeYesNo(item.esHot) || 'NO'
@@ -13892,10 +13894,15 @@ app.get('/api/viceroy/kpi-reservas/export.xlsx', requireViceroyPresentAccess, as
       { wch: 18 },
       { wch: 16 },
       { wch: 16 },
+      { wch: 16 },
+      { wch: 16 },
       { wch: 30 },
       { wch: 18 },
+      { wch: 24 },
+      { wch: 18 },
       { wch: 16 },
-      { wch: 16 },
+      { wch: 18 },
+      { wch: 14 },
       { wch: 22 }
     ];
     const workbook = XLSX.utils.book_new();
@@ -14013,6 +14020,8 @@ app.post('/api/viceroy/kpi-reservas/rows', requireViceroyPresentAccess, async (r
         reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : 'SI',
         contratoSolicitado: body.contratoSolicitado,
         contratoEnviado: body.contratoEnviado,
+        docusignSolicitado: body.docusignSolicitado,
+        docusignEnviado: body.docusignEnviado,
         contratoFirmado: body.contratoFirmado,
         enganchePagado: body.enganchePagado
       }),
@@ -14064,6 +14073,8 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
           hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : target.kpi && target.kpi.hojaReserva,
           reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : target.kpi && target.kpi.reservaPagada,
           contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : target.kpi && target.kpi.contratoEnviado,
+          docusignSolicitado: body.docusignSolicitado !== undefined ? body.docusignSolicitado : target.kpi && target.kpi.docusignSolicitado,
+          docusignEnviado: body.docusignEnviado !== undefined ? body.docusignEnviado : target.kpi && target.kpi.docusignEnviado,
           contratoFirmado: body.contratoFirmado !== undefined ? body.contratoFirmado : target.kpi && target.kpi.contratoFirmado,
           enganchePagado: body.enganchePagado !== undefined ? body.enganchePagado : target.kpi && target.kpi.enganchePagado
         }),
@@ -14095,6 +14106,8 @@ app.patch('/api/viceroy/kpi-reservas/rows/:id', requireViceroyPresentAccess, asy
           hojaReserva: body.hojaReserva !== undefined ? body.hojaReserva : whisperRow.kpi && whisperRow.kpi.hojaReserva,
           reservaPagada: body.reservaPagada !== undefined ? body.reservaPagada : whisperRow.kpi && whisperRow.kpi.reservaPagada,
           contratoEnviado: body.contratoEnviado !== undefined ? body.contratoEnviado : whisperRow.kpi && whisperRow.kpi.contratoEnviado,
+          docusignSolicitado: body.docusignSolicitado !== undefined ? body.docusignSolicitado : whisperRow.kpi && whisperRow.kpi.docusignSolicitado,
+          docusignEnviado: body.docusignEnviado !== undefined ? body.docusignEnviado : whisperRow.kpi && whisperRow.kpi.docusignEnviado,
           contratoFirmado: body.contratoFirmado !== undefined ? body.contratoFirmado : whisperRow.kpi && whisperRow.kpi.contratoFirmado,
           enganchePagado: body.enganchePagado !== undefined ? body.enganchePagado : whisperRow.kpi && whisperRow.kpi.enganchePagado
         }),
@@ -16737,6 +16750,8 @@ function normalizeViceroyKpiReservasVisibleRow(row, currentEmail, currentName, i
       documentosCompletos: normalizeYesNo(visibleKpi.documentosCompletos) || 'NO',
       contratoSolicitado: normalizeYesNo(visibleKpi.contratoSolicitado) || 'NO',
       contratoEnviado: normalizeYesNo(visibleKpi.contratoEnviado) || 'NO',
+      docusignSolicitado: normalizeYesNo(visibleKpi.docusignSolicitado) || 'NO',
+      docusignEnviado: normalizeYesNo(visibleKpi.docusignEnviado) || 'NO',
       contratoFirmado: normalizeYesNo(visibleKpi.contratoFirmado) || 'NO',
       enganchePagado: normalizeYesNo(visibleKpi.enganchePagado) || 'NO'
     },
@@ -16761,6 +16776,8 @@ function viceroyKpiReservasExportRows(rows, userMap) {
     DOCUMENTOS_COMPLETOS: normalizeYesNo(row.documentosCompletos),
     CONTRATO_SOLICITADO: normalizeYesNo(row && row.kpi && row.kpi.contratoSolicitado),
     CONTRATO_ENVIADO: normalizeYesNo(row && row.kpi && row.kpi.contratoEnviado),
+    DOCUSIGN_SOLICITADO: normalizeYesNo(row && row.kpi && row.kpi.docusignSolicitado),
+    DOCUSIGN_ENVIADO: normalizeYesNo(row && row.kpi && row.kpi.docusignEnviado),
     CONTRATO_FIRMADO: normalizeYesNo(row && row.kpi && row.kpi.contratoFirmado),
     ENGANCHE_PAGADO: normalizeYesNo(row && row.kpi && row.kpi.enganchePagado),
     CLIENT_EMAIL: normalizeClientEmail(row.clientEmail),

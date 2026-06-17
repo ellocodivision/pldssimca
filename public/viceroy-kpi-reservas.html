@@ -173,6 +173,20 @@
             </select>
           </label>
           <label class="modal-field">
+            <span class="modal-label">DocuSign solicitado</span>
+            <select id="docusignSolicitadoInput" class="modal-select">
+              <option value="NO">NO</option>
+              <option value="SI">SI</option>
+            </select>
+          </label>
+          <label class="modal-field">
+            <span class="modal-label">DocuSign enviado</span>
+            <select id="docusignEnviadoInput" class="modal-select">
+              <option value="NO">NO</option>
+              <option value="SI">SI</option>
+            </select>
+          </label>
+          <label class="modal-field">
             <span class="modal-label">Contrato firmado</span>
             <select id="contratoFirmadoInput" class="modal-select">
               <option value="NO">NO</option>
@@ -239,6 +253,8 @@
         documentosCompletosInput: document.getElementById('documentosCompletosInput'),
         contratoSolicitadoInput: document.getElementById('contratoSolicitadoInput'),
         contratoEnviadoInput: document.getElementById('contratoEnviadoInput'),
+        docusignSolicitadoInput: document.getElementById('docusignSolicitadoInput'),
+        docusignEnviadoInput: document.getElementById('docusignEnviadoInput'),
         contratoFirmadoInput: document.getElementById('contratoFirmadoInput'),
         enganchePagadoInput: document.getElementById('enganchePagadoInput')
       };
@@ -321,6 +337,8 @@
           row.documentosCompletos,
           row.kpi && row.kpi.contratoSolicitado,
           row.kpi && row.kpi.contratoEnviado,
+          row.kpi && row.kpi.docusignSolicitado,
+          row.kpi && row.kpi.docusignEnviado,
           row.kpi && row.kpi.contratoFirmado,
           row.kpi && row.kpi.enganchePagado
         ].map(normalize).join(' | ');
@@ -341,6 +359,8 @@
           '<th>Documentos completos</th>',
           '<th>Contrato solicitado</th>',
           '<th>Contrato enviado</th>',
+          '<th>DocuSign solicitado</th>',
+          '<th>DocuSign enviado</th>',
           '<th>Contrato firmado</th>',
           '<th>Enganche pagado</th>',
           '<th>Editar</th>',
@@ -366,9 +386,11 @@
             `<td>${escapeText(row.ciudad || '—')}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.hojaReserva)}</td>`,
             `<td>${yesNoChip(row.kpi && row.kpi.reservaPagada)}</td>`,
-            `<td>${yesNoChip(row.documentosCompletos)}</td>`,
+          `<td>${yesNoChip(row.documentosCompletos)}</td>`,
           `<td>${yesNoChip(row.kpi && row.kpi.contratoSolicitado)}</td>`,
           `<td>${yesNoChip(row.kpi && row.kpi.contratoEnviado)}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.docusignSolicitado)}</td>`,
+          `<td>${yesNoChip(row.kpi && row.kpi.docusignEnviado)}</td>`,
           `<td>${yesNoChip(row.kpi && row.kpi.contratoFirmado)}</td>`,
           `<td>${yesNoChip(row.kpi && row.kpi.enganchePagado)}</td>`,
           `<td><div class="cell-actions"><button class="btn" type="button" data-edit="${escapeText(row.id)}">Editar</button></div></td>`,
@@ -376,7 +398,7 @@
           `<td>${escapeText(formatUpdatedAt(row.updatedAt))}</td>`
         );
         return `<tr>${cells.join('')}</tr>`;
-        }).join('') || `<tr><td colspan="${state.isGerente ? 16 : 15}" class="small">No hay clientes para mostrar.</td></tr>`;
+        }).join('') || `<tr><td colspan="${state.isGerente ? 18 : 17}" class="small">No hay clientes para mostrar.</td></tr>`;
       }
 
       function openModal(mode, row) {
@@ -405,6 +427,8 @@
         els.documentosCompletosInput.value = row ? String(row.documentosCompletos || 'NO').toUpperCase() : 'NO';
         els.contratoSolicitadoInput.value = row && row.kpi ? String(row.kpi.contratoSolicitado || 'NO').toUpperCase() : 'NO';
         els.contratoEnviadoInput.value = row && row.kpi ? String(row.kpi.contratoEnviado || 'NO').toUpperCase() : 'NO';
+        els.docusignSolicitadoInput.value = row && row.kpi ? String(row.kpi.docusignSolicitado || 'NO').toUpperCase() : 'NO';
+        els.docusignEnviadoInput.value = row && row.kpi ? String(row.kpi.docusignEnviado || 'NO').toUpperCase() : 'NO';
         els.contratoFirmadoInput.value = row && row.kpi ? String(row.kpi.contratoFirmado || 'NO').toUpperCase() : 'NO';
         els.enganchePagadoInput.value = row && row.kpi ? String(row.kpi.enganchePagado || 'NO').toUpperCase() : 'NO';
         els.nameInput.focus();
@@ -428,6 +452,8 @@
           documentosCompletos: els.documentosCompletosInput.value,
           contratoSolicitado: els.contratoSolicitadoInput.value,
           contratoEnviado: els.contratoEnviadoInput.value,
+          docusignSolicitado: els.docusignSolicitadoInput.value,
+          docusignEnviado: els.docusignEnviadoInput.value,
           contratoFirmado: els.contratoFirmadoInput.value,
           enganchePagado: els.enganchePagadoInput.value
         };
