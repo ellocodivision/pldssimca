@@ -9528,7 +9528,11 @@ async function buildViceroyPresentationSinglePdfBuffer(payload = {}) {
     ? path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png')
     : defaultSecondaryImage;
   const allPaymentRows = Array.isArray(payload.payments) ? payload.payments : [];
-  const presentationLayout = readViceroyPresentationLayout(language, 'welcome-client');
+  const presentationLayout = normalizeViceroyPresentationLayout(
+    payload.layout && typeof payload.layout === 'object'
+      ? payload.layout
+      : readViceroyPresentationLayout(language, 'welcome-client')
+  );
   const pageRects = presentationLayout.pages;
 
   const addPages = async (indices) => {
@@ -9708,7 +9712,11 @@ async function buildViceroyPresentationMultiPdfBuffer(payload = {}) {
   const defaultPrimaryImage = fs.existsSync(path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png'))
     ? path.join(PUBLIC_DIR, 'assets', 'viceroy', 'ViceroyPlayaDelCarmen-Logo-Black.png')
     : defaultSecondaryImage;
-  const presentationLayout = readViceroyPresentationLayout(language, 'presentation-multi');
+  const presentationLayout = normalizeViceroyPresentationLayout(
+    payload.layout && typeof payload.layout === 'object'
+      ? payload.layout
+      : readViceroyPresentationLayout(language, 'presentation-multi')
+  );
   const pageRects = presentationLayout.pages;
   const addPages = async (indices) => {
     const usable = indices.filter((idx) => idx >= 0 && idx < pageCount);
