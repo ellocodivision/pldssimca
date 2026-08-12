@@ -508,6 +508,9 @@
     };
   });
 
+  const WEEKEND_SINGLE_ORDER = ['angeles', 'abi', 'rafa', 'rodrigo', 'ayrton', 'lu', 'andres', 'claudia'];
+  const WEEKEND_SINGLE_OFFSET = 5;
+
   const SEEDED_WEEKS = {
     '2026-03-30': {
       rodrigo: ['M','M','M','O','O','WM','WM'],
@@ -558,6 +561,7 @@
     mid: { title: 'Oficina NEST 11 a 4', short: '11 a 4', tone: 'mid' },
     gt: { title: 'Gran Tulum', short: 'Gran Tulum', tone: 'gt' },
     off: { title: 'OFF', short: 'OFF', tone: 'off' },
+    weekendSingle: { title: 'Guardia fin de semana 10 a 6', short: '10 a 6', tone: 'weekend' },
     weekendMorning: { title: 'Guardia fin de semana mañana', short: 'Guardia mañana', tone: 'weekend' },
     weekendAfternoon: { title: 'Guardia fin de semana tarde', short: 'Guardia tarde', tone: 'weekend' },
     free: { title: '', short: '', tone: 'free' }
@@ -587,6 +591,7 @@
     { value: 'mid', label: 'Oficina NEST 11 a 4' },
     { value: 'gt', label: 'Gran Tulum / Coca' },
     { value: 'off', label: 'OFF' },
+    { value: 'weekendSingle', label: 'Guardia fin de semana 10 a 6' },
     { value: 'weekendMorning', label: 'Guardia fin de semana mañana' },
     { value: 'weekendAfternoon', label: 'Guardia fin de semana tarde' }
   ];
@@ -686,7 +691,7 @@
     return {
       type,
       title: SHIFT_META[type].title,
-      meta: ''
+      meta: meta || ''
     };
   }
 
@@ -711,7 +716,7 @@
       record.lastGtWeek = weekIndex;
       record.lastGtOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
     }
-    if (effectiveType === 'weekendMorning' || effectiveType === 'weekendAfternoon') {
+    if (effectiveType === 'weekendMorning' || effectiveType === 'weekendAfternoon' || effectiveType === 'weekendSingle') {
       if (!record.weekendInitialShift) {
         record.weekendInitialShift = effectiveType;
       }
@@ -779,8 +784,9 @@
       if (type === 'morning' || type === 'weekendMorning') acc.morning += 1;
       if (type === 'afternoon' || type === 'weekendAfternoon') acc.afternoon += 1;
       if (type === 'mid') acc.mid += 1;
+      if (type === 'weekendSingle' || type === 'weekendMorning' || type === 'weekendAfternoon') acc.weekend += 1;
       return acc;
-    }, { morning: 0, afternoon: 0, mid: 0 });
+    }, { morning: 0, afternoon: 0, mid: 0, weekend: 0 });
   }
 
   function rebalanceOfficeCells(cells, history, weekIndex) {
@@ -878,37 +884,9 @@
   }
 
   function buildGeneratedWeek(weekStart, history, gtQueue, weekendQueue, weekIndex) {
-    const weekendPull = takeFromQueue(weekendQueue, 2, new Set());
-    let weekendPair = weekendPull.picked.map((advisorId, pairIndex) => {
-      const record = history[advisorId];
-      if (!record) return { id: advisorId, shift: pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon' };
-      if (!record.weekendInitialShift) {
-        record.weekendInitialShift = pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon';
-      }
-      const previousWeekendShift = record.lastWeekendShift || record.weekendInitialShift;
-      const shift = previousWeekendShift
-        ? oppositeWeekendShift(previousWeekendShift)
-        : (pairIndex === 0 ? 'weekendMorning' : 'weekendAfternoon');
-      return { id: advisorId, shift };
-    });
-
-    if (dateKey(weekStart) === '2026-04-20') {
-      const angelesIndex = weekendPair.findIndex((item) => item.id === 'angeles');
-      const abiIndex = weekendPair.findIndex((item) => item.id === 'abi');
-      if (angelesIndex >= 0 && abiIndex >= 0 && angelesIndex > abiIndex) {
-        weekendPair = weekendPair.map((item) => ({ ...item }));
-        [weekendPair[angelesIndex], weekendPair[abiIndex]] = [weekendPair[abiIndex], weekendPair[angelesIndex]];
-      }
-      weekendPair = weekendPair.map((item, index) => (
-        item.id === 'angeles'
-          ? { ...item, shift: 'weekendMorning' }
-          : item.id === 'abi'
-            ? { ...item, shift: 'weekendAfternoon' }
-            : { ...item, shift: index === 0 ? 'weekendMorning' : 'weekendAfternoon' }
-      ));
-    }
-
-    const weekendIds = new Set(weekendPair.map((item) => item.id));
+    const weekendAdvisorId = WEEKEND_SINGLE_ORDER[(weekIndex + WEEKEND_SINGLE_OFFSET) % WEEKEND_SINGLE_ORDER.length];
+    const weekendSingle = { id: weekendAdvisorId, shift: 'weekendSingle' };
+    const weekendIds = new Set([weekendAdvisorId]);
     const gtPull = takeFromQueue(gtQueue, 3, weekendIds);
     const gtAssignments = gtPull.picked;
     const baseAssignments = buildWeeklyBaseAssignments(history, weekIndex);
@@ -946,9 +924,7 @@
           const type = officeAssignments[teamId];
           setTeamCells(cells, teamId, type);
         });
-        weekendPair.forEach((item) => {
-          setSingleCell(cells, item.id, 'off', 'Descanso por guardia');
-        });
+        setSingleCell(cells, weekendSingle.id, 'off', 'Descanso por guardia');
         const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
         ADVISORS.forEach((advisor) => {
           applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
@@ -957,9 +933,7 @@
           });
         });
       } else {
-        weekendPair.forEach((item) => {
-          setSingleCell(cells, item.id, item.shift, 'Sábado y domingo');
-        });
+        setSingleCell(cells, weekendSingle.id, weekendSingle.shift, '10:00 - 18:00');
         ADVISORS.forEach((advisor) => {
           if (!weekendIds.has(advisor.id)) {
             setSingleCell(cells, advisor.id, 'free', '');
@@ -980,9 +954,9 @@
       weekStart,
       days,
       gtAssignments,
-      weekendPair,
+      weekendPair: [weekendSingle],
       nextGtQueue: gtPull.nextQueue,
-      nextWeekendQueue: weekendPull.nextQueue,
+      nextWeekendQueue: deriveQueueFromHistory(history, 'weekend'),
       history
     };
   }
@@ -1180,6 +1154,7 @@
               <div class="count-line"><span>Manana</span><strong>${counts.morning}</strong></div>
               <div class="count-line"><span>Tarde</span><strong>${counts.afternoon}</strong></div>
               <div class="count-line"><span>11 a 4</span><strong>${counts.mid}</strong></div>
+              <div class="count-line"><span>FDS</span><strong>${counts.weekend}</strong></div>
             </div>
           </div>
         `;
