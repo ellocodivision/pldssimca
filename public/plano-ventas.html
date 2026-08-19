@@ -1692,12 +1692,11 @@
       const asNumber = Number(numeric);
       if (!Number.isFinite(asNumber)) return raw;
       const hasDecimals = Math.abs(asNumber % 1) > 0.0001;
-      const isRelated = DEV === "related";
-      const formatted = new Intl.NumberFormat(isRelated ? "es-MX" : "en-US", {
+      const formatted = new Intl.NumberFormat("es-MX", {
         minimumFractionDigits: hasDecimals ? 2 : 0,
         maximumFractionDigits: 2
       }).format(asNumber);
-      return isRelated ? `$${formatted} MXN` : `$${formatted} USD`;
+      return `$${formatted} MXN`;
     }
 
     function formatRelatedBedValue(recValue, denValue) {
@@ -3015,8 +3014,8 @@
         `
           : `
             <div class="notes">
-              <p>Los precios están expresados en dólares estadounidenses (USD) y están sujetos al tipo de cambio vigente en pesos mexicanos al momento de la transacción. Precios sujetos a cambios sin previo aviso.</p>
-              <p>*Prices are expressed in United States dollars (USD) and are subject to the current exchange rate in Mexican pesos at the time of the transaction. Prices are subject to change without prior notice.</p>
+              <p>Los precios están expresados en pesos mexicanos (MXN). Precios sujetos a cambios sin previo aviso.</p>
+              <p>*Prices are expressed in Mexican pesos (MXN). Prices are subject to change without prior notice.</p>
             </div>
         `;
         const tableBody = exportRows.map(({ row }) => {
