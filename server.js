@@ -2078,6 +2078,65 @@ async function buildPdfBufferWithBrowser(browser, html, pdfOptions = {}) {
       preferCSSPageSize: true,
       ...pdfOptions
     });
+  } catch (pdfErr) {
+    log(`PDF browser render fallback to screenshots: ${pdfErr && pdfErr.message ? pdfErr.message : pdfErr}`);
+    try {
+      return await buildPdfBufferFromPageScreenshots(browser, html);
+    } catch (shotErr) {
+      throw pdfErr;
+    }
+  } finally {
+    try { await page.close(); } catch {}
+  }
+}
+
+async function buildPdfBufferFromPageScreenshots(browser, html) {
+  const page = await browser.newPage();
+  try {
+    page.setDefaultTimeout(120000);
+    page.setDefaultNavigationTimeout(120000);
+    await page.setViewport({ width: 1600, height: 2200, deviceScaleFactor: 1 });
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.emulateMediaType('print');
+    try {
+      const hasReadyMarker = await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, '__pdfReady'));
+      if (hasReadyMarker) {
+        await page.waitForFunction(() => window.__pdfReady === true, { timeout: 90000 });
+      }
+    } catch {}
+
+    const pageElements = await page.$$('.page');
+    const pdfDoc = await PDFDocument.create();
+
+    if (pageElements.length) {
+      for (const element of pageElements) {
+        const clip = await element.boundingBox();
+        if (!clip || clip.width < 10 || clip.height < 10) continue;
+        const pngBuffer = await element.screenshot({ type: 'png', captureBeyondViewport: true });
+        const embedded = await pdfDoc.embedPng(pngBuffer);
+        const pdfPage = pdfDoc.addPage([embedded.width, embedded.height]);
+        pdfPage.drawImage(embedded, {
+          x: 0,
+          y: 0,
+          width: embedded.width,
+          height: embedded.height
+        });
+      }
+      const saved = await pdfDoc.save();
+      return Buffer.from(saved);
+    }
+
+    const fullBuffer = await page.screenshot({ type: 'png', fullPage: true });
+    const embedded = await pdfDoc.embedPng(fullBuffer);
+    const pdfPage = pdfDoc.addPage([embedded.width, embedded.height]);
+    pdfPage.drawImage(embedded, {
+      x: 0,
+      y: 0,
+      width: embedded.width,
+      height: embedded.height
+    });
+    const saved = await pdfDoc.save();
+    return Buffer.from(saved);
   } finally {
     try { await page.close(); } catch {}
   }
@@ -7572,6 +7631,29 @@ function normalizeViceroyPlanLink(rawValue) {
   if (!value) return '';
   if (/^https?:\/\//i.test(value)) return value;
   return '';
+}
+
+function sanitizeDownloadFileName(value, fallback = 'plano-viceroy') {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return fallback;
+  const cleaned = raw
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return cleaned || fallback;
+}
+
+function inferDownloadFileNameFromUrl(source, fallback = 'plano-viceroy') {
+  try {
+    const parsed = new URL(String(source || '').trim());
+    const pathname = String(parsed.pathname || '').trim();
+    const lastSegment = pathname.split('/').filter(Boolean).pop() || '';
+    if (!lastSegment) return fallback;
+    return sanitizeDownloadFileName(decodeURIComponent(lastSegment), fallback);
+  } catch {
+    return fallback;
+  }
 }
 
 function formatViceroyPresentationNumber(value, digits = 0) {
@@ -17050,6 +17132,47 @@ app.get('/api/viceroy-piloto/tipologia-image', async (req, res) => {
     fileName: path.basename(filePath),
     planLink: planLink || ''
   });
+});
+
+app.get('/api/viceroy-piloto/plan-download', async (req, res) => {
+  try {
+    const source = String(req.query && req.query.url || '').trim();
+    if (!source) return res.status(400).json({ error: 'Falta parámetro url' });
+    let parsed;
+    try {
+      parsed = new URL(source);
+    } catch {
+      return res.status(400).json({ error: 'URL inválida' });
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ error: 'Solo se permiten URLs http/https' });
+    }
+
+    const upstream = await fetch(parsed.toString());
+    if (!upstream.ok) {
+      return res.status(502).json({ error: `No se pudo descargar el plano (${upstream.status})` });
+    }
+
+    const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    const fileNameParam = String(req.query && req.query.name || '').trim();
+    const sourceName = inferDownloadFileNameFromUrl(parsed.toString());
+    const sourceExt = path.extname(sourceName);
+    const inferredName = fileNameParam
+      ? (path.extname(fileNameParam) ? fileNameParam : `${fileNameParam}${sourceExt || ''}`)
+      : sourceName;
+    const safeName = sanitizeDownloadFileName(inferredName);
+    const data = Buffer.from(await upstream.arrayBuffer());
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    return res.send(data);
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Error al descargar el plano',
+      details: err && err.message ? err.message : 'error desconocido'
+    });
+  }
 });
 
 app.get('/api/viceroy-piloto/tipo-cambio', async (req, res) => {
