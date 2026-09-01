@@ -502,9 +502,9 @@
     nineToTwo: { title: 'Turno 9 a 2', short: '9 a 2', tone: 'morning' },
     elevenToFour: { title: 'Turno 11 a 4', short: '11 a 4', tone: 'mid' },
     twoToSeven: { title: 'Turno 2 a 7', short: '2 a 7', tone: 'afternoon' },
-    callNineToTwo: { title: 'Bajo llamado 9 a 2', short: 'Llamado 9 a 2', tone: 'call' },
-    callElevenToFour: { title: 'Bajo llamado 11 a 4', short: 'Llamado 11 a 4', tone: 'call' },
-    callTwoToSeven: { title: 'Bajo llamado 2 a 7', short: 'Llamado 2 a 7', tone: 'call' },
+    callNineToTwo: { title: 'Bajo llamado', short: 'Llamado 9 a 2', tone: 'call' },
+    callElevenToFour: { title: 'Bajo llamado', short: 'Llamado 11 a 4', tone: 'call' },
+    callTwoToSeven: { title: 'Bajo llamado', short: 'Llamado 2 a 7', tone: 'call' },
     onCall: { title: 'Bajo llamado', short: 'Llamado', tone: 'call' },
     morning: { title: 'Turno 9 a 2', short: '9 a 2', tone: 'morning' },
     afternoon: { title: 'Turno 2 a 7', short: '2 a 7', tone: 'afternoon' },
@@ -608,6 +608,9 @@
   function createHistory() {
     return ADVISORS.reduce((acc, advisor) => {
       acc[advisor.id] = {
+        active: 0,
+        work: 0,
+        call: 0,
         nineToTwo: 0,
         elevenToFour: 0,
         twoToSeven: 0,
@@ -635,7 +638,9 @@
           off: -1
         },
         lastWeekendWeek: -1,
-        lastWeekendOrder: -1
+        lastWeekendOrder: -1,
+        lastActiveWeek: -1,
+        lastActiveOrder: -1
       };
       return acc;
     }, {});
@@ -685,6 +690,16 @@
     record[role] += 1;
     record.lastRoleWeek[role] = weekIndex;
     record.lastRoleOrder[role] = (weekIndex * 10) + orderIndex;
+    if (role !== 'off') {
+      record.active += 1;
+      record.lastActiveWeek = weekIndex;
+      record.lastActiveOrder = (weekIndex * 10) + orderIndex;
+      if (role.startsWith('call')) {
+        record.call += 1;
+      } else {
+        record.work += 1;
+      }
+    }
   }
 
   function markWeekendRole(history, advisorId, weekIndex, orderIndex) {
@@ -693,6 +708,91 @@
     record.weekend += 1;
     record.lastWeekendWeek = weekIndex;
     record.lastWeekendOrder = (weekIndex * 10) + orderIndex;
+  }
+
+  function getNextWorkRole(record) {
+    const sequence = ['nineToTwo', 'elevenToFour', 'twoToSeven'];
+    return sequence[record.work % sequence.length];
+  }
+
+  function getNextCallRole(record) {
+    const sequence = ['callNineToTwo', 'callElevenToFour', 'callTwoToSeven'];
+    return sequence[record.call % sequence.length];
+  }
+
+  function getHistoryLoadScore(record) {
+    return record.active + (record.weekend * 2);
+  }
+
+  function buildWeeklyTargets(history, weekendAdvisorId) {
+    const targets = {};
+    ADVISORS.forEach((advisor) => {
+      targets[advisor.id] = { active: 4 };
+    });
+
+    const ranked = ADVISORS.slice().sort((a, b) => {
+      const aRecord = history[a.id];
+      const bRecord = history[b.id];
+      const aScore = getHistoryLoadScore(aRecord);
+      const bScore = getHistoryLoadScore(bRecord);
+      if (aScore !== bScore) return bScore - aScore;
+      if (aRecord.lastActiveWeek !== bRecord.lastActiveWeek) return aRecord.lastActiveWeek - bRecord.lastActiveWeek;
+      if (aRecord.lastWeekendWeek !== bRecord.lastWeekendWeek) return aRecord.lastWeekendWeek - bRecord.lastWeekendWeek;
+      return a.name.localeCompare(b.name, 'es');
+    });
+
+    const special = [];
+    if (weekendAdvisorId) special.push(weekendAdvisorId);
+    ranked.forEach((advisor) => {
+      if (special.length >= 2) return;
+      if (!special.includes(advisor.id)) special.push(advisor.id);
+    });
+
+    special.slice(0, 2).forEach((advisorId) => {
+      targets[advisorId].active = 3;
+    });
+
+    return targets;
+  }
+
+  function rankSlotCandidates(candidates, history, weekState, slotRole, slotType) {
+    const slotKind = slotType === 'call' ? 'call' : 'work';
+    return candidates.slice().sort((a, b) => {
+      const aRecord = history[a.id];
+      const bRecord = history[b.id];
+      const aState = weekState[a.id] || { activeRemaining: 0 };
+      const bState = weekState[b.id] || { activeRemaining: 0 };
+      const aRemaining = aState.activeRemaining;
+      const bRemaining = bState.activeRemaining;
+      if (aRemaining !== bRemaining) return bRemaining - aRemaining;
+
+      if (slotKind === 'work') {
+        const aNext = getNextWorkRole(aRecord);
+        const bNext = getNextWorkRole(bRecord);
+        if (aNext === slotRole && bNext !== slotRole) return -1;
+        if (bNext === slotRole && aNext !== slotRole) return 1;
+        if (aRecord.work !== bRecord.work) return aRecord.work - bRecord.work;
+      } else {
+        const aNext = getNextCallRole(aRecord);
+        const bNext = getNextCallRole(bRecord);
+        if (aNext === slotRole && bNext !== slotRole) return -1;
+        if (bNext === slotRole && aNext !== slotRole) return 1;
+        if (aRecord.call !== bRecord.call) return aRecord.call - bRecord.call;
+      }
+
+      const aActiveLoad = getHistoryLoadScore(aRecord);
+      const bActiveLoad = getHistoryLoadScore(bRecord);
+      if (aActiveLoad !== bActiveLoad) return aActiveLoad - bActiveLoad;
+      if (aRecord.lastActiveWeek !== bRecord.lastActiveWeek) return aRecord.lastActiveWeek - bRecord.lastActiveWeek;
+      if (aRecord.lastActiveOrder !== bRecord.lastActiveOrder) return aRecord.lastActiveOrder - bRecord.lastActiveOrder;
+      return a.name.localeCompare(b.name, 'es');
+    });
+  }
+
+  function takeFirstEligible(candidates, history, weekState, slotRole, slotType, assignedIds) {
+    const filtered = candidates.filter((advisor) => !assignedIds.has(advisor.id));
+    const ranked = rankSlotCandidates(filtered, history, weekState, slotRole, slotType);
+    return ranked[0] || null;
   }
 
   function summarizeDayCounts(cells) {
@@ -721,6 +821,13 @@
 
   function buildGeneratedWeek(weekStart, history, weekIndex) {
     const weekendAdvisorId = selectWeekendAdvisor(history, weekIndex);
+    const weeklyTargets = buildWeeklyTargets(history, weekendAdvisorId);
+    const weekState = {};
+    ADVISORS.forEach((advisor) => {
+      weekState[advisor.id] = {
+        activeRemaining: weeklyTargets[advisor.id] ? weeklyTargets[advisor.id].active : 4
+      };
+    });
     const days = [];
     for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
       const date = addDays(weekStart, dayIndex);
@@ -730,20 +837,55 @@
       });
 
       if (dayIndex <= 4) {
-        const dayRoleOrder = rotateArray(WEEKDAY_ROLE_ORDER, weekIndex + dayIndex);
         const excluded = new Set();
         if (dayIndex >= 3) {
           excluded.add(weekendAdvisorId);
         }
         const assignedIds = new Set();
+        const workSlots = ['nineToTwo', 'elevenToFour', 'twoToSeven'];
+        const callSlots = ['callNineToTwo', 'callElevenToFour', 'callTwoToSeven'];
 
-        dayRoleOrder.forEach((role, roleOrderIndex) => {
-          const candidates = ADVISORS.filter((advisor) => !excluded.has(advisor.id) && !assignedIds.has(advisor.id));
-          const candidate = pickAdvisorForRole(candidates, history, role);
+        workSlots.forEach((role, roleOrderIndex) => {
+          const eligible = ADVISORS.filter((advisor) => {
+            const state = weekState[advisor.id];
+            return state.activeRemaining > 0 && !excluded.has(advisor.id) && !assignedIds.has(advisor.id);
+          });
+          let candidate = takeFirstEligible(eligible, history, weekState, role, 'work', assignedIds);
+          if (!candidate) {
+            candidate = takeFirstEligible(ADVISORS.filter((advisor) => {
+              const state = weekState[advisor.id];
+              return state.activeRemaining > 0 && !excluded.has(advisor.id);
+            }), history, weekState, role, 'work', assignedIds);
+          }
           if (!candidate) return;
           assignedIds.add(candidate.id);
-          cells[candidate.id] = buildCell(role, role.startsWith('call') ? 'Disponible para apoyo' : '');
+          weekState[candidate.id].activeRemaining -= 1;
+          const callMeta = '';
+          cells[candidate.id] = buildCell(role, callMeta);
           markWeeklyRole(history, candidate.id, role, weekIndex, (dayIndex * 10) + roleOrderIndex);
+        });
+
+        callSlots.forEach((role, roleOrderIndex) => {
+          const eligible = ADVISORS.filter((advisor) => {
+            const state = weekState[advisor.id];
+            return state.activeRemaining > 0 && !excluded.has(advisor.id) && !assignedIds.has(advisor.id);
+          });
+          let candidate = takeFirstEligible(eligible, history, weekState, role, 'call', assignedIds);
+          if (!candidate) {
+            candidate = takeFirstEligible(ADVISORS.filter((advisor) => {
+              const state = weekState[advisor.id];
+              return state.activeRemaining > 0 && !excluded.has(advisor.id);
+            }), history, weekState, role, 'call', assignedIds);
+          }
+          if (!candidate) return;
+          assignedIds.add(candidate.id);
+          weekState[candidate.id].activeRemaining -= 1;
+          const callMeta = role === 'callNineToTwo' ? '9 a 2'
+            : role === 'callElevenToFour' ? '11 a 4'
+            : role === 'callTwoToSeven' ? '2 a 7'
+            : '';
+          cells[candidate.id] = buildCell(role, callMeta);
+          markWeeklyRole(history, candidate.id, role, weekIndex, (dayIndex * 10) + 3 + roleOrderIndex);
         });
 
         ADVISORS.forEach((advisor) => {
