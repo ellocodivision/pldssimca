@@ -4169,14 +4169,22 @@ function saveHojaReservaSimcaLayout(layout) {
 }
 
 const HORARIOS_SIMCA_SHIFT_TYPES = new Set([
-  'morning',
-  'afternoon',
-  'mid',
-  'gt',
+  'nineToTwo',
+  'elevenToFour',
+  'twoToSeven',
+  'onCall',
+  'callNineToTwo',
+  'callElevenToFour',
+  'callTwoToSeven',
   'off',
   'weekendMorning',
   'weekendAfternoon',
-  'free'
+  'weekendSingle',
+  'free',
+  'morning',
+  'afternoon',
+  'mid',
+  'gt'
 ]);
 
 const HORARIOS_VICEROY_SHIFT_TYPES = new Set([

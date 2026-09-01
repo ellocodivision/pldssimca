@@ -271,11 +271,16 @@
     opacity:.9;
   }
 
-  .shift-card.morning{background:color-mix(in srgb, var(--morning) 88%, white); color:#fff7df;}
-  .shift-card.afternoon{background:color-mix(in srgb, var(--afternoon) 88%, white); color:#10200d;}
-  .shift-card.mid{background:color-mix(in srgb, var(--mid) 90%, white); color:#241b08;}
-  .shift-card.gt{background:color-mix(in srgb, var(--gt) 88%, white); color:#f6fbff;}
+  .shift-card.morning,
+  .shift-card.nineToTwo{background:color-mix(in srgb, var(--morning) 88%, white); color:#fff7df;}
+  .shift-card.afternoon,
+  .shift-card.twoToSeven{background:color-mix(in srgb, var(--afternoon) 88%, white); color:#10200d;}
+  .shift-card.mid,
+  .shift-card.elevenToFour{background:color-mix(in srgb, var(--mid) 90%, white); color:#241b08;}
+  .shift-card.gt,
+  .shift-card.onCall{background:color-mix(in srgb, var(--gt) 88%, white); color:#f6fbff;}
   .shift-card.off{background:color-mix(in srgb, var(--off) 90%, white); color:#fff4f4;}
+  .shift-card.weekendSingle{background:color-mix(in srgb, var(--accent) 90%, white); color:#2c2412;}
   .shift-card.weekendMorning{background:color-mix(in srgb, var(--morning) 88%, white); color:#fff7df;}
   .shift-card.weekendAfternoon{background:color-mix(in srgb, var(--afternoon) 88%, white); color:#10200d;}
   .shift-card.free{background:#fff; color:#72675b; box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);}
@@ -479,95 +484,37 @@
   const MONTH_NAMES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const BASE_MONDAY = '2026-03-30';
 
-  const TEAM_ORDER = [
-    ['rodrigo', 'andres', 'lu'],
-    ['angeles', 'rafa', 'claudia'],
-    ['ayrton', 'abi']
-  ];
-
-  const TEAM_PHASE_OFFSETS = [0, 2, 1];
-
   const ADVISORS = [
-    { id: 'rodrigo', name: 'Rodrigo', team: 'alpha', phaseOffset: 0 },
-    { id: 'andres', name: 'Andrés Castro', team: 'alpha', phaseOffset: 1 },
-    { id: 'lu', name: 'Lu', team: 'alpha', phaseOffset: 2 },
-    { id: 'angeles', name: 'Ángeles', team: 'beta', phaseOffset: 0 },
-    { id: 'rafa', name: 'Rafa', team: 'beta', phaseOffset: 1 },
-    { id: 'claudia', name: 'Claudia', team: 'beta', phaseOffset: 2 },
-    { id: 'ayrton', name: 'Ayrton', team: 'gamma', phaseOffset: 0 },
-    { id: 'abi', name: 'Abi', team: 'gamma', phaseOffset: 1 }
+    { id: 'rodrigo', name: 'Rodrigo' },
+    { id: 'andres', name: 'Andrés Castro' },
+    { id: 'lu', name: 'Lu' },
+    { id: 'angeles', name: 'Ángeles' },
+    { id: 'rafa', name: 'Rafa' },
+    { id: 'claudia', name: 'Claudia' },
+    { id: 'ayrton', name: 'Ayrton' },
+    { id: 'abi', name: 'Abi' }
   ];
-
-  const TEAMS = TEAM_ORDER.map((memberIds, index) => {
-    const advisors = memberIds.map((id) => ADVISORS.find((advisor) => advisor.id === id)).filter(Boolean);
-    return {
-      id: advisors[0] ? advisors[0].team : `team-${index + 1}`,
-      memberIds,
-      advisors,
-      phaseOffset: TEAM_PHASE_OFFSETS[index] ?? index
-    };
-  });
 
   const WEEKEND_SINGLE_ORDER = ['angeles', 'abi', 'rafa', 'rodrigo', 'ayrton', 'lu', 'andres', 'claudia'];
   const WEEKEND_SINGLE_OFFSET = 5;
-
-  const SEEDED_WEEKS = {
-    '2026-03-30': {
-      rodrigo: ['M','M','M','O','O','WM','WM'],
-      andres:  ['M','M','M','M','M','F','F'],
-      angeles: ['T','T','T','T','T','F','F'],
-      rafa:    ['T','T','T','O','O','WA','WA'],
-      ayrton:  ['X','G','X','X','X','F','F'],
-      abi:     ['X','X','G','X','X','F','F'],
-      lu:      ['G','X','X','M','M','F','F'],
-      claudia: ['F','F','F','F','F','F','F']
-    },
-    '2026-04-06': {
-      rodrigo: ['G','X','X','T','X','F','F'],
-      andres:  ['X','X','G','X','T','F','F'],
-      angeles: ['M','G','M','M','M','F','F'],
-      rafa:    ['M','M','M','M','M','F','F'],
-      ayrton:  ['T','T','T','O','O','T','T'],
-      abi:     ['T','T','T','T','T','F','F'],
-      lu:      ['M','M','X','O','O','M','M'],
-      claudia: ['X','X','X','X','X','F','F']
-    },
-    '2026-04-13': {
-      rodrigo: ['T','T','T','T','T','F','F'],
-      andres:  ['T','T','T','O','O','T','T'],
-      angeles: ['X','X','X','X','X','F','F'],
-      rafa:    ['G','X','X','X','X','F','F'],
-      ayrton:  ['M','M','G','M','M','F','F'],
-      abi:     ['M','M','M','M','M','F','F'],
-      lu:      ['T','G','M','T','T','F','F'],
-      claudia: ['T','T','T','O','O','M','M']
-    }
-  };
-
-  const SHIFT_CODE_TO_TYPE = {
-    M: 'morning',
-    T: 'afternoon',
-    X: 'mid',
-    G: 'gt',
-    O: 'off',
-    WM: 'weekendMorning',
-    WA: 'weekendAfternoon',
-    F: 'free'
-  };
-
+  const WEEKDAY_ROLE_ORDER = ['nineToTwo', 'elevenToFour', 'twoToSeven', 'callNineToTwo', 'callElevenToFour', 'callTwoToSeven'];
   const SHIFT_META = {
-    morning: { title: 'Oficina NEST mañana', short: 'Mañana', tone: 'morning' },
-    afternoon: { title: 'Oficina NEST tarde', short: 'Tarde', tone: 'afternoon' },
-    mid: { title: 'Oficina NEST 11 a 4', short: '11 a 4', tone: 'mid' },
-    gt: { title: 'Gran Tulum', short: 'Gran Tulum', tone: 'gt' },
+    nineToTwo: { title: 'Turno 9 a 2', short: '9 a 2', tone: 'morning' },
+    elevenToFour: { title: 'Turno 11 a 4', short: '11 a 4', tone: 'mid' },
+    twoToSeven: { title: 'Turno 2 a 7', short: '2 a 7', tone: 'afternoon' },
+    callNineToTwo: { title: 'Bajo llamado 9 a 2', short: 'Llamado 9 a 2', tone: 'call' },
+    callElevenToFour: { title: 'Bajo llamado 11 a 4', short: 'Llamado 11 a 4', tone: 'call' },
+    callTwoToSeven: { title: 'Bajo llamado 2 a 7', short: 'Llamado 2 a 7', tone: 'call' },
+    onCall: { title: 'Bajo llamado', short: 'Llamado', tone: 'call' },
+    morning: { title: 'Turno 9 a 2', short: '9 a 2', tone: 'morning' },
+    afternoon: { title: 'Turno 2 a 7', short: '2 a 7', tone: 'afternoon' },
+    mid: { title: 'Turno 11 a 4', short: '11 a 4', tone: 'mid' },
     off: { title: 'OFF', short: 'OFF', tone: 'off' },
     weekendSingle: { title: 'Guardia fin de semana 10 a 6', short: '10 a 6', tone: 'weekend' },
     weekendMorning: { title: 'Guardia fin de semana mañana', short: 'Guardia mañana', tone: 'weekend' },
     weekendAfternoon: { title: 'Guardia fin de semana tarde', short: 'Guardia tarde', tone: 'weekend' },
     free: { title: '', short: '', tone: 'free' }
   };
-
-  const PHASE_SEQUENCE = ['morning', 'mid', 'afternoon'];
 
   const boardEl = document.getElementById('board');
   const countersGridEl = document.getElementById('countersGrid');
@@ -586,10 +533,12 @@
   const cellEditorCancelBtn = document.getElementById('cellEditorCancelBtn');
 
   const MANUAL_SHIFT_OPTIONS = [
-    { value: 'morning', label: 'Oficina NEST mañana' },
-    { value: 'afternoon', label: 'Oficina NEST tarde' },
-    { value: 'mid', label: 'Oficina NEST 11 a 4' },
-    { value: 'gt', label: 'Gran Tulum / Coca' },
+    { value: 'nineToTwo', label: 'Turno 9 a 2' },
+    { value: 'elevenToFour', label: 'Turno 11 a 4' },
+    { value: 'twoToSeven', label: 'Turno 2 a 7' },
+    { value: 'callNineToTwo', label: 'Bajo llamado 9 a 2' },
+    { value: 'callElevenToFour', label: 'Bajo llamado 11 a 4' },
+    { value: 'callTwoToSeven', label: 'Bajo llamado 2 a 7' },
     { value: 'off', label: 'OFF' },
     { value: 'weekendSingle', label: 'Guardia fin de semana 10 a 6' },
     { value: 'weekendMorning', label: 'Guardia fin de semana mañana' },
@@ -647,303 +596,172 @@
     return Math.max(0, Math.round((startOfWeek(target).getTime() - startOfWeek(base).getTime()) / (7 * 24 * 60 * 60 * 1000)));
   }
 
-  function getTeamByAdvisorId(advisorId) {
-    return TEAMS.find((team) => team.memberIds.includes(advisorId)) || null;
-  }
-
-  function getPreferredShiftForTeam(team, weekIndex) {
-    return PHASE_SEQUENCE[(weekIndex + team.phaseOffset) % PHASE_SEQUENCE.length];
-  }
-
-  function getPreferredShift(advisor, weekIndex) {
-    const team = getTeamByAdvisorId(advisor.id);
-    return team ? getPreferredShiftForTeam(team, weekIndex) : PHASE_SEQUENCE[0];
-  }
-
-  function oppositeWeekendShift(shift) {
-    return shift === 'weekendMorning' ? 'weekendAfternoon' : 'weekendMorning';
+  function buildCell(type, meta) {
+    const resolved = SHIFT_META[type] || SHIFT_META.off;
+    return {
+      type: SHIFT_META[type] ? type : 'off',
+      title: resolved.title,
+      meta: meta || ''
+    };
   }
 
   function createHistory() {
     return ADVISORS.reduce((acc, advisor) => {
       acc[advisor.id] = {
-        morning: 0,
-        afternoon: 0,
-        mid: 0,
-        gt: 0,
+        nineToTwo: 0,
+        elevenToFour: 0,
+        twoToSeven: 0,
+        callNineToTwo: 0,
+        callElevenToFour: 0,
+        callTwoToSeven: 0,
+        off: 0,
         weekend: 0,
-        rebalanceMoves: 0,
-        lastOfficeShift: null,
-        weekendAssignments: 0,
-        weekendInitialShift: null,
-        lastWeekendShift: null,
-        lastRebalanceWeek: -1,
-        lastGtWeek: -1,
+        lastRoleWeek: {
+          nineToTwo: -1,
+          elevenToFour: -1,
+          twoToSeven: -1,
+          callNineToTwo: -1,
+          callElevenToFour: -1,
+          callTwoToSeven: -1,
+          off: -1
+        },
+        lastRoleOrder: {
+          nineToTwo: -1,
+          elevenToFour: -1,
+          twoToSeven: -1,
+          callNineToTwo: -1,
+          callElevenToFour: -1,
+          callTwoToSeven: -1,
+          off: -1
+        },
         lastWeekendWeek: -1,
-        lastGtOrder: -1,
         lastWeekendOrder: -1
       };
       return acc;
     }, {});
   }
 
-  function buildCell(type, meta) {
-    return {
-      type,
-      title: SHIFT_META[type].title,
-      meta: meta || ''
-    };
+  function rotateArray(items, offset) {
+    const list = Array.isArray(items) ? items.slice() : [];
+    if (!list.length) return list;
+    const index = ((offset % list.length) + list.length) % list.length;
+    return list.slice(index).concat(list.slice(0, index));
   }
 
-  function getTeamRecord(team, history) {
-    return history[team.memberIds[0]];
-  }
-
-  function applyAssignmentToHistory(history, advisorId, type, weekIndex, options) {
-    const record = history[advisorId];
-    if (!record) return;
-    const effectiveType = String(options && options.historyType || type || '');
-    if (options && options.rebalanced) {
-      record.rebalanceMoves += 1;
-      record.lastRebalanceWeek = weekIndex;
-    }
-    if (effectiveType === 'morning' || effectiveType === 'afternoon' || effectiveType === 'mid') {
-      record[effectiveType] += 1;
-      record.lastOfficeShift = effectiveType;
-    }
-    if (effectiveType === 'gt') {
-      record.gt += 1;
-      record.lastGtWeek = weekIndex;
-      record.lastGtOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
-    }
-    if (effectiveType === 'weekendMorning' || effectiveType === 'weekendAfternoon' || effectiveType === 'weekendSingle') {
-      if (!record.weekendInitialShift) {
-        record.weekendInitialShift = effectiveType;
-      }
-      record.lastWeekendShift = effectiveType;
-      if (record.lastWeekendWeek !== weekIndex) {
-        record.weekend += 1;
-        record.weekendAssignments += 1;
-        record.lastWeekendWeek = weekIndex;
-        record.lastWeekendOrder = typeof options?.sortOrder === 'number' ? options.sortOrder : (weekIndex * 10);
-      }
-    }
-  }
-
-  function deriveQueueFromHistory(history, kind) {
-    return ADVISORS.slice().sort((a, b) => {
+  function pickAdvisorForRole(candidates, history, role) {
+    return candidates.slice().sort((a, b) => {
       const aRecord = history[a.id];
       const bRecord = history[b.id];
-      const aCount = kind === 'gt' ? aRecord.gt : aRecord.weekend;
-      const bCount = kind === 'gt' ? bRecord.gt : bRecord.weekend;
+      const aCount = aRecord ? aRecord[role] : 0;
+      const bCount = bRecord ? bRecord[role] : 0;
       if (aCount !== bCount) return aCount - bCount;
-      const aOrder = kind === 'gt' ? aRecord.lastGtOrder : aRecord.lastWeekendOrder;
-      const bOrder = kind === 'gt' ? bRecord.lastGtOrder : bRecord.lastWeekendOrder;
+      const aTotal = aRecord ? (aRecord.nineToTwo + aRecord.elevenToFour + aRecord.twoToSeven + aRecord.callNineToTwo + aRecord.callElevenToFour + aRecord.callTwoToSeven + aRecord.off) : 0;
+      const bTotal = bRecord ? (bRecord.nineToTwo + bRecord.elevenToFour + bRecord.twoToSeven + bRecord.callNineToTwo + bRecord.callElevenToFour + bRecord.callTwoToSeven + bRecord.off) : 0;
+      if (aTotal !== bTotal) return aTotal - bTotal;
+      const aWeek = aRecord && aRecord.lastRoleWeek ? aRecord.lastRoleWeek[role] : -1;
+      const bWeek = bRecord && bRecord.lastRoleWeek ? bRecord.lastRoleWeek[role] : -1;
+      if (aWeek !== bWeek) return aWeek - bWeek;
+      const aOrder = aRecord && aRecord.lastRoleOrder ? aRecord.lastRoleOrder[role] : -1;
+      const bOrder = bRecord && bRecord.lastRoleOrder ? bRecord.lastRoleOrder[role] : -1;
       if (aOrder !== bOrder) return aOrder - bOrder;
       return a.name.localeCompare(b.name, 'es');
-    }).map((advisor) => advisor.id);
+    })[0] || null;
   }
 
-  function takeFromQueue(queue, count, excludedSet) {
-    const picked = [];
-    const remaining = [];
-    queue.forEach((id) => {
-      if (picked.length < count && !(excludedSet && excludedSet.has(id))) {
-        picked.push(id);
-      } else {
-        remaining.push(id);
+  function selectWeekendAdvisor(history, weekIndex, excludedIds) {
+    const startIndex = (weekIndex + WEEKEND_SINGLE_OFFSET) % WEEKEND_SINGLE_ORDER.length;
+    for (let offset = 0; offset < WEEKEND_SINGLE_ORDER.length; offset += 1) {
+      const advisorId = WEEKEND_SINGLE_ORDER[(startIndex + offset) % WEEKEND_SINGLE_ORDER.length];
+      if (!excludedIds || !excludedIds.has(advisorId)) {
+        return advisorId;
       }
-    });
-    return {
-      picked,
-      nextQueue: remaining.concat(picked)
-    };
+    }
+    return WEEKEND_SINGLE_ORDER[weekIndex % WEEKEND_SINGLE_ORDER.length];
   }
 
-  function buildWeeklyBaseAssignments(history, weekIndex) {
-    const base = {};
-    TEAMS.forEach((team) => {
-      base[team.id] = getPreferredShiftForTeam(team, weekIndex);
-    });
-    return base;
+  function markWeeklyRole(history, advisorId, role, weekIndex, orderIndex) {
+    const record = history[advisorId];
+    if (!record || !Object.prototype.hasOwnProperty.call(record, role)) return;
+    record[role] += 1;
+    record.lastRoleWeek[role] = weekIndex;
+    record.lastRoleOrder[role] = (weekIndex * 10) + orderIndex;
   }
 
-  function chooseDayAssignments(activeTeamIds, baseAssignments, history) {
-    const assignments = {};
-    activeTeamIds.forEach((teamId) => {
-      if (baseAssignments[teamId]) {
-        assignments[teamId] = baseAssignments[teamId];
-      }
-    });
-    return assignments;
+  function markWeekendRole(history, advisorId, weekIndex, orderIndex) {
+    const record = history[advisorId];
+    if (!record) return;
+    record.weekend += 1;
+    record.lastWeekendWeek = weekIndex;
+    record.lastWeekendOrder = (weekIndex * 10) + orderIndex;
   }
 
-  function summarizeOfficeCounts(cells) {
+  function summarizeDayCounts(cells) {
     return ADVISORS.reduce((acc, advisor) => {
-      const type = cells[advisor.id] ? cells[advisor.id].type : 'free';
-      if (type === 'morning' || type === 'weekendMorning') acc.morning += 1;
-      if (type === 'afternoon' || type === 'weekendAfternoon') acc.afternoon += 1;
-      if (type === 'mid') acc.mid += 1;
+      const type = cells[advisor.id] ? cells[advisor.id].type : 'off';
+      if (type === 'nineToTwo') acc.nineToTwo += 1;
+      if (type === 'elevenToFour') acc.elevenToFour += 1;
+      if (type === 'twoToSeven') acc.twoToSeven += 1;
+      if (type === 'callNineToTwo') acc.callNineToTwo += 1;
+      if (type === 'callElevenToFour') acc.callElevenToFour += 1;
+      if (type === 'callTwoToSeven') acc.callTwoToSeven += 1;
+      if (type === 'off') acc.off += 1;
       if (type === 'weekendSingle' || type === 'weekendMorning' || type === 'weekendAfternoon') acc.weekend += 1;
       return acc;
-    }, { morning: 0, afternoon: 0, mid: 0, weekend: 0 });
-  }
-
-  function rebalanceOfficeCells(cells, history, weekIndex) {
-    const moved = new Set();
-
-    function pickMidCandidate() {
-      const candidates = ADVISORS.filter((advisor) => cells[advisor.id] && cells[advisor.id].type === 'mid');
-      candidates.sort((a, b) => {
-        const aRecord = history[a.id];
-        const bRecord = history[b.id];
-        if (aRecord.rebalanceMoves !== bRecord.rebalanceMoves) return aRecord.rebalanceMoves - bRecord.rebalanceMoves;
-        if (aRecord.lastRebalanceWeek !== bRecord.lastRebalanceWeek) return aRecord.lastRebalanceWeek - bRecord.lastRebalanceWeek;
-        return a.name.localeCompare(b.name, 'es');
-      });
-      return candidates[0] || null;
-    }
-
-    let counts = summarizeOfficeCounts(cells);
-
-    while (counts.morning < 2) {
-      const candidate = pickMidCandidate();
-      if (!candidate) break;
-      cells[candidate.id] = buildCell('morning');
-      moved.add(candidate.id);
-      counts = summarizeOfficeCounts(cells);
-    }
-
-    while (counts.afternoon < 2) {
-      const candidate = pickMidCandidate();
-      if (!candidate) break;
-      cells[candidate.id] = buildCell('afternoon');
-      moved.add(candidate.id);
-      counts = summarizeOfficeCounts(cells);
-    }
-
-    return moved;
-  }
-
-  function setTeamCells(cells, teamId, type, meta) {
-    const team = TEAMS.find((item) => item.id === teamId);
-    if (!team) return;
-    team.memberIds.forEach((advisorId) => {
-      cells[advisorId] = buildCell(type, meta);
+    }, {
+      nineToTwo: 0,
+      elevenToFour: 0,
+      twoToSeven: 0,
+      callNineToTwo: 0,
+      callElevenToFour: 0,
+      callTwoToSeven: 0,
+      off: 0,
+      weekend: 0
     });
   }
 
-  function setSingleCell(cells, advisorId, type, meta) {
-    cells[advisorId] = buildCell(type, meta);
-  }
-
-  function buildSeededWeek(weekStart, seedWeek, history, weekIndex) {
+  function buildGeneratedWeek(weekStart, history, weekIndex) {
+    const weekendAdvisorId = selectWeekendAdvisor(history, weekIndex);
     const days = [];
-    const gtAssignments = [];
-    const weekendPair = [];
-
     for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
       const date = addDays(weekStart, dayIndex);
       const cells = {};
       ADVISORS.forEach((advisor) => {
-        const code = seedWeek[advisor.id] ? seedWeek[advisor.id][dayIndex] : 'F';
-        const type = SHIFT_CODE_TO_TYPE[code] || 'free';
-        if (type === 'gt') gtAssignments.push(advisor.id);
-        if ((type === 'weekendMorning' || type === 'weekendAfternoon') && !weekendPair.some((item) => item.id === advisor.id)) {
-          weekendPair.push({ id: advisor.id, shift: type });
-        }
-        setSingleCell(cells, advisor.id, type, type === 'off' ? 'Descanso por guardia' : '');
+        cells[advisor.id] = buildCell('off');
       });
 
-      const movedIds = dayIndex <= 4 ? rebalanceOfficeCells(cells, history, weekIndex) : new Set();
-      ADVISORS.forEach((advisor) => {
-        let historyType = cells[advisor.id].type;
-        if (dayIndex >= 5) {
-          if (historyType === 'morning') historyType = 'weekendMorning';
-          if (historyType === 'afternoon') historyType = 'weekendAfternoon';
+      if (dayIndex <= 4) {
+        const dayRoleOrder = rotateArray(WEEKDAY_ROLE_ORDER, weekIndex + dayIndex);
+        const excluded = new Set();
+        if (dayIndex >= 3) {
+          excluded.add(weekendAdvisorId);
         }
-        applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
-          historyType,
-          rebalanced: movedIds.has(advisor.id),
-          sortOrder: (weekIndex * 10) + dayIndex
+        const assignedIds = new Set();
+
+        dayRoleOrder.forEach((role, roleOrderIndex) => {
+          const candidates = ADVISORS.filter((advisor) => !excluded.has(advisor.id) && !assignedIds.has(advisor.id));
+          const candidate = pickAdvisorForRole(candidates, history, role);
+          if (!candidate) return;
+          assignedIds.add(candidate.id);
+          cells[candidate.id] = buildCell(role, role.startsWith('call') ? 'Disponible para apoyo' : '');
+          markWeeklyRole(history, candidate.id, role, weekIndex, (dayIndex * 10) + roleOrderIndex);
         });
-      });
-      days.push({ date, cells });
-    }
 
-    return {
-      weekIndex,
-      weekStart,
-      days,
-      gtAssignments,
-      weekendPair,
-      nextGtQueue: deriveQueueFromHistory(history, 'gt'),
-      nextWeekendQueue: deriveQueueFromHistory(history, 'weekend'),
-      history
-    };
-  }
-
-  function buildGeneratedWeek(weekStart, history, gtQueue, weekendQueue, weekIndex) {
-    const weekendAdvisorId = WEEKEND_SINGLE_ORDER[(weekIndex + WEEKEND_SINGLE_OFFSET) % WEEKEND_SINGLE_ORDER.length];
-    const weekendSingle = { id: weekendAdvisorId, shift: 'weekendSingle' };
-    const weekendIds = new Set([weekendAdvisorId]);
-    const gtPull = takeFromQueue(gtQueue, 3, weekendIds);
-    const gtAssignments = gtPull.picked;
-    const baseAssignments = buildWeeklyBaseAssignments(history, weekIndex);
-    const days = [];
-
-    for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
-      const date = addDays(weekStart, dayIndex);
-      const cells = {};
-      ADVISORS.forEach((advisor) => {
-        cells[advisor.id] = buildCell('free');
-      });
-
-      if (dayIndex <= 2) {
-        const gtAdvisorId = gtAssignments[dayIndex];
-        const activeTeamIds = TEAMS.map((team) => team.id);
-        const officeAssignments = chooseDayAssignments(activeTeamIds, baseAssignments, history);
-        Object.keys(officeAssignments).forEach((teamId) => {
-          const type = officeAssignments[teamId];
-          setTeamCells(cells, teamId, type);
-        });
-        if (gtAdvisorId) {
-          setSingleCell(cells, gtAdvisorId, 'gt');
-        }
-        const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
         ADVISORS.forEach((advisor) => {
-          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
-            rebalanced: movedIds.has(advisor.id),
-            sortOrder: (weekIndex * 10) + dayIndex
-          });
-        });
-      } else if (dayIndex <= 4) {
-        const activeTeamIds = TEAMS.map((team) => team.id);
-        const officeAssignments = chooseDayAssignments(activeTeamIds, baseAssignments, history);
-        Object.keys(officeAssignments).forEach((teamId) => {
-          const type = officeAssignments[teamId];
-          setTeamCells(cells, teamId, type);
-        });
-        setSingleCell(cells, weekendSingle.id, 'off', 'Descanso por guardia');
-        const movedIds = rebalanceOfficeCells(cells, history, weekIndex);
-        ADVISORS.forEach((advisor) => {
-          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
-            rebalanced: movedIds.has(advisor.id),
-            sortOrder: (weekIndex * 10) + dayIndex
-          });
-        });
-      } else {
-        setSingleCell(cells, weekendSingle.id, weekendSingle.shift, '10:00 - 18:00');
-        ADVISORS.forEach((advisor) => {
-          if (!weekendIds.has(advisor.id)) {
-            setSingleCell(cells, advisor.id, 'free', '');
+          if (!assignedIds.has(advisor.id)) {
+            cells[advisor.id] = buildCell('off');
+            markWeeklyRole(history, advisor.id, 'off', weekIndex, (dayIndex * 10) + 9);
           }
         });
+      } else {
+        cells[weekendAdvisorId] = buildCell('weekendSingle', '10:00 - 18:00');
         ADVISORS.forEach((advisor) => {
-          applyAssignmentToHistory(history, advisor.id, cells[advisor.id].type, weekIndex, {
-            sortOrder: (weekIndex * 10) + dayIndex
-          });
+          if (advisor.id !== weekendAdvisorId) {
+            markWeeklyRole(history, advisor.id, 'off', weekIndex, (dayIndex * 10) + 9);
+          }
         });
+        if (dayIndex === 5) {
+          markWeekendRole(history, weekendAdvisorId, weekIndex, dayIndex);
+        }
       }
 
       days.push({ date, cells });
@@ -953,10 +771,8 @@
       weekIndex,
       weekStart,
       days,
-      gtAssignments,
-      weekendPair: [weekendSingle],
-      nextGtQueue: gtPull.nextQueue,
-      nextWeekendQueue: deriveQueueFromHistory(history, 'weekend'),
+      rolesByAdvisor: Object.fromEntries(ADVISORS.map((advisor) => [advisor.id, 'mixed'])),
+      weekendPair: [{ id: weekendAdvisorId, shift: 'weekendSingle' }],
       history
     };
   }
@@ -965,27 +781,11 @@
     const history = createHistory();
     const baseMonday = parseIsoDate(BASE_MONDAY);
     const totalWeeks = diffWeeks(baseMonday, targetMonday);
-    let gtQueue = null;
-    let weekendQueue = null;
     let targetWeek = null;
 
     for (let weekIndex = 0; weekIndex <= totalWeeks; weekIndex += 1) {
       const weekStart = addDays(baseMonday, weekIndex * 7);
-      const key = dateKey(weekStart);
-      let weekResult;
-
-      if (SEEDED_WEEKS[key]) {
-        weekResult = buildSeededWeek(weekStart, SEEDED_WEEKS[key], history, weekIndex);
-        gtQueue = deriveQueueFromHistory(history, 'gt');
-        weekendQueue = deriveQueueFromHistory(history, 'weekend');
-      } else {
-        if (!gtQueue) gtQueue = deriveQueueFromHistory(history, 'gt');
-        if (!weekendQueue) weekendQueue = deriveQueueFromHistory(history, 'weekend');
-        weekResult = buildGeneratedWeek(weekStart, history, gtQueue, weekendQueue, weekIndex);
-        gtQueue = weekResult.nextGtQueue.slice();
-        weekendQueue = weekResult.nextWeekendQueue.slice();
-      }
-
+      const weekResult = buildGeneratedWeek(weekStart, history, weekIndex);
       if (weekIndex === totalWeeks) {
         targetWeek = weekResult;
       }
@@ -1089,13 +889,9 @@
     }
   }
 
-  function isGroupStart(advisorId) {
-    return TEAM_ORDER.some((group) => group[0] === advisorId) && advisorId !== TEAM_ORDER[0][0];
-  }
-
-  function getPreferredShiftLabel(advisor, weekIndex) {
-    const preferred = getPreferredShift(advisor, weekIndex);
-    return SHIFT_META[preferred] ? SHIFT_META[preferred].short : '';
+  function getRoleLabel(role) {
+    if (role === 'mixed') return 'Rotación semanal';
+    return SHIFT_META[role] ? SHIFT_META[role].short : '';
   }
 
   function renderWeek(sim) {
@@ -1113,12 +909,12 @@
     ].join('');
 
     const rows = ADVISORS.map((advisor) => {
-      const groupStartClass = isGroupStart(advisor.id) ? ' group-start' : '';
-      const theoryLabel = getPreferredShiftLabel(advisor, sim.weekIndex);
+      const role = sim.rolesByAdvisor && sim.rolesByAdvisor[advisor.id] ? sim.rolesByAdvisor[advisor.id] : 'off';
+      const theoryLabel = getRoleLabel(role);
       const row = [
-        `<div class="person-cell${groupStartClass}">
+        `<div class="person-cell">
           <div class="person-name">${advisor.name}</div>
-          <div class="person-theory">Teorico: ${theoryLabel}</div>
+          <div class="person-theory">${theoryLabel}</div>
         </div>`
       ];
       sim.days.forEach((day, dayIndex) => {
@@ -1128,7 +924,7 @@
         const manualClass = cell.isManual ? ' manual' : '';
         row.push(`
           <div
-            class="shift-cell${groupStartClass}${editableClass}${manualClass}"
+            class="shift-cell${editableClass}${manualClass}"
             data-advisor-id="${advisor.id}"
             data-date="${dateKey(day.date)}"
             data-day-index="${dayIndex}"
@@ -1147,13 +943,14 @@
     const totalsRow = [
       '<div class="count-cell label">Conteo</div>',
       ...sim.days.map((day) => {
-        const counts = summarizeOfficeCounts(day.cells);
+        const counts = summarizeDayCounts(day.cells);
         return `
           <div class="count-cell">
             <div class="count-stack">
-              <div class="count-line"><span>Manana</span><strong>${counts.morning}</strong></div>
-              <div class="count-line"><span>Tarde</span><strong>${counts.afternoon}</strong></div>
-              <div class="count-line"><span>11 a 4</span><strong>${counts.mid}</strong></div>
+              <div class="count-line"><span>9 a 2</span><strong>${counts.nineToTwo}</strong></div>
+              <div class="count-line"><span>11 a 4</span><strong>${counts.elevenToFour}</strong></div>
+              <div class="count-line"><span>2 a 7</span><strong>${counts.twoToSeven}</strong></div>
+              <div class="count-line"><span>Llamado</span><strong>${counts.onCall}</strong></div>
               <div class="count-line"><span>FDS</span><strong>${counts.weekend}</strong></div>
             </div>
           </div>
@@ -1167,10 +964,11 @@
   function renderCounters(sim) {
     countersGridEl.innerHTML = ADVISORS.map((advisor) => {
       const record = sim.history[advisor.id];
+      const callTotal = record.callNineToTwo + record.callElevenToFour + record.callTwoToSeven;
       return `
         <div class="mini-stat">
           <div class="k">${advisor.name}</div>
-          <div class="v">GT: ${record.gt} · FDS: ${record.weekend}</div>
+          <div class="v">9-2: ${record.nineToTwo} · 11-4: ${record.elevenToFour} · 2-7: ${record.twoToSeven} · Llamado: ${callTotal} · OFF: ${record.off} · FDS: ${record.weekend}</div>
         </div>
       `;
     }).join('');
