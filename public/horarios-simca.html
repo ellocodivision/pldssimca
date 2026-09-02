@@ -750,9 +750,14 @@
       })[0] || null;
     }
 
-    const activeReduced = pickReducedAdvisor('active', new Set());
+    const activeReduced = weekendAdvisorId && targets[weekendAdvisorId] ? weekendAdvisorId : null;
     if (activeReduced) {
-      targets[activeReduced.id].active = 1;
+      targets[activeReduced].active = 1;
+    } else {
+      const fallbackActiveReduced = pickReducedAdvisor('active', new Set());
+      if (fallbackActiveReduced) {
+        targets[fallbackActiveReduced.id].active = 1;
+      }
     }
 
     const callReduced = pickReducedAdvisor('call', new Set());
