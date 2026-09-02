@@ -640,7 +640,9 @@
         lastWeekendWeek: -1,
         lastWeekendOrder: -1,
         lastActiveWeek: -1,
-        lastActiveOrder: -1
+        lastActiveOrder: -1,
+        lastReducedActiveWeek: -1,
+        lastReducedCallWeek: -1
       };
       return acc;
     }, {});
@@ -727,30 +729,36 @@
   function buildWeeklyTargets(history, weekendAdvisorId) {
     const targets = {};
     ADVISORS.forEach((advisor) => {
-      targets[advisor.id] = { active: 4 };
+      targets[advisor.id] = { active: 2, call: 2 };
     });
 
-    const ranked = ADVISORS.slice().sort((a, b) => {
-      const aRecord = history[a.id];
-      const bRecord = history[b.id];
-      const aScore = getHistoryLoadScore(aRecord);
-      const bScore = getHistoryLoadScore(bRecord);
-      if (aScore !== bScore) return bScore - aScore;
-      if (aRecord.lastActiveWeek !== bRecord.lastActiveWeek) return aRecord.lastActiveWeek - bRecord.lastActiveWeek;
-      if (aRecord.lastWeekendWeek !== bRecord.lastWeekendWeek) return aRecord.lastWeekendWeek - bRecord.lastWeekendWeek;
-      return a.name.localeCompare(b.name, 'es');
-    });
+    function pickReducedAdvisor(metric, excludedIds) {
+      const excluded = excludedIds || new Set();
+      return ADVISORS.slice().filter((advisor) => !excluded.has(advisor.id)).sort((a, b) => {
+        const aRecord = history[a.id];
+        const bRecord = history[b.id];
+        const aCount = metric === 'call' ? aRecord.call : aRecord.active;
+        const bCount = metric === 'call' ? bRecord.call : bRecord.active;
+        if (aCount !== bCount) return bCount - aCount;
+        const aReducedWeek = metric === 'call' ? aRecord.lastReducedCallWeek : aRecord.lastReducedActiveWeek;
+        const bReducedWeek = metric === 'call' ? bRecord.lastReducedCallWeek : bRecord.lastReducedActiveWeek;
+        if (aReducedWeek !== bReducedWeek) return aReducedWeek - bReducedWeek;
+        const aScore = getHistoryLoadScore(aRecord);
+        const bScore = getHistoryLoadScore(bRecord);
+        if (aScore !== bScore) return bScore - aScore;
+        return a.name.localeCompare(b.name, 'es');
+      })[0] || null;
+    }
 
-    const special = [];
-    if (weekendAdvisorId) special.push(weekendAdvisorId);
-    ranked.forEach((advisor) => {
-      if (special.length >= 2) return;
-      if (!special.includes(advisor.id)) special.push(advisor.id);
-    });
+    const activeReduced = pickReducedAdvisor('active', new Set());
+    if (activeReduced) {
+      targets[activeReduced.id].active = 1;
+    }
 
-    special.slice(0, 2).forEach((advisorId) => {
-      targets[advisorId].active = 3;
-    });
+    const callReduced = pickReducedAdvisor('call', new Set());
+    if (callReduced) {
+      targets[callReduced.id].call = 1;
+    }
 
     return targets;
   }
@@ -760,10 +768,10 @@
     return candidates.slice().sort((a, b) => {
       const aRecord = history[a.id];
       const bRecord = history[b.id];
-      const aState = weekState[a.id] || { activeRemaining: 0 };
-      const bState = weekState[b.id] || { activeRemaining: 0 };
-      const aRemaining = aState.activeRemaining;
-      const bRemaining = bState.activeRemaining;
+      const aState = weekState[a.id] || { activeRemaining: 0, callRemaining: 0 };
+      const bState = weekState[b.id] || { activeRemaining: 0, callRemaining: 0 };
+      const aRemaining = slotKind === 'call' ? aState.callRemaining : aState.activeRemaining;
+      const bRemaining = slotKind === 'call' ? bState.callRemaining : bState.activeRemaining;
       if (aRemaining !== bRemaining) return bRemaining - aRemaining;
 
       if (slotKind === 'work') {
@@ -804,6 +812,7 @@
       if (type === 'callNineToTwo') acc.callNineToTwo += 1;
       if (type === 'callElevenToFour') acc.callElevenToFour += 1;
       if (type === 'callTwoToSeven') acc.callTwoToSeven += 1;
+      if (type === 'callNineToTwo' || type === 'callElevenToFour' || type === 'callTwoToSeven' || type === 'onCall') acc.onCall += 1;
       if (type === 'off') acc.off += 1;
       if (type === 'weekendSingle' || type === 'weekendMorning' || type === 'weekendAfternoon') acc.weekend += 1;
       return acc;
@@ -814,6 +823,7 @@
       callNineToTwo: 0,
       callElevenToFour: 0,
       callTwoToSeven: 0,
+      onCall: 0,
       off: 0,
       weekend: 0
     });
@@ -825,7 +835,8 @@
     const weekState = {};
     ADVISORS.forEach((advisor) => {
       weekState[advisor.id] = {
-        activeRemaining: weeklyTargets[advisor.id] ? weeklyTargets[advisor.id].active : 4
+        activeRemaining: weeklyTargets[advisor.id] ? weeklyTargets[advisor.id].active : 2,
+        callRemaining: weeklyTargets[advisor.id] ? weeklyTargets[advisor.id].call : 2
       };
     });
     const days = [];
@@ -868,18 +879,18 @@
         callSlots.forEach((role, roleOrderIndex) => {
           const eligible = ADVISORS.filter((advisor) => {
             const state = weekState[advisor.id];
-            return state.activeRemaining > 0 && !excluded.has(advisor.id) && !assignedIds.has(advisor.id);
+            return state.callRemaining > 0 && !excluded.has(advisor.id) && !assignedIds.has(advisor.id);
           });
           let candidate = takeFirstEligible(eligible, history, weekState, role, 'call', assignedIds);
           if (!candidate) {
             candidate = takeFirstEligible(ADVISORS.filter((advisor) => {
               const state = weekState[advisor.id];
-              return state.activeRemaining > 0 && !excluded.has(advisor.id);
+              return state.callRemaining > 0 && !excluded.has(advisor.id);
             }), history, weekState, role, 'call', assignedIds);
           }
           if (!candidate) return;
           assignedIds.add(candidate.id);
-          weekState[candidate.id].activeRemaining -= 1;
+          weekState[candidate.id].callRemaining -= 1;
           const callMeta = role === 'callNineToTwo' ? '9 a 2'
             : role === 'callElevenToFour' ? '11 a 4'
             : role === 'callTwoToSeven' ? '2 a 7'
@@ -908,6 +919,13 @@
 
       days.push({ date, cells });
     }
+
+    ADVISORS.forEach((advisor) => {
+      if (weeklyTargets[advisor.id]) {
+        if (weeklyTargets[advisor.id].active === 1) history[advisor.id].lastReducedActiveWeek = weekIndex;
+        if (weeklyTargets[advisor.id].call === 1) history[advisor.id].lastReducedCallWeek = weekIndex;
+      }
+    });
 
     return {
       weekIndex,
