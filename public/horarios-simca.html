@@ -483,6 +483,7 @@
   const WEEKDAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   const MONTH_NAMES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const BASE_MONDAY = '2026-03-30';
+  const WEEKDAY_BALANCE_START = '2026-10-26';
 
   const ADVISORS = [
     { id: 'rodrigo', name: 'Rodrigo' },
@@ -834,7 +835,7 @@
     });
   }
 
-  function buildGeneratedWeek(weekStart, history, weekIndex) {
+  function buildUnbalancedWeek(weekStart, history, weekIndex) {
     const weekendAdvisorId = selectWeekendAdvisor(history, weekIndex);
     const weeklyTargets = buildWeeklyTargets(history, weekendAdvisorId);
     const weekState = {};
@@ -942,15 +943,110 @@
     };
   }
 
+  function balanceWeekdays(sim, history, recentWeeks) {
+    const kind = (cell) => cell.type === 'off' ? 'off' : cell.type.startsWith('call') ? 'call' : 'work';
+    const counts = {};
+    ADVISORS.forEach(({ id }) => {
+      counts[id] = { work: [0, 0, 0, 0, 0], call: [0, 0, 0, 0, 0] };
+    });
+    [...recentWeeks, sim].forEach((week) => {
+      week.days.slice(0, 5).forEach((day, d) => {
+        ADVISORS.forEach(({ id }) => {
+          const category = kind(day.cells[id]);
+          if (category !== 'off') counts[id][category][d] += 1;
+        });
+      });
+    });
+    const weekendId = sim.weekendPair[0].id;
+    // A rectangle exchange preserves each person's weekly workload and every
+    // daily shift. Only the weekdays assigned to those people change.
+    for (let iteration = 0; iteration < 200; iteration += 1) {
+      let best = null;
+      let bestDelta = -1e-9;
+      for (let a = 0; a < ADVISORS.length; a += 1) {
+        for (let b = a + 1; b < ADVISORS.length; b += 1) {
+          const aid = ADVISORS[a].id;
+          const bid = ADVISORS[b].id;
+          for (let d = 0; d < 5; d += 1) {
+            for (let e = d + 1; e < 5; e += 1) {
+              const ad = sim.days[d].cells[aid], bd = sim.days[d].cells[bid];
+              const ae = sim.days[e].cells[aid], be = sim.days[e].cells[bid];
+              const x = kind(ad), y = kind(bd);
+              if (x === y || kind(ae) !== y || kind(be) !== x) continue;
+              if ((aid === weekendId && ((d >= 3 && y !== 'off') || (e >= 3 && x !== 'off'))) ||
+                  (bid === weekendId && ((d >= 3 && x !== 'off') || (e >= 3 && y !== 'off')))) continue;
+              let delta = 0;
+              const changes = [[aid, d, x, y], [bid, d, y, x], [aid, e, y, x], [bid, e, x, y]];
+              changes.forEach(([id, day, from, to]) => {
+                if (from !== 'off') delta += (from === 'work' ? 4 : 1) * (1 - 2 * counts[id][from][day]);
+                if (to !== 'off') delta += (to === 'work' ? 4 : 1) * (1 + 2 * counts[id][to][day]);
+              });
+              // Keep the existing rotation among the three shift times as a
+              // secondary preference; weekday fairness has priority.
+              for (const [id, removed, added] of [[aid, [ad, ae], [bd, be]], [bid, [bd, be], [ad, ae]]]) {
+                const roleChanges = {};
+                removed.forEach((c) => { roleChanges[c.type] = (roleChanges[c.type] || 0) - 1; });
+                added.forEach((c) => { roleChanges[c.type] = (roleChanges[c.type] || 0) + 1; });
+                Object.entries(roleChanges).forEach(([role, change]) => {
+                  if (role !== 'off') {
+                    const total = history[id][role] + sim.days.slice(0, 5).filter((day) => day.cells[id].type === role).length;
+                    delta += 0.001 * (2 * total * change + change * change);
+                  }
+                });
+              }
+              if (delta < bestDelta) { bestDelta = delta; best = { aid, bid, d, e, changes }; }
+            }
+          }
+        }
+      }
+      if (!best) break;
+      best.changes.forEach(([id, day, from, to]) => {
+        if (from !== 'off') counts[id][from][day] -= 1;
+        if (to !== 'off') counts[id][to][day] += 1;
+      });
+      for (const day of [best.d, best.e]) {
+        const cells = sim.days[day].cells;
+        [cells[best.aid], cells[best.bid]] = [cells[best.bid], cells[best.aid]];
+      }
+    }
+  }
+
+  function buildGeneratedWeek(weekStart, history, weekIndex, recentWeeks, generationHistory) {
+    const sim = buildUnbalancedWeek(weekStart, generationHistory, weekIndex);
+    if (dateKey(weekStart) < WEEKDAY_BALANCE_START) {
+      Object.assign(history, JSON.parse(JSON.stringify(generationHistory)));
+      sim.history = history;
+      return sim;
+    }
+    balanceWeekdays(sim, history, recentWeeks || []);
+    sim.days.forEach((day, d) => {
+      ADVISORS.forEach(({ id }) => {
+        const role = day.cells[id].type;
+        if (d < 5 || role === 'off') markWeeklyRole(history, id, role, weekIndex, d * 10);
+        else if (d === 5) markWeekendRole(history, id, weekIndex, d);
+      });
+    });
+    ADVISORS.forEach(({ id }) => {
+      history[id].lastReducedActiveWeek = generationHistory[id].lastReducedActiveWeek;
+      history[id].lastReducedCallWeek = generationHistory[id].lastReducedCallWeek;
+    });
+    sim.history = history;
+    return sim;
+  }
+
   function buildWeekSimulation(targetMonday) {
     const history = createHistory();
+    const generationHistory = createHistory();
     const baseMonday = parseIsoDate(BASE_MONDAY);
     const totalWeeks = diffWeeks(baseMonday, targetMonday);
     let targetWeek = null;
+    const recentWeeks = [];
 
     for (let weekIndex = 0; weekIndex <= totalWeeks; weekIndex += 1) {
       const weekStart = addDays(baseMonday, weekIndex * 7);
-      const weekResult = buildGeneratedWeek(weekStart, history, weekIndex);
+      const weekResult = buildGeneratedWeek(weekStart, history, weekIndex, recentWeeks, generationHistory);
+      recentWeeks.push(weekResult);
+      if (recentWeeks.length > 7) recentWeeks.shift();
       if (weekIndex === totalWeeks) {
         targetWeek = weekResult;
       }
